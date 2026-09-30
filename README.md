@@ -13,3 +13,24 @@
 
 仓库用于保存考核学习笔记、开发记录及必要参考资料。笔记中的图片采用仓库内相对路径，可在 GitHub 页面直接显示。
 
+## 同步到 GitHub
+
+在本文件夹空白处右键打开终端，依次执行：
+
+```powershell
+git status
+git add -A
+git status
+git commit -m "docs: 更新本次学习内容"
+git pull --rebase
+git push
+```
+
+- 第一次 `git status` 用于确认发生了哪些变化。
+- `git add -A` 会暂存新增、修改和删除的文件；第二次 `git status` 用于在提交前复查。
+- 提交信息应简要说明本次改动，例如 `docs: 补充 GPIO 学习笔记` 或 `feat: 添加 PWM 呼吸灯工程`。
+- `git pull --rebase` 用于先取得 GitHub 上可能存在的新提交，再执行 `git push` 上传本地提交。
+- 如果没有任何修改，`git commit` 会提示 `nothing to commit`，此时不需要推送。
+
+不要提交账号密码、访问令牌、私人信息或体积很大的编译产物。Keil 的 `Objects`、`Listings` 等输出目录已写入 `.gitignore`。
+
