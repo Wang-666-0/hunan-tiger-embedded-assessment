@@ -14,5 +14,32 @@ Desktop.ini
 Objects/
 Listings/
 *.uvguix.*
+*.uvoptx
 *.scvd
+*.o
+*.d
+*.crf
+*.axf
+*.hex
+*.map
+*.lnp
+*.lst
+*.dep
+*.sct
+*.build_log.htm
+
+# CubeMX 随工程复制但当前未使用的大型 CMSIS 示例库
+**/Drivers/CMSIS/DSP/
+**/Drivers/CMSIS/NN/
+**/Drivers/CMSIS/RTOS/
+**/Drivers/CMSIS/RTOS2/
+**/Drivers/CMSIS/Documentation/
+**/Drivers/CMSIS/Core/
+**/Drivers/CMSIS/Core_A/
+**/Drivers/CMSIS/Lib/
+**/Drivers/CMSIS/docs/
+**/Drivers/CMSIS/Device/ST/STM32F1xx/Source/Templates/
+
+# Keil 生成的链接和内存报告
+**/MDK-ARM/*/*.htm
 
