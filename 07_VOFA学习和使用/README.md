@@ -6,4 +6,4 @@
 
 本任务学习 VOFA+ 常用数据协议，并用 VOFA+ 显示 STM32 通过串口发送到电脑的数据.
 
-实践时优先复用任务 05 中已经验证的 UART_DMA 工程，确认串口通信后再完成 RawData 文本显示和 FireWater 数值曲线演示.
+本次复制任务 05 的 UART_DMA 工程到 Output/VOFA_Demo，已验证 RawData 文本显示、FireWater 双通道解析和曲线显示. 笔记记录了控件拖入、通道绑定和缩放操作；最终截图的 Δt 仍需从 1 ms 改为约 500 ms，以对应程序发送间隔.
