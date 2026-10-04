@@ -72,9 +72,8 @@ while (1)
 
 保存 → Keil 编译 → 下载到开发板. VOFA+ 选择 RawData、串口、CH340 对应端口、115200、8N1、无流控，再打开连接. 检查接收区持续出现 Hello VOFA+，不要只看软件发送区.
 
-图 01 · RawData 文本显示与烧录结果：[01_RawData文本显示.png](../02_过程记录/01_RawData文本显示.png) · [GitHub 图片直达链接](https://github.com/Wang-666-0/hunan-tiger-embedded-assessment/blob/main/07_VOFA%E5%AD%A6%E4%B9%A0%E5%92%8C%E4%BD%BF%E7%94%A8/02_%E8%BF%87%E7%A8%8B%E8%AE%B0%E5%BD%95/01_RawData%E6%96%87%E6%9C%AC%E6%98%BE%E7%A4%BA.png).
+图 01 · RawData 文本显示与烧录结果：[GitHub 图片直达链接](https://github.com/Wang-666-0/hunan-tiger-embedded-assessment/blob/main/07_VOFA%E5%AD%A6%E4%B9%A0%E5%92%8C%E4%BD%BF%E7%94%A8/02_%E8%BF%87%E7%A8%8B%E8%AE%B0%E5%BD%95/01_RawData%E6%96%87%E6%9C%AC%E6%98%BE%E7%A4%BA.png).
 
-![图 01 · RawData 文本显示与烧录结果](../02_过程记录/01_RawData文本显示.png)
 
 截图显示 Programming Done、Verify OK、Application running，以及持续接收 Hello VOFA+，证明程序下载和单片机到电脑的通信正常.
 
@@ -106,9 +105,8 @@ while (1)
 
 接收区交替出现 10,90 和 90,10；右侧出现 I0、I1，数值交替变化，说明协议已经解析成功. 此时即使中间画布没有曲线，也不需要重新改串口代码.
 
-图 02 · FireWater 双通道解析：[02_FireWater数据解析.png](../02_过程记录/02_FireWater数据解析.png) · [GitHub 图片直达链接](https://github.com/Wang-666-0/hunan-tiger-embedded-assessment/blob/main/07_VOFA%E5%AD%A6%E4%B9%A0%E5%92%8C%E4%BD%BF%E7%94%A8/02_%E8%BF%87%E7%A8%8B%E8%AE%B0%E5%BD%95/02_FireWater%E6%95%B0%E6%8D%AE%E8%A7%A3%E6%9E%90.png).
+图 02 · FireWater 双通道解析：[GitHub 图片直达链接](https://github.com/Wang-666-0/hunan-tiger-embedded-assessment/blob/main/07_VOFA%E5%AD%A6%E4%B9%A0%E5%92%8C%E4%BD%BF%E7%94%A8/02_%E8%BF%87%E7%A8%8B%E8%AE%B0%E5%BD%95/02_FireWater%E6%95%B0%E6%8D%AE%E8%A7%A3%E6%9E%90.png).
 
-![图 02 · FireWater 双通道解析](../02_过程记录/02_FireWater数据解析.png)
 
 ## 6. 添加波形控件与绑定数据
 
@@ -146,9 +144,8 @@ while (1)
 
 本次两通道仅交替发送 10 和 90，波形图用直线连接相邻点，因此看起来像三角形. 这是离散数值的连线显示，不代表单片机发送了连续三角波. 想显示平顶方波，可使用支持的阶梯显示方式，或在高、低数值保持期间发送更多重复点.
 
-图 03 · FireWater 双通道曲线：[03_FireWater双通道曲线.png](../02_过程记录/03_FireWater双通道曲线.png) · [GitHub 图片直达链接](https://github.com/Wang-666-0/hunan-tiger-embedded-assessment/blob/main/07_VOFA%E5%AD%A6%E4%B9%A0%E5%92%8C%E4%BD%BF%E7%94%A8/02_%E8%BF%87%E7%A8%8B%E8%AE%B0%E5%BD%95/03_FireWater%E5%8F%8C%E9%80%9A%E9%81%93%E6%9B%B2%E7%BA%BF.png).
+图 03 · FireWater 双通道曲线：[GitHub 图片直达链接](https://github.com/Wang-666-0/hunan-tiger-embedded-assessment/blob/main/07_VOFA%E5%AD%A6%E4%B9%A0%E5%92%8C%E4%BD%BF%E7%94%A8/02_%E8%BF%87%E7%A8%8B%E8%AE%B0%E5%BD%95/03_FireWater%E5%8F%8C%E9%80%9A%E9%81%93%E6%9B%B2%E7%BA%BF.png).
 
-![图 03 · FireWater 双通道曲线](../02_过程记录/03_FireWater双通道曲线.png)
 
 **截图核对：图 03 中 Δt 仍为 1 ms，曲线已显示，但横轴尚未按约 500 ms 的发送间隔换算. 验收前改成 500 ms，截图中的毫秒刻度不能用来证明真实周期或频率.**
 
