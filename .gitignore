@@ -1,4 +1,7 @@
 # 系统与编辑器临时文件
+# 独立 Git 练习仓库，仅保存在本地
+/06_Git/02_练习仓库/
+/06_Git练习副本/
 .DS_Store
 Thumbs.db
 Desktop.ini
