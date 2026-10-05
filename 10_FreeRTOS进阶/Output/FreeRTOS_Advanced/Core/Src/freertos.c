@@ -336,7 +336,7 @@ static void UartTask(void *argument)
             }
         }
 
-        if (HAL_GetTick() - last_print_tick >= 200)
+        if (HAL_GetTick() - last_print_tick >= 20)
         {
             last_print_tick = HAL_GetTick();
             if (xQueueReceive(imu_data_queue, &imu, 0) == pdPASS)
