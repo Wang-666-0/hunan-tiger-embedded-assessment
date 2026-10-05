@@ -25,7 +25,7 @@
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
-
+#include "tim.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -57,7 +57,9 @@ const osThreadAttr_t defaultTask_attributes = {
 
 /* Private function prototypes -----------------------------------------------*/
 /* USER CODE BEGIN FunctionPrototypes */
-
+static void PwmTask(void *argument);
+static void UartTask(void *argument);
+static void ImuTask(void *argument);
 /* USER CODE END FunctionPrototypes */
 
 void StartDefaultTask(void *argument);
@@ -92,10 +94,26 @@ void MX_FREERTOS_Init(void) {
 
   /* Create the thread(s) */
   /* creation of defaultTask */
-  defaultTaskHandle = osThreadNew(StartDefaultTask, NULL, &defaultTask_attributes);
+  //defaultTaskHandle = osThreadNew(StartDefaultTask, NULL, &defaultTask_attributes);
 
   /* USER CODE BEGIN RTOS_THREADS */
   /* add threads, ... */
+
+if (xTaskCreate(PwmTask, "PWM", 256, NULL, 3, NULL) != pdPASS)
+{
+    Error_Handler();
+}
+
+if (xTaskCreate(UartTask, "UART", 384, NULL, 2, NULL) != pdPASS)
+{
+    Error_Handler();
+}
+
+if (xTaskCreate(ImuTask, "IMU", 512, NULL, 2, NULL) != pdPASS)
+{
+    Error_Handler();
+}
+
   /* USER CODE END RTOS_THREADS */
 
   /* USER CODE BEGIN RTOS_EVENTS */
@@ -124,6 +142,69 @@ void StartDefaultTask(void *argument)
 
 /* Private application code --------------------------------------------------*/
 /* USER CODE BEGIN Application */
+static void PwmTask(void *argument)
+{
+    (void)argument;
 
+    TickType_t last_wake = xTaskGetTickCount();
+    const TickType_t period = pdMS_TO_TICKS(5);
+
+    int32_t brightness = 0;
+    int32_t step = 5;
+
+    if (HAL_TIM_PWM_Start(&htim1, TIM_CHANNEL_1) != HAL_OK)
+    {
+        Error_Handler();
+    }
+
+    for (;;)
+    {
+        __HAL_TIM_SET_COMPARE(
+            &htim1, TIM_CHANNEL_1, (uint32_t)brightness);
+
+        brightness += step;
+
+        if (brightness >= 1000)
+        {
+            brightness = 1000;
+            step = -5;
+        }
+        else if (brightness <= 0)
+        {
+            brightness = 0;
+            step = 5;
+        }
+
+        vTaskDelayUntil(&last_wake, period);
+    }
+}
+
+static void UartTask(void *argument)
+{
+    (void)argument;
+
+    TickType_t last_wake = xTaskGetTickCount();
+
+    for (;;)
+    {
+        /* 下一步加入串口收发和指令解析 */
+
+        vTaskDelayUntil(&last_wake, pdMS_TO_TICKS(10));
+    }
+}
+
+static void ImuTask(void *argument)
+{
+    (void)argument;
+
+    TickType_t last_wake = xTaskGetTickCount();
+
+    for (;;)
+    {
+        /* 后续加入 MPU6050 初始化和读取 */
+
+        vTaskDelayUntil(&last_wake, pdMS_TO_TICKS(10));
+    }
+}
 /* USER CODE END Application */
 
