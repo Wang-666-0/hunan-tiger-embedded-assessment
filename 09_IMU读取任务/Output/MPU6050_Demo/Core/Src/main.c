@@ -27,6 +27,7 @@
 #include <stdio.h>
 #include "inv_mpu.h"
 #include "inv_mpu_dmp_motion_driver.h"
+#include <math.h>
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -75,6 +76,14 @@ float gyro_sensitivity;
 unsigned short accel_sensitivity;
 
 uint32_t last_print_tick = 0;
+
+float roll_deg = 0.0f;
+float pitch_deg = 0.0f;
+
+float roll_acc_deg = 0.0f;
+float pitch_acc_deg = 0.0f;
+
+uint8_t attitude_ready = 0;
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -190,21 +199,50 @@ if (mpu_get_gyro_sens(&gyro_sensitivity) != 0 ||
             gx_dps = (float)dmp_gyro[0] / gyro_sensitivity;
             gy_dps = (float)dmp_gyro[1] / gyro_sensitivity;
             gz_dps = (float)dmp_gyro[2] / gyro_sensitivity;
+
+            /* 根据重力方向计算倾斜角，弧度转换为度 */
+              roll_acc_deg = atan2f(ay_g, az_g) * 57.2957795f;
+
+              pitch_acc_deg = atan2f(
+                  -ax_g,
+                  sqrtf(ay_g * ay_g + az_g * az_g)
+              ) * 57.2957795f;
+
+              /* 第一包数据直接建立初始角度 */
+              if (attitude_ready == 0)
+              {
+                  roll_deg = roll_acc_deg;
+                  pitch_deg = pitch_acc_deg;
+                  attitude_ready = 1;
+              }
+              else
+              {
+                  /* 每个 FIFO 数据包对应的采样间隔，单位为秒 */
+                  const float dt = 1.0f / DEFAULT_MPU_HZ;
+                  const float alpha = 0.98f;
+
+                  roll_deg = alpha * (roll_deg + gx_dps * dt)
+                          + (1.0f - alpha) * roll_acc_deg;
+
+                  pitch_deg = alpha * (pitch_deg + gy_dps * dt)
+                            + (1.0f - alpha) * pitch_acc_deg;
+              }
         }
 
     } while (dmp_more != 0);
 
     /* 每 100 ms 打印一次，读取数据仍然保持较高频率 */
-    if (HAL_GetTick() - last_print_tick >= 100)
+    if (attitude_ready &&
+    HAL_GetTick() - last_print_tick >= 100)
     {
         last_print_tick = HAL_GetTick();
 
         int len = snprintf(
             uart_text,
             sizeof(uart_text),
-            "A(g):%.3f,%.3f,%.3f G(dps):%.2f,%.2f,%.2f\r\n",
-            (double)ax_g, (double)ay_g, (double)az_g,
-            (double)gx_dps, (double)gy_dps, (double)gz_dps
+            "Roll:%.2f Pitch:%.2f\r\n",
+            (double)roll_deg,
+            (double)pitch_deg
         );
 
         if (len > 0 && len < (int)sizeof(uart_text))
