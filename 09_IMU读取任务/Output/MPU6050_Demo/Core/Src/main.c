@@ -53,6 +53,9 @@ int16_t ax, ay, az;
 int16_t gx, gy, gz;
 
 char uart_text[128];
+
+float ax_g, ay_g, az_g;
+float gx_dps, gy_dps, gz_dps;
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -192,11 +195,19 @@ if (HAL_I2C_Mem_Write(&hi2c1, 0x68 << 1, 0x1C,
     gy = (int16_t)(((uint16_t)mpu_data[10] << 8) | mpu_data[11]);
     gz = (int16_t)(((uint16_t)mpu_data[12] << 8) | mpu_data[13]);
 
+    ax_g = ax / 16384.0f;
+    ay_g = ay / 16384.0f;
+    az_g = az / 16384.0f;
+
+    gx_dps = gx / 131.0f;
+    gy_dps = gy / 131.0f;
+    gz_dps = gz / 131.0f;
+    
     int len = snprintf(
         uart_text, sizeof(uart_text),
-        "A:%d,%d,%d G:%d,%d,%d\r\n",
-        (int)ax, (int)ay, (int)az,
-        (int)gx, (int)gy, (int)gz
+        "A(g):%.3f,%.3f,%.3f G(dps):%.2f,%.2f,%.2f\r\n",
+        (double)ax_g, (double)ay_g, (double)az_g,
+        (double)gx_dps, (double)gy_dps, (double)gz_dps
     );
 
     if (len > 0 && len < (int)sizeof(uart_text))
