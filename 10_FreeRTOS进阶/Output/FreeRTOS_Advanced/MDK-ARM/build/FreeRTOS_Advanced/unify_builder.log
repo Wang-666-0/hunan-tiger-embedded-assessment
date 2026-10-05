@@ -1,0 +1,882 @@
+[2026-10-05 14:41:41]	[info] incremental build: 36 source files changed
+These source files will be recompiled
+---
+'d:\Project\27电软正式批考核\10_FreeRTOS进阶\Output\FreeRTOS_Advanced\Core\Src\freertos.c': object (.o) file not exist
+'d:\Project\27电软正式批考核\10_FreeRTOS进阶\Output\FreeRTOS_Advanced\Core\Src\gpio.c': object (.o) file not exist
+'d:\Project\27电软正式批考核\10_FreeRTOS进阶\Output\FreeRTOS_Advanced\Core\Src\i2c.c': object (.o) file not exist
+'d:\Project\27电软正式批考核\10_FreeRTOS进阶\Output\FreeRTOS_Advanced\Core\Src\main.c': object (.o) file not exist
+'d:\Project\27电软正式批考核\10_FreeRTOS进阶\Output\FreeRTOS_Advanced\Core\Src\stm32f1xx_hal_msp.c': object (.o) file not exist
+'d:\Project\27电软正式批考核\10_FreeRTOS进阶\Output\FreeRTOS_Advanced\Core\Src\stm32f1xx_hal_timebase_tim.c': object (.o) file not exist
+'d:\Project\27电软正式批考核\10_FreeRTOS进阶\Output\FreeRTOS_Advanced\Core\Src\stm32f1xx_it.c': object (.o) file not exist
+'d:\Project\27电软正式批考核\10_FreeRTOS进阶\Output\FreeRTOS_Advanced\Core\Src\system_stm32f1xx.c': object (.o) file not exist
+'d:\Project\27电软正式批考核\10_FreeRTOS进阶\Output\FreeRTOS_Advanced\Core\Src\tim.c': object (.o) file not exist
+'d:\Project\27电软正式批考核\10_FreeRTOS进阶\Output\FreeRTOS_Advanced\Core\Src\usart.c': object (.o) file not exist
+'d:\Project\27电软正式批考核\10_FreeRTOS进阶\Output\FreeRTOS_Advanced\Drivers\STM32F1xx_HAL_Driver\Src\stm32f1xx_hal.c': object (.o) file not exist
+'d:\Project\27电软正式批考核\10_FreeRTOS进阶\Output\FreeRTOS_Advanced\Drivers\STM32F1xx_HAL_Driver\Src\stm32f1xx_hal_cortex.c': object (.o) file not exist
+'d:\Project\27电软正式批考核\10_FreeRTOS进阶\Output\FreeRTOS_Advanced\Drivers\STM32F1xx_HAL_Driver\Src\stm32f1xx_hal_dma.c': object (.o) file not exist
+'d:\Project\27电软正式批考核\10_FreeRTOS进阶\Output\FreeRTOS_Advanced\Drivers\STM32F1xx_HAL_Driver\Src\stm32f1xx_hal_exti.c': object (.o) file not exist
+'d:\Project\27电软正式批考核\10_FreeRTOS进阶\Output\FreeRTOS_Advanced\Drivers\STM32F1xx_HAL_Driver\Src\stm32f1xx_hal_flash.c': object (.o) file not exist
+'d:\Project\27电软正式批考核\10_FreeRTOS进阶\Output\FreeRTOS_Advanced\Drivers\STM32F1xx_HAL_Driver\Src\stm32f1xx_hal_flash_ex.c': object (.o) file not exist
+'d:\Project\27电软正式批考核\10_FreeRTOS进阶\Output\FreeRTOS_Advanced\Drivers\STM32F1xx_HAL_Driver\Src\stm32f1xx_hal_gpio.c': object (.o) file not exist
+'d:\Project\27电软正式批考核\10_FreeRTOS进阶\Output\FreeRTOS_Advanced\Drivers\STM32F1xx_HAL_Driver\Src\stm32f1xx_hal_gpio_ex.c': object (.o) file not exist
+'d:\Project\27电软正式批考核\10_FreeRTOS进阶\Output\FreeRTOS_Advanced\Drivers\STM32F1xx_HAL_Driver\Src\stm32f1xx_hal_i2c.c': object (.o) file not exist
+'d:\Project\27电软正式批考核\10_FreeRTOS进阶\Output\FreeRTOS_Advanced\Drivers\STM32F1xx_HAL_Driver\Src\stm32f1xx_hal_pwr.c': object (.o) file not exist
+'d:\Project\27电软正式批考核\10_FreeRTOS进阶\Output\FreeRTOS_Advanced\Drivers\STM32F1xx_HAL_Driver\Src\stm32f1xx_hal_rcc.c': object (.o) file not exist
+'d:\Project\27电软正式批考核\10_FreeRTOS进阶\Output\FreeRTOS_Advanced\Drivers\STM32F1xx_HAL_Driver\Src\stm32f1xx_hal_rcc_ex.c': object (.o) file not exist
+'d:\Project\27电软正式批考核\10_FreeRTOS进阶\Output\FreeRTOS_Advanced\Drivers\STM32F1xx_HAL_Driver\Src\stm32f1xx_hal_tim.c': object (.o) file not exist
+'d:\Project\27电软正式批考核\10_FreeRTOS进阶\Output\FreeRTOS_Advanced\Drivers\STM32F1xx_HAL_Driver\Src\stm32f1xx_hal_tim_ex.c': object (.o) file not exist
+'d:\Project\27电软正式批考核\10_FreeRTOS进阶\Output\FreeRTOS_Advanced\Drivers\STM32F1xx_HAL_Driver\Src\stm32f1xx_hal_uart.c': object (.o) file not exist
+'d:\Project\27电软正式批考核\10_FreeRTOS进阶\Output\FreeRTOS_Advanced\Middlewares\Third_Party\FreeRTOS\Source\CMSIS_RTOS_V2\cmsis_os2.c': object (.o) file not exist
+'d:\Project\27电软正式批考核\10_FreeRTOS进阶\Output\FreeRTOS_Advanced\Middlewares\Third_Party\FreeRTOS\Source\croutine.c': object (.o) file not exist
+'d:\Project\27电软正式批考核\10_FreeRTOS进阶\Output\FreeRTOS_Advanced\Middlewares\Third_Party\FreeRTOS\Source\event_groups.c': object (.o) file not exist
+'d:\Project\27电软正式批考核\10_FreeRTOS进阶\Output\FreeRTOS_Advanced\Middlewares\Third_Party\FreeRTOS\Source\list.c': object (.o) file not exist
+'d:\Project\27电软正式批考核\10_FreeRTOS进阶\Output\FreeRTOS_Advanced\Middlewares\Third_Party\FreeRTOS\Source\portable\MemMang\heap_4.c': object (.o) file not exist
+'d:\Project\27电软正式批考核\10_FreeRTOS进阶\Output\FreeRTOS_Advanced\Middlewares\Third_Party\FreeRTOS\Source\portable\RVDS\ARM_CM3\port.c': object (.o) file not exist
+'d:\Project\27电软正式批考核\10_FreeRTOS进阶\Output\FreeRTOS_Advanced\Middlewares\Third_Party\FreeRTOS\Source\queue.c': object (.o) file not exist
+'d:\Project\27电软正式批考核\10_FreeRTOS进阶\Output\FreeRTOS_Advanced\Middlewares\Third_Party\FreeRTOS\Source\stream_buffer.c': object (.o) file not exist
+'d:\Project\27电软正式批考核\10_FreeRTOS进阶\Output\FreeRTOS_Advanced\Middlewares\Third_Party\FreeRTOS\Source\tasks.c': object (.o) file not exist
+'d:\Project\27电软正式批考核\10_FreeRTOS进阶\Output\FreeRTOS_Advanced\Middlewares\Third_Party\FreeRTOS\Source\timers.c': object (.o) file not exist
+'d:\Project\27电软正式批考核\10_FreeRTOS进阶\Output\FreeRTOS_Advanced\MDK-ARM\startup_stm32f103xb.s': object (.o) file not exist
+
+[2026-10-05 14:41:44]	link failed !, exit code: 1
+   at unify_builder.Program.Main(String[] args_)
+---
+Error: L6406E: No space in execution regions with .ANY selector matching heap_4.o(.bss).
+Error: L6406E: No space in execution regions with .ANY selector matching cmsis_os2.o(.bss).
+Error: L6406E: No space in execution regions with .ANY selector matching tasks.o(.bss).
+Error: L6406E: No space in execution regions with .ANY selector matching startup_stm32f103xb.o(STACK).
+Error: L6406E: No space in execution regions with .ANY selector matching stm32f1xx_hal_rcc.o(i.HAL_RCC_OscConfig).
+Error: L6406E: No space in execution regions with .ANY selector matching stm32f1xx_hal_uart.o(i.HAL_UART_IRQHandler).
+Error: L6406E: No space in execution regions with .ANY selector matching startup_stm32f103xb.o(HEAP).
+Error: L6406E: No space in execution regions with .ANY selector matching stm32f1xx_hal_gpio.o(i.HAL_GPIO_Init).
+Error: L6406E: No space in execution regions with .ANY selector matching stm32f1xx_hal_i2c.o(i.HAL_I2C_Init).
+Error: L6406E: No space in execution regions with .ANY selector matching queue.o(i.xQueueGenericSend).
+Error: L6406E: No space in execution regions with .ANY selector matching queue.o(i.xQueueReceive).
+Error: L6406E: No space in execution regions with .ANY selector matching stm32f1xx_hal_tim.o(i.HAL_TIM_IRQHandler).
+Error: L6406E: No space in execution regions with .ANY selector matching stm32f1xx_hal_rcc.o(i.HAL_RCC_ClockConfig).
+Error: L6406E: No space in execution regions with .ANY selector matching timers.o(.bss).
+Error: L6406E: No space in execution regions with .ANY selector matching timers.o(i.prvProcessReceivedCommands).
+Error: L6406E: No space in execution regions with .ANY selector matching stm32f1xx_hal_tim.o(i.HAL_TIM_ConfigClockSource).
+Error: L6406E: No space in execution regions with .ANY selector matching heap_4.o(i.pvPortMalloc).
+Error: L6406E: No space in execution regions with .ANY selector matching tasks.o(i.prvAddNewTaskToReadyList).
+Error: L6406E: No space in execution regions with .ANY selector matching stm32f1xx_hal_tim.o(i.HAL_TIM_PWM_ConfigChannel).
+Error: L6406E: No space in execution regions with .ANY selector matching tim.o(i.MX_TIM1_Init).
+Error: L6406E: No space in execution regions with .ANY selector matching tasks.o(i.xTaskIncrementTick).
+Error: L6406E: No space in execution regions with .ANY selector matching tasks.o(i.xTaskResumeAll).
+Error: L6406E: No space in execution regions with .ANY selector matching stm32f1xx_hal_uart.o(i.UART_Receive_IT).
+Error: L6406E: No space in execution regions with .ANY selector matching timers.o(i.prvProcessTimerOrBlockTask).
+Error: L6406E: No space in execution regions with .ANY selector matching queue.o(i.xQueueGenericSendFromISR).
+Error: L6406E: No space in execution regions with .ANY selector matching stm32f1xx_hal_uart.o(i.UART_SetConfig).
+Error: L6406E: No space in execution regions with .ANY selector matching tasks.o(i.prvInitialiseNewTask).
+Error: L6406E: No space in execution regions with .ANY selector matching port.o(i.xPortStartScheduler).
+Error: L6406E: No space in execution regions with .ANY selector matching stm32f1xx_hal_timebase_tim.o(i.HAL_InitTick).
+Error: L6406E: No space in execution regions with .ANY selector matching stm32f1xx_hal_dma.o(i.HAL_DMA_Abort_IT).
+Error: L6406E: No space in execution regions with .ANY selector matching port.o(.emb_text).
+Error: L6406E: No space in execution regions with .ANY selector matching cmsis_os2.o(i.osThreadNew).
+Error: L6406E: No space in execution regions with .ANY selector matching rt_memcpy_v6.o(.text).
+Error: L6406E: No space in execution regions with .ANY selector matching queue.o(i.xQueueGenericReset).
+Error: L6406E: No space in execution regions with .ANY selector matching tasks.o(i.vTaskStartScheduler).
+Error: L6406E: No space in execution regions with .ANY selector matching usart.o(i.HAL_UART_MspInit).
+Error: L6406E: No space in execution regions with .ANY selector matching tasks.o(i.xTaskPriorityDisinherit).
+Error: L6406E: No space in execution regions with .ANY selector matching stm32f1xx_hal_tim.o(i.TIM_Base_SetConfig).
+Error: L6406E: No space in execution regions with .ANY selector matching tasks.o(i.xTaskCheckForTimeOut).
+Error: L6406E: No space in execution regions with .ANY selector matching tasks.o(i.xTaskRemoveFromEventList).
+Error: L6406E: No space in execution regions with .ANY selector matching queue.o(i.prvCopyDataToQueue).
+Error: L6406E: No space in execution regions with .ANY selector matching timers.o(i.prvSwitchTimerLists).
+Error: L6406E: No space in execution regions with .ANY selector matching queue.o(i.prvUnlockQueue).
+Error: L6406E: No space in execution regions with .ANY selector matching stm32f1xx_hal_tim_ex.o(i.HAL_TIMEx_MasterConfigSynchronization).
+Error: L6406E: No space in execution regions with .ANY selector matching timers.o(i.xTimerGenericCommand).
+Error: L6406E: No space in execution regions with .ANY selector matching queue.o(i.xQueueGenericCreateStatic).
+Error: L6406E: No space in execution regions with .ANY selector matching stm32f1xx_hal_uart.o(i.HAL_UART_Init).
+Error: L6406E: No space in execution regions with .ANY selector matching heap_4.o(i.vPortFree).
+Error: L6406E: No space in execution regions with .ANY selector matching tasks.o(i.vTaskSwitchContext).
+Error: L6406E: No space in execution regions with .ANY selector matching rt_memcpy_w.o(.text).
+Error: L6406E: No space in execution regions with .ANY selector matching tasks.o(i.prvIdleTask).
+Error: L6406E: No space in execution regions with .ANY selector matching timers.o(i.xTimerCreateTimerTask).
+Error: L6406E: No space in execution regions with .ANY selector matching libspace.o(.bss).
+Error: L6406E: No space in execution regions with .ANY selector matching main.o(i.SystemClock_Config).
+Error: L6406E: No space in execution regions with .ANY selector matching i2c.o(i.HAL_I2C_MspInit).
+Error: L6406E: No space in execution regions with .ANY selector matching tasks.o(i.prvAddCurrentTaskToDelayedList).
+Error: L6406E: No space in execution regions with .ANY selector matching stm32f1xx_hal_tim.o(i.HAL_TIM_Base_Init).
+Error: L6406E: No space in execution regions with .ANY selector matching stm32f1xx_hal_tim.o(i.HAL_TIM_PWM_Init).
+Error: L6406E: No space in execution regions with .ANY selector matching tasks.o(i.xTaskCreate).
+Error: L6406E: No space in execution regions with .ANY selector matching stm32f1xx_hal_tim.o(i.HAL_TIM_Base_Start_IT).
+Error: L6406E: No space in execution regions with .ANY selector matching stm32f1xx_hal_tim.o(i.TIM_OC2_SetConfig).
+Error: L6406E: No space in execution regions with .ANY selector matching stm32f1xx_hal_tim.o(i.TIM_OC3_SetConfig).
+Error: L6406E: No space in execution regions with .ANY selector matching timers.o(i.prvCheckForValidListAndQueue).
+Error: L6406E: No space in execution regions with .ANY selector matching tasks.o(i.xTaskCreateStatic).
+Error: L6406E: No space in execution regions with .ANY selector matching i2c.o(.bss).
+Error: L6406E: No space in execution regions with .ANY selector matching stm32f1xx_hal_tim_ex.o(i.HAL_TIMEx_ConfigBreakDeadTime).
+Error: L6406E: No space in execution regions with .ANY selector matching port.o(i.vPortValidateInterruptPriority).
+Error: L6406E: No space in execution regions with .ANY selector matching stm32f1xx_hal_tim.o(i.TIM_OC1_SetConfig).
+Error: L6406E: No space in execution regions with .ANY selector matching stm32f1xx_hal_uart.o(i.UART_EndRxTransfer).
+Error: L6406E: No space in execution regions with .ANY selector matching rt_memclr_w.o(.text).
+Error: L6406E: No space in execution regions with .ANY selector matching tim.o(i.HAL_TIM_MspPostInit).
+Error: L6406E: No space in execution regions with .ANY selector matching stm32f1xx_hal_rcc.o(i.HAL_RCC_GetSysClockFreq).
+Error: L6406E: No space in execution regions with .ANY selector matching heap_4.o(i.prvHeapInit).
+Error: L6406E: No space in execution regions with .ANY selector matching heap_4.o(i.prvInsertBlockIntoFreeList).
+Error: L6406E: No space in execution regions with .ANY selector matching tasks.o(i.vTaskDelay).
+Error: L6406E: No space in execution regions with .ANY selector matching sys_stackheap_outer.o(.text).
+Error: L6406E: No space in execution regions with .ANY selector matching stm32f1xx_hal_msp.o(i.HAL_MspInit).
+Error: L6406E: No space in execution regions with .ANY selector matching stm32f1xx_hal_timebase_tim.o(.bss).
+Error: L6406E: No space in execution regions with .ANY selector matching tim.o(.bss).
+Error: L6406E: No space in execution regions with .ANY selector matching usart.o(.bss).
+Error: L6406E: No space in execution regions with .ANY selector matching stm32f1xx_hal_dma.o(i.HAL_DMA_Abort).
+Error: L6406E: No space in execution regions with .ANY selector matching stm32f1xx_hal_tim.o(i.TIM_OC4_SetConfig).
+Error: L6406E: No space in execution regions with .ANY selector matching queue.o(i.vQueueWaitForMessageRestricted).
+Error: L6406E: No space in execution regions with .ANY selector matching rt_memclr.o(.text).
+Error: L6406E: No space in execution regions with .ANY selector matching i2c.o(i.MX_I2C1_Init).
+Error: L6406E: No space in execution regions with .ANY selector matching stm32f1xx_hal_cortex.o(i.HAL_NVIC_SetPriority).
+Error: L6406E: No space in execution regions with .ANY selector matching stm32f1xx_hal_rcc.o(i.HAL_RCC_GetClockConfig).
+Error: L6406E: No space in execution regions with .ANY selector matching port.o(i.vPortEnterCritical).
+Error: L6406E: No space in execution regions with .ANY selector matching queue.o(.bss).
+Error: L6406E: No space in execution regions with .ANY selector matching startup_stm32f103xb.o(.text).
+Error: L6406E: No space in execution regions with .ANY selector matching gpio.o(i.MX_GPIO_Init).
+Error: L6406E: No space in execution regions with .ANY selector matching tasks.o(.data).
+Error: L6406E: No space in execution regions with .ANY selector matching usart.o(i.MX_USART1_UART_Init).
+Error: L6406E: No space in execution regions with .ANY selector matching cmsis_os2.o(i.osKernelStart).
+Error: L6406E: No space in execution regions with .ANY selector matching tasks.o(i.vTaskPlaceOnEventListRestricted).
+Error: L6406E: No space in execution regions with .ANY selector matching timers.o(i.prvInsertTimerInActiveList).
+Error: L6406E: No space in execution regions with .ANY selector matching tasks.o(i.prvDeleteTCB).
+Error: L6406E: No space in execution regions with .ANY selector matching list.o(i.vListInsert).
+Error: L6406E: No space in execution regions with .ANY selector matching tasks.o(i.vTaskPlaceOnEventList).
+Error: L6406E: No space in execution regions with .ANY selector matching port.o(i.xPortSysTickHandler).
+Error: L6406E: No space in execution regions with .ANY selector matching tim.o(i.HAL_TIM_Base_MspInit).
+Error: L6406E: No space in execution regions with .ANY selector matching port.o(i.prvTaskExitError).
+Error: L6406E: No space in execution regions with .ANY selector matching port.o(i.vPortExitCritical).
+Error: L6406E: No space in execution regions with .ANY selector matching queue.o(i.vQueueAddToRegistry).
+Error: L6406E: No space in execution regions with .ANY selector matching timers.o(i.prvSampleTimeNow).
+Error: L6406E: No space in execution regions with .ANY selector matching main.o(i.main).
+Error: L6406E: No space in execution regions with .ANY selector matching list.o(i.uxListRemove).
+Error: L6406E: No space in execution regions with .ANY selector matching queue.o(i.prvCopyDataFromQueue).
+Error: L6406E: No space in execution regions with .ANY selector matching freertos.o(.constdata).
+Error: L6406E: No space in execution regions with .ANY selector matching stm32f1xx_hal.o(i.HAL_Init).
+Error: L6406E: No space in execution regions with .ANY selector matching stm32f1xx_hal_cortex.o(i.HAL_NVIC_SetPriorityGrouping).
+Error: L6406E: No space in execution regions with .ANY selector matching stm32f1xx_hal_tim.o(i.TIM_TI2_ConfigInputStage).
+Error: L6406E: No space in execution regions with .ANY selector matching cmsis_os2.o(i.osKernelInitialize).
+Error: L6406E: No space in execution regions with .ANY selector matching port.o(i.pxPortInitialiseStack).
+Error: L6406E: No space in execution regions with .ANY selector matching port.o(i.vPortSetupTimerInterrupt).
+Error: L6406E: No space in execution regions with .ANY selector matching timers.o(i.prvTimerTask).
+Error: L6406E: No space in execution regions with .ANY selector matching stm32f1xx_hal_tim.o(i.TIM_TI1_ConfigInputStage).
+Error: L6406E: No space in execution regions with .ANY selector matching queue.o(i.prvInitialiseNewQueue).
+Error: L6406E: No space in execution regions with .ANY selector matching freertos.o(i.MX_FREERTOS_Init).
+Error: L6406E: No space in execution regions with .ANY selector matching stm32f1xx_hal_cortex.o(i.__NVIC_SetPriority).
+Error: L6406E: No space in execution regions with .ANY selector matching stm32f1xx_hal_rcc.o(i.HAL_RCC_GetPCLK1Freq).
+Error: L6406E: No space in execution regions with .ANY selector matching stm32f1xx_hal_rcc.o(i.HAL_RCC_GetPCLK2Freq).
+Error: L6406E: No space in execution regions with .ANY selector matching heap_4.o(.data).
+Error: L6406E: No space in execution regions with .ANY selector matching tasks.o(i.prvResetNextTaskUnblockTime).
+Error: L6406E: No space in execution regions with .ANY selector matching queue.o(i.prvIsQueueEmpty).
+Error: L6406E: No space in execution regions with .ANY selector matching tasks.o(i.xTaskGetSchedulerState).
+Error: L6406E: No space in execution regions with .ANY selector matching stm32f1xx_hal_cortex.o(i.HAL_NVIC_EnableIRQ).
+Error: L6406E: No space in execution regions with .ANY selector matching cmsis_os2.o(i.SysTick_Handler).
+Error: L6406E: No space in execution regions with .ANY selector matching cmsis_os2.o(i.osDelay).
+Error: L6406E: No space in execution regions with .ANY selector matching cmsis_os2.o(i.vApplicationGetTimerTaskMemory).
+Error: L6406E: No space in execution regions with .ANY selector matching list.o(i.vListInsertEnd).
+Error: L6406E: No space in execution regions with .ANY selector matching list.o(i.vListInitialise).
+Error: L6406E: No space in execution regions with .ANY selector matching stm32f1xx_hal_tim.o(i.TIM_ETR_SetConfig).
+Error: L6406E: No space in execution regions with .ANY selector matching cmsis_os2.o(i.vApplicationGetIdleTaskMemory).
+Error: L6406E: No space in execution regions with .ANY selector matching timers.o(.data).
+Error: L6406E: No space in execution regions with .ANY selector matching stm32f1xx_hal_rcc.o(.constdata).
+Error: L6406E: No space in execution regions with .ANY selector matching exit.o(.text).
+Error: L6406E: No space in execution regions with .ANY selector matching system_stm32f1xx.o(.constdata).
+Error: L6406E: No space in execution regions with .ANY selector matching stm32f1xx_hal.o(i.HAL_IncTick).
+Error: L6406E: No space in execution regions with .ANY selector matching stm32f1xx_hal_tim.o(i.TIM_ITRx_SetConfig).
+Error: L6406E: No space in execution regions with .ANY selector matching stm32f1xx_hal_uart.o(i.UART_DMAAbortOnError).
+Error: L6406E: No space in execution regions with .ANY selector matching tasks.o(i.vTaskInternalSetTimeOutState).
+Error: L6406E: No space in execution regions with .ANY selector matching tasks.o(i.vTaskSuspendAll).
+Error: L6406E: No space in execution regions with .ANY selector matching aeabi_memset.o(.text).
+Error: L6406E: No space in execution regions with .ANY selector matching main.o(i.HAL_TIM_PeriodElapsedCallback).
+Error: L6406E: No space in execution regions with .ANY selector matching freertos.o(.conststring).
+Error: L6406E: No space in execution regions with .ANY selector matching stm32f1xx_it.o(i.TIM2_IRQHandler).
+Error: L6406E: No space in execution regions with .ANY selector matching stm32f1xx_it.o(i.USART1_IRQHandler).
+Error: L6406E: No space in execution regions with .ANY selector matching stm32f1xx_hal.o(i.HAL_GetTick).
+Error: L6406E: No space in execution regions with .ANY selector matching stm32f1xx_hal.o(.data).
+Error: L6406E: No space in execution regions with .ANY selector matching port.o(.data).
+Error: L6406E: No space in execution regions with .ANY selector matching tasks.o(i.vTaskMissedYield).
+Error: L6406E: No space in execution regions with .ANY selector matching tasks.o(i.xTaskGetTickCount).
+Error: L6406E: No space in execution regions with .ANY selector matching sys_exit.o(.text).
+Error: L6406E: No space in execution regions with .ANY selector matching freertos.o(i.StartDefaultTask).
+Error: L6406E: No space in execution regions with .ANY selector matching system_stm32f1xx.o(.constdata).
+Error: L6406E: No space in execution regions with .ANY selector matching __rtentry2.o(.ARM.Collect$$rtentry$$0000000D).
+Error: L6406E: No space in execution regions with .ANY selector matching libspace.o(.text).
+Error: L6406E: No space in execution regions with .ANY selector matching list.o(i.vListInitialiseItem).
+Error: L6406E: No space in execution regions with .ANY selector matching heapauxi.o(.text).
+Error: L6406E: No space in execution regions with .ANY selector matching rtexit2.o(.ARM.Collect$$rtexit$$00000004).
+Error: L6406E: No space in execution regions with .ANY selector matching freertos.o(.data).
+Error: L6406E: No space in execution regions with .ANY selector matching main.o(i.Error_Handler).
+Error: L6406E: No space in execution regions with .ANY selector matching system_stm32f1xx.o(.data).
+Error: L6406E: No space in execution regions with .ANY selector matching cmsis_os2.o(.data).
+Error: L6406E: No space in execution regions with .ANY selector matching stm32f1xx_it.o(i.BusFault_Handler).
+Error: L6406E: No space in execution regions with .ANY selector matching stm32f1xx_it.o(i.DebugMon_Handler).
+Error: L6406E: No space in execution regions with .ANY selector matching stm32f1xx_it.o(i.HardFault_Handler).
+Error: L6406E: No space in execution regions with .ANY selector matching stm32f1xx_it.o(i.MemManage_Handler).
+Error: L6406E: No space in execution regions with .ANY selector matching stm32f1xx_it.o(i.NMI_Handler).
+Error: L6406E: No space in execution regions with .ANY selector matching stm32f1xx_it.o(i.UsageFault_Handler).
+Error: L6406E: No space in execution regions with .ANY selector matching system_stm32f1xx.o(i.SystemInit).
+Error: L6406E: No space in execution regions with .ANY selector matching stm32f1xx_hal_tim.o(i.HAL_TIM_IC_CaptureCallback).
+Error: L6406E: No space in execution regions with .ANY selector matching stm32f1xx_hal_tim.o(i.HAL_TIM_OC_DelayElapsedCallback).
+Error: L6406E: No space in execution regions with .ANY selector matching stm32f1xx_hal_tim.o(i.HAL_TIM_PWM_MspInit).
+Error: L6406E: No space in execution regions with .ANY selector matching stm32f1xx_hal_tim.o(i.HAL_TIM_PWM_PulseFinishedCallback).
+Error: L6406E: No space in execution regions with .ANY selector matching stm32f1xx_hal_tim.o(i.HAL_TIM_TriggerCallback).
+Error: L6406E: No space in execution regions with .ANY selector matching stm32f1xx_hal_tim_ex.o(i.HAL_TIMEx_BreakCallback).
+Error: L6406E: No space in execution regions with .ANY selector matching stm32f1xx_hal_tim_ex.o(i.HAL_TIMEx_CommutCallback).
+Error: L6406E: No space in execution regions with .ANY selector matching stm32f1xx_hal_uart.o(i.HAL_UARTEx_RxEventCallback).
+Error: L6406E: No space in execution regions with .ANY selector matching stm32f1xx_hal_uart.o(i.HAL_UART_ErrorCallback).
+Error: L6406E: No space in execution regions with .ANY selector matching stm32f1xx_hal_uart.o(i.HAL_UART_RxCpltCallback).
+Error: L6406E: No space in execution regions with .ANY selector matching stm32f1xx_hal_uart.o(i.HAL_UART_TxCpltCallback).
+Error: L6406E: No space in execution regions with .ANY selector matching libinit.o(.ARM.Collect$$libinit$$00000000).
+Error: L6406E: No space in execution regions with .ANY selector matching libshutdown.o(.ARM.Collect$$libshutdown$$00000000).
+Error: L6406E: No space in execution regions with .ANY selector matching use_no_semi.o(.text).
+Error: L6406E: No space in execution regions with .ANY selector matching indicate_semi.o(.text).
+Error: L6407E: Sections of aggregate size 0x7288 bytes could not fit into .ANY selector(s).
+Not enough information to list image symbols.
+Not enough information to list the image map.
+Finished: 2 information, 0 warning and 188 error messages.
+
+
+[2026-10-05 14:41:56]	link failed !, exit code: 1
+   at unify_builder.Program.Main(String[] args_)
+---
+Error: L6406E: No space in execution regions with .ANY selector matching heap_4.o(.bss).
+Error: L6406E: No space in execution regions with .ANY selector matching cmsis_os2.o(.bss).
+Error: L6406E: No space in execution regions with .ANY selector matching tasks.o(.bss).
+Error: L6406E: No space in execution regions with .ANY selector matching startup_stm32f103xb.o(STACK).
+Error: L6406E: No space in execution regions with .ANY selector matching stm32f1xx_hal_rcc.o(i.HAL_RCC_OscConfig).
+Error: L6406E: No space in execution regions with .ANY selector matching stm32f1xx_hal_uart.o(i.HAL_UART_IRQHandler).
+Error: L6406E: No space in execution regions with .ANY selector matching startup_stm32f103xb.o(HEAP).
+Error: L6406E: No space in execution regions with .ANY selector matching stm32f1xx_hal_gpio.o(i.HAL_GPIO_Init).
+Error: L6406E: No space in execution regions with .ANY selector matching stm32f1xx_hal_i2c.o(i.HAL_I2C_Init).
+Error: L6406E: No space in execution regions with .ANY selector matching queue.o(i.xQueueGenericSend).
+Error: L6406E: No space in execution regions with .ANY selector matching queue.o(i.xQueueReceive).
+Error: L6406E: No space in execution regions with .ANY selector matching stm32f1xx_hal_tim.o(i.HAL_TIM_IRQHandler).
+Error: L6406E: No space in execution regions with .ANY selector matching stm32f1xx_hal_rcc.o(i.HAL_RCC_ClockConfig).
+Error: L6406E: No space in execution regions with .ANY selector matching timers.o(.bss).
+Error: L6406E: No space in execution regions with .ANY selector matching timers.o(i.prvProcessReceivedCommands).
+Error: L6406E: No space in execution regions with .ANY selector matching stm32f1xx_hal_tim.o(i.HAL_TIM_ConfigClockSource).
+Error: L6406E: No space in execution regions with .ANY selector matching heap_4.o(i.pvPortMalloc).
+Error: L6406E: No space in execution regions with .ANY selector matching tasks.o(i.prvAddNewTaskToReadyList).
+Error: L6406E: No space in execution regions with .ANY selector matching stm32f1xx_hal_tim.o(i.HAL_TIM_PWM_ConfigChannel).
+Error: L6406E: No space in execution regions with .ANY selector matching tim.o(i.MX_TIM1_Init).
+Error: L6406E: No space in execution regions with .ANY selector matching tasks.o(i.xTaskIncrementTick).
+Error: L6406E: No space in execution regions with .ANY selector matching tasks.o(i.xTaskResumeAll).
+Error: L6406E: No space in execution regions with .ANY selector matching stm32f1xx_hal_uart.o(i.UART_Receive_IT).
+Error: L6406E: No space in execution regions with .ANY selector matching timers.o(i.prvProcessTimerOrBlockTask).
+Error: L6406E: No space in execution regions with .ANY selector matching queue.o(i.xQueueGenericSendFromISR).
+Error: L6406E: No space in execution regions with .ANY selector matching stm32f1xx_hal_uart.o(i.UART_SetConfig).
+Error: L6406E: No space in execution regions with .ANY selector matching tasks.o(i.prvInitialiseNewTask).
+Error: L6406E: No space in execution regions with .ANY selector matching port.o(i.xPortStartScheduler).
+Error: L6406E: No space in execution regions with .ANY selector matching stm32f1xx_hal_timebase_tim.o(i.HAL_InitTick).
+Error: L6406E: No space in execution regions with .ANY selector matching stm32f1xx_hal_dma.o(i.HAL_DMA_Abort_IT).
+Error: L6406E: No space in execution regions with .ANY selector matching port.o(.emb_text).
+Error: L6406E: No space in execution regions with .ANY selector matching cmsis_os2.o(i.osThreadNew).
+Error: L6406E: No space in execution regions with .ANY selector matching rt_memcpy_v6.o(.text).
+Error: L6406E: No space in execution regions with .ANY selector matching queue.o(i.xQueueGenericReset).
+Error: L6406E: No space in execution regions with .ANY selector matching tasks.o(i.vTaskStartScheduler).
+Error: L6406E: No space in execution regions with .ANY selector matching usart.o(i.HAL_UART_MspInit).
+Error: L6406E: No space in execution regions with .ANY selector matching tasks.o(i.xTaskPriorityDisinherit).
+Error: L6406E: No space in execution regions with .ANY selector matching stm32f1xx_hal_tim.o(i.TIM_Base_SetConfig).
+Error: L6406E: No space in execution regions with .ANY selector matching tasks.o(i.xTaskCheckForTimeOut).
+Error: L6406E: No space in execution regions with .ANY selector matching tasks.o(i.xTaskRemoveFromEventList).
+Error: L6406E: No space in execution regions with .ANY selector matching queue.o(i.prvCopyDataToQueue).
+Error: L6406E: No space in execution regions with .ANY selector matching timers.o(i.prvSwitchTimerLists).
+Error: L6406E: No space in execution regions with .ANY selector matching queue.o(i.prvUnlockQueue).
+Error: L6406E: No space in execution regions with .ANY selector matching stm32f1xx_hal_tim_ex.o(i.HAL_TIMEx_MasterConfigSynchronization).
+Error: L6406E: No space in execution regions with .ANY selector matching timers.o(i.xTimerGenericCommand).
+Error: L6406E: No space in execution regions with .ANY selector matching queue.o(i.xQueueGenericCreateStatic).
+Error: L6406E: No space in execution regions with .ANY selector matching stm32f1xx_hal_uart.o(i.HAL_UART_Init).
+Error: L6406E: No space in execution regions with .ANY selector matching heap_4.o(i.vPortFree).
+Error: L6406E: No space in execution regions with .ANY selector matching tasks.o(i.vTaskSwitchContext).
+Error: L6406E: No space in execution regions with .ANY selector matching rt_memcpy_w.o(.text).
+Error: L6406E: No space in execution regions with .ANY selector matching tasks.o(i.prvIdleTask).
+Error: L6406E: No space in execution regions with .ANY selector matching timers.o(i.xTimerCreateTimerTask).
+Error: L6406E: No space in execution regions with .ANY selector matching libspace.o(.bss).
+Error: L6406E: No space in execution regions with .ANY selector matching main.o(i.SystemClock_Config).
+Error: L6406E: No space in execution regions with .ANY selector matching i2c.o(i.HAL_I2C_MspInit).
+Error: L6406E: No space in execution regions with .ANY selector matching tasks.o(i.prvAddCurrentTaskToDelayedList).
+Error: L6406E: No space in execution regions with .ANY selector matching stm32f1xx_hal_tim.o(i.HAL_TIM_Base_Init).
+Error: L6406E: No space in execution regions with .ANY selector matching stm32f1xx_hal_tim.o(i.HAL_TIM_PWM_Init).
+Error: L6406E: No space in execution regions with .ANY selector matching tasks.o(i.xTaskCreate).
+Error: L6406E: No space in execution regions with .ANY selector matching stm32f1xx_hal_tim.o(i.HAL_TIM_Base_Start_IT).
+Error: L6406E: No space in execution regions with .ANY selector matching stm32f1xx_hal_tim.o(i.TIM_OC2_SetConfig).
+Error: L6406E: No space in execution regions with .ANY selector matching stm32f1xx_hal_tim.o(i.TIM_OC3_SetConfig).
+Error: L6406E: No space in execution regions with .ANY selector matching timers.o(i.prvCheckForValidListAndQueue).
+Error: L6406E: No space in execution regions with .ANY selector matching tasks.o(i.xTaskCreateStatic).
+Error: L6406E: No space in execution regions with .ANY selector matching i2c.o(.bss).
+Error: L6406E: No space in execution regions with .ANY selector matching stm32f1xx_hal_tim_ex.o(i.HAL_TIMEx_ConfigBreakDeadTime).
+Error: L6406E: No space in execution regions with .ANY selector matching port.o(i.vPortValidateInterruptPriority).
+Error: L6406E: No space in execution regions with .ANY selector matching stm32f1xx_hal_tim.o(i.TIM_OC1_SetConfig).
+Error: L6406E: No space in execution regions with .ANY selector matching stm32f1xx_hal_uart.o(i.UART_EndRxTransfer).
+Error: L6406E: No space in execution regions with .ANY selector matching rt_memclr_w.o(.text).
+Error: L6406E: No space in execution regions with .ANY selector matching tim.o(i.HAL_TIM_MspPostInit).
+Error: L6406E: No space in execution regions with .ANY selector matching stm32f1xx_hal_rcc.o(i.HAL_RCC_GetSysClockFreq).
+Error: L6406E: No space in execution regions with .ANY selector matching heap_4.o(i.prvHeapInit).
+Error: L6406E: No space in execution regions with .ANY selector matching heap_4.o(i.prvInsertBlockIntoFreeList).
+Error: L6406E: No space in execution regions with .ANY selector matching tasks.o(i.vTaskDelay).
+Error: L6406E: No space in execution regions with .ANY selector matching sys_stackheap_outer.o(.text).
+Error: L6406E: No space in execution regions with .ANY selector matching stm32f1xx_hal_msp.o(i.HAL_MspInit).
+Error: L6406E: No space in execution regions with .ANY selector matching stm32f1xx_hal_timebase_tim.o(.bss).
+Error: L6406E: No space in execution regions with .ANY selector matching tim.o(.bss).
+Error: L6406E: No space in execution regions with .ANY selector matching usart.o(.bss).
+Error: L6406E: No space in execution regions with .ANY selector matching stm32f1xx_hal_dma.o(i.HAL_DMA_Abort).
+Error: L6406E: No space in execution regions with .ANY selector matching stm32f1xx_hal_tim.o(i.TIM_OC4_SetConfig).
+Error: L6406E: No space in execution regions with .ANY selector matching queue.o(i.vQueueWaitForMessageRestricted).
+Error: L6406E: No space in execution regions with .ANY selector matching rt_memclr.o(.text).
+Error: L6406E: No space in execution regions with .ANY selector matching i2c.o(i.MX_I2C1_Init).
+Error: L6406E: No space in execution regions with .ANY selector matching stm32f1xx_hal_cortex.o(i.HAL_NVIC_SetPriority).
+Error: L6406E: No space in execution regions with .ANY selector matching stm32f1xx_hal_rcc.o(i.HAL_RCC_GetClockConfig).
+Error: L6406E: No space in execution regions with .ANY selector matching port.o(i.vPortEnterCritical).
+Error: L6406E: No space in execution regions with .ANY selector matching queue.o(.bss).
+Error: L6406E: No space in execution regions with .ANY selector matching startup_stm32f103xb.o(.text).
+Error: L6406E: No space in execution regions with .ANY selector matching gpio.o(i.MX_GPIO_Init).
+Error: L6406E: No space in execution regions with .ANY selector matching tasks.o(.data).
+Error: L6406E: No space in execution regions with .ANY selector matching usart.o(i.MX_USART1_UART_Init).
+Error: L6406E: No space in execution regions with .ANY selector matching cmsis_os2.o(i.osKernelStart).
+Error: L6406E: No space in execution regions with .ANY selector matching tasks.o(i.vTaskPlaceOnEventListRestricted).
+Error: L6406E: No space in execution regions with .ANY selector matching timers.o(i.prvInsertTimerInActiveList).
+Error: L6406E: No space in execution regions with .ANY selector matching tasks.o(i.prvDeleteTCB).
+Error: L6406E: No space in execution regions with .ANY selector matching list.o(i.vListInsert).
+Error: L6406E: No space in execution regions with .ANY selector matching tasks.o(i.vTaskPlaceOnEventList).
+Error: L6406E: No space in execution regions with .ANY selector matching port.o(i.xPortSysTickHandler).
+Error: L6406E: No space in execution regions with .ANY selector matching tim.o(i.HAL_TIM_Base_MspInit).
+Error: L6406E: No space in execution regions with .ANY selector matching port.o(i.prvTaskExitError).
+Error: L6406E: No space in execution regions with .ANY selector matching port.o(i.vPortExitCritical).
+Error: L6406E: No space in execution regions with .ANY selector matching queue.o(i.vQueueAddToRegistry).
+Error: L6406E: No space in execution regions with .ANY selector matching timers.o(i.prvSampleTimeNow).
+Error: L6406E: No space in execution regions with .ANY selector matching main.o(i.main).
+Error: L6406E: No space in execution regions with .ANY selector matching list.o(i.uxListRemove).
+Error: L6406E: No space in execution regions with .ANY selector matching queue.o(i.prvCopyDataFromQueue).
+Error: L6406E: No space in execution regions with .ANY selector matching freertos.o(.constdata).
+Error: L6406E: No space in execution regions with .ANY selector matching stm32f1xx_hal.o(i.HAL_Init).
+Error: L6406E: No space in execution regions with .ANY selector matching stm32f1xx_hal_cortex.o(i.HAL_NVIC_SetPriorityGrouping).
+Error: L6406E: No space in execution regions with .ANY selector matching stm32f1xx_hal_tim.o(i.TIM_TI2_ConfigInputStage).
+Error: L6406E: No space in execution regions with .ANY selector matching cmsis_os2.o(i.osKernelInitialize).
+Error: L6406E: No space in execution regions with .ANY selector matching port.o(i.pxPortInitialiseStack).
+Error: L6406E: No space in execution regions with .ANY selector matching port.o(i.vPortSetupTimerInterrupt).
+Error: L6406E: No space in execution regions with .ANY selector matching timers.o(i.prvTimerTask).
+Error: L6406E: No space in execution regions with .ANY selector matching stm32f1xx_hal_tim.o(i.TIM_TI1_ConfigInputStage).
+Error: L6406E: No space in execution regions with .ANY selector matching queue.o(i.prvInitialiseNewQueue).
+Error: L6406E: No space in execution regions with .ANY selector matching freertos.o(i.MX_FREERTOS_Init).
+Error: L6406E: No space in execution regions with .ANY selector matching stm32f1xx_hal_cortex.o(i.__NVIC_SetPriority).
+Error: L6406E: No space in execution regions with .ANY selector matching stm32f1xx_hal_rcc.o(i.HAL_RCC_GetPCLK1Freq).
+Error: L6406E: No space in execution regions with .ANY selector matching stm32f1xx_hal_rcc.o(i.HAL_RCC_GetPCLK2Freq).
+Error: L6406E: No space in execution regions with .ANY selector matching heap_4.o(.data).
+Error: L6406E: No space in execution regions with .ANY selector matching tasks.o(i.prvResetNextTaskUnblockTime).
+Error: L6406E: No space in execution regions with .ANY selector matching queue.o(i.prvIsQueueEmpty).
+Error: L6406E: No space in execution regions with .ANY selector matching tasks.o(i.xTaskGetSchedulerState).
+Error: L6406E: No space in execution regions with .ANY selector matching stm32f1xx_hal_cortex.o(i.HAL_NVIC_EnableIRQ).
+Error: L6406E: No space in execution regions with .ANY selector matching cmsis_os2.o(i.SysTick_Handler).
+Error: L6406E: No space in execution regions with .ANY selector matching cmsis_os2.o(i.osDelay).
+Error: L6406E: No space in execution regions with .ANY selector matching cmsis_os2.o(i.vApplicationGetTimerTaskMemory).
+Error: L6406E: No space in execution regions with .ANY selector matching list.o(i.vListInsertEnd).
+Error: L6406E: No space in execution regions with .ANY selector matching list.o(i.vListInitialise).
+Error: L6406E: No space in execution regions with .ANY selector matching stm32f1xx_hal_tim.o(i.TIM_ETR_SetConfig).
+Error: L6406E: No space in execution regions with .ANY selector matching cmsis_os2.o(i.vApplicationGetIdleTaskMemory).
+Error: L6406E: No space in execution regions with .ANY selector matching timers.o(.data).
+Error: L6406E: No space in execution regions with .ANY selector matching stm32f1xx_hal_rcc.o(.constdata).
+Error: L6406E: No space in execution regions with .ANY selector matching exit.o(.text).
+Error: L6406E: No space in execution regions with .ANY selector matching system_stm32f1xx.o(.constdata).
+Error: L6406E: No space in execution regions with .ANY selector matching stm32f1xx_hal.o(i.HAL_IncTick).
+Error: L6406E: No space in execution regions with .ANY selector matching stm32f1xx_hal_tim.o(i.TIM_ITRx_SetConfig).
+Error: L6406E: No space in execution regions with .ANY selector matching stm32f1xx_hal_uart.o(i.UART_DMAAbortOnError).
+Error: L6406E: No space in execution regions with .ANY selector matching tasks.o(i.vTaskInternalSetTimeOutState).
+Error: L6406E: No space in execution regions with .ANY selector matching tasks.o(i.vTaskSuspendAll).
+Error: L6406E: No space in execution regions with .ANY selector matching aeabi_memset.o(.text).
+Error: L6406E: No space in execution regions with .ANY selector matching main.o(i.HAL_TIM_PeriodElapsedCallback).
+Error: L6406E: No space in execution regions with .ANY selector matching freertos.o(.conststring).
+Error: L6406E: No space in execution regions with .ANY selector matching stm32f1xx_it.o(i.TIM2_IRQHandler).
+Error: L6406E: No space in execution regions with .ANY selector matching stm32f1xx_it.o(i.USART1_IRQHandler).
+Error: L6406E: No space in execution regions with .ANY selector matching stm32f1xx_hal.o(i.HAL_GetTick).
+Error: L6406E: No space in execution regions with .ANY selector matching stm32f1xx_hal.o(.data).
+Error: L6406E: No space in execution regions with .ANY selector matching port.o(.data).
+Error: L6406E: No space in execution regions with .ANY selector matching tasks.o(i.vTaskMissedYield).
+Error: L6406E: No space in execution regions with .ANY selector matching tasks.o(i.xTaskGetTickCount).
+Error: L6406E: No space in execution regions with .ANY selector matching sys_exit.o(.text).
+Error: L6406E: No space in execution regions with .ANY selector matching freertos.o(i.StartDefaultTask).
+Error: L6406E: No space in execution regions with .ANY selector matching system_stm32f1xx.o(.constdata).
+Error: L6406E: No space in execution regions with .ANY selector matching __rtentry2.o(.ARM.Collect$$rtentry$$0000000D).
+Error: L6406E: No space in execution regions with .ANY selector matching libspace.o(.text).
+Error: L6406E: No space in execution regions with .ANY selector matching list.o(i.vListInitialiseItem).
+Error: L6406E: No space in execution regions with .ANY selector matching heapauxi.o(.text).
+Error: L6406E: No space in execution regions with .ANY selector matching rtexit2.o(.ARM.Collect$$rtexit$$00000004).
+Error: L6406E: No space in execution regions with .ANY selector matching freertos.o(.data).
+Error: L6406E: No space in execution regions with .ANY selector matching main.o(i.Error_Handler).
+Error: L6406E: No space in execution regions with .ANY selector matching system_stm32f1xx.o(.data).
+Error: L6406E: No space in execution regions with .ANY selector matching cmsis_os2.o(.data).
+Error: L6406E: No space in execution regions with .ANY selector matching stm32f1xx_it.o(i.BusFault_Handler).
+Error: L6406E: No space in execution regions with .ANY selector matching stm32f1xx_it.o(i.DebugMon_Handler).
+Error: L6406E: No space in execution regions with .ANY selector matching stm32f1xx_it.o(i.HardFault_Handler).
+Error: L6406E: No space in execution regions with .ANY selector matching stm32f1xx_it.o(i.MemManage_Handler).
+Error: L6406E: No space in execution regions with .ANY selector matching stm32f1xx_it.o(i.NMI_Handler).
+Error: L6406E: No space in execution regions with .ANY selector matching stm32f1xx_it.o(i.UsageFault_Handler).
+Error: L6406E: No space in execution regions with .ANY selector matching system_stm32f1xx.o(i.SystemInit).
+Error: L6406E: No space in execution regions with .ANY selector matching stm32f1xx_hal_tim.o(i.HAL_TIM_IC_CaptureCallback).
+Error: L6406E: No space in execution regions with .ANY selector matching stm32f1xx_hal_tim.o(i.HAL_TIM_OC_DelayElapsedCallback).
+Error: L6406E: No space in execution regions with .ANY selector matching stm32f1xx_hal_tim.o(i.HAL_TIM_PWM_MspInit).
+Error: L6406E: No space in execution regions with .ANY selector matching stm32f1xx_hal_tim.o(i.HAL_TIM_PWM_PulseFinishedCallback).
+Error: L6406E: No space in execution regions with .ANY selector matching stm32f1xx_hal_tim.o(i.HAL_TIM_TriggerCallback).
+Error: L6406E: No space in execution regions with .ANY selector matching stm32f1xx_hal_tim_ex.o(i.HAL_TIMEx_BreakCallback).
+Error: L6406E: No space in execution regions with .ANY selector matching stm32f1xx_hal_tim_ex.o(i.HAL_TIMEx_CommutCallback).
+Error: L6406E: No space in execution regions with .ANY selector matching stm32f1xx_hal_uart.o(i.HAL_UARTEx_RxEventCallback).
+Error: L6406E: No space in execution regions with .ANY selector matching stm32f1xx_hal_uart.o(i.HAL_UART_ErrorCallback).
+Error: L6406E: No space in execution regions with .ANY selector matching stm32f1xx_hal_uart.o(i.HAL_UART_RxCpltCallback).
+Error: L6406E: No space in execution regions with .ANY selector matching stm32f1xx_hal_uart.o(i.HAL_UART_TxCpltCallback).
+Error: L6406E: No space in execution regions with .ANY selector matching libinit.o(.ARM.Collect$$libinit$$00000000).
+Error: L6406E: No space in execution regions with .ANY selector matching libshutdown.o(.ARM.Collect$$libshutdown$$00000000).
+Error: L6406E: No space in execution regions with .ANY selector matching use_no_semi.o(.text).
+Error: L6406E: No space in execution regions with .ANY selector matching indicate_semi.o(.text).
+Error: L6407E: Sections of aggregate size 0x7288 bytes could not fit into .ANY selector(s).
+Not enough information to list image symbols.
+Not enough information to list the image map.
+Finished: 2 information, 0 warning and 188 error messages.
+
+
+[2026-10-05 14:42:14]	link failed !, exit code: 1
+   at unify_builder.Program.Main(String[] args_)
+---
+Error: L6406E: No space in execution regions with .ANY selector matching heap_4.o(.bss).
+Error: L6406E: No space in execution regions with .ANY selector matching cmsis_os2.o(.bss).
+Error: L6406E: No space in execution regions with .ANY selector matching tasks.o(.bss).
+Error: L6406E: No space in execution regions with .ANY selector matching startup_stm32f103xb.o(STACK).
+Error: L6406E: No space in execution regions with .ANY selector matching stm32f1xx_hal_rcc.o(i.HAL_RCC_OscConfig).
+Error: L6406E: No space in execution regions with .ANY selector matching stm32f1xx_hal_uart.o(i.HAL_UART_IRQHandler).
+Error: L6406E: No space in execution regions with .ANY selector matching startup_stm32f103xb.o(HEAP).
+Error: L6406E: No space in execution regions with .ANY selector matching stm32f1xx_hal_gpio.o(i.HAL_GPIO_Init).
+Error: L6406E: No space in execution regions with .ANY selector matching stm32f1xx_hal_i2c.o(i.HAL_I2C_Init).
+Error: L6406E: No space in execution regions with .ANY selector matching queue.o(i.xQueueGenericSend).
+Error: L6406E: No space in execution regions with .ANY selector matching queue.o(i.xQueueReceive).
+Error: L6406E: No space in execution regions with .ANY selector matching stm32f1xx_hal_tim.o(i.HAL_TIM_IRQHandler).
+Error: L6406E: No space in execution regions with .ANY selector matching stm32f1xx_hal_rcc.o(i.HAL_RCC_ClockConfig).
+Error: L6406E: No space in execution regions with .ANY selector matching timers.o(.bss).
+Error: L6406E: No space in execution regions with .ANY selector matching timers.o(i.prvProcessReceivedCommands).
+Error: L6406E: No space in execution regions with .ANY selector matching stm32f1xx_hal_tim.o(i.HAL_TIM_ConfigClockSource).
+Error: L6406E: No space in execution regions with .ANY selector matching heap_4.o(i.pvPortMalloc).
+Error: L6406E: No space in execution regions with .ANY selector matching tasks.o(i.prvAddNewTaskToReadyList).
+Error: L6406E: No space in execution regions with .ANY selector matching stm32f1xx_hal_tim.o(i.HAL_TIM_PWM_ConfigChannel).
+Error: L6406E: No space in execution regions with .ANY selector matching tim.o(i.MX_TIM1_Init).
+Error: L6406E: No space in execution regions with .ANY selector matching tasks.o(i.xTaskIncrementTick).
+Error: L6406E: No space in execution regions with .ANY selector matching tasks.o(i.xTaskResumeAll).
+Error: L6406E: No space in execution regions with .ANY selector matching stm32f1xx_hal_uart.o(i.UART_Receive_IT).
+Error: L6406E: No space in execution regions with .ANY selector matching timers.o(i.prvProcessTimerOrBlockTask).
+Error: L6406E: No space in execution regions with .ANY selector matching queue.o(i.xQueueGenericSendFromISR).
+Error: L6406E: No space in execution regions with .ANY selector matching stm32f1xx_hal_uart.o(i.UART_SetConfig).
+Error: L6406E: No space in execution regions with .ANY selector matching tasks.o(i.prvInitialiseNewTask).
+Error: L6406E: No space in execution regions with .ANY selector matching port.o(i.xPortStartScheduler).
+Error: L6406E: No space in execution regions with .ANY selector matching stm32f1xx_hal_timebase_tim.o(i.HAL_InitTick).
+Error: L6406E: No space in execution regions with .ANY selector matching stm32f1xx_hal_dma.o(i.HAL_DMA_Abort_IT).
+Error: L6406E: No space in execution regions with .ANY selector matching port.o(.emb_text).
+Error: L6406E: No space in execution regions with .ANY selector matching cmsis_os2.o(i.osThreadNew).
+Error: L6406E: No space in execution regions with .ANY selector matching rt_memcpy_v6.o(.text).
+Error: L6406E: No space in execution regions with .ANY selector matching queue.o(i.xQueueGenericReset).
+Error: L6406E: No space in execution regions with .ANY selector matching tasks.o(i.vTaskStartScheduler).
+Error: L6406E: No space in execution regions with .ANY selector matching usart.o(i.HAL_UART_MspInit).
+Error: L6406E: No space in execution regions with .ANY selector matching tasks.o(i.xTaskPriorityDisinherit).
+Error: L6406E: No space in execution regions with .ANY selector matching stm32f1xx_hal_tim.o(i.TIM_Base_SetConfig).
+Error: L6406E: No space in execution regions with .ANY selector matching tasks.o(i.xTaskCheckForTimeOut).
+Error: L6406E: No space in execution regions with .ANY selector matching tasks.o(i.xTaskRemoveFromEventList).
+Error: L6406E: No space in execution regions with .ANY selector matching queue.o(i.prvCopyDataToQueue).
+Error: L6406E: No space in execution regions with .ANY selector matching timers.o(i.prvSwitchTimerLists).
+Error: L6406E: No space in execution regions with .ANY selector matching queue.o(i.prvUnlockQueue).
+Error: L6406E: No space in execution regions with .ANY selector matching stm32f1xx_hal_tim_ex.o(i.HAL_TIMEx_MasterConfigSynchronization).
+Error: L6406E: No space in execution regions with .ANY selector matching timers.o(i.xTimerGenericCommand).
+Error: L6406E: No space in execution regions with .ANY selector matching queue.o(i.xQueueGenericCreateStatic).
+Error: L6406E: No space in execution regions with .ANY selector matching stm32f1xx_hal_uart.o(i.HAL_UART_Init).
+Error: L6406E: No space in execution regions with .ANY selector matching heap_4.o(i.vPortFree).
+Error: L6406E: No space in execution regions with .ANY selector matching tasks.o(i.vTaskSwitchContext).
+Error: L6406E: No space in execution regions with .ANY selector matching rt_memcpy_w.o(.text).
+Error: L6406E: No space in execution regions with .ANY selector matching tasks.o(i.prvIdleTask).
+Error: L6406E: No space in execution regions with .ANY selector matching timers.o(i.xTimerCreateTimerTask).
+Error: L6406E: No space in execution regions with .ANY selector matching libspace.o(.bss).
+Error: L6406E: No space in execution regions with .ANY selector matching main.o(i.SystemClock_Config).
+Error: L6406E: No space in execution regions with .ANY selector matching i2c.o(i.HAL_I2C_MspInit).
+Error: L6406E: No space in execution regions with .ANY selector matching tasks.o(i.prvAddCurrentTaskToDelayedList).
+Error: L6406E: No space in execution regions with .ANY selector matching stm32f1xx_hal_tim.o(i.HAL_TIM_Base_Init).
+Error: L6406E: No space in execution regions with .ANY selector matching stm32f1xx_hal_tim.o(i.HAL_TIM_PWM_Init).
+Error: L6406E: No space in execution regions with .ANY selector matching tasks.o(i.xTaskCreate).
+Error: L6406E: No space in execution regions with .ANY selector matching stm32f1xx_hal_tim.o(i.HAL_TIM_Base_Start_IT).
+Error: L6406E: No space in execution regions with .ANY selector matching stm32f1xx_hal_tim.o(i.TIM_OC2_SetConfig).
+Error: L6406E: No space in execution regions with .ANY selector matching stm32f1xx_hal_tim.o(i.TIM_OC3_SetConfig).
+Error: L6406E: No space in execution regions with .ANY selector matching timers.o(i.prvCheckForValidListAndQueue).
+Error: L6406E: No space in execution regions with .ANY selector matching tasks.o(i.xTaskCreateStatic).
+Error: L6406E: No space in execution regions with .ANY selector matching i2c.o(.bss).
+Error: L6406E: No space in execution regions with .ANY selector matching stm32f1xx_hal_tim_ex.o(i.HAL_TIMEx_ConfigBreakDeadTime).
+Error: L6406E: No space in execution regions with .ANY selector matching port.o(i.vPortValidateInterruptPriority).
+Error: L6406E: No space in execution regions with .ANY selector matching stm32f1xx_hal_tim.o(i.TIM_OC1_SetConfig).
+Error: L6406E: No space in execution regions with .ANY selector matching stm32f1xx_hal_uart.o(i.UART_EndRxTransfer).
+Error: L6406E: No space in execution regions with .ANY selector matching rt_memclr_w.o(.text).
+Error: L6406E: No space in execution regions with .ANY selector matching tim.o(i.HAL_TIM_MspPostInit).
+Error: L6406E: No space in execution regions with .ANY selector matching stm32f1xx_hal_rcc.o(i.HAL_RCC_GetSysClockFreq).
+Error: L6406E: No space in execution regions with .ANY selector matching heap_4.o(i.prvHeapInit).
+Error: L6406E: No space in execution regions with .ANY selector matching heap_4.o(i.prvInsertBlockIntoFreeList).
+Error: L6406E: No space in execution regions with .ANY selector matching tasks.o(i.vTaskDelay).
+Error: L6406E: No space in execution regions with .ANY selector matching sys_stackheap_outer.o(.text).
+Error: L6406E: No space in execution regions with .ANY selector matching stm32f1xx_hal_msp.o(i.HAL_MspInit).
+Error: L6406E: No space in execution regions with .ANY selector matching stm32f1xx_hal_timebase_tim.o(.bss).
+Error: L6406E: No space in execution regions with .ANY selector matching tim.o(.bss).
+Error: L6406E: No space in execution regions with .ANY selector matching usart.o(.bss).
+Error: L6406E: No space in execution regions with .ANY selector matching stm32f1xx_hal_dma.o(i.HAL_DMA_Abort).
+Error: L6406E: No space in execution regions with .ANY selector matching stm32f1xx_hal_tim.o(i.TIM_OC4_SetConfig).
+Error: L6406E: No space in execution regions with .ANY selector matching queue.o(i.vQueueWaitForMessageRestricted).
+Error: L6406E: No space in execution regions with .ANY selector matching rt_memclr.o(.text).
+Error: L6406E: No space in execution regions with .ANY selector matching i2c.o(i.MX_I2C1_Init).
+Error: L6406E: No space in execution regions with .ANY selector matching stm32f1xx_hal_cortex.o(i.HAL_NVIC_SetPriority).
+Error: L6406E: No space in execution regions with .ANY selector matching stm32f1xx_hal_rcc.o(i.HAL_RCC_GetClockConfig).
+Error: L6406E: No space in execution regions with .ANY selector matching port.o(i.vPortEnterCritical).
+Error: L6406E: No space in execution regions with .ANY selector matching queue.o(.bss).
+Error: L6406E: No space in execution regions with .ANY selector matching startup_stm32f103xb.o(.text).
+Error: L6406E: No space in execution regions with .ANY selector matching gpio.o(i.MX_GPIO_Init).
+Error: L6406E: No space in execution regions with .ANY selector matching tasks.o(.data).
+Error: L6406E: No space in execution regions with .ANY selector matching usart.o(i.MX_USART1_UART_Init).
+Error: L6406E: No space in execution regions with .ANY selector matching cmsis_os2.o(i.osKernelStart).
+Error: L6406E: No space in execution regions with .ANY selector matching tasks.o(i.vTaskPlaceOnEventListRestricted).
+Error: L6406E: No space in execution regions with .ANY selector matching timers.o(i.prvInsertTimerInActiveList).
+Error: L6406E: No space in execution regions with .ANY selector matching tasks.o(i.prvDeleteTCB).
+Error: L6406E: No space in execution regions with .ANY selector matching list.o(i.vListInsert).
+Error: L6406E: No space in execution regions with .ANY selector matching tasks.o(i.vTaskPlaceOnEventList).
+Error: L6406E: No space in execution regions with .ANY selector matching port.o(i.xPortSysTickHandler).
+Error: L6406E: No space in execution regions with .ANY selector matching tim.o(i.HAL_TIM_Base_MspInit).
+Error: L6406E: No space in execution regions with .ANY selector matching port.o(i.prvTaskExitError).
+Error: L6406E: No space in execution regions with .ANY selector matching port.o(i.vPortExitCritical).
+Error: L6406E: No space in execution regions with .ANY selector matching queue.o(i.vQueueAddToRegistry).
+Error: L6406E: No space in execution regions with .ANY selector matching timers.o(i.prvSampleTimeNow).
+Error: L6406E: No space in execution regions with .ANY selector matching main.o(i.main).
+Error: L6406E: No space in execution regions with .ANY selector matching list.o(i.uxListRemove).
+Error: L6406E: No space in execution regions with .ANY selector matching queue.o(i.prvCopyDataFromQueue).
+Error: L6406E: No space in execution regions with .ANY selector matching freertos.o(.constdata).
+Error: L6406E: No space in execution regions with .ANY selector matching stm32f1xx_hal.o(i.HAL_Init).
+Error: L6406E: No space in execution regions with .ANY selector matching stm32f1xx_hal_cortex.o(i.HAL_NVIC_SetPriorityGrouping).
+Error: L6406E: No space in execution regions with .ANY selector matching stm32f1xx_hal_tim.o(i.TIM_TI2_ConfigInputStage).
+Error: L6406E: No space in execution regions with .ANY selector matching cmsis_os2.o(i.osKernelInitialize).
+Error: L6406E: No space in execution regions with .ANY selector matching port.o(i.pxPortInitialiseStack).
+Error: L6406E: No space in execution regions with .ANY selector matching port.o(i.vPortSetupTimerInterrupt).
+Error: L6406E: No space in execution regions with .ANY selector matching timers.o(i.prvTimerTask).
+Error: L6406E: No space in execution regions with .ANY selector matching stm32f1xx_hal_tim.o(i.TIM_TI1_ConfigInputStage).
+Error: L6406E: No space in execution regions with .ANY selector matching queue.o(i.prvInitialiseNewQueue).
+Error: L6406E: No space in execution regions with .ANY selector matching freertos.o(i.MX_FREERTOS_Init).
+Error: L6406E: No space in execution regions with .ANY selector matching stm32f1xx_hal_cortex.o(i.__NVIC_SetPriority).
+Error: L6406E: No space in execution regions with .ANY selector matching stm32f1xx_hal_rcc.o(i.HAL_RCC_GetPCLK1Freq).
+Error: L6406E: No space in execution regions with .ANY selector matching stm32f1xx_hal_rcc.o(i.HAL_RCC_GetPCLK2Freq).
+Error: L6406E: No space in execution regions with .ANY selector matching heap_4.o(.data).
+Error: L6406E: No space in execution regions with .ANY selector matching tasks.o(i.prvResetNextTaskUnblockTime).
+Error: L6406E: No space in execution regions with .ANY selector matching queue.o(i.prvIsQueueEmpty).
+Error: L6406E: No space in execution regions with .ANY selector matching tasks.o(i.xTaskGetSchedulerState).
+Error: L6406E: No space in execution regions with .ANY selector matching stm32f1xx_hal_cortex.o(i.HAL_NVIC_EnableIRQ).
+Error: L6406E: No space in execution regions with .ANY selector matching cmsis_os2.o(i.SysTick_Handler).
+Error: L6406E: No space in execution regions with .ANY selector matching cmsis_os2.o(i.osDelay).
+Error: L6406E: No space in execution regions with .ANY selector matching cmsis_os2.o(i.vApplicationGetTimerTaskMemory).
+Error: L6406E: No space in execution regions with .ANY selector matching list.o(i.vListInsertEnd).
+Error: L6406E: No space in execution regions with .ANY selector matching list.o(i.vListInitialise).
+Error: L6406E: No space in execution regions with .ANY selector matching stm32f1xx_hal_tim.o(i.TIM_ETR_SetConfig).
+Error: L6406E: No space in execution regions with .ANY selector matching cmsis_os2.o(i.vApplicationGetIdleTaskMemory).
+Error: L6406E: No space in execution regions with .ANY selector matching timers.o(.data).
+Error: L6406E: No space in execution regions with .ANY selector matching stm32f1xx_hal_rcc.o(.constdata).
+Error: L6406E: No space in execution regions with .ANY selector matching exit.o(.text).
+Error: L6406E: No space in execution regions with .ANY selector matching system_stm32f1xx.o(.constdata).
+Error: L6406E: No space in execution regions with .ANY selector matching stm32f1xx_hal.o(i.HAL_IncTick).
+Error: L6406E: No space in execution regions with .ANY selector matching stm32f1xx_hal_tim.o(i.TIM_ITRx_SetConfig).
+Error: L6406E: No space in execution regions with .ANY selector matching stm32f1xx_hal_uart.o(i.UART_DMAAbortOnError).
+Error: L6406E: No space in execution regions with .ANY selector matching tasks.o(i.vTaskInternalSetTimeOutState).
+Error: L6406E: No space in execution regions with .ANY selector matching tasks.o(i.vTaskSuspendAll).
+Error: L6406E: No space in execution regions with .ANY selector matching aeabi_memset.o(.text).
+Error: L6406E: No space in execution regions with .ANY selector matching main.o(i.HAL_TIM_PeriodElapsedCallback).
+Error: L6406E: No space in execution regions with .ANY selector matching freertos.o(.conststring).
+Error: L6406E: No space in execution regions with .ANY selector matching stm32f1xx_it.o(i.TIM2_IRQHandler).
+Error: L6406E: No space in execution regions with .ANY selector matching stm32f1xx_it.o(i.USART1_IRQHandler).
+Error: L6406E: No space in execution regions with .ANY selector matching stm32f1xx_hal.o(i.HAL_GetTick).
+Error: L6406E: No space in execution regions with .ANY selector matching stm32f1xx_hal.o(.data).
+Error: L6406E: No space in execution regions with .ANY selector matching port.o(.data).
+Error: L6406E: No space in execution regions with .ANY selector matching tasks.o(i.vTaskMissedYield).
+Error: L6406E: No space in execution regions with .ANY selector matching tasks.o(i.xTaskGetTickCount).
+Error: L6406E: No space in execution regions with .ANY selector matching sys_exit.o(.text).
+Error: L6406E: No space in execution regions with .ANY selector matching freertos.o(i.StartDefaultTask).
+Error: L6406E: No space in execution regions with .ANY selector matching system_stm32f1xx.o(.constdata).
+Error: L6406E: No space in execution regions with .ANY selector matching __rtentry2.o(.ARM.Collect$$rtentry$$0000000D).
+Error: L6406E: No space in execution regions with .ANY selector matching libspace.o(.text).
+Error: L6406E: No space in execution regions with .ANY selector matching list.o(i.vListInitialiseItem).
+Error: L6406E: No space in execution regions with .ANY selector matching heapauxi.o(.text).
+Error: L6406E: No space in execution regions with .ANY selector matching rtexit2.o(.ARM.Collect$$rtexit$$00000004).
+Error: L6406E: No space in execution regions with .ANY selector matching freertos.o(.data).
+Error: L6406E: No space in execution regions with .ANY selector matching main.o(i.Error_Handler).
+Error: L6406E: No space in execution regions with .ANY selector matching system_stm32f1xx.o(.data).
+Error: L6406E: No space in execution regions with .ANY selector matching cmsis_os2.o(.data).
+Error: L6406E: No space in execution regions with .ANY selector matching stm32f1xx_it.o(i.BusFault_Handler).
+Error: L6406E: No space in execution regions with .ANY selector matching stm32f1xx_it.o(i.DebugMon_Handler).
+Error: L6406E: No space in execution regions with .ANY selector matching stm32f1xx_it.o(i.HardFault_Handler).
+Error: L6406E: No space in execution regions with .ANY selector matching stm32f1xx_it.o(i.MemManage_Handler).
+Error: L6406E: No space in execution regions with .ANY selector matching stm32f1xx_it.o(i.NMI_Handler).
+Error: L6406E: No space in execution regions with .ANY selector matching stm32f1xx_it.o(i.UsageFault_Handler).
+Error: L6406E: No space in execution regions with .ANY selector matching system_stm32f1xx.o(i.SystemInit).
+Error: L6406E: No space in execution regions with .ANY selector matching stm32f1xx_hal_tim.o(i.HAL_TIM_IC_CaptureCallback).
+Error: L6406E: No space in execution regions with .ANY selector matching stm32f1xx_hal_tim.o(i.HAL_TIM_OC_DelayElapsedCallback).
+Error: L6406E: No space in execution regions with .ANY selector matching stm32f1xx_hal_tim.o(i.HAL_TIM_PWM_MspInit).
+Error: L6406E: No space in execution regions with .ANY selector matching stm32f1xx_hal_tim.o(i.HAL_TIM_PWM_PulseFinishedCallback).
+Error: L6406E: No space in execution regions with .ANY selector matching stm32f1xx_hal_tim.o(i.HAL_TIM_TriggerCallback).
+Error: L6406E: No space in execution regions with .ANY selector matching stm32f1xx_hal_tim_ex.o(i.HAL_TIMEx_BreakCallback).
+Error: L6406E: No space in execution regions with .ANY selector matching stm32f1xx_hal_tim_ex.o(i.HAL_TIMEx_CommutCallback).
+Error: L6406E: No space in execution regions with .ANY selector matching stm32f1xx_hal_uart.o(i.HAL_UARTEx_RxEventCallback).
+Error: L6406E: No space in execution regions with .ANY selector matching stm32f1xx_hal_uart.o(i.HAL_UART_ErrorCallback).
+Error: L6406E: No space in execution regions with .ANY selector matching stm32f1xx_hal_uart.o(i.HAL_UART_RxCpltCallback).
+Error: L6406E: No space in execution regions with .ANY selector matching stm32f1xx_hal_uart.o(i.HAL_UART_TxCpltCallback).
+Error: L6406E: No space in execution regions with .ANY selector matching libinit.o(.ARM.Collect$$libinit$$00000000).
+Error: L6406E: No space in execution regions with .ANY selector matching libshutdown.o(.ARM.Collect$$libshutdown$$00000000).
+Error: L6406E: No space in execution regions with .ANY selector matching use_no_semi.o(.text).
+Error: L6406E: No space in execution regions with .ANY selector matching indicate_semi.o(.text).
+Error: L6407E: Sections of aggregate size 0x7288 bytes could not fit into .ANY selector(s).
+Not enough information to list image symbols.
+Not enough information to list the image map.
+Finished: 2 information, 0 warning and 188 error messages.
+
+
+[2026-10-05 14:43:40]	link failed !, exit code: 1
+   at unify_builder.Program.Main(String[] args_)
+---
+Error: L6406E: No space in execution regions with .ANY selector matching heap_4.o(.bss).
+Error: L6406E: No space in execution regions with .ANY selector matching cmsis_os2.o(.bss).
+Error: L6406E: No space in execution regions with .ANY selector matching tasks.o(.bss).
+Error: L6406E: No space in execution regions with .ANY selector matching startup_stm32f103xb.o(STACK).
+Error: L6406E: No space in execution regions with .ANY selector matching stm32f1xx_hal_rcc.o(i.HAL_RCC_OscConfig).
+Error: L6406E: No space in execution regions with .ANY selector matching stm32f1xx_hal_uart.o(i.HAL_UART_IRQHandler).
+Error: L6406E: No space in execution regions with .ANY selector matching startup_stm32f103xb.o(HEAP).
+Error: L6406E: No space in execution regions with .ANY selector matching stm32f1xx_hal_gpio.o(i.HAL_GPIO_Init).
+Error: L6406E: No space in execution regions with .ANY selector matching stm32f1xx_hal_i2c.o(i.HAL_I2C_Init).
+Error: L6406E: No space in execution regions with .ANY selector matching queue.o(i.xQueueGenericSend).
+Error: L6406E: No space in execution regions with .ANY selector matching queue.o(i.xQueueReceive).
+Error: L6406E: No space in execution regions with .ANY selector matching stm32f1xx_hal_tim.o(i.HAL_TIM_IRQHandler).
+Error: L6406E: No space in execution regions with .ANY selector matching stm32f1xx_hal_rcc.o(i.HAL_RCC_ClockConfig).
+Error: L6406E: No space in execution regions with .ANY selector matching timers.o(.bss).
+Error: L6406E: No space in execution regions with .ANY selector matching timers.o(i.prvProcessReceivedCommands).
+Error: L6406E: No space in execution regions with .ANY selector matching stm32f1xx_hal_tim.o(i.HAL_TIM_ConfigClockSource).
+Error: L6406E: No space in execution regions with .ANY selector matching heap_4.o(i.pvPortMalloc).
+Error: L6406E: No space in execution regions with .ANY selector matching tasks.o(i.prvAddNewTaskToReadyList).
+Error: L6406E: No space in execution regions with .ANY selector matching stm32f1xx_hal_tim.o(i.HAL_TIM_PWM_ConfigChannel).
+Error: L6406E: No space in execution regions with .ANY selector matching tim.o(i.MX_TIM1_Init).
+Error: L6406E: No space in execution regions with .ANY selector matching tasks.o(i.xTaskIncrementTick).
+Error: L6406E: No space in execution regions with .ANY selector matching tasks.o(i.xTaskResumeAll).
+Error: L6406E: No space in execution regions with .ANY selector matching stm32f1xx_hal_uart.o(i.UART_Receive_IT).
+Error: L6406E: No space in execution regions with .ANY selector matching timers.o(i.prvProcessTimerOrBlockTask).
+Error: L6406E: No space in execution regions with .ANY selector matching queue.o(i.xQueueGenericSendFromISR).
+Error: L6406E: No space in execution regions with .ANY selector matching stm32f1xx_hal_uart.o(i.UART_SetConfig).
+Error: L6406E: No space in execution regions with .ANY selector matching tasks.o(i.prvInitialiseNewTask).
+Error: L6406E: No space in execution regions with .ANY selector matching port.o(i.xPortStartScheduler).
+Error: L6406E: No space in execution regions with .ANY selector matching stm32f1xx_hal_timebase_tim.o(i.HAL_InitTick).
+Error: L6406E: No space in execution regions with .ANY selector matching stm32f1xx_hal_dma.o(i.HAL_DMA_Abort_IT).
+Error: L6406E: No space in execution regions with .ANY selector matching port.o(.emb_text).
+Error: L6406E: No space in execution regions with .ANY selector matching cmsis_os2.o(i.osThreadNew).
+Error: L6406E: No space in execution regions with .ANY selector matching rt_memcpy_v6.o(.text).
+Error: L6406E: No space in execution regions with .ANY selector matching queue.o(i.xQueueGenericReset).
+Error: L6406E: No space in execution regions with .ANY selector matching tasks.o(i.vTaskStartScheduler).
+Error: L6406E: No space in execution regions with .ANY selector matching usart.o(i.HAL_UART_MspInit).
+Error: L6406E: No space in execution regions with .ANY selector matching tasks.o(i.xTaskPriorityDisinherit).
+Error: L6406E: No space in execution regions with .ANY selector matching stm32f1xx_hal_tim.o(i.TIM_Base_SetConfig).
+Error: L6406E: No space in execution regions with .ANY selector matching tasks.o(i.xTaskCheckForTimeOut).
+Error: L6406E: No space in execution regions with .ANY selector matching tasks.o(i.xTaskRemoveFromEventList).
+Error: L6406E: No space in execution regions with .ANY selector matching queue.o(i.prvCopyDataToQueue).
+Error: L6406E: No space in execution regions with .ANY selector matching timers.o(i.prvSwitchTimerLists).
+Error: L6406E: No space in execution regions with .ANY selector matching queue.o(i.prvUnlockQueue).
+Error: L6406E: No space in execution regions with .ANY selector matching stm32f1xx_hal_tim_ex.o(i.HAL_TIMEx_MasterConfigSynchronization).
+Error: L6406E: No space in execution regions with .ANY selector matching timers.o(i.xTimerGenericCommand).
+Error: L6406E: No space in execution regions with .ANY selector matching queue.o(i.xQueueGenericCreateStatic).
+Error: L6406E: No space in execution regions with .ANY selector matching stm32f1xx_hal_uart.o(i.HAL_UART_Init).
+Error: L6406E: No space in execution regions with .ANY selector matching heap_4.o(i.vPortFree).
+Error: L6406E: No space in execution regions with .ANY selector matching tasks.o(i.vTaskSwitchContext).
+Error: L6406E: No space in execution regions with .ANY selector matching rt_memcpy_w.o(.text).
+Error: L6406E: No space in execution regions with .ANY selector matching tasks.o(i.prvIdleTask).
+Error: L6406E: No space in execution regions with .ANY selector matching timers.o(i.xTimerCreateTimerTask).
+Error: L6406E: No space in execution regions with .ANY selector matching libspace.o(.bss).
+Error: L6406E: No space in execution regions with .ANY selector matching main.o(i.SystemClock_Config).
+Error: L6406E: No space in execution regions with .ANY selector matching i2c.o(i.HAL_I2C_MspInit).
+Error: L6406E: No space in execution regions with .ANY selector matching tasks.o(i.prvAddCurrentTaskToDelayedList).
+Error: L6406E: No space in execution regions with .ANY selector matching stm32f1xx_hal_tim.o(i.HAL_TIM_Base_Init).
+Error: L6406E: No space in execution regions with .ANY selector matching stm32f1xx_hal_tim.o(i.HAL_TIM_PWM_Init).
+Error: L6406E: No space in execution regions with .ANY selector matching tasks.o(i.xTaskCreate).
+Error: L6406E: No space in execution regions with .ANY selector matching stm32f1xx_hal_tim.o(i.HAL_TIM_Base_Start_IT).
+Error: L6406E: No space in execution regions with .ANY selector matching stm32f1xx_hal_tim.o(i.TIM_OC2_SetConfig).
+Error: L6406E: No space in execution regions with .ANY selector matching stm32f1xx_hal_tim.o(i.TIM_OC3_SetConfig).
+Error: L6406E: No space in execution regions with .ANY selector matching timers.o(i.prvCheckForValidListAndQueue).
+Error: L6406E: No space in execution regions with .ANY selector matching tasks.o(i.xTaskCreateStatic).
+Error: L6406E: No space in execution regions with .ANY selector matching i2c.o(.bss).
+Error: L6406E: No space in execution regions with .ANY selector matching stm32f1xx_hal_tim_ex.o(i.HAL_TIMEx_ConfigBreakDeadTime).
+Error: L6406E: No space in execution regions with .ANY selector matching port.o(i.vPortValidateInterruptPriority).
+Error: L6406E: No space in execution regions with .ANY selector matching stm32f1xx_hal_tim.o(i.TIM_OC1_SetConfig).
+Error: L6406E: No space in execution regions with .ANY selector matching stm32f1xx_hal_uart.o(i.UART_EndRxTransfer).
+Error: L6406E: No space in execution regions with .ANY selector matching rt_memclr_w.o(.text).
+Error: L6406E: No space in execution regions with .ANY selector matching tim.o(i.HAL_TIM_MspPostInit).
+Error: L6406E: No space in execution regions with .ANY selector matching stm32f1xx_hal_rcc.o(i.HAL_RCC_GetSysClockFreq).
+Error: L6406E: No space in execution regions with .ANY selector matching heap_4.o(i.prvHeapInit).
+Error: L6406E: No space in execution regions with .ANY selector matching heap_4.o(i.prvInsertBlockIntoFreeList).
+Error: L6406E: No space in execution regions with .ANY selector matching tasks.o(i.vTaskDelay).
+Error: L6406E: No space in execution regions with .ANY selector matching sys_stackheap_outer.o(.text).
+Error: L6406E: No space in execution regions with .ANY selector matching stm32f1xx_hal_msp.o(i.HAL_MspInit).
+Error: L6406E: No space in execution regions with .ANY selector matching stm32f1xx_hal_timebase_tim.o(.bss).
+Error: L6406E: No space in execution regions with .ANY selector matching tim.o(.bss).
+Error: L6406E: No space in execution regions with .ANY selector matching usart.o(.bss).
+Error: L6406E: No space in execution regions with .ANY selector matching stm32f1xx_hal_dma.o(i.HAL_DMA_Abort).
+Error: L6406E: No space in execution regions with .ANY selector matching stm32f1xx_hal_tim.o(i.TIM_OC4_SetConfig).
+Error: L6406E: No space in execution regions with .ANY selector matching queue.o(i.vQueueWaitForMessageRestricted).
+Error: L6406E: No space in execution regions with .ANY selector matching rt_memclr.o(.text).
+Error: L6406E: No space in execution regions with .ANY selector matching i2c.o(i.MX_I2C1_Init).
+Error: L6406E: No space in execution regions with .ANY selector matching stm32f1xx_hal_cortex.o(i.HAL_NVIC_SetPriority).
+Error: L6406E: No space in execution regions with .ANY selector matching stm32f1xx_hal_rcc.o(i.HAL_RCC_GetClockConfig).
+Error: L6406E: No space in execution regions with .ANY selector matching port.o(i.vPortEnterCritical).
+Error: L6406E: No space in execution regions with .ANY selector matching queue.o(.bss).
+Error: L6406E: No space in execution regions with .ANY selector matching startup_stm32f103xb.o(.text).
+Error: L6406E: No space in execution regions with .ANY selector matching gpio.o(i.MX_GPIO_Init).
+Error: L6406E: No space in execution regions with .ANY selector matching tasks.o(.data).
+Error: L6406E: No space in execution regions with .ANY selector matching usart.o(i.MX_USART1_UART_Init).
+Error: L6406E: No space in execution regions with .ANY selector matching cmsis_os2.o(i.osKernelStart).
+Error: L6406E: No space in execution regions with .ANY selector matching tasks.o(i.vTaskPlaceOnEventListRestricted).
+Error: L6406E: No space in execution regions with .ANY selector matching timers.o(i.prvInsertTimerInActiveList).
+Error: L6406E: No space in execution regions with .ANY selector matching tasks.o(i.prvDeleteTCB).
+Error: L6406E: No space in execution regions with .ANY selector matching list.o(i.vListInsert).
+Error: L6406E: No space in execution regions with .ANY selector matching tasks.o(i.vTaskPlaceOnEventList).
+Error: L6406E: No space in execution regions with .ANY selector matching port.o(i.xPortSysTickHandler).
+Error: L6406E: No space in execution regions with .ANY selector matching tim.o(i.HAL_TIM_Base_MspInit).
+Error: L6406E: No space in execution regions with .ANY selector matching port.o(i.prvTaskExitError).
+Error: L6406E: No space in execution regions with .ANY selector matching port.o(i.vPortExitCritical).
+Error: L6406E: No space in execution regions with .ANY selector matching queue.o(i.vQueueAddToRegistry).
+Error: L6406E: No space in execution regions with .ANY selector matching timers.o(i.prvSampleTimeNow).
+Error: L6406E: No space in execution regions with .ANY selector matching main.o(i.main).
+Error: L6406E: No space in execution regions with .ANY selector matching list.o(i.uxListRemove).
+Error: L6406E: No space in execution regions with .ANY selector matching queue.o(i.prvCopyDataFromQueue).
+Error: L6406E: No space in execution regions with .ANY selector matching freertos.o(.constdata).
+Error: L6406E: No space in execution regions with .ANY selector matching stm32f1xx_hal.o(i.HAL_Init).
+Error: L6406E: No space in execution regions with .ANY selector matching stm32f1xx_hal_cortex.o(i.HAL_NVIC_SetPriorityGrouping).
+Error: L6406E: No space in execution regions with .ANY selector matching stm32f1xx_hal_tim.o(i.TIM_TI2_ConfigInputStage).
+Error: L6406E: No space in execution regions with .ANY selector matching cmsis_os2.o(i.osKernelInitialize).
+Error: L6406E: No space in execution regions with .ANY selector matching port.o(i.pxPortInitialiseStack).
+Error: L6406E: No space in execution regions with .ANY selector matching port.o(i.vPortSetupTimerInterrupt).
+Error: L6406E: No space in execution regions with .ANY selector matching timers.o(i.prvTimerTask).
+Error: L6406E: No space in execution regions with .ANY selector matching stm32f1xx_hal_tim.o(i.TIM_TI1_ConfigInputStage).
+Error: L6406E: No space in execution regions with .ANY selector matching queue.o(i.prvInitialiseNewQueue).
+Error: L6406E: No space in execution regions with .ANY selector matching freertos.o(i.MX_FREERTOS_Init).
+Error: L6406E: No space in execution regions with .ANY selector matching stm32f1xx_hal_cortex.o(i.__NVIC_SetPriority).
+Error: L6406E: No space in execution regions with .ANY selector matching stm32f1xx_hal_rcc.o(i.HAL_RCC_GetPCLK1Freq).
+Error: L6406E: No space in execution regions with .ANY selector matching stm32f1xx_hal_rcc.o(i.HAL_RCC_GetPCLK2Freq).
+Error: L6406E: No space in execution regions with .ANY selector matching heap_4.o(.data).
+Error: L6406E: No space in execution regions with .ANY selector matching tasks.o(i.prvResetNextTaskUnblockTime).
+Error: L6406E: No space in execution regions with .ANY selector matching queue.o(i.prvIsQueueEmpty).
+Error: L6406E: No space in execution regions with .ANY selector matching tasks.o(i.xTaskGetSchedulerState).
+Error: L6406E: No space in execution regions with .ANY selector matching stm32f1xx_hal_cortex.o(i.HAL_NVIC_EnableIRQ).
+Error: L6406E: No space in execution regions with .ANY selector matching cmsis_os2.o(i.SysTick_Handler).
+Error: L6406E: No space in execution regions with .ANY selector matching cmsis_os2.o(i.osDelay).
+Error: L6406E: No space in execution regions with .ANY selector matching cmsis_os2.o(i.vApplicationGetTimerTaskMemory).
+Error: L6406E: No space in execution regions with .ANY selector matching list.o(i.vListInsertEnd).
+Error: L6406E: No space in execution regions with .ANY selector matching list.o(i.vListInitialise).
+Error: L6406E: No space in execution regions with .ANY selector matching stm32f1xx_hal_tim.o(i.TIM_ETR_SetConfig).
+Error: L6406E: No space in execution regions with .ANY selector matching cmsis_os2.o(i.vApplicationGetIdleTaskMemory).
+Error: L6406E: No space in execution regions with .ANY selector matching timers.o(.data).
+Error: L6406E: No space in execution regions with .ANY selector matching stm32f1xx_hal_rcc.o(.constdata).
+Error: L6406E: No space in execution regions with .ANY selector matching exit.o(.text).
+Error: L6406E: No space in execution regions with .ANY selector matching system_stm32f1xx.o(.constdata).
+Error: L6406E: No space in execution regions with .ANY selector matching stm32f1xx_hal.o(i.HAL_IncTick).
+Error: L6406E: No space in execution regions with .ANY selector matching stm32f1xx_hal_tim.o(i.TIM_ITRx_SetConfig).
+Error: L6406E: No space in execution regions with .ANY selector matching stm32f1xx_hal_uart.o(i.UART_DMAAbortOnError).
+Error: L6406E: No space in execution regions with .ANY selector matching tasks.o(i.vTaskInternalSetTimeOutState).
+Error: L6406E: No space in execution regions with .ANY selector matching tasks.o(i.vTaskSuspendAll).
+Error: L6406E: No space in execution regions with .ANY selector matching aeabi_memset.o(.text).
+Error: L6406E: No space in execution regions with .ANY selector matching main.o(i.HAL_TIM_PeriodElapsedCallback).
+Error: L6406E: No space in execution regions with .ANY selector matching freertos.o(.conststring).
+Error: L6406E: No space in execution regions with .ANY selector matching stm32f1xx_it.o(i.TIM2_IRQHandler).
+Error: L6406E: No space in execution regions with .ANY selector matching stm32f1xx_it.o(i.USART1_IRQHandler).
+Error: L6406E: No space in execution regions with .ANY selector matching stm32f1xx_hal.o(i.HAL_GetTick).
+Error: L6406E: No space in execution regions with .ANY selector matching stm32f1xx_hal.o(.data).
+Error: L6406E: No space in execution regions with .ANY selector matching port.o(.data).
+Error: L6406E: No space in execution regions with .ANY selector matching tasks.o(i.vTaskMissedYield).
+Error: L6406E: No space in execution regions with .ANY selector matching tasks.o(i.xTaskGetTickCount).
+Error: L6406E: No space in execution regions with .ANY selector matching sys_exit.o(.text).
+Error: L6406E: No space in execution regions with .ANY selector matching freertos.o(i.StartDefaultTask).
+Error: L6406E: No space in execution regions with .ANY selector matching system_stm32f1xx.o(.constdata).
+Error: L6406E: No space in execution regions with .ANY selector matching __rtentry2.o(.ARM.Collect$$rtentry$$0000000D).
+Error: L6406E: No space in execution regions with .ANY selector matching libspace.o(.text).
+Error: L6406E: No space in execution regions with .ANY selector matching list.o(i.vListInitialiseItem).
+Error: L6406E: No space in execution regions with .ANY selector matching heapauxi.o(.text).
+Error: L6406E: No space in execution regions with .ANY selector matching rtexit2.o(.ARM.Collect$$rtexit$$00000004).
+Error: L6406E: No space in execution regions with .ANY selector matching freertos.o(.data).
+Error: L6406E: No space in execution regions with .ANY selector matching main.o(i.Error_Handler).
+Error: L6406E: No space in execution regions with .ANY selector matching system_stm32f1xx.o(.data).
+Error: L6406E: No space in execution regions with .ANY selector matching cmsis_os2.o(.data).
+Error: L6406E: No space in execution regions with .ANY selector matching stm32f1xx_it.o(i.BusFault_Handler).
+Error: L6406E: No space in execution regions with .ANY selector matching stm32f1xx_it.o(i.DebugMon_Handler).
+Error: L6406E: No space in execution regions with .ANY selector matching stm32f1xx_it.o(i.HardFault_Handler).
+Error: L6406E: No space in execution regions with .ANY selector matching stm32f1xx_it.o(i.MemManage_Handler).
+Error: L6406E: No space in execution regions with .ANY selector matching stm32f1xx_it.o(i.NMI_Handler).
+Error: L6406E: No space in execution regions with .ANY selector matching stm32f1xx_it.o(i.UsageFault_Handler).
+Error: L6406E: No space in execution regions with .ANY selector matching system_stm32f1xx.o(i.SystemInit).
+Error: L6406E: No space in execution regions with .ANY selector matching stm32f1xx_hal_tim.o(i.HAL_TIM_IC_CaptureCallback).
+Error: L6406E: No space in execution regions with .ANY selector matching stm32f1xx_hal_tim.o(i.HAL_TIM_OC_DelayElapsedCallback).
+Error: L6406E: No space in execution regions with .ANY selector matching stm32f1xx_hal_tim.o(i.HAL_TIM_PWM_MspInit).
+Error: L6406E: No space in execution regions with .ANY selector matching stm32f1xx_hal_tim.o(i.HAL_TIM_PWM_PulseFinishedCallback).
+Error: L6406E: No space in execution regions with .ANY selector matching stm32f1xx_hal_tim.o(i.HAL_TIM_TriggerCallback).
+Error: L6406E: No space in execution regions with .ANY selector matching stm32f1xx_hal_tim_ex.o(i.HAL_TIMEx_BreakCallback).
+Error: L6406E: No space in execution regions with .ANY selector matching stm32f1xx_hal_tim_ex.o(i.HAL_TIMEx_CommutCallback).
+Error: L6406E: No space in execution regions with .ANY selector matching stm32f1xx_hal_uart.o(i.HAL_UARTEx_RxEventCallback).
+Error: L6406E: No space in execution regions with .ANY selector matching stm32f1xx_hal_uart.o(i.HAL_UART_ErrorCallback).
+Error: L6406E: No space in execution regions with .ANY selector matching stm32f1xx_hal_uart.o(i.HAL_UART_RxCpltCallback).
+Error: L6406E: No space in execution regions with .ANY selector matching stm32f1xx_hal_uart.o(i.HAL_UART_TxCpltCallback).
+Error: L6406E: No space in execution regions with .ANY selector matching libinit.o(.ARM.Collect$$libinit$$00000000).
+Error: L6406E: No space in execution regions with .ANY selector matching libshutdown.o(.ARM.Collect$$libshutdown$$00000000).
+Error: L6406E: No space in execution regions with .ANY selector matching use_no_semi.o(.text).
+Error: L6406E: No space in execution regions with .ANY selector matching indicate_semi.o(.text).
+Error: L6407E: Sections of aggregate size 0x7288 bytes could not fit into .ANY selector(s).
+Not enough information to list image symbols.
+Not enough information to list the image map.
+Finished: 2 information, 0 warning and 188 error messages.
+
+
+[2026-10-05 14:45:07]	[done]
+	build successfully !
+
+[2026-10-05 14:54:41]	[info] incremental build: 2 source files changed
+These source files will be recompiled
+---
+'d:\Project\27电软正式批考核\10_FreeRTOS进阶\Output\FreeRTOS_Advanced\Core\Src\freertos.c': source file has been changed.
+'d:\Project\27电软正式批考核\10_FreeRTOS进阶\Output\FreeRTOS_Advanced\Core\Src\main.c': source file has been changed.
+
+[2026-10-05 14:54:42]	[done]
+	build successfully !
+
+[2026-10-05 15:07:06]	[info] incremental build: 1 source files changed
+These source files will be recompiled
+---
+'d:\Project\27电软正式批考核\10_FreeRTOS进阶\Output\FreeRTOS_Advanced\Core\Src\freertos.c': source file has been changed.
+
+[2026-10-05 15:07:06]	[done]
+	build successfully !
+
+[2026-10-05 15:12:24]	[info] incremental build: 1 source files changed
+These source files will be recompiled
+---
+'d:\Project\27电软正式批考核\10_FreeRTOS进阶\Output\FreeRTOS_Advanced\Core\Src\freertos.c': source file has been changed.
+
+[2026-10-05 15:12:24]	[done]
+	build successfully !
+
+[2026-10-05 15:18:57]	[info] incremental build: 1 source files changed
+These source files will be recompiled
+---
+'d:\Project\27电软正式批考核\10_FreeRTOS进阶\Output\FreeRTOS_Advanced\Core\Src\freertos.c': source file has been changed.
+
+[2026-10-05 15:18:58]	[done]
+	build successfully !
+
+[2026-10-05 15:22:29]	[info] incremental build: 1 source files changed
+These source files will be recompiled
+---
+'d:\Project\27电软正式批考核\10_FreeRTOS进阶\Output\FreeRTOS_Advanced\Core\Src\freertos.c': source file has been changed.
+
+[2026-10-05 15:22:30]	[done]
+	build successfully !
+
+[2026-10-05 15:50:45]	[info] incremental build: 1 source files changed
+These source files will be recompiled
+---
+'d:\Project\27电软正式批考核\10_FreeRTOS进阶\Output\FreeRTOS_Advanced\Core\Src\freertos.c': source file has been changed.
+
+[2026-10-05 15:50:45]	[done]
+	build successfully !
+
+[2026-10-05 15:53:02]	[done]
+	build successfully !
+
+[2026-10-05 16:10:58]	[done]
+	build successfully !
+
