@@ -3,7 +3,8 @@ name: MPU6050_Demo
 type: ARM
 deviceName: STM32F103C8
 packDir: C:/Users/Administrator/.eide/pack/installed/Keil/STM32F1xx_DFP.2.3.0
-srcDirs: []
+srcDirs:
+  - ../Mpu6050
 virtualFolder:
   name: <virtual_root>
   files: []
@@ -66,6 +67,7 @@ targets:
       incList:
         - .
         - ../Core/Inc
+        - ../Mpu6050
         - ../Drivers/STM32F1xx_HAL_Driver/Inc
         - ../Drivers/STM32F1xx_HAL_Driver/Inc/Legacy
         - ../Drivers/CMSIS/Device/ST/STM32F1xx/Include
