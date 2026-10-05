@@ -56,6 +56,10 @@ char uart_text[128];
 
 float ax_g, ay_g, az_g;
 float gx_dps, gy_dps, gz_dps;
+
+float gx_bias = 0.0f;
+float gy_bias = 0.0f;
+float gz_bias = 0.0f;
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -176,6 +180,48 @@ if (HAL_I2C_Mem_Write(&hi2c1, 0x68 << 1, 0x1C,
 {
     Error_Handler();
 }
+
+
+int32_t gx_sum = 0;
+int32_t gy_sum = 0;
+int32_t gz_sum = 0;
+uint16_t valid_samples = 0;
+
+uint8_t notice[] = "Keep MPU still: calibrating...\r\n";
+HAL_UART_Transmit(&huart1, notice, sizeof(notice) - 1, 100);
+
+/* 等待传感器稳定 */
+HAL_Delay(500);
+
+for (uint16_t i = 0; i < 200; i++)
+{
+    if (HAL_I2C_Mem_Read(
+            &hi2c1, 0x68 << 1, 0x43,
+            I2C_MEMADD_SIZE_8BIT,
+            mpu_data, 6, 100) != HAL_OK)
+    {
+        Error_Handler();
+    }
+
+    int16_t sample_gx =
+        (int16_t)(((uint16_t)mpu_data[0] << 8) | mpu_data[1]);
+    int16_t sample_gy =
+        (int16_t)(((uint16_t)mpu_data[2] << 8) | mpu_data[3]);
+    int16_t sample_gz =
+        (int16_t)(((uint16_t)mpu_data[4] << 8) | mpu_data[5]);
+
+    gx_sum += sample_gx;
+    gy_sum += sample_gy;
+    gz_sum += sample_gz;
+    valid_samples++;
+
+    HAL_Delay(10);
+}
+
+gx_bias = (float)gx_sum / valid_samples;
+gy_bias = (float)gy_sum / valid_samples;
+gz_bias = (float)gz_sum / valid_samples;
+
   /* USER CODE END 2 */
 
   /* Infinite loop */
@@ -199,9 +245,9 @@ if (HAL_I2C_Mem_Write(&hi2c1, 0x68 << 1, 0x1C,
     ay_g = ay / 16384.0f;
     az_g = az / 16384.0f;
 
-    gx_dps = gx / 131.0f;
-    gy_dps = gy / 131.0f;
-    gz_dps = gz / 131.0f;
+    gx_dps = (gx - gx_bias) / 131.0f;
+    gy_dps = (gy - gy_bias) / 131.0f;
+    gz_dps = (gz - gz_bias) / 131.0f;
     
     int len = snprintf(
         uart_text, sizeof(uart_text),
