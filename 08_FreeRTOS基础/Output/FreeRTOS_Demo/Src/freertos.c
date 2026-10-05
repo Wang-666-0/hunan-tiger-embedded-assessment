@@ -27,6 +27,7 @@
 /* USER CODE BEGIN Includes */
 #include "tim.h"
 #include "usart.h"
+#include <stdio.h>
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -166,7 +167,8 @@ void StartUartTask(void *argument)
   /* USER CODE BEGIN StartUartTask */
 
   uint8_t rx_byte;
-  uint8_t welcome[] = "FreeRTOS UART ready\r\n";
+  uint8_t welcome[] = "INFO FreeRTOS UART ready\r\n";
+  char firewater_text[16];
 
   HAL_UART_Transmit(&huart1,
                     welcome,
@@ -178,8 +180,14 @@ void StartUartTask(void *argument)
     /* 尝试接收一个字节，最多等待 1 ms */
     if (HAL_UART_Receive(&huart1, &rx_byte, 1, 1) == HAL_OK)
     {
-      /* 收到什么，就回复什么 */
-      HAL_UART_Transmit(&huart1, &rx_byte, 1, 10);
+      /* Send the received byte as one numeric FireWater channel. */
+      int length = snprintf(firewater_text, sizeof(firewater_text),
+                            "rx:%u\r\n", (unsigned int)rx_byte);
+      if (length > 0 && length < (int)sizeof(firewater_text))
+      {
+          HAL_UART_Transmit(&huart1, (uint8_t *)firewater_text,
+                            (uint16_t)length, 10);
+      }
     }
 
     /* 让出 CPU，其他任务可以运行 */

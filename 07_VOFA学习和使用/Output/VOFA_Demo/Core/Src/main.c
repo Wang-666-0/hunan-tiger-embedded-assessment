@@ -53,8 +53,8 @@
   
   //uint8_t vofa_text[] = "Hello VOFA+\r\n";
   
-  uint8_t vofa_data_1[] = "10,90\n";
-  uint8_t vofa_data_2[] = "90,10\n";
+  uint8_t vofa_data_1[] = "channels:10,90\r\n";
+  uint8_t vofa_data_2[] = "channels:90,10\r\n";
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/

@@ -342,11 +342,11 @@ static void UartTask(void *argument)
             if (xQueueReceive(imu_data_queue, &imu, 0) == pdPASS)
             {
                 int text_length = snprintf(text, sizeof(text),
-                    "IMU n=%lu err=%lu A:%d,%d,%d G:%d,%d,%d\r\n",
-                    (unsigned long)imu.sample_count,
-                    (unsigned long)imu.read_errors,
+                    "imu:%d,%d,%d,%d,%d,%d,%lu,%lu\r\n",
                     (int)imu.ax, (int)imu.ay, (int)imu.az,
-                    (int)imu.gx, (int)imu.gy, (int)imu.gz);
+                    (int)imu.gx, (int)imu.gy, (int)imu.gz,
+                    (unsigned long)imu.sample_count,
+                    (unsigned long)imu.read_errors);
                 if (text_length > 0 && text_length < (int)sizeof(text))
                     UartSend(&huart1, (uint8_t *)text, (uint16_t)text_length, 20);
             }

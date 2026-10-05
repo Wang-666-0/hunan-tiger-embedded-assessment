@@ -137,7 +137,7 @@ uint8_t dmp_result = MPU6050_DMP_Init();
 int len = snprintf(
     uart_text,
     sizeof(uart_text),
-    "DMP init result=%u\r\n",
+    "INFO DMP init result=%u\r\n",
     (unsigned int)dmp_result
 );
 
@@ -240,7 +240,7 @@ if (mpu_get_gyro_sens(&gyro_sensitivity) != 0 ||
         int len = snprintf(
             uart_text,
             sizeof(uart_text),
-            "Roll:%.2f Pitch:%.2f\r\n",
+            "attitude:%.2f,%.2f\r\n",
             (double)roll_deg,
             (double)pitch_deg
         );
