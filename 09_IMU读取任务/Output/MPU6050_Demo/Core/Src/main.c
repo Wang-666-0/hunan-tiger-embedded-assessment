@@ -25,6 +25,8 @@
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
 #include <stdio.h>
+#include "inv_mpu.h"
+#include "inv_mpu_dmp_motion_driver.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -60,6 +62,19 @@ float gx_dps, gy_dps, gz_dps;
 float gx_bias = 0.0f;
 float gy_bias = 0.0f;
 float gz_bias = 0.0f;
+
+short dmp_gyro[3];
+short dmp_accel[3];
+long dmp_quat[4];
+
+unsigned long dmp_timestamp;
+short dmp_sensors;
+unsigned char dmp_more;
+
+float gyro_sensitivity;
+unsigned short accel_sensitivity;
+
+uint32_t last_print_tick = 0;
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -105,122 +120,39 @@ int main(void)
   MX_I2C1_Init();
   MX_USART1_UART_Init();
   /* USER CODE BEGIN 2 */
-//HAL_Delay(100);
-
-//HAL_StatusTypeDef result = HAL_I2C_Mem_Read(
-//    &hi2c1,
-//    (0x68 << 1),
-//    0x75,
-//    I2C_MEMADD_SIZE_8BIT,
-//    &mpu_id,
-//    1,
-//    100
-//);
-
-//int length = snprintf(
-//    uart_text,
-//    sizeof(uart_text),
-//    "I2C status=%d, MPU ID=0x%02X\r\n",
-//    (int)result,
-//    (unsigned int)mpu_id
-//);
-
-//if (length > 0 && length < (int)sizeof(uart_text))
-//{
-//    HAL_UART_Transmit(
-//        &huart1,
-//        (uint8_t *)uart_text,
-//        (uint16_t)length,
-//        100
-//    );
-//}
-
-/* 唤醒，使用 X 轴陀螺仪 PLL 作为时钟 */
-mpu_config = 0x01;
-if (HAL_I2C_Mem_Write(&hi2c1, 0x68 << 1, 0x6B,
-                     I2C_MEMADD_SIZE_8BIT,
-                     &mpu_config, 1, 100) != HAL_OK)
-{
-    Error_Handler();
-}
 
 HAL_Delay(100);
 
-/* 设置低通滤波配置 */
-mpu_config = 0x03;
-if (HAL_I2C_Mem_Write(&hi2c1, 0x68 << 1, 0x1A,
-                     I2C_MEMADD_SIZE_8BIT,
-                     &mpu_config, 1, 100) != HAL_OK)
+uint8_t dmp_result = MPU6050_DMP_Init();
+
+int len = snprintf(
+    uart_text,
+    sizeof(uart_text),
+    "DMP init result=%u\r\n",
+    (unsigned int)dmp_result
+);
+
+if (len > 0 && len < (int)sizeof(uart_text))
+{
+    HAL_UART_Transmit(
+        &huart1,
+        (uint8_t *)uart_text,
+        (uint16_t)len,
+        100
+    );
+}
+
+if (dmp_result != 0)
 {
     Error_Handler();
 }
 
-/* 采样率：1 kHz / (1 + 9) = 100 Hz */
-mpu_config = 9;
-if (HAL_I2C_Mem_Write(&hi2c1, 0x68 << 1, 0x19,
-                     I2C_MEMADD_SIZE_8BIT,
-                     &mpu_config, 1, 100) != HAL_OK)
+/* 获取当前量程对应的换算系数 */
+if (mpu_get_gyro_sens(&gyro_sensitivity) != 0 ||
+    mpu_get_accel_sens(&accel_sensitivity) != 0)
 {
     Error_Handler();
 }
-
-/* 陀螺仪量程：±250 °/s */
-mpu_config = 0x00;
-if (HAL_I2C_Mem_Write(&hi2c1, 0x68 << 1, 0x1B,
-                     I2C_MEMADD_SIZE_8BIT,
-                     &mpu_config, 1, 100) != HAL_OK)
-{
-    Error_Handler();
-}
-
-/* 加速度量程：±2 g */
-if (HAL_I2C_Mem_Write(&hi2c1, 0x68 << 1, 0x1C,
-                     I2C_MEMADD_SIZE_8BIT,
-                     &mpu_config, 1, 100) != HAL_OK)
-{
-    Error_Handler();
-}
-
-
-int32_t gx_sum = 0;
-int32_t gy_sum = 0;
-int32_t gz_sum = 0;
-uint16_t valid_samples = 0;
-
-uint8_t notice[] = "Keep MPU still: calibrating...\r\n";
-HAL_UART_Transmit(&huart1, notice, sizeof(notice) - 1, 100);
-
-/* 等待传感器稳定 */
-HAL_Delay(500);
-
-for (uint16_t i = 0; i < 200; i++)
-{
-    if (HAL_I2C_Mem_Read(
-            &hi2c1, 0x68 << 1, 0x43,
-            I2C_MEMADD_SIZE_8BIT,
-            mpu_data, 6, 100) != HAL_OK)
-    {
-        Error_Handler();
-    }
-
-    int16_t sample_gx =
-        (int16_t)(((uint16_t)mpu_data[0] << 8) | mpu_data[1]);
-    int16_t sample_gy =
-        (int16_t)(((uint16_t)mpu_data[2] << 8) | mpu_data[3]);
-    int16_t sample_gz =
-        (int16_t)(((uint16_t)mpu_data[4] << 8) | mpu_data[5]);
-
-    gx_sum += sample_gx;
-    gy_sum += sample_gy;
-    gz_sum += sample_gz;
-    valid_samples++;
-
-    HAL_Delay(10);
-}
-
-gx_bias = (float)gx_sum / valid_samples;
-gy_bias = (float)gy_sum / valid_samples;
-gz_bias = (float)gz_sum / valid_samples;
 
   /* USER CODE END 2 */
 
@@ -228,49 +160,65 @@ gz_bias = (float)gz_sum / valid_samples;
   /* USER CODE BEGIN WHILE */
   while (1)
   {
-      if (HAL_I2C_Mem_Read(&hi2c1, 0x68 << 1, 0x3B,
-                    I2C_MEMADD_SIZE_8BIT,
-                    mpu_data, sizeof(mpu_data), 100) == HAL_OK)
-{
-    ax = (int16_t)(((uint16_t)mpu_data[0] << 8) | mpu_data[1]);
-    ay = (int16_t)(((uint16_t)mpu_data[2] << 8) | mpu_data[3]);
-    az = (int16_t)(((uint16_t)mpu_data[4] << 8) | mpu_data[5]);
-
-    /* 第 6、7 字节是温度，本次跳过 */
-    gx = (int16_t)(((uint16_t)mpu_data[8]  << 8) | mpu_data[9]);
-    gy = (int16_t)(((uint16_t)mpu_data[10] << 8) | mpu_data[11]);
-    gz = (int16_t)(((uint16_t)mpu_data[12] << 8) | mpu_data[13]);
-
-    ax_g = ax / 16384.0f;
-    ay_g = ay / 16384.0f;
-    az_g = az / 16384.0f;
-
-    gx_dps = (gx - gx_bias) / 131.0f;
-    gy_dps = (gy - gy_bias) / 131.0f;
-    gz_dps = (gz - gz_bias) / 131.0f;
-    
-    int len = snprintf(
-        uart_text, sizeof(uart_text),
-        "A(g):%.3f,%.3f,%.3f G(dps):%.2f,%.2f,%.2f\r\n",
-        (double)ax_g, (double)ay_g, (double)az_g,
-        (double)gx_dps, (double)gy_dps, (double)gz_dps
-    );
-
-    if (len > 0 && len < (int)sizeof(uart_text))
+    do
     {
-        HAL_UART_Transmit(&huart1, (uint8_t *)uart_text,
-                          (uint16_t)len, 100);
+        dmp_more = 0;
+
+        int result = dmp_read_fifo(
+            dmp_gyro,
+            dmp_accel,
+            dmp_quat,
+            &dmp_timestamp,
+            &dmp_sensors,
+            &dmp_more
+        );
+
+        /* 暂时没有新数据或读取失败，退出本轮读取 */
+        if (result != 0)
+        {
+            break;
+        }
+
+        /* 确认这一包同时包含加速度和角速度 */
+        if ((dmp_sensors & INV_XYZ_ACCEL) &&
+            ((dmp_sensors & INV_XYZ_GYRO) == INV_XYZ_GYRO))
+        {
+            ax_g = (float)dmp_accel[0] / accel_sensitivity;
+            ay_g = (float)dmp_accel[1] / accel_sensitivity;
+            az_g = (float)dmp_accel[2] / accel_sensitivity;
+
+            gx_dps = (float)dmp_gyro[0] / gyro_sensitivity;
+            gy_dps = (float)dmp_gyro[1] / gyro_sensitivity;
+            gz_dps = (float)dmp_gyro[2] / gyro_sensitivity;
+        }
+
+    } while (dmp_more != 0);
+
+    /* 每 100 ms 打印一次，读取数据仍然保持较高频率 */
+    if (HAL_GetTick() - last_print_tick >= 100)
+    {
+        last_print_tick = HAL_GetTick();
+
+        int len = snprintf(
+            uart_text,
+            sizeof(uart_text),
+            "A(g):%.3f,%.3f,%.3f G(dps):%.2f,%.2f,%.2f\r\n",
+            (double)ax_g, (double)ay_g, (double)az_g,
+            (double)gx_dps, (double)gy_dps, (double)gz_dps
+        );
+
+        if (len > 0 && len < (int)sizeof(uart_text))
+        {
+            HAL_UART_Transmit(
+                &huart1,
+                (uint8_t *)uart_text,
+                (uint16_t)len,
+                100
+            );
+        }
     }
-}
-else
-{
-    uint8_t error_text[] = "MPU read failed\r\n";
-    HAL_UART_Transmit(&huart1, error_text,
-                      sizeof(error_text) - 1, 100);
-}
 
-HAL_Delay(100);
-
+    HAL_Delay(1);
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
