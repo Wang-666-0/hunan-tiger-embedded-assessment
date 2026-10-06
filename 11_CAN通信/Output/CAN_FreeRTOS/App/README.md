@@ -42,6 +42,6 @@
 | CAN1 | 0x202 | A2 12 34 56 |
 | CAN2 | 0x201 | A1 12 34 56 |
 
-无提交失败、内容无效、队列丢弃或 bus-off。原有 Watch 名称全部保留，详细操作见考核目录下 `01_学习笔记/Keil调试与收发验收.md`。
+无提交失败、内容无效、队列丢弃或 bus-off。原有 Watch 名称全部保留，详细操作见 [CAN 通信学习笔记](../../../01_学习笔记/CAN通信学习笔记.md)。
 
 阅读顺序建议：can_tasks → can_protocol → can_transport → can_debug。
