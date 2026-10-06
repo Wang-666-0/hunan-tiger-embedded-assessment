@@ -1,4 +1,4 @@
-/* USER CODE BEGIN Header */
+ï»¿/* USER CODE BEGIN Header */
 /**
   ******************************************************************************
   * @file           : main.c
@@ -24,7 +24,7 @@
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
-
+#include "vofa_demo.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -45,16 +45,7 @@
 /* Private variables ---------------------------------------------------------*/
 
 /* USER CODE BEGIN PV */
-  uint8_t uart_buffer[256];
 
-  volatile uint16_t rx_length = 0;
-  volatile uint8_t rx_ready = 0;
-  volatile uint8_t tx_done = 0;
-  
-  //uint8_t vofa_text[] = "Hello VOFA+\r\n";
-  
-  uint8_t vofa_data_1[] = "channels:10,90\r\n";
-  uint8_t vofa_data_2[] = "channels:90,10\r\n";
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -100,53 +91,19 @@ int main(void)
   MX_DMA_Init();
   MX_USART1_UART_Init();
   /* USER CODE BEGIN 2 */
-  
-  /*
-  if (HAL_UARTEx_ReceiveToIdle_DMA(
-        &huart1, uart_buffer, sizeof(uart_buffer)) != HAL_OK)
-        {
-            Error_Handler();
-        }
-
-     //²»ÐèÒª°ë»º³åÇøÍ¨Öª 
-    __HAL_DMA_DISABLE_IT(huart1.hdmarx, DMA_IT_HT);
-  */
-  
-  
-  /* USER CODE END 2 */
+  /* ä¸šåŠ¡å‘é€æµç¨‹ä½äºŽ App/vofa_demo.cã€‚ */
+/* USER CODE END 2 */
 
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
   while (1)
   {
-//    HAL_UART_Transmit(
-//        &huart1,
-//        vofa_text,
-//        sizeof(vofa_text) - 1,
-//        100);
-
-//    HAL_Delay(1000);
-      
-    HAL_UART_Transmit(
-        &huart1,
-        vofa_data_1,
-        sizeof(vofa_data_1) - 1,
-        100);
-
-    HAL_Delay(500);
-
-    HAL_UART_Transmit(
-        &huart1,
-        vofa_data_2,
-        sizeof(vofa_data_2) - 1,
-        100);
-
-    HAL_Delay(500);
-  }
     /* USER CODE END WHILE */
-
     /* USER CODE BEGIN 3 */
+    VofaDemo_RunCycle();
   }
+  /* USER CODE END 3 */
+}
   /* USER CODE END 3 */
 
 
@@ -190,23 +147,7 @@ void SystemClock_Config(void)
 }
 
 /* USER CODE BEGIN 4 */
-void HAL_UARTEx_RxEventCallback(UART_HandleTypeDef *huart,
-                                uint16_t Size)
-{
-    if (huart->Instance == USART1)
-    {
-        rx_length = Size;
-        rx_ready = 1;
-    }
-}
 
-void HAL_UART_TxCpltCallback(UART_HandleTypeDef *huart)
-{
-    if (huart->Instance == USART1)
-    {
-        tx_done = 1;
-    }
-}
 /* USER CODE END 4 */
 
 /**

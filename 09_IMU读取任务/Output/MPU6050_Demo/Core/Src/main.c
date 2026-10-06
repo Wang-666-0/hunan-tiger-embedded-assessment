@@ -1,4 +1,4 @@
-/* USER CODE BEGIN Header */
+ï»¿/* USER CODE BEGIN Header */
 /**
   ******************************************************************************
   * @file           : main.c
@@ -24,10 +24,7 @@
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
-#include <stdio.h>
-#include "inv_mpu.h"
-#include "inv_mpu_dmp_motion_driver.h"
-#include <math.h>
+#include "imu_app.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -48,42 +45,7 @@
 /* Private variables ---------------------------------------------------------*/
 
 /* USER CODE BEGIN PV */
-uint8_t mpu_id = 0;
-uint8_t mpu_data[14];
-uint8_t mpu_config;
 
-int16_t ax, ay, az;
-int16_t gx, gy, gz;
-
-char uart_text[128];
-
-float ax_g, ay_g, az_g;
-float gx_dps, gy_dps, gz_dps;
-
-float gx_bias = 0.0f;
-float gy_bias = 0.0f;
-float gz_bias = 0.0f;
-
-short dmp_gyro[3];
-short dmp_accel[3];
-long dmp_quat[4];
-
-unsigned long dmp_timestamp;
-short dmp_sensors;
-unsigned char dmp_more;
-
-float gyro_sensitivity;
-unsigned short accel_sensitivity;
-
-uint32_t last_print_tick = 0;
-
-float roll_deg = 0.0f;
-float pitch_deg = 0.0f;
-
-float roll_acc_deg = 0.0f;
-float pitch_acc_deg = 0.0f;
-
-uint8_t attitude_ready = 0;
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -129,137 +91,16 @@ int main(void)
   MX_I2C1_Init();
   MX_USART1_UART_Init();
   /* USER CODE BEGIN 2 */
-
-HAL_Delay(100);
-
-uint8_t dmp_result = MPU6050_DMP_Init();
-
-int len = snprintf(
-    uart_text,
-    sizeof(uart_text),
-    "INFO DMP init result=%u\r\n",
-    (unsigned int)dmp_result
-);
-
-if (len > 0 && len < (int)sizeof(uart_text))
-{
-    HAL_UART_Transmit(
-        &huart1,
-        (uint8_t *)uart_text,
-        (uint16_t)len,
-        100
-    );
-}
-
-if (dmp_result != 0)
-{
-    Error_Handler();
-}
-
-/* »ñÈ¡µ±Ç°Á¿³Ì¶ÔÓ¦µÄ»»ËãÏµÊý */
-if (mpu_get_gyro_sens(&gyro_sensitivity) != 0 ||
-    mpu_get_accel_sens(&accel_sensitivity) != 0)
-{
-    Error_Handler();
-}
-
-  /* USER CODE END 2 */
+  ImuApp_Init();
+/* USER CODE END 2 */
 
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
   while (1)
   {
-    do
-    {
-        dmp_more = 0;
-
-        int result = dmp_read_fifo(
-            dmp_gyro,
-            dmp_accel,
-            dmp_quat,
-            &dmp_timestamp,
-            &dmp_sensors,
-            &dmp_more
-        );
-
-        /* ÔÝÊ±Ã»ÓÐÐÂÊý¾Ý»ò¶ÁÈ¡Ê§°Ü£¬ÍË³ö±¾ÂÖ¶ÁÈ¡ */
-        if (result != 0)
-        {
-            break;
-        }
-
-        /* È·ÈÏÕâÒ»°üÍ¬Ê±°üº¬¼ÓËÙ¶ÈºÍ½ÇËÙ¶È */
-        if ((dmp_sensors & INV_XYZ_ACCEL) &&
-            ((dmp_sensors & INV_XYZ_GYRO) == INV_XYZ_GYRO))
-        {
-            ax_g = (float)dmp_accel[0] / accel_sensitivity;
-            ay_g = (float)dmp_accel[1] / accel_sensitivity;
-            az_g = (float)dmp_accel[2] / accel_sensitivity;
-
-            gx_dps = (float)dmp_gyro[0] / gyro_sensitivity;
-            gy_dps = (float)dmp_gyro[1] / gyro_sensitivity;
-            gz_dps = (float)dmp_gyro[2] / gyro_sensitivity;
-
-            /* ¸ù¾ÝÖØÁ¦·½Ïò¼ÆËãÇãÐ±½Ç£¬»¡¶È×ª»»Îª¶È */
-              roll_acc_deg = atan2f(ay_g, az_g) * 57.2957795f;
-
-              pitch_acc_deg = atan2f(
-                  -ax_g,
-                  sqrtf(ay_g * ay_g + az_g * az_g)
-              ) * 57.2957795f;
-
-              /* µÚÒ»°üÊý¾ÝÖ±½Ó½¨Á¢³õÊ¼½Ç¶È */
-              if (attitude_ready == 0)
-              {
-                  roll_deg = roll_acc_deg;
-                  pitch_deg = pitch_acc_deg;
-                  attitude_ready = 1;
-              }
-              else
-              {
-                  /* Ã¿¸ö FIFO Êý¾Ý°ü¶ÔÓ¦µÄ²ÉÑù¼ä¸ô£¬µ¥Î»ÎªÃë */
-                  const float dt = 1.0f / DEFAULT_MPU_HZ;
-                  const float alpha = 0.98f;
-
-                  roll_deg = alpha * (roll_deg + gx_dps * dt)
-                          + (1.0f - alpha) * roll_acc_deg;
-
-                  pitch_deg = alpha * (pitch_deg + gy_dps * dt)
-                            + (1.0f - alpha) * pitch_acc_deg;
-              }
-        }
-
-    } while (dmp_more != 0);
-
-    /* Ã¿ 100 ms ´òÓ¡Ò»´Î£¬¶ÁÈ¡Êý¾ÝÈÔÈ»±£³Ö½Ï¸ßÆµÂÊ */
-    if (attitude_ready &&
-    HAL_GetTick() - last_print_tick >= 100)
-    {
-        last_print_tick = HAL_GetTick();
-
-        int len = snprintf(
-            uart_text,
-            sizeof(uart_text),
-            "attitude:%.2f,%.2f\r\n",
-            (double)roll_deg,
-            (double)pitch_deg
-        );
-
-        if (len > 0 && len < (int)sizeof(uart_text))
-        {
-            HAL_UART_Transmit(
-                &huart1,
-                (uint8_t *)uart_text,
-                (uint16_t)len,
-                100
-            );
-        }
-    }
-
-    HAL_Delay(1);
     /* USER CODE END WHILE */
-
     /* USER CODE BEGIN 3 */
+    ImuApp_Process();
   }
   /* USER CODE END 3 */
 }

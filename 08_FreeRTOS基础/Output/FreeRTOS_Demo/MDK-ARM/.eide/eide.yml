@@ -69,6 +69,11 @@ virtualFolder:
     - name: ::CMSIS
       files: []
       folders: []
+    - name: App
+      files:
+        - path: ../App/breath_led.c
+        - path: ../App/uart_echo.c
+      folders: []
 dependenceList: []
 outDir: build
 miscInfo:
@@ -80,6 +85,7 @@ targets:
         - USE_HAL_DRIVER
         - STM32F103xB
       incList:
+        - ../App
         - .
         - ../Inc
         - ../Drivers/STM32F1xx_HAL_Driver/Inc

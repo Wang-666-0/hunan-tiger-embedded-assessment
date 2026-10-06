@@ -52,6 +52,11 @@ virtualFolder:
     - name: ::CMSIS
       files: []
       folders: []
+    - name: App
+      files:
+        - path: ../App/uart_dma_observer.c
+        - path: ../App/vofa_demo.c
+      folders: []
 dependenceList: []
 outDir: build
 miscInfo:
@@ -63,6 +68,7 @@ targets:
         - USE_HAL_DRIVER
         - STM32F103xB
       incList:
+        - ../App
         - .
         - ../Core/Inc
         - ../Drivers/STM32F1xx_HAL_Driver/Inc
