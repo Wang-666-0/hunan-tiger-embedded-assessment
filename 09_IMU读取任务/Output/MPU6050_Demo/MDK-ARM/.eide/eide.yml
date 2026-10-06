@@ -54,6 +54,13 @@ virtualFolder:
     - name: ::CMSIS
       files: []
       folders: []
+    - name: App
+      files:
+        - path: ../App/attitude_filter.c
+        - path: ../App/imu_app.c
+        - path: ../App/imu_reader.c
+        - path: ../App/imu_telemetry.c
+      folders: []
 dependenceList: []
 outDir: build
 miscInfo:
@@ -65,6 +72,7 @@ targets:
         - USE_HAL_DRIVER
         - STM32F103xB
       incList:
+        - ../App
         - .
         - ../Core/Inc
         - ../Mpu6050

@@ -1,0 +1,180 @@
+[2026-10-06 11:53:33]	[info] incremental build: 35 source files changed
+These source files will be recompiled
+---
+'d:\Project\27电软正式批考核\11_CAN通信\Output\CAN_FreeRTOS\Core\Src\can.c': object (.o) file not exist
+'d:\Project\27电软正式批考核\11_CAN通信\Output\CAN_FreeRTOS\Core\Src\freertos.c': object (.o) file not exist
+'d:\Project\27电软正式批考核\11_CAN通信\Output\CAN_FreeRTOS\Core\Src\gpio.c': object (.o) file not exist
+'d:\Project\27电软正式批考核\11_CAN通信\Output\CAN_FreeRTOS\Core\Src\main.c': object (.o) file not exist
+'d:\Project\27电软正式批考核\11_CAN通信\Output\CAN_FreeRTOS\Core\Src\stm32f4xx_hal_msp.c': object (.o) file not exist
+'d:\Project\27电软正式批考核\11_CAN通信\Output\CAN_FreeRTOS\Core\Src\stm32f4xx_hal_timebase_tim.c': object (.o) file not exist
+'d:\Project\27电软正式批考核\11_CAN通信\Output\CAN_FreeRTOS\Core\Src\stm32f4xx_it.c': object (.o) file not exist
+'d:\Project\27电软正式批考核\11_CAN通信\Output\CAN_FreeRTOS\Core\Src\system_stm32f4xx.c': object (.o) file not exist
+'d:\Project\27电软正式批考核\11_CAN通信\Output\CAN_FreeRTOS\Drivers\STM32F4xx_HAL_Driver\Src\stm32f4xx_hal.c': object (.o) file not exist
+'d:\Project\27电软正式批考核\11_CAN通信\Output\CAN_FreeRTOS\Drivers\STM32F4xx_HAL_Driver\Src\stm32f4xx_hal_can.c': object (.o) file not exist
+'d:\Project\27电软正式批考核\11_CAN通信\Output\CAN_FreeRTOS\Drivers\STM32F4xx_HAL_Driver\Src\stm32f4xx_hal_cortex.c': object (.o) file not exist
+'d:\Project\27电软正式批考核\11_CAN通信\Output\CAN_FreeRTOS\Drivers\STM32F4xx_HAL_Driver\Src\stm32f4xx_hal_dma.c': object (.o) file not exist
+'d:\Project\27电软正式批考核\11_CAN通信\Output\CAN_FreeRTOS\Drivers\STM32F4xx_HAL_Driver\Src\stm32f4xx_hal_dma_ex.c': object (.o) file not exist
+'d:\Project\27电软正式批考核\11_CAN通信\Output\CAN_FreeRTOS\Drivers\STM32F4xx_HAL_Driver\Src\stm32f4xx_hal_exti.c': object (.o) file not exist
+'d:\Project\27电软正式批考核\11_CAN通信\Output\CAN_FreeRTOS\Drivers\STM32F4xx_HAL_Driver\Src\stm32f4xx_hal_flash.c': object (.o) file not exist
+'d:\Project\27电软正式批考核\11_CAN通信\Output\CAN_FreeRTOS\Drivers\STM32F4xx_HAL_Driver\Src\stm32f4xx_hal_flash_ex.c': object (.o) file not exist
+'d:\Project\27电软正式批考核\11_CAN通信\Output\CAN_FreeRTOS\Drivers\STM32F4xx_HAL_Driver\Src\stm32f4xx_hal_flash_ramfunc.c': object (.o) file not exist
+'d:\Project\27电软正式批考核\11_CAN通信\Output\CAN_FreeRTOS\Drivers\STM32F4xx_HAL_Driver\Src\stm32f4xx_hal_gpio.c': object (.o) file not exist
+'d:\Project\27电软正式批考核\11_CAN通信\Output\CAN_FreeRTOS\Drivers\STM32F4xx_HAL_Driver\Src\stm32f4xx_hal_pwr.c': object (.o) file not exist
+'d:\Project\27电软正式批考核\11_CAN通信\Output\CAN_FreeRTOS\Drivers\STM32F4xx_HAL_Driver\Src\stm32f4xx_hal_pwr_ex.c': object (.o) file not exist
+'d:\Project\27电软正式批考核\11_CAN通信\Output\CAN_FreeRTOS\Drivers\STM32F4xx_HAL_Driver\Src\stm32f4xx_hal_rcc.c': object (.o) file not exist
+'d:\Project\27电软正式批考核\11_CAN通信\Output\CAN_FreeRTOS\Drivers\STM32F4xx_HAL_Driver\Src\stm32f4xx_hal_rcc_ex.c': object (.o) file not exist
+'d:\Project\27电软正式批考核\11_CAN通信\Output\CAN_FreeRTOS\Drivers\STM32F4xx_HAL_Driver\Src\stm32f4xx_hal_tim.c': object (.o) file not exist
+'d:\Project\27电软正式批考核\11_CAN通信\Output\CAN_FreeRTOS\Drivers\STM32F4xx_HAL_Driver\Src\stm32f4xx_hal_tim_ex.c': object (.o) file not exist
+'d:\Project\27电软正式批考核\11_CAN通信\Output\CAN_FreeRTOS\Middlewares\Third_Party\FreeRTOS\Source\CMSIS_RTOS_V2\cmsis_os2.c': object (.o) file not exist
+'d:\Project\27电软正式批考核\11_CAN通信\Output\CAN_FreeRTOS\Middlewares\Third_Party\FreeRTOS\Source\croutine.c': object (.o) file not exist
+'d:\Project\27电软正式批考核\11_CAN通信\Output\CAN_FreeRTOS\Middlewares\Third_Party\FreeRTOS\Source\event_groups.c': object (.o) file not exist
+'d:\Project\27电软正式批考核\11_CAN通信\Output\CAN_FreeRTOS\Middlewares\Third_Party\FreeRTOS\Source\list.c': object (.o) file not exist
+'d:\Project\27电软正式批考核\11_CAN通信\Output\CAN_FreeRTOS\Middlewares\Third_Party\FreeRTOS\Source\portable\MemMang\heap_4.c': object (.o) file not exist
+'d:\Project\27电软正式批考核\11_CAN通信\Output\CAN_FreeRTOS\Middlewares\Third_Party\FreeRTOS\Source\portable\RVDS\ARM_CM4F\port.c': object (.o) file not exist
+'d:\Project\27电软正式批考核\11_CAN通信\Output\CAN_FreeRTOS\Middlewares\Third_Party\FreeRTOS\Source\queue.c': object (.o) file not exist
+'d:\Project\27电软正式批考核\11_CAN通信\Output\CAN_FreeRTOS\Middlewares\Third_Party\FreeRTOS\Source\stream_buffer.c': object (.o) file not exist
+'d:\Project\27电软正式批考核\11_CAN通信\Output\CAN_FreeRTOS\Middlewares\Third_Party\FreeRTOS\Source\tasks.c': object (.o) file not exist
+'d:\Project\27电软正式批考核\11_CAN通信\Output\CAN_FreeRTOS\Middlewares\Third_Party\FreeRTOS\Source\timers.c': object (.o) file not exist
+'d:\Project\27电软正式批考核\11_CAN通信\Output\CAN_FreeRTOS\MDK-ARM\startup_stm32f405xx.s': object (.o) file not exist
+
+[2026-10-06 11:53:37]	[done]
+	build successfully !
+
+[2026-10-06 11:58:21]	[done]
+	build successfully !
+
+[2026-10-06 13:00:24]	[info] incremental build: 1 source files changed
+These source files will be recompiled
+---
+'d:\Project\27电软正式批考核\11_CAN通信\Output\CAN_FreeRTOS\Core\Src\freertos.c': source file has been changed.
+
+[2026-10-06 13:00:25]	[done]
+	build successfully !
+
+[2026-10-06 13:04:03]	[info] incremental build: 1 source files changed
+These source files will be recompiled
+---
+'d:\Project\27电软正式批考核\11_CAN通信\Output\CAN_FreeRTOS\Core\Src\freertos.c': source file has been changed.
+
+[2026-10-06 13:04:04]	[done]
+	build successfully !
+
+[2026-10-06 13:05:36]	[info] incremental build: 1 source files changed
+These source files will be recompiled
+---
+'d:\Project\27电软正式批考核\11_CAN通信\Output\CAN_FreeRTOS\Core\Src\freertos.c': source file has been changed.
+
+[2026-10-06 13:05:37]	[done]
+	build successfully !
+
+[2026-10-06 13:18:09]	[info] incremental build: 4 source files changed
+These source files will be recompiled
+---
+'d:\Project\27电软正式批考核\11_CAN通信\Output\CAN_FreeRTOS\Core\Src\can.c': source file has been changed.
+'d:\Project\27电软正式批考核\11_CAN通信\Output\CAN_FreeRTOS\Core\Src\freertos.c': source file has been changed.
+'d:\Project\27电软正式批考核\11_CAN通信\Output\CAN_FreeRTOS\Core\Src\stm32f4xx_it.c': source file has been changed.
+'d:\Project\27电软正式批考核\11_CAN通信\Output\CAN_FreeRTOS\MDK-ARM\startup_stm32f405xx.s': source file has been changed.
+
+[2026-10-06 13:18:11]	[done]
+	build successfully !
+
+[2026-10-06 13:22:08]	[info] incremental build: 1 source files changed
+These source files will be recompiled
+---
+'d:\Project\27电软正式批考核\11_CAN通信\Output\CAN_FreeRTOS\Core\Src\freertos.c': source file has been changed.
+
+[2026-10-06 13:22:09]	[done]
+	build successfully !
+
+[2026-10-06 14:04:45]	[info] incremental build: 39 source files changed
+These source files will be recompiled
+---
+'d:\Project\27电软正式批考核\11_CAN通信\Output\CAN_FreeRTOS\Core\Src\can.c': compiler options has been changed.
+'d:\Project\27电软正式批考核\11_CAN通信\Output\CAN_FreeRTOS\Core\Src\freertos.c': source file has been changed.
+'d:\Project\27电软正式批考核\11_CAN通信\Output\CAN_FreeRTOS\Core\Src\gpio.c': compiler options has been changed.
+'d:\Project\27电软正式批考核\11_CAN通信\Output\CAN_FreeRTOS\Core\Src\main.c': compiler options has been changed.
+'d:\Project\27电软正式批考核\11_CAN通信\Output\CAN_FreeRTOS\Core\Src\stm32f4xx_hal_msp.c': compiler options has been changed.
+'d:\Project\27电软正式批考核\11_CAN通信\Output\CAN_FreeRTOS\Core\Src\stm32f4xx_hal_timebase_tim.c': compiler options has been changed.
+'d:\Project\27电软正式批考核\11_CAN通信\Output\CAN_FreeRTOS\Core\Src\stm32f4xx_it.c': compiler options has been changed.
+'d:\Project\27电软正式批考核\11_CAN通信\Output\CAN_FreeRTOS\Core\Src\system_stm32f4xx.c': compiler options has been changed.
+'d:\Project\27电软正式批考核\11_CAN通信\Output\CAN_FreeRTOS\Drivers\STM32F4xx_HAL_Driver\Src\stm32f4xx_hal.c': compiler options has been changed.
+'d:\Project\27电软正式批考核\11_CAN通信\Output\CAN_FreeRTOS\Drivers\STM32F4xx_HAL_Driver\Src\stm32f4xx_hal_can.c': compiler options has been changed.
+'d:\Project\27电软正式批考核\11_CAN通信\Output\CAN_FreeRTOS\Drivers\STM32F4xx_HAL_Driver\Src\stm32f4xx_hal_cortex.c': compiler options has been changed.
+'d:\Project\27电软正式批考核\11_CAN通信\Output\CAN_FreeRTOS\Drivers\STM32F4xx_HAL_Driver\Src\stm32f4xx_hal_dma.c': compiler options has been changed.
+'d:\Project\27电软正式批考核\11_CAN通信\Output\CAN_FreeRTOS\Drivers\STM32F4xx_HAL_Driver\Src\stm32f4xx_hal_dma_ex.c': compiler options has been changed.
+'d:\Project\27电软正式批考核\11_CAN通信\Output\CAN_FreeRTOS\Drivers\STM32F4xx_HAL_Driver\Src\stm32f4xx_hal_exti.c': compiler options has been changed.
+'d:\Project\27电软正式批考核\11_CAN通信\Output\CAN_FreeRTOS\Drivers\STM32F4xx_HAL_Driver\Src\stm32f4xx_hal_flash.c': compiler options has been changed.
+'d:\Project\27电软正式批考核\11_CAN通信\Output\CAN_FreeRTOS\Drivers\STM32F4xx_HAL_Driver\Src\stm32f4xx_hal_flash_ex.c': compiler options has been changed.
+'d:\Project\27电软正式批考核\11_CAN通信\Output\CAN_FreeRTOS\Drivers\STM32F4xx_HAL_Driver\Src\stm32f4xx_hal_flash_ramfunc.c': compiler options has been changed.
+'d:\Project\27电软正式批考核\11_CAN通信\Output\CAN_FreeRTOS\Drivers\STM32F4xx_HAL_Driver\Src\stm32f4xx_hal_gpio.c': compiler options has been changed.
+'d:\Project\27电软正式批考核\11_CAN通信\Output\CAN_FreeRTOS\Drivers\STM32F4xx_HAL_Driver\Src\stm32f4xx_hal_pwr.c': compiler options has been changed.
+'d:\Project\27电软正式批考核\11_CAN通信\Output\CAN_FreeRTOS\Drivers\STM32F4xx_HAL_Driver\Src\stm32f4xx_hal_pwr_ex.c': compiler options has been changed.
+'d:\Project\27电软正式批考核\11_CAN通信\Output\CAN_FreeRTOS\Drivers\STM32F4xx_HAL_Driver\Src\stm32f4xx_hal_rcc.c': compiler options has been changed.
+'d:\Project\27电软正式批考核\11_CAN通信\Output\CAN_FreeRTOS\Drivers\STM32F4xx_HAL_Driver\Src\stm32f4xx_hal_rcc_ex.c': compiler options has been changed.
+'d:\Project\27电软正式批考核\11_CAN通信\Output\CAN_FreeRTOS\Drivers\STM32F4xx_HAL_Driver\Src\stm32f4xx_hal_tim.c': compiler options has been changed.
+'d:\Project\27电软正式批考核\11_CAN通信\Output\CAN_FreeRTOS\Drivers\STM32F4xx_HAL_Driver\Src\stm32f4xx_hal_tim_ex.c': compiler options has been changed.
+'d:\Project\27电软正式批考核\11_CAN通信\Output\CAN_FreeRTOS\Middlewares\Third_Party\FreeRTOS\Source\CMSIS_RTOS_V2\cmsis_os2.c': compiler options has been changed.
+'d:\Project\27电软正式批考核\11_CAN通信\Output\CAN_FreeRTOS\Middlewares\Third_Party\FreeRTOS\Source\croutine.c': compiler options has been changed.
+'d:\Project\27电软正式批考核\11_CAN通信\Output\CAN_FreeRTOS\Middlewares\Third_Party\FreeRTOS\Source\event_groups.c': compiler options has been changed.
+'d:\Project\27电软正式批考核\11_CAN通信\Output\CAN_FreeRTOS\Middlewares\Third_Party\FreeRTOS\Source\list.c': compiler options has been changed.
+'d:\Project\27电软正式批考核\11_CAN通信\Output\CAN_FreeRTOS\Middlewares\Third_Party\FreeRTOS\Source\portable\MemMang\heap_4.c': compiler options has been changed.
+'d:\Project\27电软正式批考核\11_CAN通信\Output\CAN_FreeRTOS\Middlewares\Third_Party\FreeRTOS\Source\portable\RVDS\ARM_CM4F\port.c': compiler options has been changed.
+'d:\Project\27电软正式批考核\11_CAN通信\Output\CAN_FreeRTOS\Middlewares\Third_Party\FreeRTOS\Source\queue.c': compiler options has been changed.
+'d:\Project\27电软正式批考核\11_CAN通信\Output\CAN_FreeRTOS\Middlewares\Third_Party\FreeRTOS\Source\stream_buffer.c': compiler options has been changed.
+'d:\Project\27电软正式批考核\11_CAN通信\Output\CAN_FreeRTOS\Middlewares\Third_Party\FreeRTOS\Source\tasks.c': compiler options has been changed.
+'d:\Project\27电软正式批考核\11_CAN通信\Output\CAN_FreeRTOS\Middlewares\Third_Party\FreeRTOS\Source\timers.c': compiler options has been changed.
+'d:\Project\27电软正式批考核\11_CAN通信\Output\CAN_FreeRTOS\MDK-ARM\startup_stm32f405xx.s': compiler options has been changed.
+'d:\Project\27电软正式批考核\11_CAN通信\Output\CAN_FreeRTOS\App\can_debug.c': object (.o) file not exist
+'d:\Project\27电软正式批考核\11_CAN通信\Output\CAN_FreeRTOS\App\can_protocol.c': object (.o) file not exist
+'d:\Project\27电软正式批考核\11_CAN通信\Output\CAN_FreeRTOS\App\can_tasks.c': object (.o) file not exist
+'d:\Project\27电软正式批考核\11_CAN通信\Output\CAN_FreeRTOS\App\can_transport.c': object (.o) file not exist
+
+[2026-10-06 14:04:49]	[done]
+	build successfully !
+
+[2026-10-06 14:13:46]	[info] incremental build: 39 source files changed
+These source files will be recompiled
+---
+'d:\Project\27电软正式批考核\11_CAN通信\Output\CAN_FreeRTOS\App\can_debug.c': source file has been changed.
+'d:\Project\27电软正式批考核\11_CAN通信\Output\CAN_FreeRTOS\App\can_protocol.c': source file has been changed.
+'d:\Project\27电软正式批考核\11_CAN通信\Output\CAN_FreeRTOS\App\can_tasks.c': source file has been changed.
+'d:\Project\27电软正式批考核\11_CAN通信\Output\CAN_FreeRTOS\App\can_transport.c': source file has been changed.
+'d:\Project\27电软正式批考核\11_CAN通信\Output\CAN_FreeRTOS\Core\Src\can.c': compiler options has been changed.
+'d:\Project\27电软正式批考核\11_CAN通信\Output\CAN_FreeRTOS\Core\Src\freertos.c': compiler options has been changed.
+'d:\Project\27电软正式批考核\11_CAN通信\Output\CAN_FreeRTOS\Core\Src\gpio.c': compiler options has been changed.
+'d:\Project\27电软正式批考核\11_CAN通信\Output\CAN_FreeRTOS\Core\Src\main.c': compiler options has been changed.
+'d:\Project\27电软正式批考核\11_CAN通信\Output\CAN_FreeRTOS\Core\Src\stm32f4xx_hal_msp.c': compiler options has been changed.
+'d:\Project\27电软正式批考核\11_CAN通信\Output\CAN_FreeRTOS\Core\Src\stm32f4xx_hal_timebase_tim.c': compiler options has been changed.
+'d:\Project\27电软正式批考核\11_CAN通信\Output\CAN_FreeRTOS\Core\Src\stm32f4xx_it.c': compiler options has been changed.
+'d:\Project\27电软正式批考核\11_CAN通信\Output\CAN_FreeRTOS\Core\Src\system_stm32f4xx.c': compiler options has been changed.
+'d:\Project\27电软正式批考核\11_CAN通信\Output\CAN_FreeRTOS\Drivers\STM32F4xx_HAL_Driver\Src\stm32f4xx_hal.c': compiler options has been changed.
+'d:\Project\27电软正式批考核\11_CAN通信\Output\CAN_FreeRTOS\Drivers\STM32F4xx_HAL_Driver\Src\stm32f4xx_hal_can.c': compiler options has been changed.
+'d:\Project\27电软正式批考核\11_CAN通信\Output\CAN_FreeRTOS\Drivers\STM32F4xx_HAL_Driver\Src\stm32f4xx_hal_cortex.c': compiler options has been changed.
+'d:\Project\27电软正式批考核\11_CAN通信\Output\CAN_FreeRTOS\Drivers\STM32F4xx_HAL_Driver\Src\stm32f4xx_hal_dma.c': compiler options has been changed.
+'d:\Project\27电软正式批考核\11_CAN通信\Output\CAN_FreeRTOS\Drivers\STM32F4xx_HAL_Driver\Src\stm32f4xx_hal_dma_ex.c': compiler options has been changed.
+'d:\Project\27电软正式批考核\11_CAN通信\Output\CAN_FreeRTOS\Drivers\STM32F4xx_HAL_Driver\Src\stm32f4xx_hal_exti.c': compiler options has been changed.
+'d:\Project\27电软正式批考核\11_CAN通信\Output\CAN_FreeRTOS\Drivers\STM32F4xx_HAL_Driver\Src\stm32f4xx_hal_flash.c': compiler options has been changed.
+'d:\Project\27电软正式批考核\11_CAN通信\Output\CAN_FreeRTOS\Drivers\STM32F4xx_HAL_Driver\Src\stm32f4xx_hal_flash_ex.c': compiler options has been changed.
+'d:\Project\27电软正式批考核\11_CAN通信\Output\CAN_FreeRTOS\Drivers\STM32F4xx_HAL_Driver\Src\stm32f4xx_hal_flash_ramfunc.c': compiler options has been changed.
+'d:\Project\27电软正式批考核\11_CAN通信\Output\CAN_FreeRTOS\Drivers\STM32F4xx_HAL_Driver\Src\stm32f4xx_hal_gpio.c': compiler options has been changed.
+'d:\Project\27电软正式批考核\11_CAN通信\Output\CAN_FreeRTOS\Drivers\STM32F4xx_HAL_Driver\Src\stm32f4xx_hal_pwr.c': compiler options has been changed.
+'d:\Project\27电软正式批考核\11_CAN通信\Output\CAN_FreeRTOS\Drivers\STM32F4xx_HAL_Driver\Src\stm32f4xx_hal_pwr_ex.c': compiler options has been changed.
+'d:\Project\27电软正式批考核\11_CAN通信\Output\CAN_FreeRTOS\Drivers\STM32F4xx_HAL_Driver\Src\stm32f4xx_hal_rcc.c': compiler options has been changed.
+'d:\Project\27电软正式批考核\11_CAN通信\Output\CAN_FreeRTOS\Drivers\STM32F4xx_HAL_Driver\Src\stm32f4xx_hal_rcc_ex.c': compiler options has been changed.
+'d:\Project\27电软正式批考核\11_CAN通信\Output\CAN_FreeRTOS\Drivers\STM32F4xx_HAL_Driver\Src\stm32f4xx_hal_tim.c': compiler options has been changed.
+'d:\Project\27电软正式批考核\11_CAN通信\Output\CAN_FreeRTOS\Drivers\STM32F4xx_HAL_Driver\Src\stm32f4xx_hal_tim_ex.c': compiler options has been changed.
+'d:\Project\27电软正式批考核\11_CAN通信\Output\CAN_FreeRTOS\Middlewares\Third_Party\FreeRTOS\Source\CMSIS_RTOS_V2\cmsis_os2.c': compiler options has been changed.
+'d:\Project\27电软正式批考核\11_CAN通信\Output\CAN_FreeRTOS\Middlewares\Third_Party\FreeRTOS\Source\croutine.c': compiler options has been changed.
+'d:\Project\27电软正式批考核\11_CAN通信\Output\CAN_FreeRTOS\Middlewares\Third_Party\FreeRTOS\Source\event_groups.c': compiler options has been changed.
+'d:\Project\27电软正式批考核\11_CAN通信\Output\CAN_FreeRTOS\Middlewares\Third_Party\FreeRTOS\Source\list.c': compiler options has been changed.
+'d:\Project\27电软正式批考核\11_CAN通信\Output\CAN_FreeRTOS\Middlewares\Third_Party\FreeRTOS\Source\portable\MemMang\heap_4.c': compiler options has been changed.
+'d:\Project\27电软正式批考核\11_CAN通信\Output\CAN_FreeRTOS\Middlewares\Third_Party\FreeRTOS\Source\portable\RVDS\ARM_CM4F\port.c': compiler options has been changed.
+'d:\Project\27电软正式批考核\11_CAN通信\Output\CAN_FreeRTOS\Middlewares\Third_Party\FreeRTOS\Source\queue.c': compiler options has been changed.
+'d:\Project\27电软正式批考核\11_CAN通信\Output\CAN_FreeRTOS\Middlewares\Third_Party\FreeRTOS\Source\stream_buffer.c': compiler options has been changed.
+'d:\Project\27电软正式批考核\11_CAN通信\Output\CAN_FreeRTOS\Middlewares\Third_Party\FreeRTOS\Source\tasks.c': compiler options has been changed.
+'d:\Project\27电软正式批考核\11_CAN通信\Output\CAN_FreeRTOS\Middlewares\Third_Party\FreeRTOS\Source\timers.c': compiler options has been changed.
+'d:\Project\27电软正式批考核\11_CAN通信\Output\CAN_FreeRTOS\MDK-ARM\startup_stm32f405xx.s': compiler options has been changed.
+
+[2026-10-06 14:13:50]	[done]
+	build successfully !
+
