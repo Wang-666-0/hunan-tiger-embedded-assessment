@@ -340,7 +340,7 @@
               <MiscControls></MiscControls>
               <Define>USE_HAL_DRIVER,STM32F103xB</Define>
               <Undefine></Undefine>
-              <IncludePath>../Core/Inc;../Drivers/STM32F1xx_HAL_Driver/Inc;../Drivers/STM32F1xx_HAL_Driver/Inc/Legacy;../Drivers/CMSIS/Device/ST/STM32F1xx/Include;../Drivers/CMSIS/Include</IncludePath>
+              <IncludePath>../Core/Inc;../Drivers/STM32F1xx_HAL_Driver/Inc;../Drivers/STM32F1xx_HAL_Driver/Inc/Legacy;../Drivers/CMSIS/Device/ST/STM32F1xx/Include;../Drivers/CMSIS/Include;../App</IncludePath>
             </VariousControls>
           </Cads>
           <Aads>
@@ -554,6 +554,21 @@
         </Group>
         <Group>
           <GroupName>::CMSIS</GroupName>
+        </Group>
+        <Group>
+          <GroupName>Application/User/App</GroupName>
+          <Files>
+            <File>
+              <FileName>uart_dma_observer.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>../App/uart_dma_observer.c</FilePath>
+            </File>
+            <File>
+              <FileName>vofa_demo.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>../App/vofa_demo.c</FilePath>
+            </File>
+          </Files>
         </Group>
       </Groups>
     </Target>

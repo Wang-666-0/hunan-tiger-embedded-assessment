@@ -340,7 +340,7 @@
               <MiscControls></MiscControls>
               <Define>USE_HAL_DRIVER,STM32F103xB</Define>
               <Undefine></Undefine>
-              <IncludePath>../Mpu6050;../Core/Inc;../Drivers/STM32F1xx_HAL_Driver/Inc;../Drivers/STM32F1xx_HAL_Driver/Inc/Legacy;../Drivers/CMSIS/Device/ST/STM32F1xx/Include;../Drivers/CMSIS/Include</IncludePath>
+              <IncludePath>../Mpu6050;../Core/Inc;../Drivers/STM32F1xx_HAL_Driver/Inc;../Drivers/STM32F1xx_HAL_Driver/Inc/Legacy;../Drivers/CMSIS/Device/ST/STM32F1xx/Include;../Drivers/CMSIS/Include;../App</IncludePath>
             </VariousControls>
           </Cads>
           <Aads>
@@ -510,7 +510,32 @@
           <GroupName>::CMSIS</GroupName>
         </Group>
       <Group><GroupName>MPU6050_DMP</GroupName><Files><File><FileName>mpu6050.c</FileName><FileType>1</FileType><FilePath>..\Mpu6050\mpu6050.c</FilePath></File><File><FileName>inv_mpu.c</FileName><FileType>1</FileType><FilePath>..\Mpu6050\inv_mpu.c</FilePath></File><File><FileName>inv_mpu_dmp_motion_driver.c</FileName><FileType>1</FileType><FilePath>..\Mpu6050\inv_mpu_dmp_motion_driver.c</FilePath></File></Files></Group>
-</Groups>
+        <Group>
+          <GroupName>Application/User/App</GroupName>
+          <Files>
+            <File>
+              <FileName>attitude_filter.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>../App/attitude_filter.c</FilePath>
+            </File>
+            <File>
+              <FileName>imu_app.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>../App/imu_app.c</FilePath>
+            </File>
+            <File>
+              <FileName>imu_reader.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>../App/imu_reader.c</FilePath>
+            </File>
+            <File>
+              <FileName>imu_telemetry.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>../App/imu_telemetry.c</FilePath>
+            </File>
+          </Files>
+        </Group>
+      </Groups>
     </Target>
   </Targets>
 

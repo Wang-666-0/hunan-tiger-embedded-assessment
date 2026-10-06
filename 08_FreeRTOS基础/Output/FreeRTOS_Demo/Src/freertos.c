@@ -1,4 +1,4 @@
-/* USER CODE BEGIN Header */
+ï»¿/* USER CODE BEGIN Header */
 /**
   ******************************************************************************
   * File Name          : freertos.c
@@ -25,9 +25,8 @@
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
-#include "tim.h"
-#include "usart.h"
-#include <stdio.h>
+#include "breath_led.h"
+#include "uart_echo.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -127,32 +126,9 @@ void MX_FREERTOS_Init(void) {
 void StartPwmTask(void *argument)
 {
   /* USER CODE BEGIN StartPwmTask */
-      uint16_t brightness = 0;
-      int16_t step = 5;
- /* Æô¶¯ TIM1 Í¨µÀ1µÄ PWM */
-  HAL_TIM_PWM_Start(&htim1, TIM_CHANNEL_1);
-
-  for (;;)
-  {
-    /* ÉèÖÃÕ¼¿Õ±È£¬·¶Î§Îª 0¡«1000 */
-    __HAL_TIM_SET_COMPARE(&htim1, TIM_CHANNEL_1, brightness);
-
-    /* µÈ´ýÆÚ¼ä£¬ÈÃ´®¿ÚÈÎÎñÒ²ÄÜÔËÐÐ */
-    osDelay(5);
-
-    /* µ½´ï×îÁÁ»ò×î°µÊ±£¬¸Ä±ä·½Ïò */
-    if (brightness >= 1000)
-    {
-      step = -5;
-    }
-    else if (brightness == 0)
-    {
-      step = 5;
-    }
-
-    brightness = (uint16_t)((int16_t)brightness + step);
-  }
-  /* USER CODE END StartPwmTask */
+  /* CubeMX ä»»åŠ¡å…¥å£åªè´Ÿè´£è½¬äº¤ï¼Œä¾¿äºŽé‡æ–°ç”Ÿæˆä»£ç å’ŒæŸ¥æ‰¾ä¸šåŠ¡æ¨¡å—ã€‚ */
+  BreathLed_Task(argument);
+/* USER CODE END StartPwmTask */
 }
 
 /* USER CODE BEGIN Header_StartUartTask */
@@ -165,37 +141,8 @@ void StartPwmTask(void *argument)
 void StartUartTask(void *argument)
 {
   /* USER CODE BEGIN StartUartTask */
-
-  uint8_t rx_byte;
-  uint8_t welcome[] = "INFO FreeRTOS UART ready\r\n";
-  char firewater_text[16];
-
-  HAL_UART_Transmit(&huart1,
-                    welcome,
-                    sizeof(welcome) - 1,
-                    100);
-
-  for (;;)
-  {
-    /* ³¢ÊÔ½ÓÊÕÒ»¸ö×Ö½Ú£¬×î¶àµÈ´ý 1 ms */
-    if (HAL_UART_Receive(&huart1, &rx_byte, 1, 1) == HAL_OK)
-    {
-      /* Send the received byte as one numeric FireWater channel. */
-      int length = snprintf(firewater_text, sizeof(firewater_text),
-                            "rx:%u\r\n", (unsigned int)rx_byte);
-      if (length > 0 && length < (int)sizeof(firewater_text))
-      {
-          HAL_UART_Transmit(&huart1, (uint8_t *)firewater_text,
-                            (uint16_t)length, 10);
-      }
-    }
-
-    /* ÈÃ³ö CPU£¬ÆäËûÈÎÎñ¿ÉÒÔÔËÐÐ */
-    osDelay(1);
-  }
-
-
-  /* USER CODE END StartUartTask */
+  UartEcho_Task(argument);
+/* USER CODE END StartUartTask */
 }
 
 /* Private application code --------------------------------------------------*/
