@@ -1,0 +1,51 @@
+{
+  "recorded_at": "2026-10-06T20:04:39+08:00",
+  "method": "real ARM C with HAL/RTOS mocks, Unicorn; no physical hardware",
+  "results": [
+    {
+      "motor_id": 1,
+      "mode": 0,
+      "checks": 708,
+      "failures": 0,
+      "failed_line": 0,
+      "stage": 6,
+      "finished": 1
+    },
+    {
+      "motor_id": 5,
+      "mode": 1,
+      "checks": 708,
+      "failures": 0,
+      "failed_line": 0,
+      "stage": 6,
+      "finished": 1
+    }
+  ],
+  "builds": {
+    "EIDE_default": "PASS; ARMCC5; APP_ENABLE_DIAGNOSTICS=0; no warnings observed",
+    "EIDE_optional_diagnostics": "PASS; ARMCC5; APP_ENABLE_DIAGNOSTICS=1; no warnings observed"
+  },
+  "scope": "Readable refactor, key-line comments, direct feedback processing; no real hardware connected",
+  "artifact_sha256": {
+    "12_DJI电机驱动/Output/CAN_FreeRTOS/MDK-ARM/build/CAN_FreeRTOS/GM6020_FreeRTOS.hex": "fa47f12495e864843906af6acc5d90b8ac5ec36a3f34107714800838ea53b58e",
+    "12_DJI电机驱动/Output/CAN_FreeRTOS/MDK-ARM/build/diagnostics-check/GM6020_FreeRTOS.hex": "dc332d892cb7e3bdf013d85a86fd50e92e0784505e842f37290f779637361938"
+  },
+  "application_sha256": {
+    "app_config.h": "5d981f13b83ea2600fa37e74171518291f710256fd91e14c2b651e02d4fb93c9",
+    "can_debug.c": "9199fb20671e17d4402e323105d30d86216f1bafaef8391cb854ab255463cf61",
+    "can_debug.h": "ee9e1d4222f79c436558f568ce48c672d7fc86f2b5392b33b7a27b0ba1f61f29",
+    "can_protocol.c": "830980e090fc94c17fe552bddb1117cef5cd45e3d570d7a099fe4b400615f0ff",
+    "can_protocol.h": "8cb280043235ad5b718e29b19dee8d8b7957168a66790d57be945277586c74db",
+    "can_tasks.c": "495b5ea57e50edf55d02eb8ef34b5099fe6d7a9ffd8f98f91b9f4e65a15a86c2",
+    "can_tasks.h": "f41a7ca06a76ff6540c704f439cdb2c8f920f25ea88f0c08e1e3ac00e2a6ebff",
+    "can_transport.c": "c61e599d7f477177880fdcbd4821ab4120c0d79bf7be4cefbfaa2e08c8e6e6c9",
+    "can_transport.h": "115ba6c903f2e7d0ccabaa23cffa2259dc9628955432b6963f7a83d6d338aa4f",
+    "gm6020.c": "f5d342320ebf848868887abc95918c278eb8eeeb938b7fc245da5e5d42b7764c",
+    "gm6020.h": "753f2c7206d4bfded6b2a1c1ef9e3096ea4f712bca959e095460edac5624c403",
+    "gm6020_codec.c": "2038c59387ae40c1daf6675afdb113bae28bc1c85363e381b10303fc3af4a9c5",
+    "motor_console.c": "7b14387ec20192f12da71991bec6c5cce72f37307c185395e135c14ba4d4157d",
+    "motor_console.h": "a1550c2b8c34b194d19bc4153eecd20e13ba7914665d0809f3ff1796ea633f92",
+    "motor_control.c": "767e6313a5444ec4ff07ae6975a0503ab52ea0d2dbcdfcb429ede7a6bb046018",
+    "motor_control.h": "d0b4063bfc703e1efeeacaae58d5fee3331fc9233eebb3c3299a6194ce455c30"
+  }
+}

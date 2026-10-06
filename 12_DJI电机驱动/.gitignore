@@ -1,0 +1,10 @@
+# 支持包缓存和构建产物留在本地；仓库保存源码及可重建配置。
+**/.pack/
+**/build/
+*.log
+*.iex
+*.s19
+__pycache__/
+
+# CubeMX 随工程复制的 CMSIS-DAP 探针固件，本项目不使用。
+Output/CAN_FreeRTOS/Drivers/CMSIS/DAP/
