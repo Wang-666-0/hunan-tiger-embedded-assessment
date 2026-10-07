@@ -1,0 +1,65 @@
+{
+  "recorded_at": "2026-10-07T11:29:31+08:00",
+  "method": "real ARM C with HAL/RTOS mocks, Unicorn; no physical hardware",
+  "coverage": [
+    "PID scaling, limits, anti-windup, filtered derivative, invalid inputs",
+    "CAN feedback and all seven command slots",
+    "Retained speed control, continuous run, online gains, measured dt and concurrent requests",
+    "Bidirectional encoder unwrap, exact +/-720 degrees, gap/jump/speed/bounds invalid latch, tick wrap and explicit zero",
+    "Cascade angle control, real multiturn targets, speed limit, mode reset, feedback/epoch faults and stopped low-speed zero",
+    "Angle measured dt, integral gain continuity, repeat target/metrics and once-per-stage braking integral clearing",
+    "Angle settling-band/hold and overshoot telemetry, angle/gain/limit/mode/STOP concurrent requests",
+    "Feedback invalid/reference epoch/overtemperature changes during calculation rejected before publishing, coherent command admission",
+    "Strict S/A/AP/AI/AD/P/I/D/V/Z/STOP/T commands, two/21-channel FireWater and RX recovery"
+  ],
+  "source_sha256": {
+    "Tests/selftest.c": "76fbbb1a484e6e98038e358c21da67200b80a58e63518a139b0c1cae965aed1c",
+    "App/pid.c": "5166f83c49cf131d9d7933d185161d50316406654fe4fbe34e2dc83552b7cc63",
+    "App/angle_tracker.c": "9edb3f909ac608cc1b102d6d5a8e6cd1b7bcef85461f27eb513c79709d031ff0",
+    "App/can_protocol.c": "830980e090fc94c17fe552bddb1117cef5cd45e3d570d7a099fe4b400615f0ff",
+    "App/gm6020_codec.c": "b15b8852abb3a857a54d8299e02915731f831cddcd8a46afbadb58d69966adb1",
+    "App/gm6020.c": "f69347cf92a897a726a28af8d82faae5339edfcce9137e0865db122c58449bc9",
+    "App/motor_control.c": "d08c04b860fc5bbf504671d4762b204488241f7a3cd35bea41e6dda6e385d7ee",
+    "App/motor_console.c": "7c0923d661a41c63b577d73fb2a7e3352be8ff8c930b16ca5e07275e522c029a",
+    "Tests/mocks/can.h": "21b32379854bd9c693e15c7838c23998bbf3e4a6642d162cc4ea444e342de008",
+    "Tests/mocks/FreeRTOS.h": "5550ebf4917cfe04eb7d3452449ba1896dc9ed49e510f3816fbec8e464eef71c",
+    "Tests/mocks/main.h": "940510e25fe1b5b8687dc6e9b4eb36dfaf748d98d93a0b14307259f5de2f8f99",
+    "Tests/mocks/queue.h": "d5a23d5b9806a6e0f7090e2321ea251e7567019f923d0aeec05e853dda1d6a02",
+    "Tests/mocks/task.h": "e085391d8ddc404ff7ad41f3c458edeec1212fa9ffba6ab9089a72b93b58b61c",
+    "Tests/mocks/usart.h": "7ab0345dc2e573cead99bdf4fa6b4fb487d0a37d99765cbe3ec3fc782d30460e",
+    "App/angle_tracker.h": "d71335559e7a3867a24d52ad1c3f60c7d3dfce01718cc8358fc84245ab72000b",
+    "App/app_config.h": "b178a28a653f87429479ddf3006b1fecf13a406c97be12dcaa14e17000f965af",
+    "App/can_debug.h": "ee9e1d4222f79c436558f568ce48c672d7fc86f2b5392b33b7a27b0ba1f61f29",
+    "App/can_protocol.h": "8cb280043235ad5b718e29b19dee8d8b7957168a66790d57be945277586c74db",
+    "App/can_tasks.h": "f41a7ca06a76ff6540c704f439cdb2c8f920f25ea88f0c08e1e3ac00e2a6ebff",
+    "App/can_transport.h": "115ba6c903f2e7d0ccabaa23cffa2259dc9628955432b6963f7a83d6d338aa4f",
+    "App/gm6020.h": "9901bfb9eeeb27449a6f5bf62a732602909291867b9aad359cd902ab567fd598",
+    "App/motor_console.h": "0f842a90d1d533dd3ed33d2f392fe3b1566d9bbd2d11c58217f592bd61e49268",
+    "App/motor_control.h": "de8dd7669d804a9f3c4aa48c1ca6842789bb02fe1e58ad338d195e97cd039891",
+    "App/pid.h": "84462e383cb18564e73a1d3a328c1cc53235f5b99bb90b18e88d2ede981ca64b"
+  },
+  "results": [
+    {
+      "motor_id": 1,
+      "mode": 0,
+      "checks": 63669,
+      "failures": 0,
+      "failed_line": 0,
+      "first_failed_stage": 0,
+      "stage": 6,
+      "finished": 1,
+      "first_failed_lines": []
+    },
+    {
+      "motor_id": 5,
+      "mode": 1,
+      "checks": 56666,
+      "failures": 0,
+      "failed_line": 0,
+      "first_failed_stage": 0,
+      "stage": 6,
+      "finished": 1,
+      "first_failed_lines": []
+    }
+  ]
+}

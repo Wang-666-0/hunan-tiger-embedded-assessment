@@ -1,0 +1,54 @@
+{
+  "recorded_at": "2026-10-07T10:47:20+08:00",
+  "method": "real ARM C with HAL/RTOS mocks, Unicorn; no physical hardware",
+  "coverage": [
+    "PID scaling, limits, anti-windup, filtered derivative, invalid inputs",
+    "CAN feedback and all seven command slots",
+    "Speed control, continuous run without keep-alive, online gain continuity, measured dt and faults",
+    "Strict serial commands, two/ten-channel FireWater and RX recovery"
+  ],
+  "source_sha256": {
+    "Tests/selftest.c": "5a157e2cfd391db580f4f1be37633ab3c8daa87870526dfdeaa65c80b7ebbdc1",
+    "App/pid.c": "5166f83c49cf131d9d7933d185161d50316406654fe4fbe34e2dc83552b7cc63",
+    "App/can_protocol.c": "830980e090fc94c17fe552bddb1117cef5cd45e3d570d7a099fe4b400615f0ff",
+    "App/gm6020_codec.c": "b15b8852abb3a857a54d8299e02915731f831cddcd8a46afbadb58d69966adb1",
+    "App/gm6020.c": "f5d342320ebf848868887abc95918c278eb8eeeb938b7fc245da5e5d42b7764c",
+    "App/motor_control.c": "0af1040dafc96ffe5ab4870a9ca8ebd933c93d7d06217a77c5cfceab3a49eec4",
+    "App/motor_console.c": "3d9c400a16d86a98188d529fa9376d73d554495e7e600df3002673f758407cd4",
+    "Tests/mocks/can.h": "21b32379854bd9c693e15c7838c23998bbf3e4a6642d162cc4ea444e342de008",
+    "Tests/mocks/FreeRTOS.h": "5550ebf4917cfe04eb7d3452449ba1896dc9ed49e510f3816fbec8e464eef71c",
+    "Tests/mocks/main.h": "940510e25fe1b5b8687dc6e9b4eb36dfaf748d98d93a0b14307259f5de2f8f99",
+    "Tests/mocks/queue.h": "d5a23d5b9806a6e0f7090e2321ea251e7567019f923d0aeec05e853dda1d6a02",
+    "Tests/mocks/task.h": "e085391d8ddc404ff7ad41f3c458edeec1212fa9ffba6ab9089a72b93b58b61c",
+    "Tests/mocks/usart.h": "7ab0345dc2e573cead99bdf4fa6b4fb487d0a37d99765cbe3ec3fc782d30460e",
+    "App/app_config.h": "08b349f520864f41a98161580b707f94c7b191e190718bc8a832ee787f9356f5",
+    "App/can_debug.h": "ee9e1d4222f79c436558f568ce48c672d7fc86f2b5392b33b7a27b0ba1f61f29",
+    "App/can_protocol.h": "8cb280043235ad5b718e29b19dee8d8b7957168a66790d57be945277586c74db",
+    "App/can_tasks.h": "f41a7ca06a76ff6540c704f439cdb2c8f920f25ea88f0c08e1e3ac00e2a6ebff",
+    "App/can_transport.h": "115ba6c903f2e7d0ccabaa23cffa2259dc9628955432b6963f7a83d6d338aa4f",
+    "App/gm6020.h": "6cf59763b88e583d7a8b17612b4eb84fee6f13897cf4e8c5c94b530c0dfc1a28",
+    "App/motor_console.h": "ac4df3269584c94cf800990056fd68cb5e8c0498e328cc672a42793b9be4e43c",
+    "App/motor_control.h": "29528cb6dc4d0796a1d86c08835a06a95784315d733949b284cf9e317a833c11",
+    "App/pid.h": "84462e383cb18564e73a1d3a328c1cc53235f5b99bb90b18e88d2ede981ca64b"
+  },
+  "results": [
+    {
+      "motor_id": 1,
+      "mode": 0,
+      "checks": 49102,
+      "failures": 0,
+      "failed_line": 0,
+      "stage": 6,
+      "finished": 1
+    },
+    {
+      "motor_id": 5,
+      "mode": 1,
+      "checks": 42974,
+      "failures": 0,
+      "failed_line": 0,
+      "stage": 6,
+      "finished": 1
+    }
+  ]
+}
