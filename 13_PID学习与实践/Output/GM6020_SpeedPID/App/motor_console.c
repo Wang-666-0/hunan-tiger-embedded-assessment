@@ -210,6 +210,15 @@ void MotorConsole_ProcessLine(const char *line)// 解析完整的一行，错误
         MotorConsole_SetResult(MOTOR_COMMAND_OK);
         return;
     }
+    if (strcmp(line, "OK") == 0)
+    {
+        PidStore_Result save_result = MotorControl_SaveGains();
+        MotorConsole_SetResult((save_result == PID_STORE_SAVED ||
+            save_result == PID_STORE_UNCHANGED) ? MOTOR_COMMAND_OK :
+            (save_result == PID_STORE_NOT_READY ? MOTOR_COMMAND_NOT_READY :
+            (save_result == PID_STORE_INVALID ? MOTOR_COMMAND_RANGE : MOTOR_COMMAND_SAVE_ERROR)));
+        return;
+    }
     if (strcmp(line, "K") == 0)
     {
         // 兼容以前的 K 命令，只检查是否运行；本版不需要周期发送 K。

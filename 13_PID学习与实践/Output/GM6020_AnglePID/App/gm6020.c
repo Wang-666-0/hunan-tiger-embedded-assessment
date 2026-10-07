@@ -36,6 +36,14 @@ void GM6020_ResetFeedback(void)
     taskEXIT_CRITICAL();
 }
 
+void GM6020_InvalidateAngle(void)
+{
+    taskENTER_CRITICAL();
+    angle_tracker.valid = 0U; // 不清 initialized，后续反馈不能偷偷建立新零位。
+    gm6020_feedback.angle_valid = 0U;
+    taskEXIT_CRITICAL();
+}
+
 uint8_t GM6020_ParseFeedback(const CanRxMessage *message)//解析反馈报文
 {
     GM6020_Feedback decoded; // 先在局部变量中完成解码，不让其他任务看到半帧数据。

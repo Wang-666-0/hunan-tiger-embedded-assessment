@@ -86,6 +86,7 @@ virtualFolder:
         - path: ../App/motor_console.c
         - path: ../App/motor_control.c
         - path: ../App/pid.c
+        - path: ../App/pid_store.c
       folders: []
 dependenceList: []
 outDir: build
@@ -207,7 +208,7 @@ targets:
               isChecked: true
               isStartup: true
               mem:
-                size: "0x100000"
+                size: "0x80000"
                 startAddr: "0x8000000"
               tag: IROM
             - id: 2

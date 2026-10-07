@@ -2,6 +2,7 @@
 #define MOTOR_CONTROL_H
 
 #include "gm6020.h"
+#include "pid_store.h"
 
 /* 双环任务接口：角度外环输出 rpm，转速内环输出协议 raw。
  * S 命令仍可单独运行转速内环，以便先调好内环再调角度环。
@@ -68,6 +69,7 @@ uint8_t MotorControl_ZeroAngle(void); // Z：必须先 STOP，并收到新鲜且
 uint8_t MotorControl_SetAngleGain(char term, float value); // AP/AI/AD：外环增益，不启动。
 uint8_t MotorControl_SetSpeedLimit(float rpm); // V：角度环输出的最大转速，1～100 rpm。
 uint8_t MotorControl_KeepAlive(void); // 兼容旧 K：仅返回是否运行，不再要求定时发送。
+PidStore_Result MotorControl_SaveGains(void); // OK：停止并确认零给定后保存六项增益。
 void MotorControl_Stop(MotorStopReason reason);
 void MotorControl_Step(void);
 void MotorControl_GetState(MotorControl_State *snapshot);

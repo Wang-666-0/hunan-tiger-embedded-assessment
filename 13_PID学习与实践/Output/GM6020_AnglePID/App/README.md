@@ -6,6 +6,7 @@
 | --- | --- |
 | app_config.h | 电机 ID、时序、限幅、PID 初值和在线参数范围 |
 | pid.c / pid.h | 自己封装的 PID：P/I/D、微分滤波、条件积分与限幅；无硬件依赖 |
+| pid_store.c / .h | 双扇区 CRC 日志，掉电保存并加载六项 PID 增益 |
 | motor_control.c / .h | 角度/转速模式、双环 PID、在线增益、一次性制动清 I、保护、阶跃指标；统一发送 CAN |
 | motor_console.c / .h | USART1 按行收 A/Z/AP/AI/AD/V 与旧速度命令，21 通道 FireWater 遥测 |
 | angle_tracker.c / .h | 编码器跨零累计，支持正反多圈；失联、跳变后锁定无效，静止 Z 重建参考 |

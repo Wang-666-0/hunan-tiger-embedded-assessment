@@ -14,7 +14,7 @@
 #define ENCODER_HALF_TURN 4096
 #define ENCODER_JUMP_MARGIN_COUNTS 8.0f
 
-void AngleTracker_Init(AngleTracker *tracker)
+void AngleTracker_Init(AngleTracker *tracker)// 初始化角度追踪器
 {
     if (tracker != NULL)
     {
@@ -27,7 +27,7 @@ void AngleTracker_Init(AngleTracker *tracker)
     }
 }
 
-void AngleTracker_CheckAge(AngleTracker *tracker, uint32_t now_ms)
+void AngleTracker_CheckAge(AngleTracker *tracker, uint32_t now_ms)// 检查角度追踪器的有效性
 {
     if (tracker != NULL && tracker->initialized != 0U &&
         (uint32_t)(now_ms - tracker->last_rx_ms) >= ANGLE_TRACK_MAX_GAP_MS)
@@ -37,7 +37,7 @@ void AngleTracker_CheckAge(AngleTracker *tracker, uint32_t now_ms)
 }
 
 uint8_t AngleTracker_Update(AngleTracker *tracker, uint16_t encoder,
-                            int16_t speed_rpm, uint32_t now_ms)
+                            int16_t speed_rpm, uint32_t now_ms)// 更新角度追踪器的状态
 {
     uint32_t elapsed_ms;
     int32_t delta;

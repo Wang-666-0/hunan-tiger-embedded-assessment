@@ -2,6 +2,7 @@
 #define MOTOR_CONTROL_H
 
 #include "gm6020.h"
+#include "pid_store.h"
 
 /* 转速单环的任务接口；完整控制过程由 MotorControl_Step 统一执行。 */
 typedef enum
@@ -44,6 +45,7 @@ void MotorControl_Init(void);
 uint8_t MotorControl_SetSpeed(float rpm); // 锁存目标并持续运行；S0 也闭环，Stop 才完全停用。
 uint8_t MotorControl_SetGain(char term, float value); // P/I/D 在线更新，保留历史，不启动电机。
 uint8_t MotorControl_KeepAlive(void); // 兼容旧 K：仅返回是否运行，不再要求定时发送。
+PidStore_Result MotorControl_SaveGains(void); // OK：停止并确认零给定后保存三项增益。
 void MotorControl_Stop(MotorStopReason reason);
 void MotorControl_Step(void);
 void MotorControl_GetState(MotorControl_State *snapshot);

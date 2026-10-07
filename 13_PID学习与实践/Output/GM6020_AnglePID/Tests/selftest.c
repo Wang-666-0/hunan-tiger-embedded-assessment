@@ -191,8 +191,10 @@ static float FloatFromBits(uint32_t bits)
     number.bits = bits;
     return number.value;
 }
+#include "pid_store_fixture.h"
 static void ResetMotor(void)
 {
+    TestFlash_Reset();
     now_ms = 1000U;
     free_mailboxes = 3U;
     send_status = HAL_OK;
@@ -1224,7 +1226,15 @@ static void TestConsole(void)
     MotorConsole_ProcessLine("A720"); CHECK(motor_control.target_angle_deg == 720.0f);
     MotorConsole_ProcessLine("A-720"); CHECK(motor_control.target_angle_deg == -720.0f);
     MotorConsole_ProcessLine("S10"); CHECK(motor_control.control_mode == MOTOR_CONTROL_SPEED_MODE);
+    MotorConsole_ProcessLine("OK"); CHECK(motor_console_debug.last_result == MOTOR_COMMAND_NOT_READY);
     MotorConsole_ProcessLine("STOP"); CHECK(motor_control.enabled == 0U);
+    MotorConsole_ProcessLine("OK"); CHECK(motor_console_debug.last_result == MOTOR_COMMAND_OK);
+    CHECK(motor_control.angle_valid == 0U);
+    motor_control.kp = 1.0f; motor_control.angle_kp = 1.0f;
+    MotorControl_Init();
+    CHECK(motor_control.kp == 5.5f && motor_control.ki == 0.25f && Near(motor_control.kd, 0.02f, 0.00001f));
+    CHECK(motor_control.angle_kp == 4.5f && motor_control.angle_ki == 0.25f && Near(motor_control.angle_kd, 0.05f, 0.000001f));
+    CHECK(motor_control.enabled == 0U && motor_control.stop_reason == MOTOR_STOP_POWER_ON);
     test_stage = 5U;
     ResetMotor(); MotorConsole_CreateQueue(); MotorConsole_Start();
     InjectText("S3"); MotorConsole_Poll(); CHECK(motor_control.enabled == 0U);
@@ -1304,5 +1314,6 @@ void test_run(void)
     TestAngleConcurrentRequests();
     TestAngleFeedbackPublishGuards();
     TestConsole();
+    TestPidStore();
     test_done = 1U;
 }

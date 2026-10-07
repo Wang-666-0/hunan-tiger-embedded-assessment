@@ -6,6 +6,7 @@
 | --- | --- |
 | app_config.h | 电机 ID、时序、限幅、PID 初值和在线参数范围 |
 | pid.c / pid.h | 自己封装的 PID：P/I/D、微分滤波、条件积分与限幅；无硬件依赖 |
+| pid_store.c / .h | 双扇区 CRC 日志，掉电保存并加载三项 PID 增益 |
 | motor_control.c / .h | 锁存目标 rpm、连续运行、保留历史的在线增益、保护与周期闭环；统一发送 CAN |
 | motor_console.c / .h | USART1 按行收命令、S/P/I/D/K/STOP/T0/T1、FireWater 曲线 |
 | gm6020_codec.c | GM6020 八字节反馈解析及控制报文槽位编码 |

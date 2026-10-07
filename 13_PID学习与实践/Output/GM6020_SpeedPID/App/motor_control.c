@@ -27,6 +27,12 @@ static uint8_t clear_integral_requested; // 反转/零速请求只清旧积分�
 static uint8_t have_step_time;   // 第一次启用时还没有可用的上轮控制时间。
 static uint32_t last_step_ms;    // 用真实运行间隔计算 dt，而不是盲用固定常数。
 static uint32_t request_revision; // 防止计算时出现的新停止请求被旧结果覆盖。
+static uint8_t save_busy; // Flash 擦写期间禁止接受新的控制请求。
+
+static float MotorControl_Abs(float value)
+{
+    return (value >= 0.0f) ? value : -value;
+}
 
 static float MotorControl_OutputLimit(void)
 {
@@ -48,8 +54,13 @@ static PID_Config MotorControl_Config(float kp, float ki, float kd)
 
 void MotorControl_Init(void)
 {
+    PidStore_Params stored;
     PID_Config config = MotorControl_Config(SPEED_PID_DEFAULT_KP,
         SPEED_PID_DEFAULT_KI, SPEED_PID_DEFAULT_KD);
+    if (PidStore_Load(&stored) != 0U)
+    {
+        config = MotorControl_Config(stored.speed_kp, stored.speed_ki, stored.speed_kd);
+    }
     memset((void *)&motor_control, 0, sizeof(motor_control)); // 创建任务前调用，初始输出为零。
     motor_control.kp = config.kp;
     motor_control.ki = config.ki;
@@ -63,6 +74,7 @@ void MotorControl_Init(void)
     have_step_time = 0U;
     last_step_ms = 0U;
     request_revision = 0U;
+    save_busy = 0U;
 }
 
 /* 必须在短临界区内调用。只撤销请求，硬件发送由 Step 统一处理。 */
@@ -88,6 +100,34 @@ void MotorControl_Stop(MotorStopReason reason)
     taskEXIT_CRITICAL();
 }
 
+PidStore_Result MotorControl_SaveGains(void)
+{
+    PidStore_Params params;
+    PidStore_Result result;
+    taskENTER_CRITICAL();
+    if (save_busy != 0U || motor_control.enabled != 0U ||
+        motor_control.last_sent_raw != 0 ||
+        MotorControl_Abs(motor_control.actual_rpm) > PID_SAVE_MAX_SPEED_RPM ||
+        HAL_CAN_GetTxMailboxesFreeLevel(&hcan1) != 3U)
+    {
+        taskEXIT_CRITICAL();
+        return PID_STORE_NOT_READY;
+    }
+    save_busy = 1U;
+    params.speed_kp = motor_control.kp;
+    params.speed_ki = motor_control.ki;
+    params.speed_kd = motor_control.kd;
+    params.angle_kp = 0.0f;
+    params.angle_ki = 0.0f;
+    params.angle_kd = 0.0f;
+    taskEXIT_CRITICAL();
+    result = PidStore_Save(&params);
+    taskENTER_CRITICAL();
+    save_busy = 0U;
+    taskEXIT_CRITICAL();
+    return result;
+}
+
 uint8_t MotorControl_SetSpeed(float rpm)
 {
     GM6020_Feedback feedback;
@@ -105,6 +145,7 @@ uint8_t MotorControl_SetSpeed(float rpm)
         return 0U; // 未收到新鲜反馈时，即使是 S0 也不能启动闭环。
     }
     taskENTER_CRITICAL();
+    if (save_busy != 0U) { taskEXIT_CRITICAL(); return 0U; }
     if (motor_control.enabled != 0U && motor_control.target_rpm == rpm)
     {
         taskEXIT_CRITICAL();
@@ -145,6 +186,7 @@ uint8_t MotorControl_SetGain(char term, float value)
         return 0U; // 拒绝负参数、非有限数或超出教学输入范围的参数。
     }
     taskENTER_CRITICAL();
+    if (save_busy != 0U) { taskEXIT_CRITICAL(); return 0U; }
     /* 不直接操作 speed_pid；参数在下一轮由控制任务统一应用。 */
     if (term == 'P') { gain = &motor_control.kp; }
     else if (term == 'I') { gain = &motor_control.ki; }

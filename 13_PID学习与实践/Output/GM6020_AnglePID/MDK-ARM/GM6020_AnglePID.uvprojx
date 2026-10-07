@@ -15,7 +15,7 @@
           <Vendor>STMicroelectronics</Vendor>
           <PackID>Keil.STM32F4xx_DFP.2.17.1</PackID>
           <PackURL>https://www.keil.com/pack/</PackURL>
-          <Cpu>IRAM(0x20000000-0x2001BFFF) IRAM2(0x2001C000-0x2001FFFF) IROM(0x8000000-0x80FFFFF)  CLOCK(25000000) FPU2 CPUTYPE("Cortex-M4") TZ</Cpu>
+          <Cpu>IRAM(0x20000000-0x2001BFFF) IRAM2(0x2001C000-0x2001FFFF) IROM(0x8000000-0x807FFFF)  CLOCK(25000000) FPU2 CPUTYPE("Cortex-M4") TZ</Cpu>
           <FlashUtilSpec />
           <StartupFile />
           <FlashDriverDll />
@@ -249,7 +249,7 @@
               <IROM>
                 <Type>1</Type>
                 <StartAddress>0x8000000</StartAddress>
-                <Size>0x100000</Size>
+                <Size>0x80000</Size>
               </IROM>
               <XRAM>
                 <Type>0</Type>
@@ -274,7 +274,7 @@
               <OCR_RVCT4>
                 <Type>1</Type>
                 <StartAddress>0x8000000</StartAddress>
-                <Size>0x100000</Size>
+                <Size>0x80000</Size>
               </OCR_RVCT4>
               <OCR_RVCT5>
                 <Type>1</Type>
@@ -702,7 +702,7 @@
           <GroupName>::CMSIS</GroupName>
         </Group>
       <Group><GroupName>App</GroupName><Files><File><FileName>can_debug.c</FileName><FileType>1</FileType><FilePath>../App/can_debug.c</FilePath></File><File><FileName>can_protocol.c</FileName><FileType>1</FileType><FilePath>../App/can_protocol.c</FilePath></File><File><FileName>can_tasks.c</FileName><FileType>1</FileType><FilePath>../App/can_tasks.c</FilePath></File><File><FileName>can_transport.c</FileName><FileType>1</FileType><FilePath>../App/can_transport.c</FilePath></File><File><FileName>gm6020.c</FileName><FileType>1</FileType><FilePath>../App/gm6020.c</FilePath></File><File><FileName>gm6020_codec.c</FileName><FileType>1</FileType><FilePath>../App/gm6020_codec.c</FilePath></File><File><FileName>motor_console.c</FileName><FileType>1</FileType><FilePath>../App/motor_console.c</FilePath></File><File><FileName>motor_control.c</FileName><FileType>1</FileType><FilePath>../App/motor_control.c</FilePath></File>
-              <File><FileName>angle_tracker.c</FileName><FileType>1</FileType><FilePath>../App/angle_tracker.c</FilePath></File><File><FileName>pid.c</FileName><FileType>1</FileType><FilePath>../App/pid.c</FilePath></File></Files></Group>
+              <File><FileName>angle_tracker.c</FileName><FileType>1</FileType><FilePath>../App/angle_tracker.c</FilePath></File><File><FileName>pid.c</FileName><FileType>1</FileType><FilePath>../App/pid.c</FilePath></File><File><FileName>pid_store.c</FileName><FileType>1</FileType><FilePath>../App/pid_store.c</FilePath></File></Files></Group>
       </Groups>
     </Target>
   </Targets>

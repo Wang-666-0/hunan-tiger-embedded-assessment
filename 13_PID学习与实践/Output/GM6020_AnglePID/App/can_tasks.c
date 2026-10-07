@@ -2,7 +2,7 @@
  * 文件功能：创建并调度电机应用的三个 FreeRTOS 任务。
  * 1. CAN 接收任务：启动 CAN1，阻塞等待接收队列，处理反馈与诊断记录。
  * 2. 电机控制任务：默认每 2 ms 执行控制步骤，可选每 100 ms 采样诊断。
- * 3. 串口控制台任务：默认每 5 ms 处理输入，每 20 ms 发送双环遥测。
+ * 3. 串口控制台任务：默认每 5 ms 处理输入并调度双环遥测。
  * 4. 设置各任务优先级和栈大小，处理创建失败；额外诊断默认关闭。
  * 模块关系：本文件负责安排何时执行；具体收发、协议解码、输出管理
  * 和串口命令处理，分别交给 can_transport、gm6020、motor_control、
@@ -93,7 +93,7 @@ static void MotorConsoleTask(void *argument)//电机控制台任务
     {
         MotorConsole_Poll();//轮询串口输入，处理命令
         if ((TickType_t)(xTaskGetTickCount() - last_telemetry) >= // 串口输入每轮处理，遥测达到独立周期才发送。
-            pdMS_TO_TICKS(MOTOR_TELEMETRY_PERIOD_MS))//每 20 ms 发送一次双环遥测数据
+            pdMS_TO_TICKS(MOTOR_TELEMETRY_PERIOD_MS))//每 5 ms 调度一次双环遥测数据
         {
             last_telemetry = xTaskGetTickCount(); // 先记录本次发送基准，避免把发送耗时重复累加。
             MotorConsole_SendTelemetry();//发送遥测数据
@@ -102,7 +102,7 @@ static void MotorConsoleTask(void *argument)//电机控制台任务
             motor_console_stack_free_words = uxTaskGetStackHighWaterMark(NULL);
 #endif
         }
-        // 名义每 5 ms 处理一轮输入，遥测名义每 20 ms 输出。
+        // 名义每 5 ms 处理一轮输入并发送遥测；发送必须能在该周期内完成。
         vTaskDelayUntil(&last_wake, pdMS_TO_TICKS(MOTOR_CONSOLE_PERIOD_MS));
     }
 }

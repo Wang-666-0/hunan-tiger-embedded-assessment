@@ -162,8 +162,10 @@ static float FloatFromBits(uint32_t bits)
     number.bits = bits;
     return number.value;
 }
+#include "pid_store_fixture.h"
 static void ResetMotor(void)
 {
+    TestFlash_Reset();
     now_ms = 1000U;
     free_mailboxes = 3U;
     send_status = HAL_OK;
@@ -802,6 +804,11 @@ static void TestConsole(void)
     MotorConsole_ProcessLine("P5.5"); CHECK(motor_control.kp == 5.5f && motor_control.enabled == 0U);
     MotorConsole_ProcessLine("I0.25"); CHECK(motor_control.ki == 0.25f);
     MotorConsole_ProcessLine("D0.02"); CHECK(Near(motor_control.kd, 0.02f, 0.00001f));
+    MotorConsole_ProcessLine("OK"); CHECK(motor_console_debug.last_result == MOTOR_COMMAND_OK);
+    motor_control.kp = 1.0f;
+    MotorControl_Init();
+    CHECK(motor_control.kp == 5.5f && motor_control.ki == 0.25f && Near(motor_control.kd, 0.02f, 0.00001f));
+    CHECK(motor_control.enabled == 0U && motor_control.stop_reason == MOTOR_STOP_POWER_ON);
     MotorConsole_ProcessLine("S100.01"); CHECK(motor_console_debug.last_result == MOTOR_COMMAND_RANGE);
     MotorConsole_ProcessLine("P200.01"); CHECK(motor_console_debug.last_result == MOTOR_COMMAND_RANGE);
     MotorConsole_ProcessLine("I1000.01"); CHECK(motor_console_debug.last_result == MOTOR_COMMAND_RANGE);
@@ -882,5 +889,6 @@ void test_run(void)
     TestTargetTransitions();
     TestConcurrentRequests();
     TestConsole();
+    TestPidStore();
     test_done = 1U;
 }

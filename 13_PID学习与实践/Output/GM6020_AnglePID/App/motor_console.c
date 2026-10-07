@@ -212,6 +212,15 @@ void MotorConsole_ProcessLine(const char *line)// 解析完整的一行，错误
         MotorConsole_SetResult(MOTOR_COMMAND_OK);
         return;
     }
+    if (strcmp(line, "OK") == 0)
+    {
+        PidStore_Result save_result = MotorControl_SaveGains();
+        MotorConsole_SetResult((save_result == PID_STORE_SAVED ||
+            save_result == PID_STORE_UNCHANGED) ? MOTOR_COMMAND_OK :
+            (save_result == PID_STORE_NOT_READY ? MOTOR_COMMAND_NOT_READY :
+            (save_result == PID_STORE_INVALID ? MOTOR_COMMAND_RANGE : MOTOR_COMMAND_SAVE_ERROR)));
+        return;
+    }
     if (strcmp(line, "Z") == 0)
     {
         // 停机后且最新速度足够低才能改角度参考，不能运动中悄悄清圈数。
@@ -513,7 +522,7 @@ void MotorConsole_SendTelemetry(void)// 发送一整帧 FireWater 数值，以 C
         motor_console_debug.format_error_count++;
         return;
     }
-    // 50Hz的21通道文本由单一控制台发送；更高优先级闭环任务仍可抢占。
+    // 21通道文本由单一控制台按5ms周期调度发送；更高优先级闭环任务仍可抢占。
     if (HAL_UART_Transmit(&huart1, (uint8_t *)line, (uint16_t)length, UART_TRANSMIT_TIMEOUT_MS) == HAL_OK)
     {
         motor_console_debug.tx_frame_count++;

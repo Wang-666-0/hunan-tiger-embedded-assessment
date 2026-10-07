@@ -4,6 +4,8 @@
 /* 复盘或调整时，应用参数集中在这里。 */
 #define GM6020_MODE_VOLTAGE 0U // 协议模式编号 0：电压给定。
 #define GM6020_MODE_CURRENT 1U // 协议模式编号 1：电流给定。
+#define PID_STORE_APP_KIND 2U // AnglePID 独占 Flash sector 10/11 保存六项增益。
+#define PID_SAVE_MAX_SPEED_RPM 2.0f // OK 仅在 STOP 且电机基本静止时接受。
 #ifndef GM6020_MOTOR_ID
 #define GM6020_MOTOR_ID 1U // 必须与电机前三位物理拨码一致；范围 1～7。
 #endif
@@ -22,7 +24,7 @@
 /* S 命令锁存目标：持续运行到 STOP 或实际故障，不需要上位机循环发 K。
  * 上电仍默认停止；断开电脑本身不会停机，实验结束必须发送 STOP。 */
 #define MOTOR_TEMPERATURE_LIMIT_C 80U // 本工程温度阈值，不是电机内置保护参数。
-#define MOTOR_TELEMETRY_PERIOD_MS 20U // 21 通道文本每 20 ms 一帧，50 Hz；避免 115200 串口带宽不足。
+#define MOTOR_TELEMETRY_PERIOD_MS 5U // 21 通道文本每 5 ms 一帧，200 Hz；USART1 使用 921600 波特率。
 #define MOTOR_TELEMETRY_DEFAULT_MODE 1U // 默认角度/转速/双环增益和状态共 21 通道。
 #define MOTOR_CONSOLE_PERIOD_MS 5U // 每 5 ms 处理一轮 UART 字节队列。
 #define UART_INPUT_TIMEOUT_MS 1000U /* 一条命令的字节不能积压或间隔太久。 */

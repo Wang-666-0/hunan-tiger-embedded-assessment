@@ -50,11 +50,11 @@ def main():
     for motor_id, mode in [(1, 0), (5, 1)]:
         elf = output / f"test_id{motor_id}_mode{mode}.elf"
         sources = [root / "selftest.c"] + [app / name for name in
-                   ("pid.c", "can_protocol.c", "gm6020_codec.c", "gm6020.c", "motor_control.c", "motor_console.c")]
+                   ("pid.c", "pid_store.c", "can_protocol.c", "gm6020_codec.c", "gm6020.c", "motor_control.c", "motor_console.c")]
         command = [str(gcc), "-mcpu=cortex-m4", "-mthumb", "-mfloat-abi=soft", "-std=c99",
                    "-O0", "-g", "-Wall", "-Wextra", "-Werror", "-ffunction-sections", "-fdata-sections",
                    "-I", str(root / "mocks"), "-I", str(app),
-                   f"-DGM6020_MOTOR_ID={motor_id}", f"-DGM6020_CONTROL_MODE={mode}",
+                   f"-DGM6020_MOTOR_ID={motor_id}", f"-DGM6020_CONTROL_MODE={mode}", "-DPID_STORE_TEST_BACKEND",
                    "-nostartfiles", "--specs=nosys.specs", "-Wl,--gc-sections",
                    "-T", str(root / "test.ld"), "-o", str(elf)] + [str(p) for p in sources]
         run(command)
@@ -72,7 +72,7 @@ def main():
         uc.reg_write(UC_ARM_REG_SP, 0x2001FFF0)
         uc.reg_write(UC_ARM_REG_LR, stop_address | 1)
         # 连续运行用例包含 2000 个控制周期，预留足够指令但保留死循环上界。
-        instruction_budget = 100_000_000
+        instruction_budget = 2_000_000_000
         uc.emu_start(symbols["test_run"] | 1, stop_address, count=instruction_budget)
 
         def value(name):
@@ -87,7 +87,7 @@ def main():
             print(f"ERROR: ID {motor_id}/mode {mode} did not finish within "
                   f"{instruction_budget:,} instructions (stage {result['stage']}).", file=sys.stderr)
     tested_sources = [root / "selftest.c"] + [app / name for name in
-        ("pid.c", "can_protocol.c", "gm6020_codec.c", "gm6020.c", "motor_control.c", "motor_console.c")]
+        ("pid.c", "pid_store.c", "can_protocol.c", "gm6020_codec.c", "gm6020.c", "motor_control.c", "motor_console.c")]
     tested_sources += sorted((root / "mocks").glob("*.h"))
     tested_sources += sorted(app.glob("*.h"))
     report = {"recorded_at": datetime.datetime.now().astimezone().isoformat(timespec="seconds"),

@@ -4,6 +4,8 @@
 /* 复盘或调整时，应用参数集中在这里。 */
 #define GM6020_MODE_VOLTAGE 0U // 协议模式编号 0：电压给定。
 #define GM6020_MODE_CURRENT 1U // 协议模式编号 1：电流给定。
+#define PID_STORE_APP_KIND 1U // SpeedPID 独占 Flash sector 8/9 保存三项增益。
+#define PID_SAVE_MAX_SPEED_RPM 2.0f // OK 仅在 STOP 且电机基本静止时接受。
 #ifndef GM6020_MOTOR_ID
 #define GM6020_MOTOR_ID 1U // 必须与电机前三位物理拨码一致；范围 1～7。
 #endif

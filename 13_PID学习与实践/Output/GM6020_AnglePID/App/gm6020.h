@@ -29,6 +29,7 @@ uint8_t GM6020_DecodeFeedback(const CanRxMessage *message, GM6020_Feedback *resu
 uint8_t GM6020_ParseFeedback(const CanRxMessage *message);
 /* 初始化时同时清除共享反馈和多圈状态，禁止仅清结构体而遗留旧圈数。 */
 void GM6020_ResetFeedback(void);
+void GM6020_InvalidateAngle(void); // Flash 擦写后锁存失效，必须静止后重新 Z。
 /* 仅允许反馈新鲜且 |rpm| <= ANGLE_ZERO_SPEED_RPM 时重建零点。
  * 调用方还必须确保控制已停止；返回 1 表示已经成功发布新的零点。 */
 uint8_t GM6020_ZeroAngle(void);

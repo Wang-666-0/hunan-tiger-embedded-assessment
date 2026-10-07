@@ -18,7 +18,8 @@ typedef enum
     MOTOR_COMMAND_RANGE = 4, // 数值超目标转速或 PID 参数范围。
     MOTOR_COMMAND_NOT_READY = 5, // 在线/温度条件不满足，或停止时发送兼容 K。
     MOTOR_COMMAND_STALE = 6, // 命令字节陈旧或片段间隔过大。
-    MOTOR_COMMAND_RX_FAULT = 7 // 接收丢字节或 HAL 错误。
+    MOTOR_COMMAND_RX_FAULT = 7, // 接收丢字节或 HAL 错误。
+    MOTOR_COMMAND_SAVE_ERROR = 8 // Flash 保存或写保护恢复失败。
 } MotorCommandResult;
 
 typedef struct
@@ -47,7 +48,7 @@ void MotorConsole_SendTelemetry(void);
 /* 行内不能包含换行。指令：S30 / S-30 / S0 / P5 / I0.5 / D0 / STOP / K / T0 / T1。
  * S 的单位是 rpm，S0 保持零转速闭环；STOP 才撤销控制请求。
  * P/I/D 只修改参数，不启动电机。S 一次发送后持续运行，不需要 K。
- * 每条串口指令用 CR 或 LF 结束。 */
+ * OK 保存当前三项 PID；须先 STOP、等零给定发完且电机静止。每条指令用 CR 或 LF 结束。 */
 void MotorConsole_ProcessLine(const char *line);
 
 #endif /* MOTOR_CONSOLE_H */

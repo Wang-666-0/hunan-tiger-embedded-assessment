@@ -13,13 +13,13 @@
 /* NaN 与任何数的有序比较都为假，无穷超出 FLT_MAX。
  * 这样可以检查有限数，并且不依赖不同编译器的 isfinite 宏。
  */
-static uint8_t PID_IsFinite(float value)
+static uint8_t PID_IsFinite(float value)// 检查浮点数是否为有限值
 {
     return (uint8_t)((value >= -FLT_MAX) && (value <= FLT_MAX));
 }
 
 /* 所有参数先检查有限性，再检查符号，避免 NaN 漏过范围比较。 */
-static uint8_t PID_ConfigIsValid(const PID_Config *config)
+static uint8_t PID_ConfigIsValid(const PID_Config *config)// 检查 PID 配置参数是否有效
 {
     if (config == NULL)
     {
@@ -54,7 +54,7 @@ static float PID_Clamp(float value, float limit)
     return value;
 }
 
-void PID_ClearIntegral(PID_Controller *controller)
+void PID_ClearIntegral(PID_Controller *controller)// 清除 PID 控制器的积分状态
 {
     if (controller == NULL)
     {
@@ -64,7 +64,7 @@ void PID_ClearIntegral(PID_Controller *controller)
     controller->i_term = 0.0f;
 }
 
-void PID_Reset(PID_Controller *controller)
+void PID_Reset(PID_Controller *controller)// 重置 PID 控制器的状态，清除积分、微分和历史实际值
 {
     if (controller == NULL)
     {
@@ -81,7 +81,7 @@ void PID_Reset(PID_Controller *controller)
     controller->initialized = 0U;
 }
 
-uint8_t PID_Init(PID_Controller *controller, const PID_Config *config)
+uint8_t PID_Init(PID_Controller *controller, const PID_Config *config)// 初始化 PID 控制器，检查参数并复制到控制器，然后清除历史状态
 {
     if ((controller == NULL) || (!PID_ConfigIsValid(config)))
     {
@@ -94,7 +94,7 @@ uint8_t PID_Init(PID_Controller *controller, const PID_Config *config)
     return 1U;
 }
 
-uint8_t PID_SetGains(PID_Controller *controller, float kp, float ki, float kd)
+uint8_t PID_SetGains(PID_Controller *controller, float kp, float ki, float kd)// 在线修改 PID 控制器的增益，保留限幅、时间常数、历史实际值和微分滤波状态
 {
     PID_Config candidate;
 
@@ -136,7 +136,7 @@ uint8_t PID_SetGains(PID_Controller *controller, float kp, float ki, float kd)
 /* 低通系数 alpha = tau / (tau + dt)。
  * 分别除以较大的数，避免两个有限的大数相加得到无穷。
  */
-static float PID_DerivativeAlpha(float tau_s, float dt_s)
+static float PID_DerivativeAlpha(float tau_s, float dt_s)// 计算微分低通滤波系数
 {
     float ratio;
 
@@ -154,7 +154,7 @@ static float PID_DerivativeAlpha(float tau_s, float dt_s)
 }
 
 float PID_Update(PID_Controller *controller, float target,
-                 float measurement, float dt_s)
+                 float measurement, float dt_s)// 计算一次 PID，dt_s 是两次计算之间的秒数，例如 2 ms 对应 0.002f
 {
     float error;
     float p_term;
@@ -189,9 +189,9 @@ float PID_Update(PID_Controller *controller, float target,
     /* 第一帧还没有历史实际值，因此微分从零开始。Kd 为零时不计算差分。 */
     if ((controller->initialized != 0U) && (controller->config.kd > 0.0f))
     {
-        float measurement_delta = measurement - controller->previous_measurement;
-        float raw_derivative = -measurement_delta / dt_s;
-        float alpha = PID_DerivativeAlpha(controller->config.derivative_tau_s, dt_s);
+        float measurement_delta = measurement - controller->previous_measurement;// 实际值变化量
+        float raw_derivative = -measurement_delta / dt_s;// 负实际值变化率，避免目标阶跃冲击
+        float alpha = PID_DerivativeAlpha(controller->config.derivative_tau_s, dt_s);// 微分低通滤波系数
 
         if ((!PID_IsFinite(measurement_delta)) || (!PID_IsFinite(raw_derivative)) ||
             (!PID_IsFinite(controller->filtered_derivative)))
@@ -205,7 +205,7 @@ float PID_Update(PID_Controller *controller, float target,
                      (1.0f - alpha) * raw_derivative;
     }
 
-    d_term = controller->config.kd * derivative;
+    d_term = controller->config.kd * derivative;// 微分项
     integral_delta = controller->config.ki * error * dt_s;
     integral_candidate = controller->integral + integral_delta;
     if ((!PID_IsFinite(derivative)) || (!PID_IsFinite(d_term)) ||
@@ -216,8 +216,8 @@ float PID_Update(PID_Controller *controller, float target,
     }
 
     /* 先限制积分项自身，再判断新增积分是否加重最终输出的饱和。 */
-    integral_candidate = PID_Clamp(integral_candidate, controller->config.integral_limit);
-    output_candidate = p_term + integral_candidate + d_term;
+    integral_candidate = PID_Clamp(integral_candidate, controller->config.integral_limit);// 限制积分项自身
+    output_candidate = p_term + integral_candidate + d_term;//
     if (!PID_IsFinite(output_candidate))
     {
         PID_Reset(controller);
