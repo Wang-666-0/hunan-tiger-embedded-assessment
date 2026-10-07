@@ -65,6 +65,41 @@
 
 另有一张局部截图显示 291 ms、0.01°超调，但没有完整六参数信息，不把它归到某一组参数，也不擅自把 0.01°写成严格的零超调。
 
+### 关键过程图片
+
+下面保留本次聊天保存的五张实测截图附件（1996×1248），未重绘曲线或修改测量数据。图中数值以右侧回传和串口记录为准；点击每张图题后面的链接，可以在 GitHub 打开对应原图。
+
+![图1｜初始参数：1443 ms慢响应、0.23°超调](../02_过程记录/PID调参过程/01-angle-30deg-slow-1443ms.png)
+
+图1｜初始参数：1443 ms慢响应、0.23°超调。[GitHub直达原图](https://github.com/Wang-666-0/hunan-tiger-embedded-assessment/blob/main/13_PID%E5%AD%A6%E4%B9%A0%E4%B8%8E%E5%AE%9E%E8%B7%B5/02_%E8%BF%87%E7%A8%8B%E8%AE%B0%E5%BD%95/PID%E8%B0%83%E5%8F%82%E8%BF%87%E7%A8%8B/01-angle-30deg-slow-1443ms.png)
+
+内环50/200/0.003，外环2/0/0.050。末端位置误差在0.5°内，但到位时间明显超出300 ms。图中纵轴范围过宽，不能凭曲线看似重合就判定达标。
+
+![图2｜接近门槛：305 ms到位，仍有0.28°超调](../02_过程记录/PID调参过程/02-angle-30deg-near-limit-305ms.png)
+
+图2｜接近门槛：305 ms到位，仍有0.28°超调。[GitHub直达原图](https://github.com/Wang-666-0/hunan-tiger-embedded-assessment/blob/main/13_PID%E5%AD%A6%E4%B9%A0%E4%B8%8E%E5%AE%9E%E8%B7%B5/02_%E8%BF%87%E7%A8%8B%E8%AE%B0%E5%BD%95/PID%E8%B0%83%E5%8F%82%E8%BF%87%E7%A8%8B/02-angle-30deg-near-limit-305ms.png)
+
+内环24/60/0.020，外环5.8/0.80/0.015。时间和无超调两项仍不满足；这张图主要展示末段保持状态，不是完整的上升过程。
+
+![图3｜单次合格：283 ms到位、统计超调0°](../02_过程记录/PID调参过程/03-angle-30deg-pass-283ms.png)
+
+图3｜单次合格：283 ms到位、统计超调0°。[GitHub直达原图](https://github.com/Wang-666-0/hunan-tiger-embedded-assessment/blob/main/13_PID%E5%AD%A6%E4%B9%A0%E4%B8%8E%E5%AE%9E%E8%B7%B5/02_%E8%BF%87%E7%A8%8B%E8%AE%B0%E5%BD%95/PID%E8%B0%83%E5%8F%82%E8%BF%87%E7%A8%8B/03-angle-30deg-pass-283ms.png)
+
+内环29/75/0.010，外环6/0.050/0.035。截图时实际29.97°，静差约0.03°，说明这一轮表现良好，不代表后续每轮都会通过。
+
+![图4｜失败复盘：1.11°超调，3159 ms重新到位](../02_过程记录/PID调参过程/04-angle-30deg-overshoot-1p11deg.png)
+
+图4｜失败复盘：1.11°超调，3159 ms重新到位。[GitHub直达原图](https://github.com/Wang-666-0/hunan-tiger-embedded-assessment/blob/main/13_PID%E5%AD%A6%E4%B9%A0%E4%B8%8E%E5%AE%9E%E8%B7%B5/02_%E8%BF%87%E7%A8%8B%E8%AE%B0%E5%BD%95/PID%E8%B0%83%E5%8F%82%E8%BF%87%E7%A8%8B/04-angle-30deg-overshoot-1p11deg.png)
+
+内环30/75/0.010，外环6/0.050/0.035。先冲过30°，再缓慢回到误差带；这是需要保留的失败证据，不能只展示最好的一次。
+
+![图5｜最新候选：166 ms到位、统计超调0°](../02_过程记录/PID调参过程/05-angle-30deg-candidate-166ms.png)
+
+图5｜最新候选：166 ms到位、统计超调0°。[GitHub直达原图](https://github.com/Wang-666-0/hunan-tiger-embedded-assessment/blob/main/13_PID%E5%AD%A6%E4%B9%A0%E4%B8%8E%E5%AE%9E%E8%B7%B5/02_%E8%BF%87%E7%A8%8B%E8%AE%B0%E5%BD%95/PID%E8%B0%83%E5%8F%82%E8%BF%87%E7%A8%8B/05-angle-30deg-candidate-166ms.png)
+
+内环78/75/0.017，外环11.1/0.550/0.010。截图时实际29.97°，静差约0.03°；仍需要同条件重复和连续往返验证。图左侧角度突变的原因未完整记录，不把它解释为机械瞬间回零。
+
+### 实测结果的启示
 从这些结果学到：
 
 1. 静差小不等于响应快。1443 ms 那次末端误差不到 0.5°，但仍不满足 300 ms。
