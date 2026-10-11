@@ -1,0 +1,26 @@
+{
+  "recorded_at": "2026-10-11T11:02:05+08:00",
+  "method": "Real ARM C, GCC -Wall -Wextra -Werror, Unicorn; no physical hardware",
+  "compiler": "C:\\Users\\Administrator\\.eide\\tools\\gcc_arm\\bin\\arm-none-eabi-gcc.exe",
+  "elf_directory": "C:\\Users\\Administrator\\AppData\\Local\\Temp\\remote-ibus-arm-selftests-82bgl2jh",
+  "results": [
+    {
+      "name": "ibus",
+      "checks": 4311,
+      "failures": 0,
+      "first_failed_line": 0,
+      "stage": 7,
+      "finished": 1,
+      "returned": true,
+      "source_hashes_stable": true,
+      "source_sha256": {
+        "Tests/test_ibus.c": "e2d94a4050d86c08b19aa15bb655aae00294934b98e13a26e5c81b3e8ff5b35b",
+        "App/ibus.c": "2be11b9e34c9949ab7fcf75637df409fe1e2cdd113e5f73dde74384555cb249f",
+        "Tests/test.ld": "cb097e8ab3c46476918cafafef8024d3922e4b7ffd0b1f61732629da5d861436",
+        "Tests/run_selftests.py": "21a420a8bbc6c54f179e2fdc38efcbc692ca9bce8ce96c16da333e78efe822f1",
+        "App/ibus.h": "bb08394c4f6c1b0ea0cab856b276d38048bdaf84c44efa5c9417675ccf8c291f"
+      }
+    }
+  ],
+  "success": true
+}

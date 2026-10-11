@@ -1,0 +1,97 @@
+[ INFO ] start building at 2026-10-11 13:45:46
+
+[ TOOL ] Product: ARM Compiler 5.06
+
+[ INFO ] file statistics (rebuild mode)
+
++---------+-----------+-----------+---------------+--------+
+| C Files | Cpp Files | Asm Files | Lib/Obj Files | Totals |
++---------+-----------+-----------+---------------+--------+
+| 49      | 0         | 1         | 0             | 50     |
++---------+-----------+-----------+---------------+--------+
+
+[ INFO ] start compiling (jobs: 8) ...
+
+>> [  2%] AS 'startup_stm32f405xx.s'
+>> [  4%] CC '../Core/Src/freertos.c'
+>> [  6%] CC '../Core/Src/main.c'
+>> [  8%] CC '../Core/Src/gpio.c'
+>> [ 10%] CC '../Core/Src/can.c'
+>> [ 12%] CC '../Core/Src/usart.c'
+>> [ 14%] CC '../Core/Src/stm32f4xx_it.c'
+>> [ 16%] CC '../Core/Src/stm32f4xx_hal_msp.c'
+>> [ 18%] CC '../Core/Src/stm32f4xx_hal_timebase_tim.c'
+>> [ 20%] CC '../Drivers/STM32F4xx_HAL_Driver/Src/stm32f4xx_hal_can.c'
+>> [ 22%] CC '../Drivers/STM32F4xx_HAL_Driver/Src/stm32f4xx_hal_rcc.c'
+>> [ 24%] CC '../Drivers/STM32F4xx_HAL_Driver/Src/stm32f4xx_hal_tim_ex.c'
+>> [ 26%] CC '../Drivers/STM32F4xx_HAL_Driver/Src/stm32f4xx_hal_flash.c'
+>> [ 28%] CC '../Drivers/STM32F4xx_HAL_Driver/Src/stm32f4xx_hal_rcc_ex.c'
+>> [ 30%] CC '../Drivers/STM32F4xx_HAL_Driver/Src/stm32f4xx_hal_flash_ex.c'
+>> [ 32%] CC '../Drivers/STM32F4xx_HAL_Driver/Src/stm32f4xx_hal_flash_ramfunc.c'
+>> [ 34%] CC '../Drivers/STM32F4xx_HAL_Driver/Src/stm32f4xx_hal_tim.c'
+>> [ 36%] CC '../Drivers/STM32F4xx_HAL_Driver/Src/stm32f4xx_hal_gpio.c'
+>> [ 38%] CC '../Drivers/STM32F4xx_HAL_Driver/Src/stm32f4xx_hal_dma.c'
+>> [ 40%] CC '../Drivers/STM32F4xx_HAL_Driver/Src/stm32f4xx_hal_dma_ex.c'
+>> [ 42%] CC '../Drivers/STM32F4xx_HAL_Driver/Src/stm32f4xx_hal_pwr.c'
+>> [ 44%] CC '../Drivers/STM32F4xx_HAL_Driver/Src/stm32f4xx_hal_pwr_ex.c'
+>> [ 46%] CC '../Drivers/STM32F4xx_HAL_Driver/Src/stm32f4xx_hal_cortex.c'
+>> [ 48%] CC '../Drivers/STM32F4xx_HAL_Driver/Src/stm32f4xx_hal.c'
+>> [ 50%] CC '../Middlewares/Third_Party/FreeRTOS/Source/croutine.c'
+>> [ 52%] CC '../Drivers/STM32F4xx_HAL_Driver/Src/stm32f4xx_hal_exti.c'
+>> [ 54%] CC '../Middlewares/Third_Party/FreeRTOS/Source/event_groups.c'
+>> [ 56%] CC '../Middlewares/Third_Party/FreeRTOS/Source/list.c'
+>> [ 58%] CC '../Core/Src/system_stm32f4xx.c'
+>> [ 60%] CC '../Middlewares/Third_Party/FreeRTOS/Source/queue.c'
+>> [ 62%] CC '../Middlewares/Third_Party/FreeRTOS/Source/stream_buffer.c'
+>> [ 64%] CC '../Drivers/STM32F4xx_HAL_Driver/Src/stm32f4xx_hal_uart.c'
+>> [ 66%] CC '../Middlewares/Third_Party/FreeRTOS/Source/timers.c'
+>> [ 68%] CC '../Middlewares/Third_Party/FreeRTOS/Source/tasks.c'
+>> [ 70%] CC '../Middlewares/Third_Party/FreeRTOS/Source/portable/MemMang/heap_4.c'
+>> [ 72%] CC '../App/can_protocol.c'
+>> [ 74%] CC '../Middlewares/Third_Party/FreeRTOS/Source/portable/RVDS/ARM_CM4F/port.c'
+>> [ 76%] CC '../App/can_debug.c'
+>> [ 78%] CC '../Middlewares/Third_Party/FreeRTOS/Source/CMSIS_RTOS_V2/cmsis_os2.c'
+>> [ 80%] CC '../App/gm6020_codec.c'
+>> [ 82%] CC '../App/can_tasks.c'
+>> [ 84%] CC '../App/can_transport.c'
+>> [ 86%] CC '../App/pid.c'
+>> [ 88%] CC '../App/gm6020.c'
+>> [ 90%] CC '../App/ibus.c'
+>> [ 92%] CC '../App/remote_control.c'
+>> [ 94%] CC '../App/motor_console.c'
+>> [ 96%] CC '../App/motor_control.c'
+>> [ 98%] CC '../App/remote_app.c'
+>> [100%] CC '../App/remote_input.c'
+
+[ INFO ] start linking ...
+
+Program Size: Code=24516 RO-data=612 RW-data=304 ZI-data=30216  
+
+Total RO  Size (Code + RO Data)                25128 (  24.54kB)
+Total RW  Size (RW Data + ZI Data)             30520 (  29.80kB)
+Total ROM Size (Code + RO Data + RW Data)      25144 (  24.55kB)
+
+Total Memory Usage:
+
+  RAM: [#####               ] 23.3%     29.8KB/128.0KB
+  ROM: [                    ] 2.4%      24.6KB/1024.0KB
+
+Section Memory Usage:
+
+  LR_IROM1 (0x08000000): [                    ] 2.4%      24.8KB/1024.0KB
+    - ER_IROM1 (0x08000000): [                    ] 2.4%      24.5KB/1024.0KB
+    - RW_IRAM1 (0x20000000): [#####               ] 26.6%     29.8KB/112.0KB
+    - RW_IRAM2 (0x2001C000): [                    ] 0.0%      0B/16.0KB
+
+[ INFO ] start outputting files ...
+
+>> output hex file		[done]
+
+file path: "build/Remote_GM6020/Remote_GM6020.hex"
+
+>> output s19 file		[done]
+
+file path: "build/Remote_GM6020/Remote_GM6020.s19"
+
+[ DONE ] build successfully !, elapsed time 0:0:4
+

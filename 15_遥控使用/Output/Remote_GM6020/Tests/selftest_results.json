@@ -1,0 +1,87 @@
+{
+  "recorded_at": "2026-10-11T13:45:48+08:00",
+  "method": "Real ARM C, GCC -Wall -Wextra -Werror, Unicorn; no physical hardware",
+  "compiler": "C:\\Users\\Administrator\\.eide\\tools\\gcc_arm\\bin\\arm-none-eabi-gcc.exe",
+  "elf_directory": "C:\\Users\\Administrator\\AppData\\Local\\Temp\\remote-ibus-arm-selftests-izidfkj3",
+  "results": [
+    {
+      "name": "ibus",
+      "checks": 4311,
+      "failures": 0,
+      "first_failed_line": 0,
+      "stage": 7,
+      "finished": 1,
+      "returned": true,
+      "source_hashes_stable": true,
+      "source_sha256": {
+        "Tests/test_ibus.c": "e2d94a4050d86c08b19aa15bb655aae00294934b98e13a26e5c81b3e8ff5b35b",
+        "App/ibus.c": "2be11b9e34c9949ab7fcf75637df409fe1e2cdd113e5f73dde74384555cb249f",
+        "Tests/test.ld": "cb097e8ab3c46476918cafafef8024d3922e4b7ffd0b1f61732629da5d861436",
+        "Tests/run_selftests.py": "21a420a8bbc6c54f179e2fdc38efcbc692ca9bce8ce96c16da333e78efe822f1",
+        "App/ibus.h": "bb08394c4f6c1b0ea0cab856b276d38048bdaf84c44efa5c9417675ccf8c291f"
+      }
+    },
+    {
+      "name": "remote_control",
+      "checks": 352,
+      "failures": 0,
+      "first_failed_line": 0,
+      "stage": 8,
+      "finished": 1,
+      "returned": true,
+      "source_hashes_stable": true,
+      "source_sha256": {
+        "Tests/test_remote_control.c": "3709989134634979b27a3a582f9aab841a569daa6f619bcd06a20e6c0f7b03ed",
+        "App/remote_control.c": "95766f3bebcd0266272137679f79f87e182640039a1279bbfa1499b912143858",
+        "App/ibus.c": "2be11b9e34c9949ab7fcf75637df409fe1e2cdd113e5f73dde74384555cb249f",
+        "App/gm6020_codec.c": "b15b8852abb3a857a54d8299e02915731f831cddcd8a46afbadb58d69966adb1",
+        "App/can_protocol.c": "830980e090fc94c17fe552bddb1117cef5cd45e3d570d7a099fe4b400615f0ff",
+        "Tests/test.ld": "cb097e8ab3c46476918cafafef8024d3922e4b7ffd0b1f61732629da5d861436",
+        "Tests/run_selftests.py": "21a420a8bbc6c54f179e2fdc38efcbc692ca9bce8ce96c16da333e78efe822f1",
+        "App/ibus.h": "bb08394c4f6c1b0ea0cab856b276d38048bdaf84c44efa5c9417675ccf8c291f",
+        "App/remote_control.h": "e4819666b6ce0b80097d8727ff91461da7b8b8d2f1b9827e059fae1b7cb966b4",
+        "App/app_config.h": "e36cedf83357298476cef71d72a23f1eacaa6dd47329ad14fb31d6eaafe0579f",
+        "App/gm6020.h": "6cf59763b88e583d7a8b17612b4eb84fee6f13897cf4e8c5c94b530c0dfc1a28",
+        "App/can_protocol.h": "8cb280043235ad5b718e29b19dee8d8b7957168a66790d57be945277586c74db"
+      }
+    },
+    {
+      "name": "remote_integration",
+      "checks": 1971,
+      "failures": 0,
+      "first_failed_line": 0,
+      "stage": 6,
+      "finished": 1,
+      "returned": true,
+      "source_hashes_stable": true,
+      "source_sha256": {
+        "Tests/test_remote_integration.c": "fa911fefb4a64b79b06670e185a0c0a89cce5be99610074f72a452a16fbf0a08",
+        "App/remote_input.c": "2a7aa6cf9b1f43f988e2335b762370d9bb1bb5f9bdb1ee5c462633e4c143f431",
+        "App/motor_console.c": "c115abc81b22f14b47be00d8f7a514fbf432e3b62b986a206254b41e4765c879",
+        "App/remote_app.c": "c163a91cc094bf4843520c9fce2577a9de0045a1c841ef543045a22388b32165",
+        "App/remote_control.c": "95766f3bebcd0266272137679f79f87e182640039a1279bbfa1499b912143858",
+        "App/ibus.c": "2be11b9e34c9949ab7fcf75637df409fe1e2cdd113e5f73dde74384555cb249f",
+        "App/gm6020_codec.c": "b15b8852abb3a857a54d8299e02915731f831cddcd8a46afbadb58d69966adb1",
+        "App/can_protocol.c": "830980e090fc94c17fe552bddb1117cef5cd45e3d570d7a099fe4b400615f0ff",
+        "Tests/test.ld": "cb097e8ab3c46476918cafafef8024d3922e4b7ffd0b1f61732629da5d861436",
+        "Tests/run_selftests.py": "21a420a8bbc6c54f179e2fdc38efcbc692ca9bce8ce96c16da333e78efe822f1",
+        "App/ibus.h": "bb08394c4f6c1b0ea0cab856b276d38048bdaf84c44efa5c9417675ccf8c291f",
+        "App/remote_control.h": "e4819666b6ce0b80097d8727ff91461da7b8b8d2f1b9827e059fae1b7cb966b4",
+        "App/app_config.h": "e36cedf83357298476cef71d72a23f1eacaa6dd47329ad14fb31d6eaafe0579f",
+        "App/gm6020.h": "6cf59763b88e583d7a8b17612b4eb84fee6f13897cf4e8c5c94b530c0dfc1a28",
+        "App/can_protocol.h": "8cb280043235ad5b718e29b19dee8d8b7957168a66790d57be945277586c74db",
+        "App/remote_input.h": "b19f4d77520177c25da3b2b2f9949c93b710d143a0c5c48221bece9e2d299bdb",
+        "App/remote_app.h": "b6f86be6792d5a0066dec4971cc6a4f68ce96217d31f2119fcdf7700c9e65603",
+        "App/motor_console.h": "2c3e825ffd1c9c5a23b3d5177f4af0d084efbce6b3d97a8d72d95878d5f6e0c8",
+        "App/motor_control.h": "eab6ae5f952c279012695e9e8c0ff8841aae4f7c0a583241a5ebff3bda7ece92",
+        "App/can_debug.h": "ee9e1d4222f79c436558f568ce48c672d7fc86f2b5392b33b7a27b0ba1f61f29",
+        "Tests/mocks_integration/FreeRTOS.h": "83ae3b39ed20c737d01c7542e82d7a6647a979330517a3f32c46f672bb98b2df",
+        "Tests/mocks_integration/main.h": "b0eb63dac134cf25dc4efc9140426b4b41c8d1e587a7dfd56e6724015e1f2947",
+        "Tests/mocks_integration/queue.h": "44b4491de8791205122876fe0336fc29a02cc169a86f1fda253e6a39dcbb8158",
+        "Tests/mocks_integration/task.h": "c6c7328eafeb04857c3df40519d8e9a0ced59e97aa78de2641de007aebb81f26",
+        "Tests/mocks_integration/usart.h": "7d1cf92d3f490bb4a33be027ca663e0396d5765621826f001e8f64b1e9ce808b"
+      }
+    }
+  ],
+  "success": true
+}

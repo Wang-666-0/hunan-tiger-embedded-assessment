@@ -1,0 +1,7 @@
+# 本任务的派生文件：保留源代码、CubeMX、Keil、EIDE 持久配置。
+**/MDK-ARM/build/
+**/MDK-ARM/BMI088_Read/
+**/MDK-ARM/.pack/
+**/MDK-ARM/.eide/log/
+**/__pycache__/
+/02_过程记录/合并前备份/

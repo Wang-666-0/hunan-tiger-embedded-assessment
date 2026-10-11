@@ -1,0 +1,21 @@
+日期：2026-10-08
+工具：内置 imagegen，编辑标注模式。未修改原始 JPG/PDF 或工程代码。
+
+最终图：BMI088与STM32_器件圈注.png
+底图：本任务 03_参考资料/云台板硬件图_02.jpg。
+红圈位于原图约 (58,307)，根据 BMI088 3×4.5 mm 长方形封装及器件尺度推断。低分辨率图无可读 U14/型号，实物需核对。蓝圈为中央 STM32F405。
+只用于器件定位，不可从生成图测量/追踪真实铜线。第一张带逻辑框和重绘原理图的生成拼图出现细节变化，已弃用，不应作硬件依据。
+
+BMI088_U14_原理图局部.png 是从原始 PDF 第一页直接渲染的局部，没有用生成模型重绘。
+原理图确认 U14=BMI088；PA5->8 SCL/SCK；PA7->9 SDA/SDI；PA6<-15 SDO1和10 SDO2（各经22欧姆电阻）；PC4->14 CSB1（加速度计）；PA4->5 CSB2（陀螺仪）。
+原理图 INT_Accel=PB0，INT_Gyro=PC5。先前解释中把工程配置的 PC9 当成硬件陀螺仪 INT 是错误的。本版未使用 IMU EXTI，轮询读取不受这个 INT 配置影响；以后启用中断须核对真实硬件。本次没有调整代码或 IOC。
+
+封装及 SPI 规则核对来源：
+https://www.bosch-sensortec.com/en/products/motion-sensors/imus/bmi088
+https://www.bosch-sensortec.com/media/boschsensortec/downloads/datasheets/bst-bmi088-ds001.pdf
+
+最终实际提示词：
+Use case precise-object-edit. ANNOTATION ONLY, not redesign. Edit the provided original gimbal PCB rendering (531x556) by ONLY superimposing TWO outline circles and TWO short labels. Preserve the source image's orientation, aspect ratio, all original pixels/components/traces/connector positions as faithfully as possible. Use the exact source as a background layer, not a recreated PCB. No schematic, no inset, no wiring diagram, no arrows to crystal, no additional chips, no sharpened/generated details. There is ONLY ONE silver crystal above the large MCU in the original image: do NOT turn neighboring dark regulators into silver crystals. All original chip counts and package geometry must remain unchanged.
+1. Add a RED outline ellipse with no fill centered at source coordinate x58,y307, radii x26,y31. It encloses the tall black rectangular chip whose source body is x43..73,y287..327, LEFT and slightly lower than the large MCU. This is the BMI088 location inferred from package shape. Do not circle the higher chip at x58,y249. Place legible white-backed red text near the left margin or beside the ellipse: "BMI088（按封装推断）". A second smaller line: "需核对 U14 / 实物型号".
+2. Add a BLUE outline ellipse with no fill around the large central MCU, source body x170..268,y228..327; center x218,y277, radii x67,y66 including its pins. Label "STM32F405" in a small white-backed blue text box below or to the right without covering any relevant IC.
+Nothing else. No extra titles, no schematic text, no made-up SPI traces or physical wires. Leave all original silkscreen untouched. The result is a simple marked-up version of the user's original image, not a technical drawing.

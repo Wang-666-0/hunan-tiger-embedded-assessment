@@ -1,0 +1,7 @@
+.deps/
+.pip-cache/
+pip-cache/
+__pycache__/
+*.pyc
+*.elf
+*.o

@@ -25,7 +25,7 @@
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
-
+#include "imu_app.h" /* 分模块业务入口：BMI088、校准、Mahony 和 VOFA。 */
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -51,8 +51,8 @@
 osThreadId_t imuTaskHandle;
 const osThreadAttr_t imuTask_attributes = {
   .name = "imuTask",
-  .stack_size = 512 * 4,
-  .priority = (osPriority_t) osPriorityNormal,
+  .stack_size = 512 * 4, /* CubeMX 的 512 words 换成 CMSIS v2 的 2048 字节。 */
+  .priority = (osPriority_t) osPriorityNormal, /* 正常优先级；周期等待时释放 CPU。 */
 };
 
 /* Private function prototypes -----------------------------------------------*/
@@ -92,10 +92,13 @@ void MX_FREERTOS_Init(void) {
 
   /* Create the thread(s) */
   /* creation of imuTask */
-  imuTaskHandle = osThreadNew(StartImuTask, NULL, &imuTask_attributes);
+  imuTaskHandle = osThreadNew(StartImuTask, NULL, &imuTask_attributes); /* 动态分配 IMU 任务。 */
 
   /* USER CODE BEGIN RTOS_THREADS */
-  /* add threads, ... */
+  if (imuTaskHandle == NULL)
+  {
+    Error_Handler(); /* 堆不足等创建失败不能被当作正常启动。 */
+  }
   /* USER CODE END RTOS_THREADS */
 
   /* USER CODE BEGIN RTOS_EVENTS */
@@ -114,11 +117,8 @@ void MX_FREERTOS_Init(void) {
 void StartImuTask(void *argument)
 {
   /* USER CODE BEGIN StartImuTask */
-  /* Infinite loop */
-  for(;;)
-  {
-    osDelay(1);
-  }
+  (void)argument; /* 此任务不需要外部启动参数。 */
+  ImuApp_Run(); /* 全部业务由 App 模块负责；正常运行时本函数不返回。 */
   /* USER CODE END StartImuTask */
 }
 

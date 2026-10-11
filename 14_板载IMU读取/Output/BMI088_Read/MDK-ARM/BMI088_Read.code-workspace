@@ -10,6 +10,7 @@
             "--header-insertion=never"
         ],
         "files.autoGuessEncoding": true,
+        "files.encoding": "utf8",
         "C_Cpp.default.configurationProvider": "cl.eide",
         "C_Cpp.errorSquiggles": "disabled",
         "files.associations": {

@@ -340,7 +340,7 @@
               <MiscControls></MiscControls>
               <Define>USE_HAL_DRIVER,STM32F405xx</Define>
               <Undefine></Undefine>
-              <IncludePath>../Core/Inc;../Drivers/STM32F4xx_HAL_Driver/Inc;../Drivers/STM32F4xx_HAL_Driver/Inc/Legacy;../Drivers/CMSIS/Device/ST/STM32F4xx/Include;../Drivers/CMSIS/Include;../Middlewares/Third_Party/FreeRTOS/Source/include;../Middlewares/Third_Party/FreeRTOS/Source/CMSIS_RTOS_V2;../Middlewares/Third_Party/FreeRTOS/Source/portable/RVDS/ARM_CM4F</IncludePath>
+              <IncludePath>../Core/Inc;../App;../Drivers/STM32F4xx_HAL_Driver/Inc;../Drivers/STM32F4xx_HAL_Driver/Inc/Legacy;../Drivers/CMSIS/Device/ST/STM32F4xx/Include;../Drivers/CMSIS/Include;../Middlewares/Third_Party/FreeRTOS/Source/include;../Middlewares/Third_Party/FreeRTOS/Source/CMSIS_RTOS_V2;../Middlewares/Third_Party/FreeRTOS/Source/portable/RVDS/ARM_CM4F</IncludePath>
             </VariousControls>
           </Cads>
           <Aads>
@@ -536,6 +536,17 @@
                 </FileArmAds>
               </FileOption>
             </File>
+          </Files>
+        </Group>
+        <Group>
+          <GroupName>Application/User/App</GroupName>
+          <Files>
+            <File><FileName>bmi088.c</FileName><FileType>1</FileType><FilePath>../App/bmi088.c</FilePath></File>
+            <File><FileName>bmi088_port.c</FileName><FileType>1</FileType><FilePath>../App/bmi088_port.c</FilePath></File>
+            <File><FileName>imu_calibration.c</FileName><FileType>1</FileType><FilePath>../App/imu_calibration.c</FilePath></File>
+            <File><FileName>mahony.c</FileName><FileType>1</FileType><FilePath>../App/mahony.c</FilePath></File>
+            <File><FileName>vofa_telemetry.c</FileName><FileType>1</FileType><FilePath>../App/vofa_telemetry.c</FilePath></File>
+            <File><FileName>imu_app.c</FileName><FileType>1</FileType><FilePath>../App/imu_app.c</FilePath></File>
           </Files>
         </Group>
         <Group>

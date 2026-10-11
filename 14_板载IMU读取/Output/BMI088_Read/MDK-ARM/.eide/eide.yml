@@ -29,6 +29,15 @@ virtualFolder:
                 - path: ../Core/Src/stm32f4xx_hal_msp.c
                 - path: ../Core/Src/stm32f4xx_hal_timebase_tim.c
               folders: []
+            - name: App
+              files:
+                - path: ../App/bmi088.c
+                - path: ../App/bmi088_port.c
+                - path: ../App/imu_calibration.c
+                - path: ../App/mahony.c
+                - path: ../App/vofa_telemetry.c
+                - path: ../App/imu_app.c
+              folders: []
     - name: Drivers
       files: []
       folders:
@@ -85,6 +94,7 @@ targets:
       incList:
         - .
         - ../Core/Inc
+        - ../App
         - ../Drivers/STM32F4xx_HAL_Driver/Inc
         - ../Drivers/STM32F4xx_HAL_Driver/Inc/Legacy
         - ../Drivers/CMSIS/Device/ST/STM32F4xx/Include
