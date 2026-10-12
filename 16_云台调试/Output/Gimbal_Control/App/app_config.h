@@ -1,0 +1,75 @@
+﻿#ifndef APP_CONFIG_H
+#define APP_CONFIG_H
+
+/* 参数采集版只允许白名单读查询，不向任何电机发送控制报文。
+ * 后续补齐协议、单位与停机策略后，才能实现 motor_backend 并修改此开关。 */
+#define APP_MOTOR_DRIVERS_IMPLEMENTED 0U
+
+/* 已确认的设备分配。型号名称不代表驱动已经实现；协议版本仍需实物核对。 */
+#define APP_YAW_MOTOR_MODEL "CubeMars GL60 II"
+#define APP_YAW_CAN_BUS 1U
+#define APP_YAW_DEVICE_ID 1U
+#define APP_PITCH_CAN_BUS 1U
+#define APP_PITCH_DEVICE_ID 2U
+#define APP_FLYWHEEL_CAN_BUS 2U
+#define APP_FLYWHEEL_LEFT_ID 70U
+#define APP_FLYWHEEL_RIGHT_ID 71U
+#define APP_FEEDER_CAN_BUS 2U
+#define APP_FEEDER_DEVICE_ID 5U
+
+/* VESC 查询的回包地址，不能与现场其他VESC节点重复。
+ * CAN APB1=42MHz，(1+11+2)TQ：prescaler=3为1Mbps。
+ * CAN2同时有C610，默认维持1Mbps；不要为试读随意修改电调波特率。 */
+#define APP_DIAG_VESC_HOST_ID 240U
+#define APP_DIAG_TIMEOUT_MS 1200U
+#define APP_CAN1_PRESCALER 3U
+#define APP_CAN2_PRESCALER 3U
+
+/* 默认完全沿用第15项：CH1输入、CH5解锁、CH6失联标记。
+ * 0为后续完整考核的十通道映射，目前不要求改变遥控设置。 */
+#ifndef APP_REMOTE_PROFILE_LEGACY
+#define APP_REMOTE_PROFILE_LEGACY 1U
+#endif
+
+#define APP_CONTROL_PERIOD_MS 2U
+#define APP_CONTROL_MAX_GAP_MS 10U
+#define APP_REMOTE_PERIOD_MS 2U
+#define APP_CONSOLE_PERIOD_MS 5U
+#define APP_TELEMETRY_PERIOD_MS 50U
+#define REMOTE_TIMEOUT_MS 100U
+#define REMOTE_RX_QUEUE_LENGTH 256U
+#define APP_CAN_RX_QUEUE_LENGTH 64U
+#define APP_CONSOLE_RX_QUEUE_LENGTH 128U
+#define APP_CONSOLE_INPUT_TIMEOUT_MS 1000U
+
+/* 下标0对应CH1；下面的额外通道只在完整考核映射中启用。 */
+#define RC_YAW_CHANNEL 0U
+#define RC_PITCH_CHANNEL 1U
+#define RC_TRIGGER_CHANNEL 2U
+#define RC_ARM_CHANNEL 4U
+#define RC_FAILSAFE_CHANNEL 5U
+#define RC_FIRE_MODE_CHANNEL 6U
+#define RC_FRICTION_CHANNEL 7U
+#define RC_TEST_MODE_CHANNEL 8U
+#define RC_STEP_CHANNEL 9U
+#define RC_CENTER 1500U
+#define RC_DEADBAND 30U
+#define RC_SWITCH_LOW 1300U
+#define RC_SWITCH_HIGH 1700U
+#define APP_YAW_RATE_LIMIT_DPS 60.0f
+#define APP_PITCH_RATE_LIMIT_DPS 45.0f
+#define APP_FLYWHEEL_TARGET_RPM 6000.0f /* 机械轮速；当前不会进行ERPM换算或发送。 */
+#define APP_STEP_DEGREES 30.0f
+#define APP_FIRE_INTERVAL_MS 50U
+
+/* 原生FreeRTOS的栈单位是word（F405上4字节），优先级数字越大越紧急。 */
+#define APP_INPUT_STACK_WORDS 384U
+#define APP_CAN_STACK_WORDS 384U
+#define APP_CONTROL_STACK_WORDS 512U
+#define APP_CONSOLE_STACK_WORDS 768U
+#define APP_INPUT_PRIORITY 4U
+#define APP_CAN_PRIORITY 4U
+#define APP_CONTROL_PRIORITY 3U
+#define APP_CONSOLE_PRIORITY 2U
+
+#endif

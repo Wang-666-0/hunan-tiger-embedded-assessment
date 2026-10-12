@@ -1,0 +1,99 @@
+[ INFO ] start building at 2026-10-11 20:38:37
+
+[ TOOL ] Product: ARM Compiler 5.06
+
+[ INFO ] file statistics (rebuild mode)
+
++---------+-----------+-----------+---------------+--------+
+| C Files | Cpp Files | Asm Files | Lib/Obj Files | Totals |
++---------+-----------+-----------+---------------+--------+
+| 51      | 0         | 1         | 0             | 52     |
++---------+-----------+-----------+---------------+--------+
+
+[ INFO ] start compiling (jobs: 8) ...
+
+>> [  1%] AS 'startup_stm32f405xx.s'
+>> [  3%] CC '../Core/Src/main.c'
+>> [  5%] CC '../Core/Src/gpio.c'
+>> [  7%] CC '../Core/Src/freertos.c'
+>> [  9%] CC '../Core/Src/usart.c'
+>> [ 11%] CC '../Core/Src/can.c'
+>> [ 13%] CC '../Core/Src/stm32f4xx_it.c'
+>> [ 15%] CC '../Core/Src/stm32f4xx_hal_msp.c'
+>> [ 17%] CC '../Core/Src/stm32f4xx_hal_timebase_tim.c'
+>> [ 19%] CC '../Drivers/STM32F4xx_HAL_Driver/Src/stm32f4xx_hal_can.c'
+>> [ 21%] CC '../Drivers/STM32F4xx_HAL_Driver/Src/stm32f4xx_hal_rcc.c'
+>> [ 23%] CC '../Drivers/STM32F4xx_HAL_Driver/Src/stm32f4xx_hal_tim_ex.c'
+>> [ 25%] CC '../Drivers/STM32F4xx_HAL_Driver/Src/stm32f4xx_hal_rcc_ex.c'
+>> [ 26%] CC '../Drivers/STM32F4xx_HAL_Driver/Src/stm32f4xx_hal_flash.c'
+>> [ 28%] CC '../Drivers/STM32F4xx_HAL_Driver/Src/stm32f4xx_hal_flash_ex.c'
+>> [ 30%] CC '../Drivers/STM32F4xx_HAL_Driver/Src/stm32f4xx_hal_flash_ramfunc.c'
+>> [ 32%] CC '../Drivers/STM32F4xx_HAL_Driver/Src/stm32f4xx_hal_tim.c'
+>> [ 34%] CC '../Drivers/STM32F4xx_HAL_Driver/Src/stm32f4xx_hal_gpio.c'
+>> [ 36%] CC '../Drivers/STM32F4xx_HAL_Driver/Src/stm32f4xx_hal_dma_ex.c'
+>> [ 38%] CC '../Drivers/STM32F4xx_HAL_Driver/Src/stm32f4xx_hal_dma.c'
+>> [ 40%] CC '../Drivers/STM32F4xx_HAL_Driver/Src/stm32f4xx_hal_pwr.c'
+>> [ 42%] CC '../Drivers/STM32F4xx_HAL_Driver/Src/stm32f4xx_hal_pwr_ex.c'
+>> [ 44%] CC '../Drivers/STM32F4xx_HAL_Driver/Src/stm32f4xx_hal_cortex.c'
+>> [ 46%] CC '../Middlewares/Third_Party/FreeRTOS/Source/croutine.c'
+>> [ 48%] CC '../Drivers/STM32F4xx_HAL_Driver/Src/stm32f4xx_hal.c'
+>> [ 50%] CC '../Drivers/STM32F4xx_HAL_Driver/Src/stm32f4xx_hal_exti.c'
+>> [ 51%] CC '../Middlewares/Third_Party/FreeRTOS/Source/event_groups.c'
+>> [ 53%] CC '../Middlewares/Third_Party/FreeRTOS/Source/list.c'
+>> [ 55%] CC '../Core/Src/system_stm32f4xx.c'
+>> [ 57%] CC '../Middlewares/Third_Party/FreeRTOS/Source/queue.c'
+>> [ 59%] CC '../Drivers/STM32F4xx_HAL_Driver/Src/stm32f4xx_hal_uart.c'
+>> [ 61%] CC '../Middlewares/Third_Party/FreeRTOS/Source/stream_buffer.c'
+>> [ 63%] CC '../Middlewares/Third_Party/FreeRTOS/Source/timers.c'
+>> [ 65%] CC '../Middlewares/Third_Party/FreeRTOS/Source/tasks.c'
+>> [ 67%] CC '../Middlewares/Third_Party/FreeRTOS/Source/portable/MemMang/heap_4.c'
+>> [ 69%] CC '../App/dm_diag.c'
+>> [ 71%] CC '../Middlewares/Third_Party/FreeRTOS/Source/portable/RVDS/ARM_CM4F/port.c'
+>> [ 73%] CC '../App/vesc_diag.c'
+>> [ 75%] CC '../App/app_logic.c'
+>> [ 76%] CC '../App/app_diagnostics.c'
+>> [ 78%] CC '../Middlewares/Third_Party/FreeRTOS/Source/CMSIS_RTOS_V2/cmsis_os2.c'
+>> [ 80%] CC '../App/app_fault.c'
+>> [ 82%] CC '../App/can_frame.c'
+>> [ 84%] CC '../App/motor_backend.c'
+>> [ 86%] CC '../App/app_tasks.c'
+>> [ 88%] CC '../App/safety_manager.c'
+>> [ 90%] CC '../App/can_bus.c'
+>> [ 92%] CC '../App/target_manager.c'
+>> [ 94%] CC '../App/ibus.c'
+>> [ 96%] CC '../App/remote_mapper.c'
+>> [ 98%] CC '../App/app_console.c'
+>> [100%] CC '../App/remote_input.c'
+
+[ INFO ] start linking ...
+
+Program Size: Code=28700 RO-data=932 RW-data=280 ZI-data=33216  
+
+Total RO  Size (Code + RO Data)                29632 (  28.94kB)
+Total RW  Size (RW Data + ZI Data)             33496 (  32.71kB)
+Total ROM Size (Code + RO Data + RW Data)      29912 (  29.21kB)
+
+Total Memory Usage:
+
+  RAM: [#####               ] 25.6%     32.7KB/128.0KB
+  ROM: [#                   ] 2.9%      29.2KB/1024.0KB
+
+Section Memory Usage:
+
+  LR_IROM1 (0x08000000): [#                   ] 2.9%      29.2KB/1024.0KB
+    - ER_IROM1 (0x08000000): [#                   ] 2.8%      28.9KB/1024.0KB
+    - RW_IRAM1 (0x20000000): [######              ] 29.2%     32.7KB/112.0KB
+    - RW_IRAM2 (0x2001C000): [                    ] 0.0%      0B/16.0KB
+
+[ INFO ] start outputting files ...
+
+>> output hex file		[done]
+
+file path: "build/Gimbal_Control/Gimbal_Control.hex"
+
+>> output s19 file		[done]
+
+file path: "build/Gimbal_Control/Gimbal_Control.s19"
+
+[ DONE ] build successfully !, elapsed time 0:0:4
+

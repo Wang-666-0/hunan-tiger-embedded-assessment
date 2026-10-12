@@ -1,0 +1,48 @@
+{
+  "date": "2026-10-11",
+  "downloads": [
+    {
+      "file": "01_Yaw_GL60II\\上位机\\gl-ii-upper-computer-v1-0.zip",
+      "bytes": 8416483,
+      "sha256": "5c9fa2f9bf3e27aba25a6c8be93482530b683fd5c02c07c46a7d7e573c590c73",
+      "source": "https://www.cubemars.com/data/cms/202602/gl-ii-upper-computer-v1-0.zip",
+      "zip_crc_ok": true
+    },
+    {
+      "file": "02_Pitch_DM3507\\上位机\\DMTool_2.1.8.2_Windows_x86_64.exe",
+      "bytes": 23219234,
+      "sha256": "55df27a70afda881c54a0e6ac645277d3bbf3be4228cd7f682dd4a4b55e8dcc9",
+      "source": "https://raw.githubusercontent.com/dmBots/motor-debugging-tool/master/Windows/x86_64/DMTool%202.1.8.2.exe",
+      "official_git_blob_sha1": "b1d82ad938c9e7c33fe6f8ebd22b02d399f18ea4",
+      "official_hash_matches": true
+    },
+    {
+      "file": "02_Pitch_DM3507\\上位机\\DMTool上位机软件说明书.pdf",
+      "bytes": 12727801,
+      "sha256": "81cb24d834201662ab27daf769491924a951763235388b1545cfb6d484a6fd48",
+      "source": "https://github.com/dmBots/motor-debugging-tool/blob/master/DMTool%E4%B8%8A%E4%BD%8D%E6%9C%BA%E8%BD%AF%E4%BB%B6%E8%AF%B4%E6%98%8E%E4%B9%A6.pdf",
+      "official_git_blob_sha1": "c62c88e7a260db39fcfb05f3cc89adba5b3063f9",
+      "official_hash_matches": true
+    },
+    {
+      "file": "03_摩擦轮_N630_VESC\\原作者资料\\南邮N630电调开源.zip",
+      "bytes": 87089740,
+      "sha256": "e86343d74873737dbf3b2018cf18b81244bdbcfacb44c8a408d4919ee5f71d75",
+      "source": "https://hz-rm-bbs-web-prod.oss-cn-hangzhou.aliyuncs.com/29d07313ab11439592af648faf801a9a1758714256381/%E5%8D%97%E9%82%AEN630%E7%94%B5%E8%B0%83%E5%BC%80%E6%BA%90.zip",
+      "zip_crc_ok": true
+    },
+    {
+      "file": "03_摩擦轮_N630_VESC\\上位机\\vesc_tool_6.05.exe",
+      "bytes": 158797312,
+      "sha256": "6512c51bb28ca6d078e5fc29805dded590b9db9f46b94a409a81f0084bcef83d",
+      "source": "extracted from N630 author archive"
+    },
+    {
+      "file": "01_Yaw_GL60II\\上位机\\gl-ii-upper-computer-v1-0\\CubeMars.exe",
+      "bytes": 8623959,
+      "sha256": "a57389942c6374eca9504404717518ec9887e8bd1ac45d1f256ab9dded39998f",
+      "source": "extracted from official GL II archive"
+    }
+  ],
+  "executed": false
+}

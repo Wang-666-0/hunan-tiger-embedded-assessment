@@ -1,0 +1,844 @@
+{
+  "format": "comet_motor_capture_1",
+  "started_at": "2026-10-11T21:39:49.561+08:00",
+  "firmware": "GIMBAL_DIAG_1",
+  "serial": {
+    "baudrate": 115200,
+    "data_bits": 8,
+    "parity": "N",
+    "stop_bits": 1,
+    "port": "COM11"
+  },
+  "hardware": {
+    "yaw": "GL60 II, CAN1 ID1",
+    "pitch": "DM3507, CAN1 ID2",
+    "flywheels": "VESC N630, CAN2 ID70/71",
+    "feeder": "C610, CAN2 ID5"
+  },
+  "status": [
+    {
+      "can1_rx": 0,
+      "can2_rx": 594045,
+      "can1_error": 0,
+      "can2_error": 0,
+      "can_dropped": 0,
+      "can_fault_epoch": 0,
+      "remote_fresh": 1,
+      "ch1": 1493,
+      "ch5": 1000,
+      "ch6": 1000,
+      "motor_enabled": 0,
+      "captured_at": "2026-10-11T21:39:49.642+08:00"
+    },
+    {
+      "can1_rx": 14,
+      "can2_rx": 600145,
+      "can1_error": 0,
+      "can2_error": 0,
+      "can_dropped": 0,
+      "can_fault_epoch": 0,
+      "remote_fresh": 1,
+      "ch1": 1493,
+      "ch5": 1000,
+      "ch6": 1000,
+      "motor_enabled": 0,
+      "captured_at": "2026-10-11T21:39:51.922+08:00"
+    }
+  ],
+  "passive_can": [
+    {
+      "captured_at": "2026-10-11T21:39:49.642+08:00",
+      "bus": 2,
+      "extended": false,
+      "id_hex": "205",
+      "dlc": 8,
+      "data_hex": "1006000000100000",
+      "count": 232543,
+      "age_ms": 1,
+      "c610_feedback": {
+        "rotor_angle_raw": 4102,
+        "rotor_rpm": 0,
+        "torque_feedback_raw": 16,
+        "reserved_hex": "0000"
+      }
+    },
+    {
+      "captured_at": "2026-10-11T21:39:49.655+08:00",
+      "bus": 2,
+      "extended": true,
+      "id_hex": "946",
+      "dlc": 8,
+      "data_hex": "0000000000000000",
+      "count": 115134,
+      "age_ms": 1
+    },
+    {
+      "captured_at": "2026-10-11T21:39:49.655+08:00",
+      "bus": 2,
+      "extended": true,
+      "id_hex": "1046",
+      "dlc": 8,
+      "data_hex": "01A1FD3100001A5D",
+      "count": 115136,
+      "age_ms": 2
+    },
+    {
+      "captured_at": "2026-10-11T21:39:49.655+08:00",
+      "bus": 2,
+      "extended": true,
+      "id_hex": "1B46",
+      "dlc": 8,
+      "data_hex": "FFFFFFFF00FE0000",
+      "count": 115139,
+      "age_ms": 0
+    },
+    {
+      "captured_at": "2026-10-11T21:39:49.672+08:00",
+      "bus": 2,
+      "extended": true,
+      "id_hex": "E46",
+      "dlc": 8,
+      "data_hex": "0000000000000000",
+      "count": 1152,
+      "age_ms": 75
+    },
+    {
+      "captured_at": "2026-10-11T21:39:49.672+08:00",
+      "bus": 2,
+      "extended": true,
+      "id_hex": "947",
+      "dlc": 8,
+      "data_hex": "0000000000000000",
+      "count": 11514,
+      "age_ms": 8
+    },
+    {
+      "captured_at": "2026-10-11T21:39:49.672+08:00",
+      "bus": 2,
+      "extended": true,
+      "id_hex": "E47",
+      "dlc": 8,
+      "data_hex": "0000000000000000",
+      "count": 1152,
+      "age_ms": 73
+    },
+    {
+      "captured_at": "2026-10-11T21:39:49.775+08:00",
+      "bus": 2,
+      "extended": true,
+      "id_hex": "1047",
+      "dlc": 8,
+      "data_hex": "0187FD2000001A5E",
+      "count": 1152,
+      "age_ms": 77
+    },
+    {
+      "captured_at": "2026-10-11T21:39:49.775+08:00",
+      "bus": 2,
+      "extended": true,
+      "id_hex": "1B47",
+      "dlc": 8,
+      "data_hex": "FFFFFFFF00FC0000",
+      "count": 1152,
+      "age_ms": 82
+    },
+    {
+      "captured_at": "2026-10-11T21:39:51.922+08:00",
+      "bus": 2,
+      "extended": false,
+      "id_hex": "205",
+      "dlc": 8,
+      "data_hex": "1006000000100000",
+      "count": 234805,
+      "age_ms": 1,
+      "c610_feedback": {
+        "rotor_angle_raw": 4102,
+        "rotor_rpm": 0,
+        "torque_feedback_raw": 16,
+        "reserved_hex": "0000"
+      }
+    },
+    {
+      "captured_at": "2026-10-11T21:39:51.935+08:00",
+      "bus": 2,
+      "extended": true,
+      "id_hex": "946",
+      "dlc": 8,
+      "data_hex": "0000000000000000",
+      "count": 116264,
+      "age_ms": 1
+    },
+    {
+      "captured_at": "2026-10-11T21:39:51.935+08:00",
+      "bus": 2,
+      "extended": true,
+      "id_hex": "1046",
+      "dlc": 8,
+      "data_hex": "01A0FD1800001A5D",
+      "count": 116267,
+      "age_ms": 2
+    },
+    {
+      "captured_at": "2026-10-11T21:39:51.935+08:00",
+      "bus": 2,
+      "extended": true,
+      "id_hex": "1B46",
+      "dlc": 8,
+      "data_hex": "FFFFFFFF00FE0000",
+      "count": 116270,
+      "age_ms": 1
+    },
+    {
+      "captured_at": "2026-10-11T21:39:51.952+08:00",
+      "bus": 2,
+      "extended": true,
+      "id_hex": "E46",
+      "dlc": 8,
+      "data_hex": "0000000000000000",
+      "count": 1163,
+      "age_ms": 155
+    },
+    {
+      "captured_at": "2026-10-11T21:39:51.952+08:00",
+      "bus": 2,
+      "extended": true,
+      "id_hex": "947",
+      "dlc": 8,
+      "data_hex": "0000000000000000",
+      "count": 11628,
+      "age_ms": 8
+    },
+    {
+      "captured_at": "2026-10-11T21:39:51.952+08:00",
+      "bus": 2,
+      "extended": true,
+      "id_hex": "E47",
+      "dlc": 8,
+      "data_hex": "0000000000000000",
+      "count": 1163,
+      "age_ms": 153
+    },
+    {
+      "captured_at": "2026-10-11T21:39:52.059+08:00",
+      "bus": 2,
+      "extended": true,
+      "id_hex": "1047",
+      "dlc": 8,
+      "data_hex": "0187FD3500001A5E",
+      "count": 1163,
+      "age_ms": 157
+    },
+    {
+      "captured_at": "2026-10-11T21:39:52.059+08:00",
+      "bus": 2,
+      "extended": true,
+      "id_hex": "1B47",
+      "dlc": 8,
+      "data_hex": "FFFFFFFF00FC0000",
+      "count": 1163,
+      "age_ms": 162
+    },
+    {
+      "captured_at": "2026-10-11T21:39:52.059+08:00",
+      "bus": 1,
+      "extended": false,
+      "id_hex": "2",
+      "dlc": 8,
+      "data_hex": "0200332432000000",
+      "count": 14,
+      "age_ms": 1275
+    }
+  ],
+  "dm": {
+    "7": {
+      "captured_at": "2026-10-11T21:39:49.837+08:00",
+      "raw_hex": "0200330702000000",
+      "length": 8,
+      "decoded": {
+        "name": "MST_ID",
+        "type": "uint32",
+        "value": 2
+      }
+    },
+    "8": {
+      "captured_at": "2026-10-11T21:39:49.899+08:00",
+      "raw_hex": "0200330802000000",
+      "length": 8,
+      "decoded": {
+        "name": "ESC_ID",
+        "type": "uint32",
+        "value": 2
+      }
+    },
+    "9": {
+      "captured_at": "2026-10-11T21:39:49.978+08:00",
+      "raw_hex": "0200330900000000",
+      "length": 8,
+      "decoded": {
+        "name": "TIMEOUT",
+        "type": "uint32",
+        "value": 0
+      }
+    },
+    "10": {
+      "captured_at": "2026-10-11T21:39:50.039+08:00",
+      "raw_hex": "0200330A01000000",
+      "length": 8,
+      "decoded": {
+        "name": "CTRL_MODE",
+        "type": "uint32",
+        "value": 1
+      }
+    },
+    "13": {
+      "captured_at": "2026-10-11T21:39:50.117+08:00",
+      "raw_hex": "0200330D33303056",
+      "length": 8,
+      "decoded": {
+        "name": "hw_ver",
+        "type": "uint32",
+        "value": 1445998643
+      }
+    },
+    "14": {
+      "captured_at": "2026-10-11T21:39:50.180+08:00",
+      "raw_hex": "0200330E35373137",
+      "length": 8,
+      "decoded": {
+        "name": "sw_ver",
+        "type": "uint32",
+        "value": 925972277
+      }
+    },
+    "15": {
+      "captured_at": "2026-10-11T21:39:50.257+08:00",
+      "raw_hex": "0200330F35303054",
+      "length": 8,
+      "decoded": {
+        "name": "SN",
+        "type": "uint32",
+        "value": 1412444213
+      }
+    },
+    "16": {
+      "captured_at": "2026-10-11T21:39:50.319+08:00",
+      "raw_hex": "020033100E000000",
+      "length": 8,
+      "decoded": {
+        "name": "NPP",
+        "type": "uint32",
+        "value": 14
+      }
+    },
+    "20": {
+      "captured_at": "2026-10-11T21:39:50.398+08:00",
+      "raw_hex": "020033140000E040",
+      "length": 8,
+      "decoded": {
+        "name": "Gr",
+        "type": "float32",
+        "value": 7.0
+      }
+    },
+    "21": {
+      "captured_at": "2026-10-11T21:39:50.459+08:00",
+      "raw_hex": "02003315DC0F4940",
+      "length": 8,
+      "decoded": {
+        "name": "PMAX",
+        "type": "float32",
+        "value": 3.1415929794311523
+      }
+    },
+    "22": {
+      "captured_at": "2026-10-11T21:39:50.537+08:00",
+      "raw_hex": "0200331600004843",
+      "length": 8,
+      "decoded": {
+        "name": "VMAX",
+        "type": "float32",
+        "value": 200.0
+      }
+    },
+    "23": {
+      "captured_at": "2026-10-11T21:39:50.599+08:00",
+      "raw_hex": "0200331700002041",
+      "length": 8,
+      "decoded": {
+        "name": "TMAX",
+        "type": "float32",
+        "value": 10.0
+      }
+    },
+    "35": {
+      "captured_at": "2026-10-11T21:39:50.676+08:00",
+      "raw_hex": "0200332304000000",
+      "length": 8,
+      "decoded": {
+        "name": "can_br",
+        "type": "uint32",
+        "value": 4
+      }
+    },
+    "36": {
+      "captured_at": "2026-10-11T21:39:50.739+08:00",
+      "raw_hex": "0200332432000000",
+      "length": 8,
+      "decoded": {
+        "name": "sub_ver",
+        "type": "uint32",
+        "value": 50
+      }
+    }
+  },
+  "vesc": {
+    "70": {
+      "0": {
+        "captured_at": "2026-10-11T21:39:50.816+08:00",
+        "raw_hex": "0006053630004F0033000F504D425436322000000000000000000000000000",
+        "length": 31,
+        "decoded": {
+          "major": 6,
+          "minor": 5,
+          "hardware_name": "60",
+          "uuid_hex": "4F0033000F504D4254363220",
+          "extra_hex": "00000000000000000000000000"
+        }
+      },
+      "91": {
+        "captured_at": "2026-10-11T21:39:50.893+08:00",
+        "raw_hex": "5B3F8000003F800000C7C3500047C350003BA3D70A3F733333C9B71B0049B71B00C270000042C600000E404000003DA9FBE7",
+        "length": 50,
+        "decoded": {
+          "layout": "official_bldc_6.06_GET_MCCONF_TEMP",
+          "fields": {
+            "l_current_min_scale": 1.0,
+            "l_current_max_scale": 1.0,
+            "l_min_erpm": -100000.0,
+            "l_max_erpm": 100000.0,
+            "l_min_duty": 0.004999999888241291,
+            "l_max_duty": 0.949999988079071,
+            "l_watt_min": -1500000.0,
+            "l_watt_max": 1500000.0,
+            "l_in_current_min": -60.0,
+            "l_in_current_max": 99.0,
+            "si_motor_poles": 14,
+            "configured_pole_pairs": 7.0,
+            "si_gear_ratio": 3.0,
+            "si_wheel_diameter": 0.08299999684095383
+          },
+          "note": "Values are ESC configuration, not physical identification. Confirm poles and gear ratio on the mechanism."
+        }
+      },
+      "14": {
+        "captured_at": "2026-10-11T21:39:51.080+08:00",
+        "raw_hex": "0E3F829CF70100020041A00000C1A0000042C60000C27000002710003242700000C7C3500047C350001F404396000044BB80000050023A0064005027102AF8005564556405DC0032251C49B71B00C9B71B00271027102710431600004489800041200000026C1F40479C400044160000FF010302050604FF44FA00003CAA64C342A051EC46EA60003DF5C28F004334000040E000000044FA000046EA600037AED18F34A10FB03DA43FE63A6065304EA2B0DD3D4CCCCDFC1842480000447A00002710451C400044BB80000000038400C8000A0000000A00050000FF9CFFFFFFFFFFFFFFFF43FA0000451C4000455AC00000000000000009C403E8000300C80028003C012C00960000453B800000053A83126F0101450012A44500202D45001DA2FFFF002FFFD30000000000000101457A00000000000000232800C800C80000053B83126F3B83126F38D1B71707D0446100000146C35000003CCCCCCD000000000000000039B7803407D03F80000000000000000000643D4CCCCD3B96BB990190000001F400C83F0000000000200003E803E80672067201F4000000000010453B80004708B80046C350004553400000003F1C28F603E800FA032D0E404000003DA9FBE7000340C000003F80000001032D41003200000B5409C4106810CC00",
+        "length": 478,
+        "decoded": {
+          "signature": 1065524471,
+          "schema_source": {
+            "repository": "https://github.com/vedderb/bldc",
+            "commit": "94b305ec124b67b0161f2d3d85c4d5b35e48edc5",
+            "version": "6.06",
+            "file": "confgenerator.c",
+            "sha256": "7a696c298c79fdbfbf12b9d8c8ffec74fc9f9d5847275dd7843ee32c3321a785"
+          },
+          "decoded": false,
+          "reason": "unknown_configuration_signature; raw reply preserved"
+        }
+      },
+      "17": {
+        "captured_at": "2026-10-11T21:39:51.220+08:00",
+        "raw_hex": "117D217EB846000003E80000000001F40005190203000107000000474350000000000300466A60003E19999A3F800000400000003FC0000001010000000000000000023ECCCCCD3E4CCCCD0100453B80000FA03D8F5C2940400000003E19999A03840BB800000DAC07D003840BB801010000000000000000000000023E99999A3DCCCCCD0100453B800001F40001C200003E19999A3ECCCCCD3E4CCCCD453B80000000000000000000020100453B8000013D8F5C294040000001030100034CC6C70001000000640064070800001801003C001E01F4010001000000000000000000C8013F8000003E99999A000000003DCCCCCD000000000000000000000000000000000000000000000000000000000000000000000000",
+        "length": 279,
+        "decoded": {
+          "signature": 2099347128,
+          "schema_source": {
+            "repository": "https://github.com/vedderb/bldc",
+            "commit": "94b305ec124b67b0161f2d3d85c4d5b35e48edc5",
+            "version": "6.06",
+            "file": "confgenerator.c",
+            "sha256": "7a696c298c79fdbfbf12b9d8c8ffec74fc9f9d5847275dd7843ee32c3321a785"
+          },
+          "decoded": true,
+          "fields": {
+            "controller_id": 70,
+            "timeout_msec": 1000,
+            "timeout_brake_current": 0.0,
+            "can_status_rate_1": 500,
+            "can_status_rate_2": 5,
+            "can_status_msgs_r1": 25,
+            "can_status_msgs_r2": 2,
+            "can_baud_rate": 3,
+            "pairing_done": 0,
+            "permanent_uart_enabled": 1,
+            "shutdown_mode": 7,
+            "can_mode": 0,
+            "uavcan_esc_index": 0,
+            "uavcan_raw_mode": 0,
+            "uavcan_raw_rpm_max": 50000.0,
+            "uavcan_status_current_mode": 0,
+            "servo_out_enable": 0,
+            "kill_sw_mode": 0,
+            "app_to_use": 3,
+            "app_ppm_conf.ctrl_type": 0,
+            "app_ppm_conf.pid_max_erpm": 15000.0,
+            "app_ppm_conf.hyst": 0.15000000596046448,
+            "app_ppm_conf.pulse_start": 1.0,
+            "app_ppm_conf.pulse_end": 2.0,
+            "app_ppm_conf.pulse_center": 1.5,
+            "app_ppm_conf.median_filter": 1,
+            "app_ppm_conf.safe_start": 1,
+            "app_ppm_conf.throttle_exp": 0.0,
+            "app_ppm_conf.throttle_exp_brake": 0.0,
+            "app_ppm_conf.throttle_exp_mode": 2,
+            "app_ppm_conf.ramp_time_pos": 0.4000000059604645,
+            "app_ppm_conf.ramp_time_neg": 0.20000000298023224,
+            "app_ppm_conf.multi_esc": 1,
+            "app_ppm_conf.tc": 0,
+            "app_ppm_conf.tc_max_diff": 3000.0,
+            "app_ppm_conf.max_erpm_for_dir": 4000.0,
+            "app_ppm_conf.smart_rev_max_duty": 0.07000000029802322,
+            "app_ppm_conf.smart_rev_ramp_time": 3.0,
+            "app_adc_conf.ctrl_type": 0,
+            "app_adc_conf.hyst": 0.15000000596046448,
+            "app_adc_conf.voltage_start": 0.9,
+            "app_adc_conf.voltage_end": 3.0,
+            "app_adc_conf.voltage_min": 0.0,
+            "app_adc_conf.voltage_max": 3.5,
+            "app_adc_conf.voltage_center": 2.0,
+            "app_adc_conf.voltage2_start": 0.9,
+            "app_adc_conf.voltage2_end": 3.0,
+            "app_adc_conf.use_filter": 1,
+            "app_adc_conf.safe_start": 1,
+            "app_adc_conf.buttons": 0,
+            "app_adc_conf.voltage_inverted": 0,
+            "app_adc_conf.voltage2_inverted": 0,
+            "app_adc_conf.throttle_exp": 0.0,
+            "app_adc_conf.throttle_exp_brake": 0.0,
+            "app_adc_conf.throttle_exp_mode": 2,
+            "app_adc_conf.ramp_time_pos": 0.30000001192092896,
+            "app_adc_conf.ramp_time_neg": 0.10000000149011612,
+            "app_adc_conf.multi_esc": 1,
+            "app_adc_conf.tc": 0,
+            "app_adc_conf.tc_max_diff": 3000.0,
+            "app_adc_conf.update_rate_hz": 500,
+            "app_uart_baudrate": 115200,
+            "app_chuk_conf.ctrl_type": 0,
+            "app_chuk_conf.hyst": 0.15000000596046448,
+            "app_chuk_conf.ramp_time_pos": 0.4000000059604645,
+            "app_chuk_conf.ramp_time_neg": 0.20000000298023224,
+            "app_chuk_conf.stick_erpm_per_s_in_cc": 3000.0,
+            "app_chuk_conf.throttle_exp": 0.0,
+            "app_chuk_conf.throttle_exp_brake": 0.0,
+            "app_chuk_conf.throttle_exp_mode": 2,
+            "app_chuk_conf.multi_esc": 1,
+            "app_chuk_conf.tc": 0,
+            "app_chuk_conf.tc_max_diff": 3000.0,
+            "app_chuk_conf.use_smart_rev": 1,
+            "app_chuk_conf.smart_rev_max_duty": 0.07000000029802322,
+            "app_chuk_conf.smart_rev_ramp_time": 3.0,
+            "app_nrf_conf.speed": 1,
+            "app_nrf_conf.power": 3,
+            "app_nrf_conf.crc_type": 1,
+            "app_nrf_conf.retry_delay": 0,
+            "app_nrf_conf.retries": 3,
+            "app_nrf_conf.channel": 76,
+            "app_nrf_conf.address[0]": 198,
+            "app_nrf_conf.address[1]": 199,
+            "app_nrf_conf.address[2]": 0,
+            "app_nrf_conf.send_crc_ack": 1,
+            "app_pas_conf.ctrl_type": 0,
+            "app_pas_conf.sensor_type": 0,
+            "app_pas_conf.current_scaling": 0.1,
+            "app_pas_conf.pedal_rpm_start": 10.0,
+            "app_pas_conf.pedal_rpm_end": 180.0,
+            "app_pas_conf.invert_pedal_direction": 0,
+            "app_pas_conf.magnets": 24,
+            "app_pas_conf.use_filter": 1,
+            "app_pas_conf.ramp_time_pos": 0.6,
+            "app_pas_conf.ramp_time_neg": 0.3,
+            "app_pas_conf.update_rate_hz": 500,
+            "imu_conf.type": 1,
+            "imu_conf.mode": 0,
+            "imu_conf.filter": 1,
+            "imu_conf.accel_lowpass_filter_x": 0.0,
+            "imu_conf.accel_lowpass_filter_y": 0.0,
+            "imu_conf.accel_lowpass_filter_z": 0.0,
+            "imu_conf.gyro_lowpass_filter": 0.0,
+            "imu_conf.sample_rate_hz": 200,
+            "imu_conf.use_magnetometer": 1,
+            "imu_conf.accel_confidence_decay": 1.0,
+            "imu_conf.mahony_kp": 0.30000001192092896,
+            "imu_conf.mahony_ki": 0.0,
+            "imu_conf.madgwick_beta": 0.10000000149011612,
+            "imu_conf.rot_roll": 0.0,
+            "imu_conf.rot_pitch": 0.0,
+            "imu_conf.rot_yaw": 0.0,
+            "imu_conf.accel_offsets[0]": 0.0,
+            "imu_conf.accel_offsets[1]": 0.0,
+            "imu_conf.accel_offsets[2]": 0.0,
+            "imu_conf.gyro_offsets[0]": 0.0,
+            "imu_conf.gyro_offsets[1]": 0.0,
+            "imu_conf.gyro_offsets[2]": 0.0
+          }
+        }
+      },
+      "4": {
+        "captured_at": "2026-10-11T21:39:51.314+08:00",
+        "raw_hex": "0401A0FD170000000000000000000000000000000000000000000000FE00000000000000000000000000000000FFFFFFFF0000000700080BFC504600000000000000000006FFFFFFFF01",
+        "length": 74,
+        "decoded": {
+          "layout": "official_bldc_6.06_GET_VALUES_base_prefix",
+          "fields": {
+            "fet_temperature_c": 41.6,
+            "motor_temperature_c": -74.5,
+            "motor_current_a": 0.0,
+            "input_current_a": 0.0,
+            "id_current_a": 0.0,
+            "iq_current_a": 0.0,
+            "duty_cycle": 0.0,
+            "electrical_rpm": 0,
+            "input_voltage_v": 25.4,
+            "amp_hours": 0.0,
+            "amp_hours_charged": 0.0,
+            "watt_hours": 0.0,
+            "watt_hours_charged": 0.0,
+            "tachometer": -1,
+            "tachometer_absolute": 7,
+            "fault_code": 0
+          },
+          "extra_hex": "080BFC504600000000000000000006FFFFFFFF01"
+        }
+      }
+    },
+    "71": {
+      "0": {
+        "captured_at": "2026-10-11T21:39:51.392+08:00",
+        "raw_hex": "00060536300033003D00084739353036383000000000000000000000000000",
+        "length": 31,
+        "decoded": {
+          "major": 6,
+          "minor": 5,
+          "hardware_name": "60",
+          "uuid_hex": "33003D000847393530363830",
+          "extra_hex": "00000000000000000000000000"
+        }
+      },
+      "91": {
+        "captured_at": "2026-10-11T21:39:51.469+08:00",
+        "raw_hex": "5B3F8000003F800000C7C3500047C350003BA3D70A3F733333C9B71B0049B71B00C270000042C600000E404000003DA9FBE7",
+        "length": 50,
+        "decoded": {
+          "layout": "official_bldc_6.06_GET_MCCONF_TEMP",
+          "fields": {
+            "l_current_min_scale": 1.0,
+            "l_current_max_scale": 1.0,
+            "l_min_erpm": -100000.0,
+            "l_max_erpm": 100000.0,
+            "l_min_duty": 0.004999999888241291,
+            "l_max_duty": 0.949999988079071,
+            "l_watt_min": -1500000.0,
+            "l_watt_max": 1500000.0,
+            "l_in_current_min": -60.0,
+            "l_in_current_max": 99.0,
+            "si_motor_poles": 14,
+            "configured_pole_pairs": 7.0,
+            "si_gear_ratio": 3.0,
+            "si_wheel_diameter": 0.08299999684095383
+          },
+          "note": "Values are ESC configuration, not physical identification. Confirm poles and gear ratio on the mechanism."
+        }
+      },
+      "14": {
+        "captured_at": "2026-10-11T21:39:51.669+08:00",
+        "raw_hex": "0E3F829CF70100020041A00000C1A0000042C60000C27000002710003242700000C7C3500047C350001F404396000044BB80000050023A0064005027102AF8005564556405DC0032251C49B71B00C9B71B00271027102710431600004489800041200000026C1F40479C400044160000FF010302050604FF44FA00003CA57A7842A0570A46EA60003DF5C28F004334000040E000000044FA000046EA600037A91D45351652E83DA43FE63A5887EC4EAEB9013D4CCCCDFC1842480000447A00002710451C400044BB80000000038400C8000A0000000A00050000FF9CFFFFFFFFFFFFFFFF43FA0000451C4000455AC00000000000000009C403E8000300C80028003C012C00960000453B800000053A83126F010145002CEE45003EEE45003B480006FFFDFFFD0000000000000101457A00000000000000232800C800C80000053B83126F3B83126F38D1B71707D0446100000146C35000003CCCCCCD000000000000000039B7803407D03F80000000000000000000643D4CCCCD3B96BB990190000001F400C83F0000000000200003E803E80672067201F4000000000010453B80004708B80046C350004553400000003F1C28F603E800FA032D0E404000003DA9FBE7000340C000003F80000001032D41003200000B5409C4106810CC00",
+        "length": 478,
+        "decoded": {
+          "signature": 1065524471,
+          "schema_source": {
+            "repository": "https://github.com/vedderb/bldc",
+            "commit": "94b305ec124b67b0161f2d3d85c4d5b35e48edc5",
+            "version": "6.06",
+            "file": "confgenerator.c",
+            "sha256": "7a696c298c79fdbfbf12b9d8c8ffec74fc9f9d5847275dd7843ee32c3321a785"
+          },
+          "decoded": false,
+          "reason": "unknown_configuration_signature; raw reply preserved"
+        }
+      },
+      "17": {
+        "captured_at": "2026-10-11T21:39:51.810+08:00",
+        "raw_hex": "117D217EB847000003E80000000000320005011A03000107000000474350000000000300466A60003E19999A3F800000400000003FC0000001010000000000000000023ECCCCCD3E4CCCCD0100453B80000FA03D8F5C2940400000003E19999A03840BB800000DAC07D003840BB801010000000000000000000000023E99999A3DCCCCCD0100453B800001F40001C200003E19999A3ECCCCCD3E4CCCCD453B80000000000000000000020100453B8000013D8F5C294040000001030100034CC6C70001000000640064070800001801003C001E01F4010001000000000000000000C8013F8000003E99999A000000003DCCCCCD000000000000000000000000000000000000000000000000000000000000000000000000",
+        "length": 279,
+        "decoded": {
+          "signature": 2099347128,
+          "schema_source": {
+            "repository": "https://github.com/vedderb/bldc",
+            "commit": "94b305ec124b67b0161f2d3d85c4d5b35e48edc5",
+            "version": "6.06",
+            "file": "confgenerator.c",
+            "sha256": "7a696c298c79fdbfbf12b9d8c8ffec74fc9f9d5847275dd7843ee32c3321a785"
+          },
+          "decoded": true,
+          "fields": {
+            "controller_id": 71,
+            "timeout_msec": 1000,
+            "timeout_brake_current": 0.0,
+            "can_status_rate_1": 50,
+            "can_status_rate_2": 5,
+            "can_status_msgs_r1": 1,
+            "can_status_msgs_r2": 26,
+            "can_baud_rate": 3,
+            "pairing_done": 0,
+            "permanent_uart_enabled": 1,
+            "shutdown_mode": 7,
+            "can_mode": 0,
+            "uavcan_esc_index": 0,
+            "uavcan_raw_mode": 0,
+            "uavcan_raw_rpm_max": 50000.0,
+            "uavcan_status_current_mode": 0,
+            "servo_out_enable": 0,
+            "kill_sw_mode": 0,
+            "app_to_use": 3,
+            "app_ppm_conf.ctrl_type": 0,
+            "app_ppm_conf.pid_max_erpm": 15000.0,
+            "app_ppm_conf.hyst": 0.15000000596046448,
+            "app_ppm_conf.pulse_start": 1.0,
+            "app_ppm_conf.pulse_end": 2.0,
+            "app_ppm_conf.pulse_center": 1.5,
+            "app_ppm_conf.median_filter": 1,
+            "app_ppm_conf.safe_start": 1,
+            "app_ppm_conf.throttle_exp": 0.0,
+            "app_ppm_conf.throttle_exp_brake": 0.0,
+            "app_ppm_conf.throttle_exp_mode": 2,
+            "app_ppm_conf.ramp_time_pos": 0.4000000059604645,
+            "app_ppm_conf.ramp_time_neg": 0.20000000298023224,
+            "app_ppm_conf.multi_esc": 1,
+            "app_ppm_conf.tc": 0,
+            "app_ppm_conf.tc_max_diff": 3000.0,
+            "app_ppm_conf.max_erpm_for_dir": 4000.0,
+            "app_ppm_conf.smart_rev_max_duty": 0.07000000029802322,
+            "app_ppm_conf.smart_rev_ramp_time": 3.0,
+            "app_adc_conf.ctrl_type": 0,
+            "app_adc_conf.hyst": 0.15000000596046448,
+            "app_adc_conf.voltage_start": 0.9,
+            "app_adc_conf.voltage_end": 3.0,
+            "app_adc_conf.voltage_min": 0.0,
+            "app_adc_conf.voltage_max": 3.5,
+            "app_adc_conf.voltage_center": 2.0,
+            "app_adc_conf.voltage2_start": 0.9,
+            "app_adc_conf.voltage2_end": 3.0,
+            "app_adc_conf.use_filter": 1,
+            "app_adc_conf.safe_start": 1,
+            "app_adc_conf.buttons": 0,
+            "app_adc_conf.voltage_inverted": 0,
+            "app_adc_conf.voltage2_inverted": 0,
+            "app_adc_conf.throttle_exp": 0.0,
+            "app_adc_conf.throttle_exp_brake": 0.0,
+            "app_adc_conf.throttle_exp_mode": 2,
+            "app_adc_conf.ramp_time_pos": 0.30000001192092896,
+            "app_adc_conf.ramp_time_neg": 0.10000000149011612,
+            "app_adc_conf.multi_esc": 1,
+            "app_adc_conf.tc": 0,
+            "app_adc_conf.tc_max_diff": 3000.0,
+            "app_adc_conf.update_rate_hz": 500,
+            "app_uart_baudrate": 115200,
+            "app_chuk_conf.ctrl_type": 0,
+            "app_chuk_conf.hyst": 0.15000000596046448,
+            "app_chuk_conf.ramp_time_pos": 0.4000000059604645,
+            "app_chuk_conf.ramp_time_neg": 0.20000000298023224,
+            "app_chuk_conf.stick_erpm_per_s_in_cc": 3000.0,
+            "app_chuk_conf.throttle_exp": 0.0,
+            "app_chuk_conf.throttle_exp_brake": 0.0,
+            "app_chuk_conf.throttle_exp_mode": 2,
+            "app_chuk_conf.multi_esc": 1,
+            "app_chuk_conf.tc": 0,
+            "app_chuk_conf.tc_max_diff": 3000.0,
+            "app_chuk_conf.use_smart_rev": 1,
+            "app_chuk_conf.smart_rev_max_duty": 0.07000000029802322,
+            "app_chuk_conf.smart_rev_ramp_time": 3.0,
+            "app_nrf_conf.speed": 1,
+            "app_nrf_conf.power": 3,
+            "app_nrf_conf.crc_type": 1,
+            "app_nrf_conf.retry_delay": 0,
+            "app_nrf_conf.retries": 3,
+            "app_nrf_conf.channel": 76,
+            "app_nrf_conf.address[0]": 198,
+            "app_nrf_conf.address[1]": 199,
+            "app_nrf_conf.address[2]": 0,
+            "app_nrf_conf.send_crc_ack": 1,
+            "app_pas_conf.ctrl_type": 0,
+            "app_pas_conf.sensor_type": 0,
+            "app_pas_conf.current_scaling": 0.1,
+            "app_pas_conf.pedal_rpm_start": 10.0,
+            "app_pas_conf.pedal_rpm_end": 180.0,
+            "app_pas_conf.invert_pedal_direction": 0,
+            "app_pas_conf.magnets": 24,
+            "app_pas_conf.use_filter": 1,
+            "app_pas_conf.ramp_time_pos": 0.6,
+            "app_pas_conf.ramp_time_neg": 0.3,
+            "app_pas_conf.update_rate_hz": 500,
+            "imu_conf.type": 1,
+            "imu_conf.mode": 0,
+            "imu_conf.filter": 1,
+            "imu_conf.accel_lowpass_filter_x": 0.0,
+            "imu_conf.accel_lowpass_filter_y": 0.0,
+            "imu_conf.accel_lowpass_filter_z": 0.0,
+            "imu_conf.gyro_lowpass_filter": 0.0,
+            "imu_conf.sample_rate_hz": 200,
+            "imu_conf.use_magnetometer": 1,
+            "imu_conf.accel_confidence_decay": 1.0,
+            "imu_conf.mahony_kp": 0.30000001192092896,
+            "imu_conf.mahony_ki": 0.0,
+            "imu_conf.madgwick_beta": 0.10000000149011612,
+            "imu_conf.rot_roll": 0.0,
+            "imu_conf.rot_pitch": 0.0,
+            "imu_conf.rot_yaw": 0.0,
+            "imu_conf.accel_offsets[0]": 0.0,
+            "imu_conf.accel_offsets[1]": 0.0,
+            "imu_conf.accel_offsets[2]": 0.0,
+            "imu_conf.gyro_offsets[0]": 0.0,
+            "imu_conf.gyro_offsets[1]": 0.0,
+            "imu_conf.gyro_offsets[2]": 0.0
+          }
+        }
+      },
+      "4": {
+        "captured_at": "2026-10-11T21:39:51.903+08:00",
+        "raw_hex": "040187FD350000000000000000000000000000000000000000000000FC00000000000000000000000000000000FFFFFFFF0000000D00080C1E0047000000000000000000030000000001",
+        "length": 74,
+        "decoded": {
+          "layout": "official_bldc_6.06_GET_VALUES_base_prefix",
+          "fields": {
+            "fet_temperature_c": 39.1,
+            "motor_temperature_c": -71.5,
+            "motor_current_a": 0.0,
+            "input_current_a": 0.0,
+            "id_current_a": 0.0,
+            "iq_current_a": 0.0,
+            "duty_cycle": 0.0,
+            "electrical_rpm": 0,
+            "input_voltage_v": 25.2,
+            "amp_hours": 0.0,
+            "amp_hours_charged": 0.0,
+            "watt_hours": 0.0,
+            "watt_hours_charged": 0.0,
+            "tachometer": -1,
+            "tachometer_absolute": 13,
+            "fault_code": 0
+          },
+          "extra_hex": "080C1E0047000000000000000000030000000001"
+        }
+      }
+    }
+  },
+  "failures": [],
+  "complete": true,
+  "limitations": [
+    "GL60 II configuration cannot be read by a defined CAN parameter command; raw feedback only.",
+    "C610 feedback does not identify the motor model or feeder gear ratio/shots per revolution.",
+    "VESC configured poles/gear ratio require physical confirmation; defaults are never substituted."
+  ],
+  "finished_at": "2026-10-11T21:39:52.059+08:00"
+}
