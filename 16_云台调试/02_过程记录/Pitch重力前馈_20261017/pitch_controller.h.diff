@@ -1,0 +1,24 @@
+--- before/Output/Gimbal_Control/App/pitch_controller.h
++++ Output/Gimbal_Control/App/pitch_controller.h
+@@ -36,6 +36,9 @@
+     YawCascade cascade;
+     float reference_rad, last_position_rad, continuous_rad;
+     float angle_deg, target_deg, velocity_dps, torque_nm;
++    /* 实际水平角=angle_deg+gravity_offset_deg。Kg带符号，默认0；仅RAM。 */
++    float gravity_kg_nm, gravity_offset_deg, gravity_torque_nm, pid_torque_nm;
++    uint8_t gravity_calibrated, gravity_i_transferred;
+     uint32_t last_feedback_ms, last_sequence, faults, last_control_ms;
+     uint32_t stationary_started_ms;
+     uint8_t have_feedback, have_reference, active, have_control_tick;
+@@ -51,6 +54,11 @@
+ /* P:deg->deg/s；V:deg/s->协议Nm。参数输入范围并非PID输出限幅。 */
+ uint8_t PitchController_SetPid(PitchController *pitch, char which, float kp, float ki, float kd);
+ uint8_t PitchController_SetTarget(PitchController *pitch, float degrees);
++void PitchController_ClearGravity(PitchController *pitch);
++uint8_t PitchController_SetGravityGain(PitchController *pitch, float kg_nm);
++/* 关闭且已建立软件零点时声明水平偏置；不改变软件零点。 */
++uint8_t PitchController_SetGravityOffset(PitchController *pitch, float offset_deg);
++uint8_t PitchController_CaptureHorizontal(PitchController *pitch);
+ void PitchController_Stop(PitchController *pitch);
+ /* 无新CAN不推进积分/估计。手动rate限幅仅CH2映射，阶跃无速度业务限幅。 */
+ float PitchController_Update(PitchController *pitch, float rate_dps, uint32_t now_ms, uint8_t allowed);

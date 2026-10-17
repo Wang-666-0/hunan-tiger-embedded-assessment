@@ -1,0 +1,566 @@
+--- before/App\app_config.h
++++ after/App\app_config.h
+@@ -7,7 +7,7 @@
+ #ifndef APP_YAW_ENABLED
+ #define APP_YAW_ENABLED 1U
+ #endif
+-#define APP_YAW_VERSION "GL60II_CASCADE_FF_V2J"
++#define APP_YAW_VERSION "GL60II_CASCADE_SHAPE_V2K"
+ #define APP_YAW_COMMAND_PERIOD_MS 10U
+ #define APP_YAW_ENABLE_TIMEOUT_MS 100U
+ /* DM3507专用白名单接口；安全OFF可自动准备，不自动使能。
+--- before/App\app_console.c
++++ after/App\app_console.c
+@@ -286,15 +286,15 @@
+     }
+     if (strcmp(line, "TELEM YAW") == 0 || strcmp(line, "YAW VIEW") == 0) {
+         pitch_view = 0U;
+-        SendText(strcmp(line, "YAW VIEW") == 0 ? "Y|VIEW|YAW|GROUP|gimbal|COLS|64|PID_I|7_12|FF_I|48_59|BAND05_I|60_62\r\n" :
+-            "P|VIEW|YAW|GROUP|gimbal|COLS|64|PID_I|7_12|FF_I|48_59|BAND05_I|60_62\r\n"); return;
++        SendText(strcmp(line, "YAW VIEW") == 0 ? "Y|VIEW|YAW|GROUP|gimbal|COLS|70|PID_I|7_12|FF_I|48_59|BAND05_I|60_62\r\n" :
++            "P|VIEW|YAW|GROUP|gimbal|COLS|70|PID_I|7_12|FF_I|48_59|BAND05_I|60_62\r\n"); return;
+     }
+     if (PitchConsole_Handle(line, telemetry, sizeof(telemetry))) { SendText(telemetry); return; }
+ #endif
+ #if APP_YAW_ENABLED
+ #if !APP_PITCH_ENABLED
+     if (strcmp(line, "YAW VIEW") == 0 || strcmp(line, "TELEM YAW") == 0) {
+-        SendText("Y|VIEW|YAW|GROUP|gimbal|COLS|64|PID_I|7_12|FF_I|48_59|BAND05_I|60_62\r\n"); return;
++        SendText("Y|VIEW|YAW|GROUP|gimbal|COLS|70|PID_I|7_12|FF_I|48_59|BAND05_I|60_62\r\n"); return;
+     }
+ #endif
+     if (YawConsole_Handle(line, telemetry, sizeof(telemetry))) { SendText(telemetry); return; }
+@@ -641,13 +641,14 @@
+ #endif
+     age = remote.has_frame ? (uint32_t)(now - remote.received_ms) : 0U;
+ #if APP_YAW_ENABLED
+-    /* 原I0~I47不变；追加前馈参数/积分/新±0.5指标和CAN毫秒戳，共64列。
++    /* 原I0~I47不变；追加前馈参数/积分/新±0.5指标和CAN毫秒戳，共70列；I64~I69为规划时间/活动/位置/速度/加速度/跟踪误差。
+      * 前馈参数4位有效数字，诊断5位，减少5ms/921600线路开销。 */
+     length = snprintf(telemetry, sizeof(telemetry),
+         "gimbal:%.6g,%.6g,%.6g,%.6g,%.6g,%.6g,%.6g,%.6g,%.6g,%.6g,%.6g,%.6g,%.6g,%.6g"
+         ",%u,%u,%u,%u,%lu,%lu,%u,%u,%u,%u,%lu,%u,%ld,%ld,%.6g,%.6g,%.6g,%u,%u,%ld,%ld"
+         ",%u,%.6g,%.6g,%lu,%u,%u,%u,%u,%u,%u,%lu,%d,%d"
+-        ",%u,%.4g,%.4g,%.4g,%.4g,%.4g,%.4g,%.5g,%.5g,%.5g,%.5g,%u,%ld,%ld,%u,%lu\r\n",
++        ",%u,%.4g,%.4g,%.4g,%.4g,%.4g,%.4g,%.5g,%.5g,%.5g,%.5g,%u,%ld,%ld,%u,%lu"
++        ",%lu,%u,%.5g,%.5g,%.5g,%.5g\r\n",
+         (double)yaw.controller.angle_deg, (double)yaw.controller.target_deg,
+         (double)yaw.controller.cascade.target_velocity_dps, (double)yaw.controller.cascade.velocity_dps,
+         (double)yaw.controller.velocity_dps, (double)yaw.controller.torque_nm, (double)yaw.feedback.torque_nm,
+@@ -682,7 +683,11 @@
+         (double)yaw.controller.pid_torque_nm, (double)yaw.controller.cascade.speed_i,
+         (double)yaw.controller.cascade.position_i, (unsigned)yaw.controller.cascade.feedforward_limited,
+         (long)(int32_t)step.response05_ms, (long)(int32_t)step.settle05_ms, (unsigned)step.pass05,
+-        (unsigned long)yaw.controller.last_feedback_ms);
++        (unsigned long)yaw.controller.last_feedback_ms,
++        (unsigned long)yaw.controller.shape.duration_ms, (unsigned)yaw.controller.shape.active,
++        (double)yaw.controller.shape.position_deg, (double)yaw.controller.shape.velocity_dps,
++        (double)yaw.controller.shape.acceleration_dps2,
++        (double)(yaw.controller.shape.position_deg - yaw.controller.angle_deg));
+ #else
+     request = &app.logic.targets.request;
+     length = snprintf(telemetry, sizeof(telemetry),
+--- before/App\README.md
++++ after/App\README.md
+@@ -1,3 +1,5 @@
++2026-10-17最新 **Yaw V2K**：新增仅STEP入口生效、默认关闭的平滑轨迹与参考速度前馈，规划段冻结外环积分；`YAW SHAPE 0/160`控制，原30°目标/计时/判定保留。原I0~I63保持，新增I64~I69共70列。Pitch及原业务保护保持。64组483163项、AC5/O0完整构建通过，实机效果待验证。[操作](../../../01_学习笔记/Yaw平滑阶跃与速度前馈_20261017.md) / [验证](../../../02_过程记录/Yaw平滑阶跃_20261017/实现与验证.md)。
++
+ # App 分文件说明
+ 
+ 2026-10-17 Yaw V2J：在原yaw_controller/cascade/backend/console内加入力矩前馈，默认OFF、系数0；原外部双环/真实目标阶跃/保护链保持。新增FBIAS/FANG/FKV/FC/FVS/FMAX在线参数和FF ON/OFF，参数改变中止当前统计并做可行的速度积分转移；普通OFF重开保留坐标/参数，重新设零关闭前馈。Yaw遥测64列，追加积分诊断和独立±0.5°稳定判定；原48列及Pitch58列保持原含义，无新增生产C源文件。默认Yaw PID为用户最后截图7.5/.15/0与.0025/.003/0。详见[VOFA指南](../../../01_学习笔记/Yaw前馈与VOFA控件调参_20261017.md)。
+--- before/App\yaw_backend.c
++++ after/App\yaw_backend.c
+@@ -277,6 +277,7 @@
+     uint8_t accepted;
+     uint32_t revision;
+     taskENTER_CRITICAL();
++    if (state.controller.shape.active) { taskEXIT_CRITICAL(); return 0U; }
+     revision = state.controller.cascade.revision;
+     accepted = YawCascade_SetPid(&state.controller.cascade, loop, kp, ki, kd);
+     if (accepted && revision != state.controller.cascade.revision) {
+@@ -320,6 +321,9 @@
+     uint8_t accepted = 0U, off_allowed, active_allowed;
+     uint32_t revision;
+     taskENTER_CRITICAL();
++    if (state.controller.shape.active && !(parameter == 'E' && value == 0.0f)) {
++        taskEXIT_CRITICAL(); return 0U;
++    }
+     off_allowed = (uint8_t)(!state.active && !state.enabling && !state.stop_pending);
+     active_allowed = (uint8_t)(state.active && !state.enabling && !state.stop_pending &&
+         Online(HAL_GetTick()) && state.feedback.status == 1U && !state.controller.faults && CanBus_YawAllowed());
+@@ -338,6 +342,17 @@
+     taskEXIT_CRITICAL(); return accepted;
+ }
+ 
++uint8_t YawBackend_SetShape(uint32_t duration_ms)
++{
++    uint8_t accepted = 0U;
++    taskENTER_CRITICAL();
++    if (duration_ms == state.controller.shape.duration_ms) { accepted = 1U; }
++    else if (step.phase != YAW_STEP_RUNNING) {
++        accepted = YawController_SetShape(&state.controller, duration_ms);
++    }
++    taskEXIT_CRITICAL(); return accepted;
++}
++
+ uint8_t YawBackend_CaptureReference(void)
+ {
+     uint8_t accepted = 0U;
+@@ -371,6 +386,8 @@
+         YawController_SetTarget(&state.controller, degrees)) {
+         accepted = YawStep_Start(&step, HAL_GetTick(), state.controller.angle_deg, degrees);
+         if (accepted) {
++            YawController_StartShape(&state.controller, step.start_ms);
++            step.shape_ms = state.controller.shape.active ? state.controller.shape.duration_ms : 0U;
+             step.kp = state.controller.pid.kp; step.ki = state.controller.pid.ki; step.kd = state.controller.pid.kd;
+ #if YAW_CONTROLLER_CASCADE_ENABLED
+             step.kp = state.controller.cascade.position.kp;
+--- before/App\yaw_backend.h
++++ after/App\yaw_backend.h
+@@ -50,6 +50,7 @@
+ uint8_t YawBackend_SetLoopParameter(char loop, char parameter, float value);
+ uint8_t YawBackend_SetVelocityLimit(float dps);
+ uint8_t YawBackend_SetFeedforward(char parameter, float value);
++uint8_t YawBackend_SetShape(uint32_t duration_ms);
+ uint8_t YawBackend_CaptureReference(void);
+ /* 先安全OFF/ZERO、ON和人工CH5重解锁。STEP只在健康静止近零活动状态接受；
+  * ±30是相对软件零点的绝对目标，完成5秒测量后继续保持，不自动失能。 */
+--- before/App\yaw_cascade.c
++++ after/App\yaw_cascade.c
+@@ -75,7 +75,7 @@
+ }
+ static float update(YawCascade *loop, float error_deg, uint32_t feedback_ms,
+                         uint32_t sequence, float torque_limit_nm, float feedforward_nm,
+-                        const YawCascadeFeedforward *ff)
++                        const YawCascadeFeedforward *ff, const YawCascadeReference *reference)
+ {
+     float dt = 0.0f, wanted, candidate, change, speed_error;
+     uint32_t gap = feedback_ms - loop->feedback_ms;
+@@ -83,6 +83,7 @@
+     loop->feedback_ms = feedback_ms; loop->sequence = sequence; loop->have_update = 1U;
+     if (loop->position.ki == 0.0f) { loop->position_i = 0.0f; }
+     change = loop->position.ki * error_deg * dt;
++    if (reference && reference->freeze_position_i) { change = 0.0f; }
+ #if YAW_CASCADE_OUTPUT_LIMITS_ENABLED
+     candidate = clamp(loop->position_i + change, -loop->velocity_limit_dps, loop->velocity_limit_dps);
+     wanted = loop->position.kp * error_deg + candidate - loop->position.kd * loop->velocity_dps;
+@@ -99,6 +100,14 @@
+     loop->target_velocity_dps = loop->position.kp * error_deg + loop->position_i - loop->position.kd * loop->velocity_dps;
+     loop->velocity_limited = 0U;
+ #endif
++    if (reference) {
++        loop->target_velocity_dps += (1.0f + loop->position.kd) * reference->velocity_dps;
++#if YAW_CASCADE_OUTPUT_LIMITS_ENABLED
++        wanted = loop->target_velocity_dps;
++        loop->target_velocity_dps = clamp(wanted, -loop->velocity_limit_dps, loop->velocity_limit_dps);
++        loop->velocity_limited = (uint8_t)(wanted > loop->velocity_limit_dps || wanted < -loop->velocity_limit_dps);
++#endif
++    }
+     loop->feedforward_limited = 0U;
+     if (ff) {
+         float speed_abs = loop->target_velocity_dps < 0.0f ? -loop->target_velocity_dps : loop->target_velocity_dps;
+@@ -122,10 +131,16 @@
+ float YawCascade_UpdateWithFeedforward(YawCascade *loop, float error_deg, uint32_t feedback_ms,
+                         uint32_t sequence, float torque_limit_nm, float feedforward_nm)
+ {
+-    return update(loop, error_deg, feedback_ms, sequence, torque_limit_nm, feedforward_nm, 0);
++    return update(loop, error_deg, feedback_ms, sequence, torque_limit_nm, feedforward_nm, 0, 0);
+ }
+ float YawCascade_UpdateWithCompensation(YawCascade *loop, float error_deg, uint32_t feedback_ms,
+                         uint32_t sequence, float torque_limit_nm, const YawCascadeFeedforward *ff)
+ {
+-    return update(loop, error_deg, feedback_ms, sequence, torque_limit_nm, 0.0f, ff);
++    return update(loop, error_deg, feedback_ms, sequence, torque_limit_nm, 0.0f, ff, 0);
+ }
++float YawCascade_UpdateTracking(YawCascade *loop, float error_deg, uint32_t feedback_ms,
++                        uint32_t sequence, float torque_limit_nm, const YawCascadeFeedforward *ff,
++                        const YawCascadeReference *reference)
++{
++    return update(loop, error_deg, feedback_ms, sequence, torque_limit_nm, 0.0f, ff, reference);
++}
+--- before/App\yaw_cascade.h
++++ after/App\yaw_cascade.h
+@@ -13,6 +13,10 @@
+ typedef struct {
+     float bias_nm, velocity_gain, friction_nm, friction_velocity_dps, limit_nm;
+ } YawCascadeFeedforward;
++typedef struct {
++    float velocity_dps;
++    uint8_t freeze_position_i;
++} YawCascadeReference;
+ typedef struct {
+     YawCascadePid position, speed;
+     float velocity_limit_dps, velocity_dps, acceleration_dps2, target_velocity_dps;
+@@ -45,4 +49,9 @@
+ /* bias + Kv*vref + Fc*vref/(|vref|+Vs)，先裁前馈再参加总力矩抗饱和。 */
+ float YawCascade_UpdateWithCompensation(YawCascade *loop, float error_deg, uint32_t feedback_ms,
+                          uint32_t sequence, float torque_limit_nm, const YawCascadeFeedforward *ff);
++/* Yaw平滑阶跃专用：已知参考速度进入外环，D对速度跟踪误差作用。
++ * 仅规划运动段冻结外环积分；内环积分/抗饱和仍按实际CAN反馈更新。 */
++float YawCascade_UpdateTracking(YawCascade *loop, float error_deg, uint32_t feedback_ms,
++                         uint32_t sequence, float torque_limit_nm, const YawCascadeFeedforward *ff,
++                         const YawCascadeReference *reference);
+ #endif
+--- before/App\yaw_console.c
++++ after/App\yaw_console.c
+@@ -137,13 +137,13 @@
+             length = snprintf(response + used, capacity - used,
+                 "|CTRL|CASCADE|VKP|%.6f|VKI|%.6f|VKD|%.6f|VREF_MAX_DPS|%.1f|VFILTER_MS|%u|OUTPUT_LIMITS|%u"
+                 "|BAND05|0.5|RESP05_MS|%ld|SETTLE05_MS|%ld|PASS05|%u"
+-                "|FF_ON|%u|FBIAS|%.6g|FANG|%.6g|FKV|%.6g|FC|%.6g|FVS|%.6g|FMAX|%.6g\r\n",
++                "|FF_ON|%u|FBIAS|%.6g|FANG|%.6g|FKV|%.6g|FC|%.6g|FVS|%.6g|FMAX|%.6g|SHAPE_MS|%lu\r\n",
+                 (double)step->vkp, (double)step->vki, (double)step->vkd,
+                 (double)step->vmax_dps, (unsigned)YAW_CASCADE_VELOCITY_FILTER_MS, (unsigned)step->output_limits,
+                 (long)(int32_t)step->response05_ms, (long)(int32_t)step->settle05_ms, (unsigned)step->pass05,
+                 (unsigned)step->ff_enabled, (double)step->ff_bias_nm, (double)step->ff_angle_gain,
+                 (double)step->ff_velocity_gain, (double)step->ff_friction_nm,
+-                (double)step->ff_velocity_dps, (double)step->ff_limit_nm);
++                (double)step->ff_velocity_dps, (double)step->ff_limit_nm, (unsigned long)step->shape_ms);
+         } else { length = snprintf(response + used, capacity - used, "\r\n"); }
+         return (uint8_t)(length > 0 && (size_t)length < capacity - used);
+     }
+@@ -295,13 +295,13 @@
+     uint8_t accepted = 0U;
+     char parameter = 0;
+     const char *number = 0;
+-    float value;
++    float value = 0.0f;
+     if (!line || !response || !capacity ||
+         (strcmp(line, "YAW") != 0 && strncmp(line, "YAW ", 4U) != 0)) { return 0U; }
+     if (strcmp(line, "YAW") == 0) { BriefStatus(response, capacity); return 1U; }
+     if (strcmp(line, "YAW HELP") == 0 || strcmp(line, "YAW ?") == 0) {
+         (void)snprintf(response, capacity,
+-            "Y|HELP|READ|YAW;PID;RESULT;STATUS|PREPARE|READY|STOP|OFF|VIEW|YAW VIEW|TUNE|POS kp ki kd;VEL kp ki kd;PKP/PKI/PKD/VKP/VKI/VKD value|FF|FF;FF ON/OFF;FBIAS/FANG/FKV/FC/FVS/FMAX value|TELEM|TELEM OFF/ON|TEST|STEP [30];HOME;REMOTE_CH5_CH7|DETAIL|INFO;CHECK;BUS;ZERO;CLEAR\r\n");
++            "Y|HELP|READ|YAW;PID;RESULT;STATUS|PREPARE|READY|STOP|OFF|VIEW|YAW VIEW|TUNE|POS kp ki kd;VEL kp ki kd;PKP/PKI/PKD/VKP/VKI/VKD value|FF|FF;FF ON/OFF;FBIAS/FANG/FKV/FC/FVS/FMAX value|SHAPE|SHAPE [0_or_80_to_500_ms]|TELEM|TELEM OFF/ON|TEST|STEP [30];HOME;REMOTE_CH5_CH7|DETAIL|INFO;CHECK;BUS;ZERO;CLEAR\r\n");
+         return 1U;
+     }
+     if (strcmp(line, "YAW BUS") == 0) {
+@@ -417,6 +417,25 @@
+         return 1U;
+     }
+ #if YAW_CONTROLLER_CASCADE_ENABLED
++    if (strcmp(line, "YAW SHAPE") == 0) {
++        YawBackend_GetState(&yaw);
++        (void)snprintf(response, capacity,
++            "Y|SHAPE|ENABLED|%u|MS|%lu|ACTIVE|%u|REF_DEG|%.6g|REF_DPS|%.6g|REF_DPS2|%.6g|GOAL_DEG|%.6g|VEL_FF|1|PI_FREEZE|%u\r\n",
++            (unsigned)(yaw.controller.shape.duration_ms != 0U), (unsigned long)yaw.controller.shape.duration_ms,
++            (unsigned)yaw.controller.shape.active, (double)yaw.controller.shape.position_deg,
++            (double)yaw.controller.shape.velocity_dps, (double)yaw.controller.shape.acceleration_dps2,
++            (double)yaw.controller.target_deg, (unsigned)yaw.controller.shape.active);
++        return 1U;
++    }
++    if (strncmp(line, "YAW SHAPE ", 10U) == 0) {
++        if (Number(line + 10U, &value) && value >= 0.0f && value <= 500.0f &&
++            value == (float)(uint32_t)value && !AppConsole_IsDiagnosticMode()) {
++            accepted = YawBackend_SetShape((uint32_t)value);
++        }
++        (void)snprintf(response, capacity, accepted ? "Y|OK|SHAPE|MS|%.0f\r\n" :
++            "Y|ERROR|SHAPE|USE_0_OR_80_TO_500_MS|FINISH_STEP_FIRST\r\n", (double)value);
++        return 1U;
++    }
+     if (strcmp(line, "YAW FF ON") == 0 || strcmp(line, "YAW FF OFF") == 0 ||
+         strcmp(line, "YAW FF 1") == 0 || strcmp(line, "YAW FF 0") == 0) {
+         value = (strcmp(line, "YAW FF ON") == 0 || strcmp(line, "YAW FF 1") == 0) ? 1.0f : 0.0f;
+--- before/App\yaw_controller.c
++++ after/App\yaw_controller.c
+@@ -85,6 +85,9 @@
+     yaw->target_deg = finite_value(yaw->angle_deg) ?
+         clamp(yaw->angle_deg, -YAW_CONTROLLER_TARGET_LIMIT_DEG,
+               YAW_CONTROLLER_TARGET_LIMIT_DEG) : 0.0f;
++    yaw->shape.active = 0U;
++    yaw->shape.position_deg = yaw->target_deg;
++    yaw->shape.velocity_dps = yaw->shape.acceleration_dps2 = 0.0f;
+ }
+ 
+ uint8_t YawController_OnFeedback(YawController *yaw, const Gl60Feedback *feedback)
+@@ -141,6 +144,9 @@
+         yaw->reference_rad = feedback->position_rad;
+         yaw->angle_deg = 0.0f;
+         yaw->target_deg = 0.0f;
++        yaw->shape.active = 0U;
++        yaw->shape.position_deg = 0.0f;
++        yaw->shape.velocity_dps = yaw->shape.acceleration_dps2 = 0.0f;
+         /* 首次静止反馈可显示相对零位。断线/跳变后必须人工重新捕获。 */
+         yaw->have_reference = (uint8_t)(first && sample_safe(yaw));
+         yaw->stationary_samples = 0U;
+@@ -186,6 +192,7 @@
+     yaw->reference_rad = yaw->continuous_rad;
+     yaw->angle_deg = 0.0f;
+     yaw->target_deg = 0.0f;
++    yaw->shape.position_deg = 0.0f;
+     yaw->have_reference = 1U;
+     YawCascade_ResetObserver(&yaw->cascade);
+     yaw->faults &= ~(uint32_t)RECOVERABLE_FAULTS;
+@@ -212,8 +219,58 @@
+         degrees > YAW_CONTROLLER_TARGET_LIMIT_DEG ||
+         !yaw->have_reference || yaw->faults != 0U) { return 0U; }
+     yaw->target_deg = degrees;
+-    return 1U;
+-}
++    yaw->shape.active = 0U;
++    yaw->shape.position_deg = degrees;
++    yaw->shape.velocity_dps = yaw->shape.acceleration_dps2 = 0.0f;
++    return 1U;
++}
++
++uint8_t YawController_SetShape(YawController *yaw, uint32_t duration_ms)
++{
++#if YAW_CONTROLLER_CASCADE_ENABLED && !YAW_CASCADE_OUTPUT_LIMITS_ENABLED
++    if (!yaw || yaw->shape.active || (duration_ms && (duration_ms < 80U || duration_ms > 500U))) { return 0U; }
++    yaw->shape.duration_ms = duration_ms;
++    return 1U;
++#else
++    (void)yaw; (void)duration_ms; return 0U;
++#endif
++}
++
++void YawController_StartShape(YawController *yaw, uint32_t now_ms)
++{
++    if (!yaw || !yaw->shape.duration_ms || !yaw->active || !yaw->have_reference || yaw->faults) { return; }
++    yaw->shape.start_ms = now_ms;
++    yaw->shape.start_deg = yaw->shape.position_deg = yaw->angle_deg;
++    yaw->shape.velocity_dps = yaw->shape.acceleration_dps2 = 0.0f;
++    yaw->shape.active = 1U;
++}
++
++#if YAW_CONTROLLER_CASCADE_ENABLED
++static void shape_update(YawController *yaw, uint32_t now_ms)
++{
++    uint32_t elapsed;
++    float x, x2, x3, remain, span, seconds;
++    if (!yaw->shape.active) {
++        yaw->shape.position_deg = yaw->target_deg;
++        yaw->shape.velocity_dps = yaw->shape.acceleration_dps2 = 0.0f;
++        return;
++    }
++    elapsed = now_ms - yaw->shape.start_ms;
++    if (elapsed >= yaw->shape.duration_ms) {
++        yaw->shape.active = 0U;
++        yaw->shape.position_deg = yaw->target_deg;
++        yaw->shape.velocity_dps = yaw->shape.acceleration_dps2 = 0.0f;
++        return;
++    }
++    x = (float)elapsed / (float)yaw->shape.duration_ms;
++    x2 = x * x; x3 = x2 * x; remain = 1.0f - x;
++    seconds = (float)yaw->shape.duration_ms * 0.001f;
++    span = yaw->target_deg - yaw->shape.start_deg;
++    yaw->shape.position_deg = yaw->shape.start_deg + span * x3 * (10.0f + x * (-15.0f + 6.0f * x));
++    yaw->shape.velocity_dps = span * 30.0f * x2 * remain * remain / seconds;
++    yaw->shape.acceleration_dps2 = span * 60.0f * x * remain * (1.0f - 2.0f * x) / (seconds * seconds);
++}
++#endif
+ 
+ uint8_t YawController_SetFeedforward(YawController *yaw, char parameter, float value)
+ {
+@@ -260,6 +317,10 @@
+     if (yaw == 0) { return 0.0f; }
+     if (allowed) { yaw->motion_guard_active = 1U; }
+     if (!finite_value(rate_dps) || !valid_ff(&yaw->ff)) { fault(yaw, YAW_CONTROLLER_FAULT_DATA); return 0.0f; }
++    if (yaw->shape.active && (yaw->shape.duration_ms < 80U || yaw->shape.duration_ms > 500U ||
++        !finite_value(yaw->shape.start_deg))) {
++        fault(yaw, YAW_CONTROLLER_FAULT_DATA); return 0.0f;
++    }
+     age = now_ms - yaw->last_feedback_ms;
+     if (!yaw->have_feedback || age >= YAW_CONTROLLER_FEEDBACK_TIMEOUT_MS ||
+         age >= HALF_TICK_RANGE) {
+@@ -290,7 +351,20 @@
+     yaw->target_deg = clamp(yaw->target_deg + rate_dps * (float)elapsed / 1000.0f,
+         -YAW_CONTROLLER_TARGET_LIMIT_DEG, YAW_CONTROLLER_TARGET_LIMIT_DEG);
+ #if YAW_CONTROLLER_CASCADE_ENABLED
+-    if (yaw->ff.enabled) {
++    if (rate_dps != 0.0f) { yaw->shape.active = 0U; }
++    shape_update(yaw, now_ms);
++    if (yaw->shape.active) {
++        YawCascadeReference reference;
++        YawCascadeFeedforward model;
++        reference.velocity_dps = yaw->shape.velocity_dps;
++        reference.freeze_position_i = 1U;
++        model.bias_nm = yaw->ff.bias_nm + yaw->ff.angle_gain * yaw->angle_deg;
++        model.velocity_gain = yaw->ff.velocity_gain; model.friction_nm = yaw->ff.friction_nm;
++        model.friction_velocity_dps = yaw->ff.friction_velocity_dps; model.limit_nm = yaw->ff.limit_nm;
++        yaw->torque_nm = YawCascade_UpdateTracking(&yaw->cascade, yaw->shape.position_deg - yaw->angle_deg,
++            yaw->last_feedback_ms, yaw->last_sequence, YAW_CONTROLLER_TORQUE_LIMIT_NM,
++            yaw->ff.enabled ? &model : 0, &reference);
++    } else if (yaw->ff.enabled) {
+         YawCascadeFeedforward model;
+         model.bias_nm = yaw->ff.bias_nm + yaw->ff.angle_gain * yaw->angle_deg;
+         model.velocity_gain = yaw->ff.velocity_gain; model.friction_nm = yaw->ff.friction_nm;
+--- before/App\yaw_controller.h
++++ after/App\yaw_controller.h
+@@ -75,9 +75,15 @@
+     uint8_t enabled, i_transferred;
+ } YawFeedforward;
+ typedef struct {
++    uint32_t duration_ms, start_ms;
++    float start_deg, position_deg, velocity_dps, acceleration_dps2;
++    uint8_t active;
++} YawShape;
++typedef struct {
+     YawPid pid;
+     YawCascade cascade;
+     YawFeedforward ff;
++    YawShape shape;
+     float pid_torque_nm;
+     float reference_rad, last_position_rad, continuous_rad;
+     float angle_deg, target_deg, velocity_dps, torque_nm, integral;
+@@ -108,6 +114,10 @@
+ /* B偏置/A角度斜率/V速度系数/C摩擦/S平滑速度/L前馈限幅/E使能。
+  * 在线改值只转移内环积分以减小力矩突变，不改变软件零点及目标。 */
+ uint8_t YawController_SetFeedforward(YawController *yaw, char parameter, float value);
++/* 默认duration=0关闭。只在正式STEP入口启动；配置不启动电机。
++ * 80~500ms为五次多项式全程时间，0恢复原始阶跃；计时仍从原指令开始。 */
++uint8_t YawController_SetShape(YawController *yaw, uint32_t duration_ms);
++void YawController_StartShape(YawController *yaw, uint32_t now_ms);
+ void YawController_Stop(YawController *yaw);
+ /* allowed由后端综合遥控、CAN、驱动使能和停机提交状态。无新反馈不积分，
+  * 新反馈dt最大100ms；手动目标以控制tick积分，不追补迟到时间。 */
+--- before/App\yaw_step.h
++++ after/App\yaw_step.h
+@@ -20,6 +20,7 @@
+     uint32_t response05_ms, settle05_ms, band05_since_ms;
+     uint32_t ss_duration_ms, ss_samples, faults, limited_samples;
+     uint32_t command_samples;
++    uint32_t shape_ms;
+     float start_deg, target_deg, span_deg, direction, last_angle_deg;
+     float last_velocity_dps, last_torque_nm, overshoot_deg, overshoot_pct;
+     float steady_error_deg, peak_velocity_dps, peak_torque_nm;
+--- before/README.md
++++ after/README.md
+@@ -1,5 +1,6 @@
+ # Gimbal_Control：Yaw双环PID与摩擦轮双轮6000rpm
+ 
++2026-10-17最新 **Yaw V2K**：新增默认关闭的五次平滑阶跃、参考速度前馈及规划段外环积分冻结，配置命令 `YAW SHAPE 0/160`。原目标/计时/±0.5°判定保留；Yaw原I0~I63保持，追加I64~I69共70列。原PID默认值未改，Pitch及遥控/CAN流程保持。64组483163项全部完成返回、0失败，AC5/O0原66源项构建成功；尚未烧录或验证实机抑振/250ms。见[新模式与VOFA操作](../../01_学习笔记/Yaw平滑阶跃与速度前馈_20261017.md)和[验证记录](../../02_过程记录/Yaw平滑阶跃_20261017/实现与验证.md)。以下版本为历史。
+ 2026-10-17最新 **Yaw V2J**：加入默认关闭的偏置/角度负载/平滑摩擦/速度相关力矩补偿，支持VOFA滑条在线调节与积分转移；Yaw原I0～I47保持，追加I48～I63共64列。上电Yaw六参采用用户最后截图 **位置7.5/.15/0、速度.0025/.003/0**。新考核看I61/SETTLE05和I62/PASS05（±0.5°、250ms内进入并保持到5秒），原±0.2°指标保留。Pitch V1F及自动准备/遥控保护保持。使用[前馈与VOFA详细指南](../../01_学习笔记/Yaw前馈与VOFA控件调参_20261017.md)和[独立面板目录](../VOFA_Yaw_FF_20261017/README.md)；尚待烧录与实机辨识。以下“最新”条目是历史版本。
+ 
+ 最新 **Yaw V2I / Pitch V1F**：上电在原水平机械基准、安全OFF自动准备双轴；新CH5上→中即可右杆操控，不用逐条串口准备。GIMBAL READY统一手动重设双轴参考，YAW/PITCH STEP及HOME快速测量/回零。反复关停重开保留原零点，失联/硬故障保护保持。59组467812项及原AC5/O0完整66源项构建通过，尚待用户烧录实机核验。[现行快速操作](../../01_学习笔记/云台自动启动与快速阶跃_20261017.md) / [实现与验证](../../02_过程记录/云台上电遥控自动准备_20261017/实现与验证.md)。以下旧启动方式保留历史。
+--- before/Tests\README.md
++++ after/Tests\README.md
+@@ -1,3 +1,5 @@
++2026-10-17 Yaw V2K：新增yaw_shape（2552项）与yaw_shape_console（1624项），验证轨迹正反向/边界/回绕、参考速度与外环积分冻结、停机/手动接管、命令/遥控入口、原始t0和最终目标验收、配置冻结。Yaw遥测扩展70列，原I0~I63保持。完整64组483163项、0失败，全部完成返回；真实AC5/O0构建成功。合成反馈不代表负载仿真或实机250ms达标。见[记录](../../../02_过程记录/Yaw平滑阶跃_20261017/实现与验证.md)。
++
+ 2026-10-17 Yaw V2J前馈：新增yaw_feedforward、yaw_feedforward_console、yaw_step_assessment三组；覆盖零前馈等价、参数边界、负载/速度/摩擦分支、积分转移、总力矩抗饱和、OFF/重新设零、阶跃条件冻结/FF_CHANGE、独立±0.5°最终保持判定与Yaw64列。原单环/受限双环历史夹具保留，当前默认值验证更新为7.5/.15/0与.0025/.003/0。最终结果见[本次验证记录](../../../02_过程记录/Yaw前馈与VOFA_20261017/实现与验证.md)。软件测试不证明250ms实机达标。
+ 
+ 2026-10-13 V1A人工通信故障恢复新增检查：35组338413项、0失败，AC5 O0完整构建无错警；详见[通信故障13处理记录](../../../02_过程记录/Yaw通信故障13恢复_20261013/处理与验证记录.md)。
+--- before/Tests\run_selftests.py
++++ after/Tests\run_selftests.py
+@@ -107,6 +107,10 @@
+         "remote_mapper", "app_logic", "safety_manager", "target_manager")]
+     groups["yaw_cascade_unlimited"] = [root / "test_yaw_cascade_unlimited.c", app / "yaw_controller.c"]
+     groups["yaw_feedforward"] = [root / "test_yaw_feedforward.c", app / "yaw_controller.c"]
++    groups["yaw_shape"] = [root / "test_yaw_shape.c", app / "yaw_controller.c"]
++    groups["yaw_shape_console"] = [root / "test_yaw_shape_console.c"] + [app / (n + ".c") for n in (
++        "yaw_console", "yaw_backend", "yaw_controller", "yaw_step", "gl60_ii", "can_frame",
++        "remote_mapper", "app_logic", "safety_manager", "target_manager")]
+     groups["yaw_step_assessment"] = [root / "test_yaw_step_assessment.c", app / "yaw_step.c"]
+     groups["yaw_feedforward_console"] = [root / "test_yaw_feedforward_console.c"] + [app / (n + ".c") for n in (
+         "yaw_console", "yaw_backend", "yaw_controller", "yaw_step", "gl60_ii", "can_frame",
+--- before/Tests\test_pitch_telemetry.c
++++ after/Tests\test_pitch_telemetry.c
+@@ -37,10 +37,10 @@
+ }
+ void YawBackend_GetState(YawBackendState *out) { *out = yaw_sample; }
+ void YawBackend_GetStep(YawStep *out) { *out = yaw_step_sample; }
+-static float columns[64];
++static float columns[70];
+ static void parse(const char *group)
+ {
+-    uint32_t i, count = strcmp(group, "pitch:") == 0 ? 58U : 64U;
++    uint32_t i, count = strcmp(group, "pitch:") == 0 ? 58U : 70U;
+     const char *cursor = output + strlen(group);
+     char *end;
+     CHECK(strncmp(output, group, strlen(group)) == 0);
+@@ -152,7 +152,7 @@
+     CHECK(columns[35] < -3.14f && columns[36] == -200 && columns[46] == 255);
+     CHECK(columns[48] == 65535 && columns[49] == 65535 && columns[50] == 65535 && columns[51] == 65535);
+     test_stage = 4U;
+-    clear_output(); command_line("TELEM YAW"); CHECK(strstr(output, "GROUP|gimbal|COLS|64") != 0);
++    clear_output(); command_line("TELEM YAW"); CHECK(strstr(output, "GROUP|gimbal|COLS|70") != 0);
+     now += 5U; clear_output(); AppConsole_Poll(); parse("gimbal:"); CHECK(columns[7] == 10);
+     test_stage = 5U;
+     clear_output(); command_line("HELP"); CHECK(strstr(output, "C|HELP|AXIS|YAW;PITCH"));
+@@ -169,7 +169,7 @@
+     CHECK(!stops && !pitch_cancel_count);
+     clear_output(); command_line("TELEM ON"); CHECK(strstr(output, "C|OK|TELEM|ON"));
+     now += 5U; clear_output(); AppConsole_Poll(); parse("pitch:");
+-    clear_output(); command_line("YAW VIEW"); CHECK(strstr(output, "Y|VIEW|YAW|GROUP|gimbal|COLS|64"));
++    clear_output(); command_line("YAW VIEW"); CHECK(strstr(output, "Y|VIEW|YAW|GROUP|gimbal|COLS|70"));
+     now += 5U; clear_output(); AppConsole_Poll(); parse("gimbal:");
+     clear_output(); command_line("STOP"); CHECK(stops == 1 && pitch_cancel_count == 1);
+     test_stage = 6U;
+--- before/Tests\test_yaw_cascade_unlimited_console.c
++++ after/Tests\test_yaw_cascade_unlimited_console.c
+@@ -9,7 +9,7 @@
+     test_stage = 1;
+     CHECK(!YAW_CASCADE_OUTPUT_LIMITS_ENABLED);
+     ConsoleReset(1000); Control(1000, 0);
+-    Command(1000, "YAW", "Y|STATE|GL60II_CASCADE_FF_V2J"); CHECK(strlen(response) < 300U);
++    Command(1000, "YAW", "Y|STATE|GL60II_CASCADE_SHAPE_V2K"); CHECK(strlen(response) < 300U);
+     Command(1000, "YAW HELP", "Y|HELP|READ|YAW;PID;RESULT;STATUS");
+     Command(1000, "YAW ?", "VIEW|YAW VIEW");
+     Command(1000, "YAW BAD", "UNKNOWN_COMMAND|USE|YAW HELP");
+--- before/Tests\test_yaw_manual50.c
++++ after/Tests\test_yaw_manual50.c
+@@ -47,7 +47,7 @@
+     CHECK(YAW_CONTROLLER_TARGET_LIMIT_DEG == 50 && YAW_CONTROLLER_HARD_LIMIT_DEG == 60);
+     CHECK(YAW_CONTROLLER_MANUAL_RATE_LIMIT_DPS == 90 && APP_STEP_DEGREES == 30);
+     ConsoleZeroActivate(1000U); clock_ms = 1066U;
+-    Command(clock_ms, "YAW STATUS", "GL60II_CASCADE_FF_V2J");
++    Command(clock_ms, "YAW STATUS", "GL60II_CASCADE_SHAPE_V2K");
+     CHECK(strstr(response, "|TARGET_LIMIT_DEG|50.0|HARD_LIMIT_DEG|60.0|") != 0);
+     Command(clock_ms, "YAW PID", "|POS|7.5000,0.1500,0.0000|VEL|0.002500,0.003000,0.000000");
+     before = state.controller.target_deg;
+--- before/Tests\test_yaw_telemetry.c
++++ after/Tests\test_yaw_telemetry.c
+@@ -18,16 +18,16 @@
+     if (strncmp(line, "YAW ", 4U)) { return 0U; }
+     ++yaw_commands; (void)snprintf(response, capacity, "Y|MOCK\r\n"); return 1U;
+ }
+-static float columns[64];
++static float columns[70];
+ static void ParseColumns(void)
+ {
+     const char *cursor = output + 7U;
+     char *end;
+     uint32_t index;
+     CHECK(strncmp(output, "gimbal:", 7U) == 0);
+-    for (index = 0U; index < 64U; ++index) {
++    for (index = 0U; index < 70U; ++index) {
+         columns[index] = strtof(cursor, &end); CHECK(end != cursor);
+-        if (index < 63U) { CHECK(*end == ','); cursor = end + 1U; }
++        if (index < 69U) { CHECK(*end == ','); cursor = end + 1U; }
+         else { CHECK(strcmp(end, "\r\n") == 0); }
+     }
+     if (output_length > test_max_wire_bytes) { test_max_wire_bytes = output_length; }
+@@ -67,6 +67,11 @@
+     yaw_sample.controller.cascade.position_i = 0.25f; yaw_sample.controller.cascade.feedforward_limited = 1U;
+     step_sample.response05_ms = 190U; step_sample.settle05_ms = 240U; step_sample.pass05 = 1U;
+     yaw_sample.controller.last_feedback_ms = 4294967200UL;
++    yaw_sample.controller.shape.duration_ms = 160;
++    yaw_sample.controller.shape.active = 1;
++    yaw_sample.controller.shape.position_deg = 15;
++    yaw_sample.controller.shape.velocity_dps = 351.5625f;
++    yaw_sample.controller.shape.acceleration_dps2 = -3000;
+     jog_state.active = 1U; jog_state.speed.filtered_erpm = 42000;
+     jog_state.speed_right.filtered_erpm = 41300; jog_state.health.faults = 16U;
+     app_armed = output_allowed = 1U;
+@@ -88,6 +93,9 @@
+     CHECK(columns[52] == 0.02f && columns[53] == 5 && columns[54] == 0.1f && columns[55] == -0.015f);
+     CHECK(columns[56] == 0.115f && columns[57] == 0.04f && columns[58] == 0.25f && columns[59] == 1);
+     CHECK(columns[60] == 190 && columns[61] == 240 && columns[62] == 1);
++    CHECK(columns[64] == 160 && columns[65] == 1 && columns[66] == 15);
++    CHECK(columns[67] > 351.55f && columns[67] < 351.58f && columns[68] == -3000);
++    CHECK(columns[69] > 13.765f && columns[69] < 13.767f);
+     test_stage = 2U;
+     clear_output(); command_line("YAW VKP 0.001000");
+     CHECK(yaw_commands == 1 && strcmp(output, "Y|MOCK\r\n") == 0);
+@@ -141,6 +149,10 @@
+     yaw_sample.controller.cascade.speed_i = -10;
+     yaw_sample.controller.cascade.position_i = -1234567890.0f;
+     step_sample.response05_ms = step_sample.settle05_ms = 5000;
++    yaw_sample.controller.shape.duration_ms = 500;
++    yaw_sample.controller.shape.position_deg = -50;
++    yaw_sample.controller.shape.velocity_dps = -708;
++    yaw_sample.controller.shape.acceleration_dps2 = -28000;
+     clear_output(); now += 5U; AppConsole_Poll(); ParseColumns();
+     CHECK(columns[0] < -39.999f && columns[2] < -1.234e9f && columns[5] == -10);
+     CHECK(columns[12] == 0.000001f && columns[13] == 0 && columns[36] == -6600);

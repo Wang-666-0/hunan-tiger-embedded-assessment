@@ -1,0 +1,746 @@
+{
+  "type": "config",
+  "vnumber": 100,
+  "ctx": {
+    ".": {
+      "samples": 2,
+      "ctx": {
+        ".": {
+          "ontop": false,
+          "real_x": 0,
+          "real_y": 0,
+          "real_width": 2560,
+          "real_height": 1528
+        },
+        "resize_border": {
+          "ctx": {
+            ".": {
+              "status": {
+                "mouse": {
+                  "mouseX": 692,
+                  "mouseY": 675
+                },
+                "target": {
+                  "offset": {
+                    "x": 0,
+                    "y": 0
+                  },
+                  "x": 1141,
+                  "y": 222,
+                  "width": 1384,
+                  "height": 1350
+                },
+                "types": [
+                  0
+                ]
+              },
+              "full_status": {
+                "mouse": {
+                  "mouseX": 692,
+                  "mouseY": 675
+                },
+                "target": {
+                  "offset": {
+                    "x": 0,
+                    "y": 0
+                  },
+                  "x": 1141,
+                  "y": 222,
+                  "width": 1384,
+                  "height": 1350
+                },
+                "types": [
+                  0
+                ]
+              },
+              "full_screen": true,
+              "full_height": false,
+              "full_width": false
+            }
+          }
+        }
+      },
+      "hide_menu": false
+    },
+    "text_buffer": {
+      "encoder": "UTF-8",
+      "list_size": 20
+    },
+    "activation_panel": {
+      "pop_on_start": true
+    },
+    "datahub_global": {
+      "fps": 62,
+      "use_instance": false,
+      "timeout_ms": 0,
+      "global_decimal": 4
+    },
+    "defaultAppTheme": {
+      "ctx": {
+        ".": {
+          "textAnsiTime": "38;2;0;125;255",
+          "textAnsiRx": "32",
+          "textAnsiTx": "38;2;0;0;255",
+          "textAnsiErr": "91"
+        },
+        "lColors": [
+          "#ff007f",
+          "#008000",
+          "#0000ff",
+          "#ffa500",
+          "#800080",
+          "#ffc0cb",
+          "#616100",
+          "#ff007f",
+          "#008000",
+          "#0000ff",
+          "#ffa500",
+          "#800080",
+          "#ffc0cb",
+          "#acac00",
+          "#ff007f",
+          "#008000",
+          "#0000ff",
+          "#ffa500",
+          "#800080",
+          "#ffc0cb",
+          "#7f7f00"
+        ]
+      }
+    },
+    "theme_funcs": {
+      "ctx": {
+        ".": {
+          "theme_name": "BlueIronman"
+        }
+      }
+    },
+    "g_settings": {
+      "ctx": {
+        ".": {
+          "fontRenderType": 0,
+          "fontFamily": "Microsoft YaHei UI",
+          "fontFamilyNumber": "Cascadia Mono",
+          "fontFamilyAxis": "Cascadia Mono",
+          "fontFamilyTerm": "Cascadia Mono",
+          "globalScale": 1.33,
+          "fontScaleTerm": 1
+        }
+      }
+    },
+    "wave_view": {
+      "ctx": {
+        ".": {
+          "locked": false
+        },
+        "main_split_view": {
+          "ctx": {
+            "width": 2560,
+            "height": 1489,
+            "size_list": [
+              296,
+              1615,
+              633.04
+            ],
+            "index_list": [
+              0,
+              1,
+              2
+            ],
+            "alone_list": [
+              false,
+              false,
+              false
+            ],
+            "alone_window_list": [
+              [],
+              [],
+              []
+            ]
+          }
+        },
+        "center_split_view": {
+          "ctx": {
+            "width": 1615,
+            "height": 1489,
+            "size_list": [
+              842,
+              142.48000000000005,
+              501.85999999999996
+            ],
+            "index_list": [
+              0,
+              1,
+              2
+            ],
+            "alone_list": [
+              false,
+              false,
+              false
+            ],
+            "alone_window_list": [
+              [],
+              [],
+              []
+            ]
+          }
+        },
+        "tx_rx_zone": {
+          "ctx": {
+            ".": {
+              "loop_on": false,
+              "loop_ms": 500,
+              "loop_count": 1,
+              "hex_on": false,
+              "send_file": false,
+              "send_hex_on": false,
+              "cmd_hex": "",
+              "send_file_path": "",
+              "enter_to_send": true,
+              "send_record_max_count": 30
+            },
+            "send_record_model": {
+              "ctx": []
+            },
+            "encoder_menu": {
+              "ctx": [
+                {
+                  "name": "UTF-8",
+                  "editable": false
+                },
+                {
+                  "name": "GBK",
+                  "editable": false
+                }
+              ]
+            },
+            "split_view": {
+              "ctx": {
+                "width": 1595,
+                "height": 481.85999999999996,
+                "size_list": [
+                  429.88999999999993,
+                  50.64000000000003
+                ],
+                "index_list": [
+                  0,
+                  1
+                ],
+                "alone_list": [
+                  false,
+                  false
+                ],
+                "alone_window_list": [
+                  [],
+                  []
+                ]
+              }
+            },
+            "tx_show_echo": {
+              "checked": true
+            },
+            "rx_show_echo": {
+              "checked": true
+            },
+            "rx_show_plot_data": {
+              "checked": true
+            },
+            "rx_show_image_data": {
+              "checked": false
+            },
+            "t_string_on_check": {
+              "checked": true
+            },
+            "tx_rect": {
+              "show_more": true
+            },
+            "append_combo": {
+              "currentIndex": 1
+            }
+          }
+        },
+        "left_panel": {
+          "ctx": {
+            ".": {
+              "ctx_width": 296
+            },
+            "command_panel": {
+              "ctx": {}
+            },
+            "pal": {
+              "ctx": {
+                "demo": {
+                  "protocal": "FireWater",
+                  "timeout": 15,
+                  "send_picture": false,
+                  "picture_dir": "",
+                  "picture_timeout": 15,
+                  "send_csv_list": false,
+                  "csv_dir": "",
+                  "csv_timeout": 15
+                },
+                "serial": {
+                  "port": "",
+                  "baud": "921600",
+                  "flow_control": "None",
+                  "parity": "None",
+                  "databits": "8",
+                  "stopbits": "1",
+                  "break_enabled": false,
+                  "dtr": false,
+                  "rts": false
+                },
+                "udp": {
+                  "remote_ip": "",
+                  "remote_port": "",
+                  "local_port": ""
+                },
+                "tcp_client": {
+                  "server_ip": "",
+                  "server_port": "",
+                  "banner": ""
+                },
+                "tcp_server": {
+                  "listen_port": ""
+                },
+                "protocol_combo": "FireWater",
+                "link_type_combo": 0
+              }
+            },
+            "lpf": {
+              "ctx": {
+                ".": {
+                  "lastIndex": 1,
+                  "__currentIndex": 0
+                }
+              }
+            }
+          }
+        },
+        "settingsPanel": {
+          "ctx": {
+            ".": {
+              "settings_ctx": [
+                {
+                  "is_draw": true,
+                  "color": "#ffffff",
+                  "scale": 1,
+                  "yoffset": 0,
+                  "xoffset": 0,
+                  "decimal": -7,
+                  "value": 0,
+                  "name": "I0 输出轴实际 deg"
+                },
+                {
+                  "is_draw": true,
+                  "color": "#ffffff",
+                  "scale": 1,
+                  "yoffset": 0,
+                  "xoffset": 0,
+                  "decimal": -7,
+                  "value": 0,
+                  "name": "I1 输出轴目标 deg"
+                },
+                {
+                  "is_draw": true,
+                  "color": "#ffffff",
+                  "scale": 1,
+                  "yoffset": 0,
+                  "xoffset": 0,
+                  "decimal": -7,
+                  "value": 0,
+                  "name": "I2 转子实际 RPM"
+                },
+                {
+                  "is_draw": true,
+                  "color": "#ffffff",
+                  "scale": 1,
+                  "yoffset": 0,
+                  "xoffset": 0,
+                  "decimal": -7,
+                  "value": 0,
+                  "name": "I3 转子目标 RPM"
+                },
+                {
+                  "is_draw": true,
+                  "color": "#ffffff",
+                  "scale": 1,
+                  "yoffset": 0,
+                  "xoffset": 0,
+                  "decimal": -7,
+                  "value": 0,
+                  "name": "I4 C610给定 raw"
+                },
+                {
+                  "is_draw": true,
+                  "color": "#ffffff",
+                  "scale": 1,
+                  "yoffset": 0,
+                  "xoffset": 0,
+                  "decimal": -7,
+                  "value": 0,
+                  "name": "I5 C610反馈电流 raw"
+                },
+                {
+                  "is_draw": true,
+                  "color": "#ffffff",
+                  "scale": 1,
+                  "yoffset": 0,
+                  "xoffset": 0,
+                  "decimal": -7,
+                  "value": 0,
+                  "name": "I6 位置 KP"
+                },
+                {
+                  "is_draw": true,
+                  "color": "#ffffff",
+                  "scale": 1,
+                  "yoffset": 0,
+                  "xoffset": 0,
+                  "decimal": -7,
+                  "value": 0,
+                  "name": "I7 速度 KP"
+                },
+                {
+                  "is_draw": true,
+                  "color": "#ffffff",
+                  "scale": 1,
+                  "yoffset": 0,
+                  "xoffset": 0,
+                  "decimal": -7,
+                  "value": 0,
+                  "name": "I8 速度 KI"
+                },
+                {
+                  "is_draw": true,
+                  "color": "#ffffff",
+                  "scale": 1,
+                  "yoffset": 0,
+                  "xoffset": 0,
+                  "decimal": -7,
+                  "value": 0,
+                  "name": "I9 转子限速 RPM"
+                },
+                {
+                  "is_draw": true,
+                  "color": "#ffffff",
+                  "scale": 1,
+                  "yoffset": 0,
+                  "xoffset": 0,
+                  "decimal": -7,
+                  "value": 0,
+                  "name": "I10 给定限幅 raw"
+                },
+                {
+                  "is_draw": true,
+                  "color": "#ffffff",
+                  "scale": 1,
+                  "yoffset": 0,
+                  "xoffset": 0,
+                  "decimal": -7,
+                  "value": 0,
+                  "name": "I11 每发输出轴 deg"
+                },
+                {
+                  "is_draw": true,
+                  "color": "#ffffff",
+                  "scale": 1,
+                  "yoffset": 0,
+                  "xoffset": 0,
+                  "decimal": -7,
+                  "value": 0,
+                  "name": "I12 已生效 DIR"
+                },
+                {
+                  "is_draw": true,
+                  "color": "#ffffff",
+                  "scale": 1,
+                  "yoffset": 0,
+                  "xoffset": 0,
+                  "decimal": -7,
+                  "value": 0,
+                  "name": "I13 已生效 GEAR"
+                },
+                {
+                  "is_draw": true,
+                  "color": "#ffffff",
+                  "scale": 1,
+                  "yoffset": 0,
+                  "xoffset": 0,
+                  "decimal": -7,
+                  "value": 0,
+                  "name": "I14 已确认 CAL"
+                },
+                {
+                  "is_draw": true,
+                  "color": "#ffffff",
+                  "scale": 1,
+                  "yoffset": 0,
+                  "xoffset": 0,
+                  "decimal": -7,
+                  "value": 0,
+                  "name": "I15 零点有效"
+                },
+                {
+                  "is_draw": true,
+                  "color": "#ffffff",
+                  "scale": 1,
+                  "yoffset": 0,
+                  "xoffset": 0,
+                  "decimal": -7,
+                  "value": 0,
+                  "name": "I16 反馈在线"
+                },
+                {
+                  "is_draw": true,
+                  "color": "#ffffff",
+                  "scale": 1,
+                  "yoffset": 0,
+                  "xoffset": 0,
+                  "decimal": -7,
+                  "value": 0,
+                  "name": "I17 拨盘 ARM"
+                },
+                {
+                  "is_draw": true,
+                  "color": "#ffffff",
+                  "scale": 1,
+                  "yoffset": 0,
+                  "xoffset": 0,
+                  "decimal": -7,
+                  "value": 0,
+                  "name": "I18 执行中"
+                },
+                {
+                  "is_draw": true,
+                  "color": "#ffffff",
+                  "scale": 1,
+                  "yoffset": 0,
+                  "xoffset": 0,
+                  "decimal": -7,
+                  "value": 0,
+                  "name": "I19 故障位"
+                },
+                {
+                  "is_draw": true,
+                  "color": "#ffffff",
+                  "scale": 1,
+                  "yoffset": 0,
+                  "xoffset": 0,
+                  "decimal": -7,
+                  "value": 0,
+                  "name": "I20 真实双轮稳速"
+                },
+                {
+                  "is_draw": true,
+                  "color": "#ffffff",
+                  "scale": 1,
+                  "yoffset": 0,
+                  "xoffset": 0,
+                  "decimal": -7,
+                  "value": 0,
+                  "name": "I21 已接受动作"
+                },
+                {
+                  "is_draw": true,
+                  "color": "#ffffff",
+                  "scale": 1,
+                  "yoffset": 0,
+                  "xoffset": 0,
+                  "decimal": -7,
+                  "value": 0,
+                  "name": "I22 已完成动作"
+                },
+                {
+                  "is_draw": true,
+                  "color": "#ffffff",
+                  "scale": 1,
+                  "yoffset": 0,
+                  "xoffset": 0,
+                  "decimal": -7,
+                  "value": 0,
+                  "name": "I23 已拒绝动作"
+                },
+                {
+                  "is_draw": true,
+                  "color": "#ffffff",
+                  "scale": 1,
+                  "yoffset": 0,
+                  "xoffset": 0,
+                  "decimal": -7,
+                  "value": 0,
+                  "name": "I24 已中止动作"
+                },
+                {
+                  "is_draw": true,
+                  "color": "#ffffff",
+                  "scale": 1,
+                  "yoffset": 0,
+                  "xoffset": 0,
+                  "decimal": -7,
+                  "value": 0,
+                  "name": "I25 反馈帧数"
+                },
+                {
+                  "is_draw": true,
+                  "color": "#ffffff",
+                  "scale": 1,
+                  "yoffset": 0,
+                  "xoffset": 0,
+                  "decimal": -7,
+                  "value": 0,
+                  "name": "I26 反馈年龄 ms"
+                },
+                {
+                  "is_draw": true,
+                  "color": "#ffffff",
+                  "scale": 1,
+                  "yoffset": 0,
+                  "xoffset": 0,
+                  "decimal": -7,
+                  "value": 0,
+                  "name": "I27 原始编码 0..8191"
+                },
+                {
+                  "is_draw": true,
+                  "color": "#ffffff",
+                  "scale": 1,
+                  "yoffset": 0,
+                  "xoffset": 0,
+                  "decimal": -7,
+                  "value": 0,
+                  "name": "I28 停机待提交"
+                },
+                {
+                  "is_draw": true,
+                  "color": "#ffffff",
+                  "scale": 1,
+                  "yoffset": 0,
+                  "xoffset": 0,
+                  "decimal": -7,
+                  "value": 0,
+                  "name": "I29 已接受单发"
+                },
+                {
+                  "is_draw": true,
+                  "color": "#ffffff",
+                  "scale": 1,
+                  "yoffset": 0,
+                  "xoffset": 0,
+                  "decimal": -7,
+                  "value": 0,
+                  "name": "I30 已接受连发"
+                },
+                {
+                  "is_draw": true,
+                  "color": "#ffffff",
+                  "scale": 1,
+                  "yoffset": 0,
+                  "xoffset": 0,
+                  "decimal": -7,
+                  "value": 0,
+                  "name": "I31 完成间隔 ms"
+                },
+                {
+                  "is_draw": true,
+                  "color": "#ffffff",
+                  "scale": 1,
+                  "yoffset": 0,
+                  "xoffset": 0,
+                  "decimal": -7,
+                  "value": 0,
+                  "name": "I32 输出轴容差 deg"
+                },
+                {
+                  "is_draw": true,
+                  "color": "#ffffff",
+                  "scale": 1,
+                  "yoffset": 0,
+                  "xoffset": 0,
+                  "decimal": -7,
+                  "value": 0,
+                  "name": "I33 到位转子速度 RPM"
+                },
+                {
+                  "is_draw": true,
+                  "color": "#ffffff",
+                  "scale": 1,
+                  "yoffset": 0,
+                  "xoffset": 0,
+                  "decimal": -7,
+                  "value": 0,
+                  "name": "I34 到位确认 ms"
+                },
+                {
+                  "is_draw": true,
+                  "color": "#ffffff",
+                  "scale": 1,
+                  "yoffset": 0,
+                  "xoffset": 0,
+                  "decimal": -7,
+                  "value": 0,
+                  "name": "I35 动作超时 ms"
+                },
+                {
+                  "is_draw": true,
+                  "color": "#ffffff",
+                  "scale": 1,
+                  "yoffset": 0,
+                  "xoffset": 0,
+                  "decimal": -7,
+                  "value": 0,
+                  "name": "I36 预留 I36 恒0"
+                },
+                {
+                  "is_draw": true,
+                  "color": "#ffffff",
+                  "scale": 1,
+                  "yoffset": 0,
+                  "xoffset": 0,
+                  "decimal": -7,
+                  "value": 0,
+                  "name": "I37 原始累计转子 deg"
+                },
+                {
+                  "is_draw": true,
+                  "color": "#ffffff",
+                  "scale": 1,
+                  "yoffset": 0,
+                  "xoffset": 0,
+                  "decimal": -7,
+                  "value": 0,
+                  "name": "I38 原始目标转子 deg"
+                }
+              ],
+              "selected_line": -1,
+              "down_line": -1
+            },
+            "data_settings_arrow": {
+              "down": false
+            }
+          }
+        },
+        "color_bar": {
+          "ctx": {
+            ".": {
+              "delta_t": 5,
+              "buffer_max_size_input.text": "50000",
+              "x_auto_align": 100,
+              "left_index": 48999,
+              "right_index": 49999,
+              "size": 50000,
+              "no_alert": false
+            },
+            "buffer_max_size_input": {
+              "text": "50000"
+            },
+            "auto_bt": {
+              "lock_mode": 0,
+              "locked": false
+            }
+          }
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,108 @@
+--- before/App/yaw_console.c
++++ after/App/yaw_console.c
+@@ -112,13 +112,13 @@
+ static uint8_t StepReport(const YawStep *step, char *response, size_t capacity)
+ {
+     static const char *phases[] = { "IDLE", "RUNNING", "DONE", "ABORTED" };
+-    static const char *reasons[] = { "NONE", "STOP", "FAULT", "PID_CHANGE", "TARGET_CHANGE", "MANUAL", "GAP", "DATA" };
++    static const char *reasons[] = { "NONE", "STOP", "FAULT", "PID_CHANGE", "TARGET_CHANGE", "MANUAL", "GAP", "DATA", "FF_CHANGE" };
+     uint32_t rise = step->t10_ms != YAW_STEP_UNREACHED && step->t90_ms != YAW_STEP_UNREACHED ?
+         step->t90_ms - step->t10_ms : YAW_STEP_UNREACHED;
+     int length = snprintf(response, capacity,
+         "Y|STEP|ID|%lu|STATE|%s|REASON|%s|VALID|%u|START|%.3f|TARGET|%.3f|WINDOW_MS|%lu|RESP_MS|%ld|T90_MS|%ld|RISE_MS|%ld|SETTLE_MS|%ld|OS_DEG|%.3f|OS_PCT|%.3f|SSE_DEG|%.3f|SSE_VALID|%u|PASS|%u|FAULT|%lu|VMAX_DPS|%.2f|TMAX_NM|%.5f|N|%lu|GAP_MS|%lu|%s|%lu|%s|%.4f|%s|%.4f|%s|%.4f|CMD_N|%lu|FIRST_NM|%.5f",
+         (unsigned long)step->id, step->phase <= YAW_STEP_ABORTED ? phases[step->phase] : "UNKNOWN",
+-        step->reason <= YAW_STEP_DATA ? reasons[step->reason] : "UNKNOWN",
++        step->reason <= YAW_STEP_FF_CHANGE ? reasons[step->reason] : "UNKNOWN",
+         (unsigned)(step->phase == YAW_STEP_DONE), (double)step->start_deg, (double)step->target_deg,
+         (unsigned long)step->elapsed_ms, (long)(int32_t)step->response_ms, (long)(int32_t)step->t90_ms,
+         (long)(int32_t)rise, (long)(int32_t)step->settle_ms, (double)step->overshoot_deg,
+@@ -135,13 +135,39 @@
+         size_t used = (size_t)length;
+         if (step->cascade) {
+             length = snprintf(response + used, capacity - used,
+-                "|CTRL|CASCADE|VKP|%.6f|VKI|%.6f|VKD|%.6f|VREF_MAX_DPS|%.1f|VFILTER_MS|%u|OUTPUT_LIMITS|%u\r\n",
++                "|CTRL|CASCADE|VKP|%.6f|VKI|%.6f|VKD|%.6f|VREF_MAX_DPS|%.1f|VFILTER_MS|%u|OUTPUT_LIMITS|%u"
++                "|BAND05|0.5|RESP05_MS|%ld|SETTLE05_MS|%ld|PASS05|%u"
++                "|FF_ON|%u|FBIAS|%.6g|FANG|%.6g|FKV|%.6g|FC|%.6g|FVS|%.6g|FMAX|%.6g\r\n",
+                 (double)step->vkp, (double)step->vki, (double)step->vkd,
+-                (double)step->vmax_dps, (unsigned)YAW_CASCADE_VELOCITY_FILTER_MS, (unsigned)step->output_limits);
++                (double)step->vmax_dps, (unsigned)YAW_CASCADE_VELOCITY_FILTER_MS, (unsigned)step->output_limits,
++                (long)(int32_t)step->response05_ms, (long)(int32_t)step->settle05_ms, (unsigned)step->pass05,
++                (unsigned)step->ff_enabled, (double)step->ff_bias_nm, (double)step->ff_angle_gain,
++                (double)step->ff_velocity_gain, (double)step->ff_friction_nm,
++                (double)step->ff_velocity_dps, (double)step->ff_limit_nm);
+         } else { length = snprintf(response + used, capacity - used, "\r\n"); }
+         return (uint8_t)(length > 0 && (size_t)length < capacity - used);
+     }
+ }
++
++#if YAW_CONTROLLER_CASCADE_ENABLED
++static void FeedforwardReport(char *response, size_t capacity)
++{
++    YawBackendState yaw;
++    YawBackend_GetState(&yaw);
++    (void)snprintf(response, capacity,
++        "Y|FF|ON|%u|FBIAS|%.6g|FANG|%.6g|FKV|%.6g|FC|%.6g|FVS|%.6g|FMAX|%.6g"
++        "|FF_NM|%.6g|PID_NM|%.6g|SUM_NM|%.6g|OUT_NM|%.6g|VI_NM|%.6g|PI_DPS|%.6g"
++        "|FF_SAT|%u|TOTAL_SAT|%u|I_TRANSFER|%u|REV|%lu\r\n",
++        (unsigned)yaw.controller.ff.enabled, (double)yaw.controller.ff.bias_nm, (double)yaw.controller.ff.angle_gain,
++        (double)yaw.controller.ff.velocity_gain, (double)yaw.controller.ff.friction_nm,
++        (double)yaw.controller.ff.friction_velocity_dps, (double)yaw.controller.ff.limit_nm,
++        (double)yaw.controller.cascade.feedforward_nm, (double)yaw.controller.pid_torque_nm,
++        (double)yaw.controller.cascade.unsaturated_torque_nm, (double)yaw.controller.torque_nm,
++        (double)yaw.controller.cascade.speed_i, (double)yaw.controller.cascade.position_i,
++        (unsigned)yaw.controller.cascade.feedforward_limited, (unsigned)yaw.controller.cascade.torque_limited,
++        (unsigned)yaw.controller.ff.i_transferred, (unsigned long)yaw.controller.ff.revision);
++}
++#endif
+ 
+ uint8_t YawConsole_Poll(char *response, size_t capacity)
+ {
+@@ -275,7 +301,7 @@
+     if (strcmp(line, "YAW") == 0) { BriefStatus(response, capacity); return 1U; }
+     if (strcmp(line, "YAW HELP") == 0 || strcmp(line, "YAW ?") == 0) {
+         (void)snprintf(response, capacity,
+-            "Y|HELP|READ|YAW;PID;RESULT;STATUS|PREPARE|READY|STOP|OFF|VIEW|YAW VIEW|TUNE|POS kp ki kd;VEL kp ki kd;PKP/PKI/PKD/VKP/VKI/VKD value|TELEM|TELEM OFF/ON|TEST|STEP [30];HOME;REMOTE_CH5_CH7|DETAIL|INFO;CHECK;BUS;ZERO;CLEAR\r\n");
++            "Y|HELP|READ|YAW;PID;RESULT;STATUS|PREPARE|READY|STOP|OFF|VIEW|YAW VIEW|TUNE|POS kp ki kd;VEL kp ki kd;PKP/PKI/PKD/VKP/VKI/VKD value|FF|FF;FF ON/OFF;FBIAS/FANG/FKV/FC/FVS/FMAX value|TELEM|TELEM OFF/ON|TEST|STEP [30];HOME;REMOTE_CH5_CH7|DETAIL|INFO;CHECK;BUS;ZERO;CLEAR\r\n");
+         return 1U;
+     }
+     if (strcmp(line, "YAW BUS") == 0) {
+@@ -285,6 +311,9 @@
+         YawStep snapshot; YawBackend_GetStep(&snapshot);
+         (void)StepReport(&snapshot, response, capacity); return 1U;
+     }
++#if YAW_CONTROLLER_CASCADE_ENABLED
++    if (strcmp(line, "YAW FF") == 0) { FeedforwardReport(response, capacity); return 1U; }
++#endif
+     if (ready_phase && strcmp(line, "YAW READY") != 0 && strcmp(line, "YAW OFF") != 0 &&
+         strcmp(line, "YAW CHECK") != 0 && strcmp(line, "YAW STATUS") != 0 && strcmp(line, "YAW INFO") != 0 &&
+         strcmp(line, "YAW PID") != 0) {
+@@ -388,6 +417,28 @@
+         return 1U;
+     }
+ #if YAW_CONTROLLER_CASCADE_ENABLED
++    if (strcmp(line, "YAW FF ON") == 0 || strcmp(line, "YAW FF OFF") == 0 ||
++        strcmp(line, "YAW FF 1") == 0 || strcmp(line, "YAW FF 0") == 0) {
++        value = (strcmp(line, "YAW FF ON") == 0 || strcmp(line, "YAW FF 1") == 0) ? 1.0f : 0.0f;
++        if (value == 0.0f || !AppConsole_IsDiagnosticMode()) { accepted = YawBackend_SetFeedforward('E', value); }
++        (void)snprintf(response, capacity, accepted ? "Y|OK|FF|ON|%u\r\n" :
++            "Y|ERROR|FF_REQUIRES_PREPARED_HEALTHY_OR_VALID_VALUE\r\n", (unsigned)value); return 1U;
++    }
++    {
++        static const char *names[] = { "FBIAS", "FANG", "FKV", "FC", "FVS", "FMAX" };
++        static const char parameters[] = { 'B', 'A', 'V', 'C', 'S', 'L' };
++        unsigned i;
++        for (i = 0U; i < sizeof(parameters); ++i) {
++            size_t length = strlen(names[i]);
++            if (strncmp(line + 4U, names[i], length) == 0 && line[4U + length] == ' ') {
++                if (Number(line + 5U + length, &value) && !AppConsole_IsDiagnosticMode()) {
++                    accepted = YawBackend_SetFeedforward(parameters[i], value);
++                }
++                (void)snprintf(response, capacity, accepted ? "Y|OK|%s\r\n" :
++                    "Y|ERROR|FF_PARAMETER_OR_STATE|%s\r\n", names[i]); return 1U;
++            }
++        }
++    }
+     if (strcmp(line, "YAW PID") == 0) {
+         YawBackend_GetState(&yaw);
+         (void)snprintf(response, capacity,

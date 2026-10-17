@@ -1,0 +1,11 @@
+--- before/Output/Gimbal_Control/App/yaw_backend.c
++++ Output/Gimbal_Control/App/yaw_backend.c
+@@ -448,7 +448,7 @@
+     HAL_StatusTypeDef result;
+     YawClearCheck check;
+     taskENTER_CRITICAL();
+-    /* 单次人工FB；关闭监测的运动记录按来源和500ms静止门禁单独审核。
++    /* 单次FB供人工READY或受控上电准备；关闭监测的运动记录按来源和500ms静止门禁审核。
+      * 软件锁存仍不在此清除，需后续新的FD/状态0和人工参考捕获。 */
+     YawBackend_GetClearCheck(&check);
+     last_clear_blocks = check.blocks; last_clear_result = 4U;

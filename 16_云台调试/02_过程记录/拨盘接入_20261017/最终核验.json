@@ -1,0 +1,20 @@
+{
+  "success": true,
+  "groups": 68,
+  "checks": 527966,
+  "failures": 0,
+  "protected_files_unchanged": 34,
+  "original_config_defines_preserved": true,
+  "eide_and_uvproj_sources_registered": true,
+  "build_sources": 69,
+  "static_stack_bytes_plus_unknown": {
+    "ConsoleTask": 2032,
+    "ControlTask": 1760,
+    "CanTask": 344,
+    "RemoteTask": 188
+  },
+  "hardware_tested": false,
+  "flashed": false,
+  "hex_generated": false,
+  "remaining": "Physical DIR/GEAR calibration, VOFA GUI import, PID and actual 20Hz validation"
+}

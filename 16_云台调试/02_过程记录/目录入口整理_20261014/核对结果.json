@@ -1,0 +1,26 @@
+{
+  "date": "2026-10-14",
+  "success": true,
+  "firmware_source_changes": false,
+  "tested_source_hashes_checked": 83,
+  "hash_mismatches": [],
+  "existing_test_report_groups": 44,
+  "existing_test_report_checks": 410882,
+  "build_sources_exist": 60,
+  "app_files_searchable": 48,
+  "new_local_links_valid": true,
+  "default_search_backup_hits": 0,
+  "default_search_file_count": 4474,
+  "previous_default_search_duplicate_backup_paths": 470,
+  "handoff": "D:\\Project\\27电软正式批考核\\16_云台调试\\02_过程记录\\Pitch调试新项目交接_20261014.md",
+  "handoff_sha256": "acbd28513a05237541d212e327ed15c9f66e48efea54a0b323e30e0955e1e463",
+  "mutations": [
+    "16_云台调试/README.md",
+    "16_云台调试/.ignore",
+    "16_云台调试/02_过程记录/README.md",
+    "16_云台调试/02_过程记录/Pitch调试新项目交接_20261014.md",
+    "16_云台调试/02_过程记录/目录入口整理_20261014/（说明、核对结果和旧文档备份）"
+  ],
+  "hardware_operations": false,
+  "subagents_used": false
+}

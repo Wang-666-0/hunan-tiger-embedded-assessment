@@ -1,0 +1,26 @@
+--- before/Output/Gimbal_Control/App/yaw_cascade.c
++++ Output/Gimbal_Control/App/yaw_cascade.c
+@@ -70,6 +70,11 @@
+ float YawCascade_Update(YawCascade *loop, float error_deg, uint32_t feedback_ms,
+                         uint32_t sequence, float torque_limit_nm)
+ {
++    return YawCascade_UpdateWithFeedforward(loop, error_deg, feedback_ms, sequence, torque_limit_nm, 0.0f);
++}
++float YawCascade_UpdateWithFeedforward(YawCascade *loop, float error_deg, uint32_t feedback_ms,
++                        uint32_t sequence, float torque_limit_nm, float feedforward_nm)
++{
+     float dt = 0.0f, wanted, candidate, change, speed_error;
+     uint32_t gap = feedback_ms - loop->feedback_ms;
+     if (loop->have_update && sequence != loop->sequence && gap < 100U) { dt = (float)gap * 0.001f; }
+@@ -96,9 +101,9 @@
+     if (loop->speed.ki == 0.0f) { loop->speed_i = 0.0f; }
+     change = loop->speed.ki * speed_error * dt;
+     candidate = clamp(loop->speed_i + change, -torque_limit_nm, torque_limit_nm);
+-    wanted = loop->speed.kp * speed_error + candidate - loop->speed.kd * loop->acceleration_dps2;
++    wanted = loop->speed.kp * speed_error + candidate - loop->speed.kd * loop->acceleration_dps2 + feedforward_nm;
+     if (!winds_up(wanted, change, torque_limit_nm)) { loop->speed_i = candidate; }
+-    loop->unsaturated_torque_nm = loop->speed.kp * speed_error + loop->speed_i - loop->speed.kd * loop->acceleration_dps2;
++    loop->unsaturated_torque_nm = loop->speed.kp * speed_error + loop->speed_i - loop->speed.kd * loop->acceleration_dps2 + feedforward_nm;
+     loop->torque_nm = clamp(loop->unsaturated_torque_nm, -torque_limit_nm, torque_limit_nm);
+     loop->torque_limited = (uint8_t)(loop->unsaturated_torque_nm > torque_limit_nm || loop->unsaturated_torque_nm < -torque_limit_nm);
+     return loop->torque_nm;

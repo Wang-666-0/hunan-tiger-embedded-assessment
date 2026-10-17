@@ -8,6 +8,8 @@ param(
     [string]$Port = '',
     [string]$OutputDirectory = '',
     [string]$PythonPath = '',
+    [ValidateRange(1, 4000000)]
+    [int]$BaudRate = 921600,
     [switch]$List
 )
 $ErrorActionPreference = 'Stop'
@@ -57,7 +59,7 @@ if (!$selectedPython) {
     Write-Host ('& "' + $fallbackPython + '" -m pip install --target "' + $localDependencies + '" pyserial==3.5')
     exit 2
 }
-$arguments = @($collector)
+$arguments = @($collector, '--baud', [string]$BaudRate)
 if ($List) {
     $arguments += '--list'
 } else {

@@ -43,6 +43,11 @@ void MX_USART1_UART_Init(void);
 void MX_UART4_Init(void);
 
 /* USER CODE BEGIN Prototypes */
+/* USART1 normal DMA + IDLE, fixed RX-only transport; no TX/motor commands. */
+HAL_StatusTypeDef ConsoleUart_StartReceive(uint8_t *data, uint16_t length);
+extern DMA_HandleTypeDef hdma_usart1_rx;
+HAL_StatusTypeDef RemoteUart_StartReceive(uint8_t *data, uint16_t length);
+extern DMA_HandleTypeDef hdma_uart4_rx;
 
 /* USER CODE END Prototypes */
 

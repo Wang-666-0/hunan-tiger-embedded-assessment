@@ -7,7 +7,7 @@ import tempfile
 import unittest
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "Tools"))
-from motor_capture import Capture, DM_FIELDS, FIRMWARE_ID, ProtocolError, read_command, validate_command
+from motor_capture import Capture, DEFAULT_BAUDRATE, DM_FIELDS, FIRMWARE_ID, ProtocolError, read_command, validate_command
 from vesc_decode import DecodeError, decode_vesc
 
 
@@ -61,6 +61,13 @@ class FakeSerial:
 
 
 class CaptureTests(unittest.TestCase):
+    def test_capture_records_current_or_legacy_transport_baudrate(self):
+        self.assertEqual(DEFAULT_BAUDRATE, 921600)
+        transport = FakeSerial(lambda _: [])
+        self.assertEqual(Capture(transport).report["serial"]["baudrate"], 921600)
+        transport.baudrate = 115200
+        self.assertEqual(Capture(transport).report["serial"]["baudrate"], 115200)
+
     def capture(self, handler):
         serial = FakeSerial(handler)
         return Capture(serial, clock=TickClock(), progress=lambda _: None), serial

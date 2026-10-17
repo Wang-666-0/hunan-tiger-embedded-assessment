@@ -1,0 +1,63 @@
+--- before/Output/Gimbal_Control/App/app_console.c
++++ Output/Gimbal_Control/App/app_console.c
+@@ -34,6 +34,7 @@
+ static uint32_t observed_epoch, last_byte_ms, telemetry_ms;
+ static uint8_t line_length, discard_line;
+ static uint8_t diagnostic_mode, status_pending, status_index;
++static uint8_t telemetry_enabled = 1U;
+ static uint32_t reported_remote_epoch;
+ #if APP_PITCH_ENABLED
+ static uint8_t pitch_view;
+@@ -225,18 +226,31 @@
+     DiagKind kind;
+     CanFrame check;
+     if (line[0] == '\0') { return; }
+-#if APP_PITCH_ENABLED
+-    if (strcmp(line, "TELEM PITCH") == 0) {
++    if (strcmp(line, "HELP") == 0) {
++        SendText("C|HELP|AXIS|YAW;PITCH|READ|axis;axis PID;axis RESULT|ACTION|axis READY;axis OFF|VIEW|axis VIEW|TELEM|TELEM OFF;TELEM ON|DETAIL|axis HELP\r\n"); return;
++    }
++    if (strcmp(line, "TELEM OFF") == 0 || strcmp(line, "TELEM ON") == 0) {
++        telemetry_enabled = (uint8_t)(strcmp(line, "TELEM ON") == 0);
++        SendText(telemetry_enabled ? "C|OK|TELEM|ON\r\n" : "C|OK|TELEM|OFF\r\n"); return;
++    }
++#if APP_PITCH_ENABLED
++    if (strcmp(line, "TELEM PITCH") == 0 || strcmp(line, "PITCH VIEW") == 0) {
+         pitch_view = 1U;
+         SendText("P|VIEW|PITCH|GROUP|pitch|COLS|58|PID_I|7_12|GFF_I|52_57\r\n"); return;
+     }
+-    if (strcmp(line, "TELEM YAW") == 0) {
++    if (strcmp(line, "TELEM YAW") == 0 || strcmp(line, "YAW VIEW") == 0) {
+         pitch_view = 0U;
+-        SendText("P|VIEW|YAW|GROUP|gimbal|COLS|48|PID_I|7_12\r\n"); return;
++        SendText(strcmp(line, "YAW VIEW") == 0 ? "Y|VIEW|YAW|GROUP|gimbal|COLS|48|PID_I|7_12\r\n" :
++            "P|VIEW|YAW|GROUP|gimbal|COLS|48|PID_I|7_12\r\n"); return;
+     }
+     if (PitchConsole_Handle(line, telemetry, sizeof(telemetry))) { SendText(telemetry); return; }
+ #endif
+ #if APP_YAW_ENABLED
++#if !APP_PITCH_ENABLED
++    if (strcmp(line, "YAW VIEW") == 0 || strcmp(line, "TELEM YAW") == 0) {
++        SendText("Y|VIEW|YAW|GROUP|gimbal|COLS|48|PID_I|7_12\r\n"); return;
++    }
++#endif
+     if (YawConsole_Handle(line, telemetry, sizeof(telemetry))) { SendText(telemetry); return; }
+ #endif
+     if (strcmp(line, "REMOTE RX") == 0) { PublishRemoteRx(0U); return; }
+@@ -415,6 +429,7 @@
+ 
+ void AppConsole_CreateQueue(void)
+ {
++    telemetry_enabled = 1U;
+ #if APP_PITCH_ENABLED
+     PitchConsole_Init();
+ #endif
+@@ -683,6 +698,8 @@
+  * AC5/O0会为整个函数预留栈，分派后各轴只使用自身快照。 */
+ static void PublishTelemetry(uint32_t now)
+ {
++    /* Pause only FireWater snapshots, never command replies, safety or step reports. */
++    if (!telemetry_enabled) { telemetry_ms = now; return; }
+     if ((uint32_t)(now - telemetry_ms) < APP_TELEMETRY_PERIOD_MS) { return; }
+ #if APP_YAW_ENABLED || APP_PITCH_ENABLED
+     /* 迟到只发送当前一帧，保留固定相位，不追发旧快照。 */

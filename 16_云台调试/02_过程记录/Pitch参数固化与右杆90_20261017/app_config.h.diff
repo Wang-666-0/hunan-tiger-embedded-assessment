@@ -1,0 +1,46 @@
+--- before/Output/Gimbal_Control/App/app_config.h
++++ Output/Gimbal_Control/App/app_config.h
+@@ -7,23 +7,24 @@
+ #ifndef APP_YAW_ENABLED
+ #define APP_YAW_ENABLED 1U
+ #endif
+-#define APP_YAW_VERSION "GL60II_CASCADE_MANUAL50_V2G"
++#define APP_YAW_VERSION "GL60II_CASCADE_MANUAL50_V2H"
+ #define APP_YAW_COMMAND_PERIOD_MS 10U
+ #define APP_YAW_ENABLE_TIMEOUT_MS 100U
+ /* DM3507专用白名单接口；上电只监听，CHECK显式只读，不自动使能。
+- * 初始六参是带载调试起点，尚无实机性能成绩，不能代替现场调参。 */
++ * 2026-10-17按用户截图固化七参数；坐标/软件零点/水平标定仍由人工建立。 */
+ #ifndef APP_PITCH_ENABLED
+ #define APP_PITCH_ENABLED 1U
+ #endif
+-#define APP_PITCH_VERSION "DM3507_CASCADE_V1D"
++#define APP_PITCH_VERSION "DM3507_CASCADE_V1E"
+ #define APP_PITCH_COMMAND_PERIOD_MS 2U
+ #define APP_PITCH_ENABLE_TIMEOUT_MS 100U
+-#define APP_PITCH_POSITION_KP 12.0f
+-#define APP_PITCH_POSITION_KI 0.2f
+-#define APP_PITCH_POSITION_KD 0.02f
+-#define APP_PITCH_SPEED_KP 0.02f
+-#define APP_PITCH_SPEED_KI 0.03f
+-#define APP_PITCH_SPEED_KD 0.00005f
++#define APP_PITCH_POSITION_KP 18.2f
++#define APP_PITCH_POSITION_KI 0.44f
++#define APP_PITCH_POSITION_KD 0.04f
++#define APP_PITCH_SPEED_KP 0.0065f
++#define APP_PITCH_SPEED_KI 0.014f
++#define APP_PITCH_SPEED_KD 0.000004f
++#define APP_PITCH_GRAVITY_KG_NM (-0.13f)
+ /* 2026-10-14实物ID29的六个反馈增益，上电/复位默认加载。
+  * 在线调参仍只作用于本次RAM会话；下面允许离线历史用例明确覆盖。 */
+ #ifndef APP_YAW_POSITION_KP
+@@ -206,7 +207,8 @@
+ #define RC_SWITCH_LOW 1300U
+ #define RC_SWITCH_HIGH 1700U
+ #define APP_YAW_RATE_LIMIT_DPS 90.0f
+-#define APP_PITCH_RATE_LIMIT_DPS 45.0f
++/* 右杆CH2与Yaw CH1使用相同速度标尺；机械角度边界各自独立。 */
++#define APP_PITCH_RATE_LIMIT_DPS APP_YAW_RATE_LIMIT_DPS
+ #define APP_FLYWHEEL_TARGET_RPM 6000.0f /* 遥控请求接口；既有速度环参数保持原值。 */
+ #define APP_STEP_DEGREES 30.0f
+ #define APP_FIRE_INTERVAL_MS 50U

@@ -1,0 +1,11 @@
+--- before/Output/Gimbal_Control/App/pitch_backend.h
++++ Output/Gimbal_Control/App/pitch_backend.h
+@@ -40,6 +40,8 @@
+ uint8_t PitchBackend_SetTarget(float degrees);
+ uint8_t PitchBackend_SetLoopPid(char loop, float kp, float ki, float kd);
+ uint8_t PitchBackend_SetLoopParameter(char loop, char parameter, float value);
++uint8_t PitchBackend_SetGravityGain(float kg_nm);
++uint8_t PitchBackend_SetGravityOffset(float offset_deg, uint8_t capture_horizontal);
+ /* +/-30 is an absolute software-zero target, measured for five seconds and then held. */
+ uint8_t PitchBackend_StartStep(float degrees);
+ void PitchBackend_GetStep(PitchStep *out);

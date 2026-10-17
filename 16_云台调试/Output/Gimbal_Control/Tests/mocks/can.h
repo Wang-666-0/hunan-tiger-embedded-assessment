@@ -40,5 +40,6 @@ uint32_t HAL_CAN_GetRxFifoFillLevel(CAN_HandleTypeDef *handle, uint32_t fifo);
 HAL_StatusTypeDef HAL_CAN_GetRxMessage(CAN_HandleTypeDef *handle, uint32_t fifo,
     CAN_RxHeaderTypeDef *header, uint8_t *data);
 uint32_t HAL_CAN_GetError(CAN_HandleTypeDef *handle);
+uint32_t HAL_CAN_IsTxMessagePending(const CAN_HandleTypeDef *handle, uint32_t mailboxes);
 uint32_t HAL_GetTick(void);
 #endif

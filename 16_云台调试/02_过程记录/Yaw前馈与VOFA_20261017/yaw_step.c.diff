@@ -1,0 +1,41 @@
+--- before/App/yaw_step.c
++++ after/App/yaw_step.c
+@@ -9,6 +9,7 @@
+     if (!step) { return; }
+     memset(step, 0, sizeof(*step));
+     step->t10_ms = step->t90_ms = step->response_ms = step->settle_ms = YAW_STEP_UNREACHED;
++    step->response05_ms = step->settle05_ms = YAW_STEP_UNREACHED;
+ }
+ uint8_t YawStep_Start(YawStep *step, uint32_t now_ms, float start_deg, float target_deg)
+ {
+@@ -39,7 +40,7 @@
+     if (!step || step->phase != YAW_STEP_RUNNING) { return; }
+     step->phase = YAW_STEP_ABORTED; step->reason = (uint8_t)reason;
+     step->faults = faults; step->elapsed_ms = now_ms - step->start_ms;
+-    step->pending = 1U; step->sse_valid = step->pass = 0U;
++    step->pending = 1U; step->sse_valid = step->pass = step->pass05 = 0U;
+ }
+ void YawStep_Sample(YawStep *step, uint32_t received_ms, float angle_deg,
+                     float velocity_dps, float torque_nm, uint8_t limited)
+@@ -77,6 +78,10 @@
+             step->response_ms = end;
+         }
+     } else { step->band_active = 0U; }
++    if (absolute(step->target_deg - angle) <= YAW_STEP_ASSESSMENT_BAND_DEG) {
++        if (!step->band05_active) { step->band05_active = 1U; step->band05_since_ms = end; }
++        if (step->response05_ms == YAW_STEP_UNREACHED) { step->response05_ms = end; }
++    } else { step->band05_active = 0U; }
+     low = previous > YAW_STEP_WINDOW_MS - YAW_STEP_STEADY_MS ?
+         previous : YAW_STEP_WINDOW_MS - YAW_STEP_STEADY_MS;
+     if (end > low) {
+@@ -101,5 +106,10 @@
+         step->pass = (uint8_t)(absolute(step->span_deg - 30.0f) <= 0.2f &&
+             step->response_ms != YAW_STEP_UNREACHED && step->response_ms <= 250U &&
+             step->overshoot_deg <= 0.2f && step->sse_valid && absolute(step->steady_error_deg) <= 0.2f);
++        if (step->band05_active && end - step->band05_since_ms >= YAW_STEP_SETTLE_HOLD_MS) {
++            step->settle05_ms = step->band05_since_ms;
++        }
++        step->pass05 = (uint8_t)(!step->faults && absolute(step->span_deg - 30.0f) <= 0.2f &&
++            step->settle05_ms != YAW_STEP_UNREACHED && step->settle05_ms <= YAW_STEP_ASSESSMENT_LIMIT_MS);
+     }
+ }

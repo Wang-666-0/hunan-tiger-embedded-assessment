@@ -1,0 +1,31 @@
+{
+  "yaw": "GL60II_CASCADE_MANUAL50_V2I",
+  "pitch": "DM3507_CASCADE_V1F",
+  "groups": 59,
+  "checks": 467812,
+  "failures": 0,
+  "modified_backup_files": [
+    "Output/Gimbal_Control/App/app_config.h",
+    "Output/Gimbal_Control/App/app_console.c",
+    "Output/Gimbal_Control/App/app_tasks.c",
+    "Output/Gimbal_Control/App/can_bus.h",
+    "Output/Gimbal_Control/App/pitch_console.c",
+    "Output/Gimbal_Control/App/yaw_backend.c",
+    "Output/Gimbal_Control/App/yaw_console.c",
+    "Output/Gimbal_Control/MDK-ARM/.eide/eide.yml",
+    "Output/Gimbal_Control/MDK-ARM/Gimbal_Control.uvprojx",
+    "Output/Gimbal_Control/Tests/run_selftests.py",
+    "Output/Gimbal_Control/Tests/test_app_console.c",
+    "Output/Gimbal_Control/Tests/test_pitch_console.c",
+    "Output/Gimbal_Control/Tests/test_pitch_telemetry.c",
+    "Output/Gimbal_Control/Tests/test_yaw_cascade_unlimited_console.c",
+    "Output/Gimbal_Control/Tests/test_yaw_manual50.c"
+  ],
+  "static_stack_bytes_plus_unknown": {
+    "ConsoleTask": 1796,
+    "ControlTask": 1616,
+    "CanTask": 344,
+    "RemoteTask": 188
+  },
+  "hardware_flashed_or_tested": false
+}

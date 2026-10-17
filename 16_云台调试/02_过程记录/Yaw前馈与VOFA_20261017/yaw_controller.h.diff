@@ -1,0 +1,28 @@
+--- before/App/yaw_controller.h
++++ after/App/yaw_controller.h
+@@ -70,8 +70,15 @@
+ 
+ typedef struct { float kp, ki, kd; } YawPid;
+ typedef struct {
++    float bias_nm, angle_gain, velocity_gain, friction_nm, friction_velocity_dps, limit_nm;
++    uint32_t revision;
++    uint8_t enabled, i_transferred;
++} YawFeedforward;
++typedef struct {
+     YawPid pid;
+     YawCascade cascade;
++    YawFeedforward ff;
++    float pid_torque_nm;
+     float reference_rad, last_position_rad, continuous_rad;
+     float angle_deg, target_deg, velocity_dps, torque_nm, integral;
+     uint32_t last_feedback_ms, last_sequence, faults;
+@@ -98,6 +105,9 @@
+  * 双环由yaw_cascade接口调参，不能复用这组三个数字。 */
+ uint8_t YawController_SetPid(YawController *yaw, float kp, float ki, float kd);
+ uint8_t YawController_SetTarget(YawController *yaw, float degrees);
++/* B偏置/A角度斜率/V速度系数/C摩擦/S平滑速度/L前馈限幅/E使能。
++ * 在线改值只转移内环积分以减小力矩突变，不改变软件零点及目标。 */
++uint8_t YawController_SetFeedforward(YawController *yaw, char parameter, float value);
+ void YawController_Stop(YawController *yaw);
+ /* allowed由后端综合遥控、CAN、驱动使能和停机提交状态。无新反馈不积分，
+  * 新反馈dt最大100ms；手动目标以控制tick积分，不追补迟到时间。 */

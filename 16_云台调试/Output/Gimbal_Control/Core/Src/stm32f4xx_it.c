@@ -22,6 +22,7 @@
 #include "stm32f4xx_it.h"
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
+#include "usart.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -258,6 +259,14 @@ void CAN1_SCE_IRQHandler(void)
 }
 
 /* USER CODE BEGIN 1 */
+void DMA1_Stream2_IRQHandler(void)
+{
+  HAL_DMA_IRQHandler(&hdma_uart4_rx);
+}
+void DMA2_Stream2_IRQHandler(void)
+{
+  HAL_DMA_IRQHandler(&hdma_usart1_rx);
+}
 void CAN2_SCE_IRQHandler(void)
 {
   HAL_CAN_IRQHandler(&hcan2);

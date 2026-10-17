@@ -1,0 +1,38 @@
+--- before/Output/Gimbal_Control/App/app_console.c
++++ Output/Gimbal_Control/App/app_console.c
+@@ -228,7 +228,7 @@
+ #if APP_PITCH_ENABLED
+     if (strcmp(line, "TELEM PITCH") == 0) {
+         pitch_view = 1U;
+-        SendText("P|VIEW|PITCH|GROUP|pitch|COLS|52|PID_I|7_12\r\n"); return;
++        SendText("P|VIEW|PITCH|GROUP|pitch|COLS|58|PID_I|7_12|GFF_I|52_57\r\n"); return;
+     }
+     if (strcmp(line, "TELEM YAW") == 0) {
+         pitch_view = 0U;
+@@ -511,12 +511,12 @@
+     PitchBackend_GetState(&pitch); PitchBackend_GetStep(&step);
+     taskEXIT_CRITICAL();
+     RemoteInput_GetState(&remote); AppTasks_GetState(&app); CanBus_GetState(&bus);
+-    /* Pitch原I0~I47保持，I48~I51追加CH1~CH4原始值；Yaw仍为48列。
++    /* Pitch原I0~I51保持；I52~I57追加Kg、水平偏置、前馈、PID、速度积分、标定。Yaw仍48列。
+      * 同时只发当前选择的一组，保持921600/5ms的线路预算。 */
+     length = snprintf(telemetry, sizeof(telemetry),
+         "pitch:%.6g,%.6g,%.6g,%.6g,%.6g,%.6g,%.6g,%.6g,%.6g,%.6g,%.6g,%.6g,%.6g,%.6g"
+         ",%u,%u,%u,%u,%lu,%lu,%u,%u,%u,%u,%lu,%u,%ld,%ld,%.6g,%.6g,%.6g,%u,%u,%ld,%ld"
+-        ",%.6g,%.6g,%u,%lu,%u,%u,%u,%u,%u,%u,%lu,%u,%u,%u,%u,%u,%u\r\n",
++        ",%.6g,%.6g,%u,%lu,%u,%u,%u,%u,%u,%u,%lu,%u,%u,%u,%u,%u,%u,%.6g,%.6g,%.6g,%.6g,%.6g,%u\r\n",
+         (double)pitch.controller.angle_deg, (double)pitch.controller.target_deg,
+         (double)pitch.controller.cascade.target_velocity_dps, (double)pitch.controller.cascade.velocity_dps,
+         (double)pitch.controller.velocity_dps, (double)pitch.controller.torque_nm, (double)pitch.feedback.torque_nm,
+@@ -542,7 +542,10 @@
+         (unsigned)remote.channels[7], (unsigned long)bus.fault_epoch,
+         (unsigned)pitch.feedback.temp_mos, (unsigned)pitch.feedback.temp_rotor,
+         (unsigned)remote.channels[0], (unsigned)remote.channels[1],
+-        (unsigned)remote.channels[2], (unsigned)remote.channels[3]);
++        (unsigned)remote.channels[2], (unsigned)remote.channels[3],
++        (double)pitch.controller.gravity_kg_nm, (double)pitch.controller.gravity_offset_deg,
++        (double)pitch.controller.gravity_torque_nm, (double)pitch.controller.pid_torque_nm,
++        (double)pitch.controller.cascade.speed_i, (unsigned)pitch.controller.gravity_calibrated);
+     if (length > 0 && (size_t)length < sizeof(telemetry)) { SendText(telemetry); }
+ }
+ #endif

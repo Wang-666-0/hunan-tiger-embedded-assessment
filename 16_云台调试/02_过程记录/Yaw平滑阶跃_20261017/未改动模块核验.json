@@ -1,0 +1,16 @@
+{
+  "App/pitch_controller.c": true,
+  "App/pitch_backend.c": true,
+  "App/pitch_console.c": true,
+  "App/pitch_step.c": true,
+  "App/yaw_step.c": true,
+  "App/gl60_ii.c": true,
+  "App/dm3507.c": true,
+  "App/can_bus.c": true,
+  "App/remote_mapper.c": true,
+  "App/remote_input.c": true,
+  "App/safety_manager.c": true,
+  "App/target_manager.c": true,
+  "App/gimbal_startup.c": true,
+  "App/flywheel_speed.c": true
+}

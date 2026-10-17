@@ -1,0 +1,10 @@
+--- before/Output/Gimbal_Control/App/pitch_step.h
++++ Output/Gimbal_Control/App/pitch_step.h
+@@ -24,6 +24,7 @@
+ #define PITCH_STEP_MANUAL YAW_STEP_MANUAL
+ #define PITCH_STEP_GAP YAW_STEP_GAP
+ #define PITCH_STEP_DATA YAW_STEP_DATA
++#define PITCH_STEP_FF_CHANGE YAW_STEP_FF_CHANGE
+ void PitchStep_Init(PitchStep *step);
+ uint8_t PitchStep_Start(PitchStep *step, uint32_t now_ms, float start_deg, float target_deg);
+ void PitchStep_Sample(PitchStep *step, uint32_t received_ms, float angle_deg,

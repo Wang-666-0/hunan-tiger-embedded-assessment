@@ -48,7 +48,8 @@ void MX_CAN1_Init(void)
   hcan1.Init.TimeTriggeredMode = DISABLE;
   hcan1.Init.AutoBusOff = ENABLE;
   hcan1.Init.AutoWakeUp = DISABLE;
-  hcan1.Init.AutoRetransmission = DISABLE; /* 只读查询只提交一次，不在无ACK时持续重发。 */
+  /* CAN1共享运动总线：仲裁让位后由硬件重试；实际总线错误仍由ISR撤权并取消邮箱。 */
+  hcan1.Init.AutoRetransmission = ENABLE;
   hcan1.Init.ReceiveFifoLocked = DISABLE;
   hcan1.Init.TransmitFifoPriority = DISABLE;
   if (HAL_CAN_Init(&hcan1) != HAL_OK)

@@ -1,0 +1,21 @@
+--- before/Output/Gimbal_Control/App/yaw_step.h
++++ Output/Gimbal_Control/App/yaw_step.h
+@@ -9,7 +9,7 @@
+ typedef enum { YAW_STEP_IDLE, YAW_STEP_RUNNING, YAW_STEP_DONE, YAW_STEP_ABORTED } YawStepPhase;
+ typedef enum {
+     YAW_STEP_NONE, YAW_STEP_STOP, YAW_STEP_FAULT, YAW_STEP_PID_CHANGE,
+-    YAW_STEP_TARGET_CHANGE, YAW_STEP_MANUAL, YAW_STEP_GAP, YAW_STEP_DATA
++    YAW_STEP_TARGET_CHANGE, YAW_STEP_MANUAL, YAW_STEP_GAP, YAW_STEP_DATA, YAW_STEP_FF_CHANGE
+ } YawStepReason;
+ typedef struct {
+     uint32_t id, start_ms, last_ms, elapsed_ms, samples, max_gap_ms;
+@@ -22,6 +22,9 @@
+     float first_command_nm;
+     float ss_integral, ss_max_error, kp, ki, kd;
+     float vkp, vki, vkd, vmax_dps;
++    /* Pitch冻结试验条件；Yaw保持0，不使用这些字段。 */
++    float gravity_kg_nm, gravity_offset_deg;
++    uint8_t gravity_calibrated;
+     uint8_t cascade, output_limits;
+     uint8_t phase, reason, pending, band_active, sse_valid, pass;
+ } YawStep;

@@ -1,0 +1,55 @@
+--- before/App/app_console.c
++++ after/App/app_console.c
+@@ -286,15 +286,15 @@
+     }
+     if (strcmp(line, "TELEM YAW") == 0 || strcmp(line, "YAW VIEW") == 0) {
+         pitch_view = 0U;
+-        SendText(strcmp(line, "YAW VIEW") == 0 ? "Y|VIEW|YAW|GROUP|gimbal|COLS|48|PID_I|7_12\r\n" :
+-            "P|VIEW|YAW|GROUP|gimbal|COLS|48|PID_I|7_12\r\n"); return;
++        SendText(strcmp(line, "YAW VIEW") == 0 ? "Y|VIEW|YAW|GROUP|gimbal|COLS|64|PID_I|7_12|FF_I|48_59|BAND05_I|60_62\r\n" :
++            "P|VIEW|YAW|GROUP|gimbal|COLS|64|PID_I|7_12|FF_I|48_59|BAND05_I|60_62\r\n"); return;
+     }
+     if (PitchConsole_Handle(line, telemetry, sizeof(telemetry))) { SendText(telemetry); return; }
+ #endif
+ #if APP_YAW_ENABLED
+ #if !APP_PITCH_ENABLED
+     if (strcmp(line, "YAW VIEW") == 0 || strcmp(line, "TELEM YAW") == 0) {
+-        SendText("Y|VIEW|YAW|GROUP|gimbal|COLS|48|PID_I|7_12\r\n"); return;
++        SendText("Y|VIEW|YAW|GROUP|gimbal|COLS|64|PID_I|7_12|FF_I|48_59|BAND05_I|60_62\r\n"); return;
+     }
+ #endif
+     if (YawConsole_Handle(line, telemetry, sizeof(telemetry))) { SendText(telemetry); return; }
+@@ -641,12 +641,13 @@
+ #endif
+     age = remote.has_frame ? (uint32_t)(now - remote.received_ms) : 0U;
+ #if APP_YAW_ENABLED
+-    /* V2C仍48列/原顺序，6位有效数字删去多余尾零以适配921600/5ms。
+-     * 保留小增益科学计数；FireWater解析数值不依赖固定小数位数。 */
++    /* 原I0~I47不变；追加前馈参数/积分/新±0.5指标和CAN毫秒戳，共64列。
++     * 前馈参数4位有效数字，诊断5位，减少5ms/921600线路开销。 */
+     length = snprintf(telemetry, sizeof(telemetry),
+         "gimbal:%.6g,%.6g,%.6g,%.6g,%.6g,%.6g,%.6g,%.6g,%.6g,%.6g,%.6g,%.6g,%.6g,%.6g"
+         ",%u,%u,%u,%u,%lu,%lu,%u,%u,%u,%u,%lu,%u,%ld,%ld,%.6g,%.6g,%.6g,%u,%u,%ld,%ld"
+-        ",%u,%.6g,%.6g,%lu,%u,%u,%u,%u,%u,%u,%lu,%d,%d\r\n",
++        ",%u,%.6g,%.6g,%lu,%u,%u,%u,%u,%u,%u,%lu,%d,%d"
++        ",%u,%.4g,%.4g,%.4g,%.4g,%.4g,%.4g,%.5g,%.5g,%.5g,%.5g,%u,%ld,%ld,%u,%lu\r\n",
+         (double)yaw.controller.angle_deg, (double)yaw.controller.target_deg,
+         (double)yaw.controller.cascade.target_velocity_dps, (double)yaw.controller.cascade.velocity_dps,
+         (double)yaw.controller.velocity_dps, (double)yaw.controller.torque_nm, (double)yaw.feedback.torque_nm,
+@@ -673,7 +674,15 @@
+         (unsigned)(remote.has_frame && age < REMOTE_TIMEOUT_MS), (unsigned)app.logic.safety.operator_armed,
+         (unsigned)remote.channels[4], (unsigned)remote.channels[5], (unsigned)remote.channels[6],
+         (unsigned)remote.channels[7], (unsigned long)bus.fault_epoch,
+-        (int)yaw.feedback.driver_temp_c, (int)yaw.feedback.motor_temp_c);
++        (int)yaw.feedback.driver_temp_c, (int)yaw.feedback.motor_temp_c,
++        (unsigned)yaw.controller.ff.enabled, (double)yaw.controller.ff.bias_nm,
++        (double)yaw.controller.ff.angle_gain, (double)yaw.controller.ff.velocity_gain,
++        (double)yaw.controller.ff.friction_nm, (double)yaw.controller.ff.friction_velocity_dps,
++        (double)yaw.controller.ff.limit_nm, (double)yaw.controller.cascade.feedforward_nm,
++        (double)yaw.controller.pid_torque_nm, (double)yaw.controller.cascade.speed_i,
++        (double)yaw.controller.cascade.position_i, (unsigned)yaw.controller.cascade.feedforward_limited,
++        (long)(int32_t)step.response05_ms, (long)(int32_t)step.settle05_ms, (unsigned)step.pass05,
++        (unsigned long)yaw.controller.last_feedback_ms);
+ #else
+     request = &app.logic.targets.request;
+     length = snprintf(telemetry, sizeof(telemetry),

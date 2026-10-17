@@ -1,0 +1,42 @@
+--- before/App/app_config.h
++++ after/App/app_config.h
+@@ -7,7 +7,7 @@
+ #ifndef APP_YAW_ENABLED
+ #define APP_YAW_ENABLED 1U
+ #endif
+-#define APP_YAW_VERSION "GL60II_CASCADE_MANUAL50_V2I"
++#define APP_YAW_VERSION "GL60II_CASCADE_FF_V2J"
+ #define APP_YAW_COMMAND_PERIOD_MS 10U
+ #define APP_YAW_ENABLE_TIMEOUT_MS 100U
+ /* DM3507专用白名单接口；安全OFF可自动准备，不自动使能。
+@@ -31,25 +31,25 @@
+ #endif
+ #define APP_GIMBAL_STARTUP_OFF_HOLD_MS 100U
+ #define APP_GIMBAL_STARTUP_TIMEOUT_MS 5000U
+-/* 2026-10-14实物ID29的六个反馈增益，上电/复位默认加载。
++/* 2026-10-17用户最后截图的前馈试验基线，上电/复位默认加载。
+  * 在线调参仍只作用于本次RAM会话；下面允许离线历史用例明确覆盖。 */
+ #ifndef APP_YAW_POSITION_KP
+-#define APP_YAW_POSITION_KP 10.0f
++#define APP_YAW_POSITION_KP 7.5f
+ #endif
+ #ifndef APP_YAW_POSITION_KI
+ #define APP_YAW_POSITION_KI 0.15f
+ #endif
+ #ifndef APP_YAW_POSITION_KD
+-#define APP_YAW_POSITION_KD 0.01f
++#define APP_YAW_POSITION_KD 0.0f
+ #endif
+ #ifndef APP_YAW_SPEED_KP
+-#define APP_YAW_SPEED_KP 0.0037f
++#define APP_YAW_SPEED_KP 0.0025f
+ #endif
+ #ifndef APP_YAW_SPEED_KI
+ #define APP_YAW_SPEED_KI 0.003f
+ #endif
+ #ifndef APP_YAW_SPEED_KD
+-#define APP_YAW_SPEED_KD 0.000001f
++#define APP_YAW_SPEED_KD 0.0f
+ #endif
+ #ifndef APP_FLYWHEEL_JOG_ENABLED
+ #define APP_FLYWHEEL_JOG_ENABLED 1U

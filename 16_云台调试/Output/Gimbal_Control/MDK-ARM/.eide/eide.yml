@@ -77,9 +77,14 @@ virtualFolder:
       folders: []
     - name: App
       files:
+        - path: ../App/flywheel_jog.c
+        - path: ../App/app_diagnostics.c
+        - path: ../App/dm_diag.c
+        - path: ../App/vesc_diag.c
         - path: ../App/app_fault.c
         - path: ../App/app_logic.c
         - path: ../App/app_tasks.c
+        - path: ../App/gimbal_startup.c
         - path: ../App/can_bus.c
         - path: ../App/can_frame.c
         - path: ../App/motor_backend.c
@@ -89,9 +94,21 @@ virtualFolder:
         - path: ../App/ibus.c
         - path: ../App/remote_mapper.c
         - path: ../App/remote_input.c
-        - path: ../App/app_diagnostics.c
-        - path: ../App/dm_diag.c
-        - path: ../App/vesc_diag.c
+        - path: ../App/flywheel_speed.c
+        - path: ../App/gl60_ii.c
+        - path: ../App/yaw_controller.c
+        - path: ../App/yaw_cascade.c
+        - path: ../App/yaw_step.c
+        - path: ../App/yaw_backend.c
+        - path: ../App/yaw_console.c
+        - path: ../App/dm3507.c
+        - path: ../App/pitch_controller.c
+        - path: ../App/pitch_step.c
+        - path: ../App/pitch_backend.c
+        - path: ../App/pitch_console.c
+        - path: ../App/feeder_controller.c
+        - path: ../App/feeder_backend.c
+        - path: ../App/feeder_console.c
       folders: []
 dependenceList: []
 outDir: build
@@ -104,8 +121,8 @@ targets:
         - USE_HAL_DRIVER
         - STM32F405xx
       incList:
-        - ../App
         - .
+        - ../App
         - ../Core/Inc
         - ../Drivers/STM32F4xx_HAL_Driver/Inc
         - ../Drivers/STM32F4xx_HAL_Driver/Inc/Legacy
@@ -114,6 +131,8 @@ targets:
         - ../Middlewares/Third_Party/FreeRTOS/Source/portable/RVDS/ARM_CM4F
         - ../Drivers/CMSIS/Device/ST/STM32F4xx/Include
         - ../Drivers/CMSIS/Include
+        - .cmsis/include
+        - RTE/_Gimbal_Control
       libList: []
     excludeList: []
     settings:
@@ -135,7 +154,7 @@ targets:
             C_FLAGS: --diag_suppress=1 --diag_suppress=1295
             c99-mode: true
             one-elf-section-per-function: true
-            optimization: level-3
+            optimization: level-0
             warnings: all-warnings
           global:
             output-debug-info: enable
@@ -190,7 +209,7 @@ targets:
               isChecked: false
               isStartup: false
               mem:
-                size: "0x0"
+                size: "0x100000"
                 startAddr: "0x0"
               tag: ROM
             - id: 2
@@ -211,7 +230,7 @@ targets:
               isChecked: true
               isStartup: true
               mem:
-                size: "0x100000"
+                size: "0x80000"
                 startAddr: "0x8000000"
               tag: IROM
             - id: 2

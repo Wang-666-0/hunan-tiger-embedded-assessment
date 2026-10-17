@@ -1,0 +1,30 @@
+{
+  "version": "DM3507_CASCADE_V1D",
+  "groups": 57,
+  "checks": 457565,
+  "failures": 0,
+  "modified_backup_files": [
+    "Output/Gimbal_Control/App/app_config.h",
+    "Output/Gimbal_Control/App/app_console.c",
+    "Output/Gimbal_Control/App/pitch_backend.c",
+    "Output/Gimbal_Control/App/pitch_backend.h",
+    "Output/Gimbal_Control/App/pitch_console.c",
+    "Output/Gimbal_Control/App/pitch_controller.c",
+    "Output/Gimbal_Control/App/pitch_controller.h",
+    "Output/Gimbal_Control/App/pitch_step.h",
+    "Output/Gimbal_Control/App/README.md",
+    "Output/Gimbal_Control/App/yaw_cascade.c",
+    "Output/Gimbal_Control/App/yaw_cascade.h",
+    "Output/Gimbal_Control/App/yaw_step.h",
+    "Output/Gimbal_Control/Tests/test_pitch_console.c",
+    "Output/Gimbal_Control/Tests/test_pitch_telemetry.c",
+    "Output/Gimbal_Control/Tests/run_selftests.py"
+  ],
+  "static_stack_bytes_plus_unknown": {
+    "ConsoleTask": 1788,
+    "ControlTask": 1392,
+    "CanTask": 344,
+    "RemoteTask": 188
+  },
+  "hardware_flashed_or_tested": false
+}

@@ -1,0 +1,48 @@
+g Motor Mode 
+
+
+
+ Commands:
+ m - Motor Mode
+ z - Set Zero Position
+ esc - Exit to Menu
+
+
+
+ Commands:
+ m - Motor Mode
+ z - Set Zero Position
+ esc - Exit to Menu
+CubeMars Motor Driver--V3.0
+ Debug Info:
+Firmware Version: 4407
+Sub Version: 002
+Imax: 20.522388
+ I_U Offset:     2053.2129
+ I_V Offset:     2034.6270
+ I_W Offset:     2099.0410
+ Position Sensor Electrical Offset:   0.2928
+ Mechanical Offset:   4.0248
+ Output Position:  0.1706
+ CAN ID:  1
+ MASTER ID:  0
+
+ Motor Info:
+ Rs  = 2969.0845 mΩ
+ Ls  = 2562.3350 μH
+ Ψf = 0.0168 Wb
+V_BUS=23.9484
+
+ Control Mode : 
+1:MIT Mode <----
+2:position-speed cascade Mode
+3:speed Mode
+
+ Entering Motor Mode 
+
+
+
+ Commands:
+ m - Motor Mode
+ z - Set Zero Position
+ esc - Exit to Menu

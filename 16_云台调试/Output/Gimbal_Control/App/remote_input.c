@@ -15,9 +15,23 @@ static QueueHandle_t rx_queue;
 static ibus_parser_t parser;
 static RemoteInput_State state;
 static volatile uint32_t fault_epoch, rx_bytes, rx_drops, rx_errors, last_uart_error;
+static volatile uint32_t rx_bursts, rearm_errors;
 static volatile uint8_t needs_rearm, last_rx_byte;
 static uint32_t observed_epoch;
+#if APP_REMOTE_RX_DMA_ENABLED
+static uint8_t rx_dma[APP_REMOTE_RX_DMA_BYTES];
+#else
 static uint8_t rx_byte;
+#endif
+
+static HAL_StatusTypeDef StartRemoteRx(void)
+{
+#if APP_REMOTE_RX_DMA_ENABLED
+    return RemoteUart_StartReceive(rx_dma, sizeof(rx_dma));
+#else
+    return HAL_UART_Receive_IT(&huart4, &rx_byte, 1U);
+#endif
+}
 
 void RemoteInput_CreateQueue(void)// 创建接收队列和 iBUS 解析器
 {
@@ -27,12 +41,13 @@ void RemoteInput_CreateQueue(void)// 创建接收队列和 iBUS 解析器
     ibus_init(&parser);
     memset(&state, 0, sizeof(state));
 }
-void RemoteInput_Start(void)// 启动 UART 接收中断
+void RemoteInput_Start(void)// 启动UART4接收，生产配置为DMA+IDLE
 {
-    if (HAL_UART_Receive_IT(&huart4, &rx_byte, 1U) != HAL_OK) { AppFault_Fatal(APP_FAULT_UART_START); }
+    if (StartRemoteRx() != HAL_OK) { AppFault_Fatal(APP_FAULT_UART_START); }
 }
 void RemoteInput_RxCplt(UART_HandleTypeDef *huart)// UART 接收完成中断回调
 {
+#if !APP_REMOTE_RX_DMA_ENABLED
     RemoteByte item;
     BaseType_t woken = pdFALSE;
     if (huart != &huart4) { return; }
@@ -44,8 +59,36 @@ void RemoteInput_RxCplt(UART_HandleTypeDef *huart)// UART 接收完成中断回�
     if (HAL_UART_GetError(huart) != HAL_UART_ERROR_NONE) { return; }
     item.byte = rx_byte; item.received_ms = HAL_GetTick(); item.epoch = fault_epoch;
     if (xQueueSendFromISR(rx_queue, &item, &woken) != pdPASS) { rx_drops++; fault_epoch++; }
-    if (HAL_UART_Receive_IT(&huart4, &rx_byte, 1U) != HAL_OK) { fault_epoch++; needs_rearm = 1U; }
+    if (StartRemoteRx() != HAL_OK) { rearm_errors++; fault_epoch++; needs_rearm = 1U; }
     portYIELD_FROM_ISR(woken);
+#else
+    (void)huart; /* ReceiveToIdle routes UART4 through RxEvent, not RxCplt. */
+#endif
+}
+
+void RemoteInput_RxEvent(UART_HandleTypeDef *huart, uint16_t size)
+{
+#if APP_REMOTE_RX_DMA_ENABLED
+    RemoteByte item;
+    uint16_t i;
+    BaseType_t woken = pdFALSE;
+    if (huart != &huart4 || HAL_UART_GetError(huart) != HAL_UART_ERROR_NONE) { return; }
+    /* HT is disabled; normal DMA is stopped by HAL before IDLE/TC callback.
+     * Copy a stable bounded burst. Parsing and safety remain in their tasks. */
+    if (!size || size > sizeof(rx_dma)) { fault_epoch++; needs_rearm = 1U; return; }
+    rx_bursts++; rx_bytes += size; last_rx_byte = rx_dma[size - 1U];
+    item.received_ms = HAL_GetTick(); item.epoch = fault_epoch;
+    for (i = 0U; i < size; ++i) {
+        item.byte = rx_dma[i];
+        if (xQueueSendFromISR(rx_queue, &item, &woken) != pdPASS) {
+            rx_drops++; fault_epoch++; break;
+        }
+    }
+    if (StartRemoteRx() != HAL_OK) { rearm_errors++; fault_epoch++; needs_rearm = 1U; }
+    portYIELD_FROM_ISR(woken);
+#else
+    (void)huart; (void)size;
+#endif
 }
 void RemoteInput_Error(UART_HandleTypeDef *huart)// UART 错误中断回调
 {
@@ -72,7 +115,7 @@ void RemoteInput_Poll(void)// 轮询处理接收队列和 iBUS 解析
     if (needs_rearm) {
         taskENTER_CRITICAL();
         (void)HAL_UART_AbortReceive(&huart4);
-        if (HAL_UART_Receive_IT(&huart4, &rx_byte, 1U) == HAL_OK) { needs_rearm = 0U; }
+        if (StartRemoteRx() == HAL_OK) { needs_rearm = 0U; }
         taskEXIT_CRITICAL();
     }
     for (uint32_t i = 0U; i < REMOTE_RX_QUEUE_LENGTH; i++) {
@@ -86,10 +129,12 @@ void RemoteInput_Poll(void)// 轮询处理接收队列和 iBUS 解析
         }
         if (ibus_feed_byte(&parser, item.byte, item.received_ms, &frame)) {
             taskENTER_CRITICAL();
-            memcpy(state.channels, frame.channels, sizeof(state.channels));
-            state.received_ms = frame.received_ms;
-            state.valid_frames = parser.stats.valid_frames;
-            state.has_frame = 1U;
+            if (item.epoch == fault_epoch) {
+                memcpy(state.channels, frame.channels, sizeof(state.channels));
+                state.received_ms = frame.received_ms;
+                state.valid_frames = parser.stats.valid_frames;
+                state.has_frame = 1U;
+            }
             taskEXIT_CRITICAL();
         }
     }
@@ -109,5 +154,8 @@ void RemoteInput_GetState(RemoteInput_State *out)// 获取当前遥控输入状�
     out->rx_drops = rx_drops; out->rx_errors = rx_errors;
     out->last_uart_error = last_uart_error;
     out->last_rx_byte = last_rx_byte;
+    out->rx_bursts = rx_bursts; out->rearm_errors = rearm_errors;
+    out->needs_rearm = needs_rearm;
+    if (observed_epoch != fault_epoch) { out->has_frame = 0U; }
     taskEXIT_CRITICAL();
 }

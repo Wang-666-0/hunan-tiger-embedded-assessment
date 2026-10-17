@@ -1,0 +1,37 @@
+--- before/Output/Gimbal_Control/App/pitch_console.c
++++ Output/Gimbal_Control/App/pitch_console.c
+@@ -43,7 +43,10 @@
+         if (command.arm != RC_LOW) { return "CH5_NOT_OFF"; }
+         if (!command.neutral) { return "NOT_NEUTRAL_OR_CH6_ON"; }
+         if (app.logic.safety.operator_armed) { return "ARMED"; }
+-    } else if (command.arm != RC_HIGH || !app.logic.safety.operator_armed) { return "NOT_ARMED"; }
++    } else {
++        if (command.arm != RC_HIGH || !app.logic.safety.operator_armed) { return "NOT_ARMED"; }
++        if (!command.neutral) { return "NOT_NEUTRAL_OR_CH6_ON"; }
++    }
+     return "OK";
+ }
+ 
+@@ -303,7 +306,7 @@
+     if (strcmp(line, "PITCH") == 0) { BriefStatus(response, capacity); return 1U; }
+     if (strcmp(line, "PITCH HELP") == 0 || strcmp(line, "PITCH ?") == 0) {
+         (void)snprintf(response, capacity,
+-            "P|HELP|READ|PITCH;PID;RESULT;STATUS|PREPARE|READY|STOP|OFF|VIEW|PITCH VIEW|TUNE|POS kp ki kd;VEL kp ki kd;PKP/PKI/PKD/VKP/VKI/VKD value|TELEM|TELEM OFF/ON|TEST|REMOTE_CH5_CH7|PITCH_ONLY|COORD 1;GHORIZ;FF;KG value;GOFF degrees\r\n");
++            "P|HELP|READ|PITCH;PID;RESULT;STATUS|PREPARE|READY|STOP|OFF|VIEW|PITCH VIEW|TUNE|POS kp ki kd;VEL kp ki kd;PKP/PKI/PKD/VKP/VKI/VKD value|TELEM|TELEM OFF/ON|TEST|STEP [30];HOME;REMOTE_CH5_CH7|PITCH_ONLY|COORD 1;GHORIZ;FF;KG value;GOFF degrees\r\n");
+         return 1U;
+     }
+     if (strcmp(line, "PITCH OFF") == 0) {
+@@ -419,6 +422,13 @@
+         (void)snprintf(response, capacity, accepted ? "P|OK|STEP_STARTED|TARGET|%.1f|WINDOW_MS|5000|HOLD|1\r\n" :
+             "P|ERROR|STEP_REQUIRES_ARMED_READY_STATIONARY_ZERO_AND_PLUS_MINUS_30\r\n", (double)value); return 1U;
+     }
++    if (strcmp(line, "PITCH HOME") == 0) {
++        taskENTER_CRITICAL();
++        if (strcmp(RemoteReason(0U), "OK") == 0) { accepted = PitchBackend_SetTarget(0.0f); }
++        taskEXIT_CRITICAL();
++        (void)snprintf(response, capacity, accepted ? "P|OK|HOME|TARGET|0\r\n" :
++            "P|ERROR|HOME_REQUIRES_ARMED_ACTIVE\r\n"); return 1U;
++    }
+     if (strncmp(line, "PITCH TARGET ", 13U) == 0) {
+         uint8_t parsed = Number(line + 13U, &value);
+         taskENTER_CRITICAL();

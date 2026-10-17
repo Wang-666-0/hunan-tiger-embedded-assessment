@@ -5,4 +5,5 @@ void AppConsole_CreateQueue(void);
 void AppConsole_Start(void);
 void AppConsole_Poll(void);
 uint32_t AppConsole_GetFaultEpoch(void);
+uint8_t AppConsole_IsDiagnosticMode(void);
 #endif

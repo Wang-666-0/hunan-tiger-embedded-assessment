@@ -8,4 +8,6 @@ HAL_StatusTypeDef HAL_UART_Receive_IT(UART_HandleTypeDef *handle, uint8_t *data,
 HAL_StatusTypeDef HAL_UART_Transmit(UART_HandleTypeDef *handle, uint8_t *data, uint16_t length, uint32_t timeout);
 HAL_StatusTypeDef HAL_UART_AbortReceive(UART_HandleTypeDef *handle);
 uint32_t HAL_UART_GetError(UART_HandleTypeDef *handle);
+HAL_StatusTypeDef ConsoleUart_StartReceive(uint8_t *data, uint16_t length);
+HAL_StatusTypeDef RemoteUart_StartReceive(uint8_t *data, uint16_t length);
 #endif

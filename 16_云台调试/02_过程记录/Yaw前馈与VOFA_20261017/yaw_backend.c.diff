@@ -1,0 +1,61 @@
+--- before/App/yaw_backend.c
++++ after/App/yaw_backend.c
+@@ -41,6 +41,8 @@
+     float reference = state.controller.reference_rad;
+     float edge = YAW_CONTROLLER_TARGET_LIMIT_DEG;
+     uint8_t keep = state.zero_set && state.controller.have_reference;
++    uint8_t ff_enabled = state.controller.ff.enabled;
++    uint32_t ff_revision = state.controller.ff.revision;
+ #if YAW_CONTROLLER_CASCADE_ENABLED
+     /* 端点反馈允许原到位误差带，避免±50附近的量化/微小静差阻断重启。
+      * 目标仍裁到±50；更远的位置继续要求人工处理，不沿旧目标使能。 */
+@@ -51,6 +53,8 @@
+     }
+     if (!YawController_CaptureReference(&state.controller)) { return 0U; }
+     if (keep) {
++        state.controller.ff.enabled = ff_enabled;
++        state.controller.ff.revision = ff_revision;
+         state.controller.reference_rad = reference;
+         state.controller.angle_deg = (state.controller.continuous_rad - reference) * 57.2957795f;
+         /* 保留人工零点，但使能时先保持当前位置，不自行追赶旧零点。 */
+@@ -311,6 +315,29 @@
+     taskEXIT_CRITICAL(); return accepted;
+ }
+ 
++uint8_t YawBackend_SetFeedforward(char parameter, float value)
++{
++    uint8_t accepted = 0U, off_allowed, active_allowed;
++    uint32_t revision;
++    taskENTER_CRITICAL();
++    off_allowed = (uint8_t)(!state.active && !state.enabling && !state.stop_pending);
++    active_allowed = (uint8_t)(state.active && !state.enabling && !state.stop_pending &&
++        Online(HAL_GetTick()) && state.feedback.status == 1U && !state.controller.faults && CanBus_YawAllowed());
++    if ((parameter == 'E' && value == 0.0f) || off_allowed || active_allowed) {
++        uint8_t can_enable = (uint8_t)(state.zero_set && state.controller.have_reference &&
++            Online(HAL_GetTick()) && !state.controller.faults &&
++            ((off_allowed && state.feedback.status == 0U) || active_allowed));
++        if (!(parameter == 'E' && value == 1.0f) || can_enable) {
++            revision = state.controller.ff.revision;
++            accepted = YawController_SetFeedforward(&state.controller, parameter, value);
++            if (accepted && revision != state.controller.ff.revision) {
++                YawStep_Abort(&step, HAL_GetTick(), YAW_STEP_FF_CHANGE, 0U);
++            }
++        }
++    }
++    taskEXIT_CRITICAL(); return accepted;
++}
++
+ uint8_t YawBackend_CaptureReference(void)
+ {
+     uint8_t accepted = 0U;
+@@ -355,6 +382,10 @@
+             step.vmax_dps = state.controller.cascade.velocity_limit_dps;
+             step.cascade = 1U;
+             step.output_limits = YAW_CASCADE_OUTPUT_LIMITS_ENABLED;
++            step.ff_enabled = state.controller.ff.enabled;
++            step.ff_bias_nm = state.controller.ff.bias_nm; step.ff_angle_gain = state.controller.ff.angle_gain;
++            step.ff_velocity_gain = state.controller.ff.velocity_gain; step.ff_friction_nm = state.controller.ff.friction_nm;
++            step.ff_velocity_dps = state.controller.ff.friction_velocity_dps; step.ff_limit_nm = state.controller.ff.limit_nm;
+ #endif
+             step.last_velocity_dps = state.controller.velocity_dps;
+             step.last_torque_nm = last_submitted_torque_nm;

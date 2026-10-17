@@ -1,0 +1,141 @@
+--- before/App/yaw_controller.c
++++ after/App/yaw_controller.c
+@@ -23,6 +23,27 @@
+     return value < low ? low : (value > high ? high : value);
+ }
+ 
++static uint8_t valid_ff(const YawFeedforward *ff)
++{
++    return (uint8_t)(ff->enabled <= 1U && finite_value(ff->bias_nm) && absolute(ff->bias_nm) <= 1.0f &&
++        finite_value(ff->angle_gain) && absolute(ff->angle_gain) <= 0.02f &&
++        finite_value(ff->velocity_gain) && ff->velocity_gain >= 0.0f && ff->velocity_gain <= 0.01f &&
++        finite_value(ff->friction_nm) && ff->friction_nm >= 0.0f && ff->friction_nm <= 0.5f &&
++        finite_value(ff->friction_velocity_dps) && ff->friction_velocity_dps >= 1.0f && ff->friction_velocity_dps <= 100.0f &&
++        finite_value(ff->limit_nm) && ff->limit_nm >= 0.0f && ff->limit_nm <= 1.0f);
++}
++
++#if YAW_CONTROLLER_CASCADE_ENABLED
++static float ff_at(const YawFeedforward *ff, float angle, float velocity)
++{
++    float wanted;
++    if (!ff->enabled) { return 0.0f; }
++    wanted = ff->bias_nm + ff->angle_gain * angle + ff->velocity_gain * velocity +
++        ff->friction_nm * velocity / (absolute(velocity) + ff->friction_velocity_dps);
++    return clamp(wanted, -ff->limit_nm, ff->limit_nm);
++}
++#endif
++
+ static void fault(YawController *yaw, uint32_t reasons)
+ {
+     yaw->faults |= reasons;
+@@ -44,6 +65,8 @@
+     yaw->pid.kp = 1.0f;
+     yaw->pid.kd = 0.015f;
+     YawCascade_Init(&yaw->cascade);
++    yaw->ff.friction_velocity_dps = 5.0f;
++    yaw->ff.limit_nm = 0.10f;
+     yaw->motion_guard_active = 1U;
+ }
+ 
+@@ -54,6 +77,8 @@
+     YawCascade_Stop(&yaw->cascade);
+     yaw->speed_limited = 0U;
+     yaw->torque_nm = 0.0f;
++    yaw->pid_torque_nm = 0.0f;
++    yaw->ff.i_transferred = 0U;
+     yaw->integral = 0.0f;
+     yaw->have_pid_feedback = 0U;
+     yaw->have_control_tick = 0U;
+@@ -111,6 +136,7 @@
+     yaw->last_motor_temp_c = feedback->motor_temp_c;
+     yaw->have_feedback = 1U;
+     if (first || rebase) {
++        if (yaw->ff.enabled) { yaw->ff.enabled = 0U; ++yaw->ff.revision; }
+         yaw->continuous_rad = feedback->position_rad;
+         yaw->reference_rad = feedback->position_rad;
+         yaw->angle_deg = 0.0f;
+@@ -154,6 +180,9 @@
+             YAW_CONTROLLER_STATIONARY_HOLD_MS ||
+         (yaw->faults & ~(uint32_t)RECOVERABLE_FAULTS) != 0U) { return 0U; }
+     YawController_Stop(yaw);
++    /* 人工重新设零使角度负载模型的坐标改变，保留系数但关闭前馈。
++     * 后端普通OFF重启保留原软件坐标时会恢复原开关。 */
++    if (yaw->ff.enabled) { yaw->ff.enabled = 0U; ++yaw->ff.revision; }
+     yaw->reference_rad = yaw->continuous_rad;
+     yaw->angle_deg = 0.0f;
+     yaw->target_deg = 0.0f;
+@@ -186,6 +215,41 @@
+     return 1U;
+ }
+ 
++uint8_t YawController_SetFeedforward(YawController *yaw, char parameter, float value)
++{
++#if YAW_CONTROLLER_CASCADE_ENABLED
++    YawFeedforward next;
++    float *field = 0, old_ff, new_ff, previous_i, wanted_i;
++    if (!yaw || !finite_value(value)) { return 0U; }
++    next = yaw->ff;
++    if (parameter == 'B') { field = &next.bias_nm; }
++    else if (parameter == 'A') { field = &next.angle_gain; }
++    else if (parameter == 'V') { field = &next.velocity_gain; }
++    else if (parameter == 'C') { field = &next.friction_nm; }
++    else if (parameter == 'S') { field = &next.friction_velocity_dps; }
++    else if (parameter == 'L') { field = &next.limit_nm; }
++    else if (parameter == 'E' && (value == 0.0f || value == 1.0f)) {
++        if (next.enabled == (uint8_t)value) { return 1U; }
++        next.enabled = (uint8_t)value;
++    } else { return 0U; }
++    if (field) { if (*field == value) { return 1U; } *field = value; }
++    if (!valid_ff(&next) || (next.enabled && (!yaw->have_reference || yaw->faults))) { return 0U; }
++    old_ff = ff_at(&yaw->ff, yaw->angle_deg, yaw->cascade.target_velocity_dps);
++    new_ff = ff_at(&next, yaw->angle_deg, yaw->cascade.target_velocity_dps);
++    next.i_transferred = 0U;
++    if (yaw->active && yaw->cascade.speed.ki > 0.0f) {
++        previous_i = yaw->cascade.speed_i;
++        wanted_i = previous_i + old_ff - new_ff;
++        yaw->cascade.speed_i = clamp(wanted_i, -YAW_CONTROLLER_TORQUE_LIMIT_NM, YAW_CONTROLLER_TORQUE_LIMIT_NM);
++        next.i_transferred = (uint8_t)(absolute(yaw->cascade.speed_i - wanted_i) < 0.00001f);
++    }
++    ++next.revision; yaw->ff = next;
++    return 1U;
++#else
++    (void)yaw; (void)parameter; (void)value; return 0U;
++#endif
++}
++
+ float YawController_Update(YawController *yaw, float rate_dps,
+                            uint32_t now_ms, uint8_t allowed)
+ {
+@@ -195,7 +259,7 @@
+ #endif
+     if (yaw == 0) { return 0.0f; }
+     if (allowed) { yaw->motion_guard_active = 1U; }
+-    if (!finite_value(rate_dps)) { fault(yaw, YAW_CONTROLLER_FAULT_DATA); return 0.0f; }
++    if (!finite_value(rate_dps) || !valid_ff(&yaw->ff)) { fault(yaw, YAW_CONTROLLER_FAULT_DATA); return 0.0f; }
+     age = now_ms - yaw->last_feedback_ms;
+     if (!yaw->have_feedback || age >= YAW_CONTROLLER_FEEDBACK_TIMEOUT_MS ||
+         age >= HALF_TICK_RANGE) {
+@@ -226,8 +290,21 @@
+     yaw->target_deg = clamp(yaw->target_deg + rate_dps * (float)elapsed / 1000.0f,
+         -YAW_CONTROLLER_TARGET_LIMIT_DEG, YAW_CONTROLLER_TARGET_LIMIT_DEG);
+ #if YAW_CONTROLLER_CASCADE_ENABLED
+-    yaw->torque_nm = YawCascade_Update(&yaw->cascade, yaw->target_deg - yaw->angle_deg,
+-        yaw->last_feedback_ms, yaw->last_sequence, YAW_CONTROLLER_TORQUE_LIMIT_NM);
++    if (yaw->ff.enabled) {
++        YawCascadeFeedforward model;
++        model.bias_nm = yaw->ff.bias_nm + yaw->ff.angle_gain * yaw->angle_deg;
++        model.velocity_gain = yaw->ff.velocity_gain; model.friction_nm = yaw->ff.friction_nm;
++        model.friction_velocity_dps = yaw->ff.friction_velocity_dps; model.limit_nm = yaw->ff.limit_nm;
++        yaw->torque_nm = YawCascade_UpdateWithCompensation(&yaw->cascade, yaw->target_deg - yaw->angle_deg,
++            yaw->last_feedback_ms, yaw->last_sequence, YAW_CONTROLLER_TORQUE_LIMIT_NM, &model);
++    } else {
++        yaw->torque_nm = YawCascade_Update(&yaw->cascade, yaw->target_deg - yaw->angle_deg,
++            yaw->last_feedback_ms, yaw->last_sequence, YAW_CONTROLLER_TORQUE_LIMIT_NM);
++    }
++    yaw->pid_torque_nm = yaw->cascade.unsaturated_torque_nm - yaw->cascade.feedforward_nm;
++    if (!finite_value(yaw->torque_nm) || !finite_value(yaw->pid_torque_nm) ||
++        !finite_value(yaw->cascade.position_i) || !finite_value(yaw->cascade.speed_i) ||
++        !finite_value(yaw->cascade.target_velocity_dps)) { fault(yaw, YAW_CONTROLLER_FAULT_DATA); return 0.0f; }
+     return yaw->torque_nm;
+ #else
+     error = (yaw->target_deg - yaw->angle_deg) * DEG_TO_RAD;

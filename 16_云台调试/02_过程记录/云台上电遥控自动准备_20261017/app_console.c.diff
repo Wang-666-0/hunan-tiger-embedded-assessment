@@ -1,0 +1,80 @@
+--- before/Output/Gimbal_Control/App/app_console.c
++++ Output/Gimbal_Control/App/app_console.c
+@@ -1,4 +1,5 @@
+ #include "app_console.h"
++#include "gimbal_startup.h"
+ #include "app_tasks.h"
+ #include "app_config.h"
+ #include "app_fault.h"
+@@ -219,6 +220,34 @@
+ }
+ #endif
+ 
++#if APP_GIMBAL_REMOTE_STARTUP_ENABLED
++static void PublishStartup(uint8_t event_only)
++{
++    static const char *phases[] = { "WAIT_OFF", "PREPARING", "READY", "BLOCKED", "MANUAL" };
++    static const char *reasons[] = { "NONE", "REMOTE", "CAN", "FAULT", "REFERENCE_LOST", "DIAGNOSTIC", "STOP", "TIMEOUT" };
++    GimbalStartupState state;
++    if (event_only) { if (!GimbalStartup_TakeEvent(&state)) { return; } }
++    else { GimbalStartup_GetState(&state); }
++    (void)snprintf(telemetry, sizeof(telemetry),
++        "G|%s|PHASE|%s|REASON|%s|READY|%u|REFERENCE|%u|SEQ|%lu\r\n",
++        event_only ? "AUTO" : "STATE", state.phase <= GIMBAL_STARTUP_MANUAL ? phases[state.phase] : "UNKNOWN",
++        state.reason <= GIMBAL_STARTUP_TIMEOUT ? reasons[state.reason] : "UNKNOWN", (unsigned)state.ready,
++        (unsigned)state.reference_latched, (unsigned long)state.sequence);
++    SendText(telemetry);
++}
++static uint8_t StartupRequest(void)
++{
++    RemoteInput_State remote;
++    RemoteFrame frame;
++    RemoteInput_GetState(&remote); memset(&frame, 0, sizeof(frame));
++    memcpy(frame.channels, remote.channels, sizeof(frame.channels));
++    frame.has_frame = remote.has_frame; frame.received_ms = remote.received_ms;
++    frame.sequence = remote.valid_frames;
++    if (!GimbalStartup_Request(&frame, HAL_GetTick(), diagnostic_mode)) { return 0U; }
++    AppTasks_RequestStop(); return 1U;
++}
++#endif
++
+ static void HandleLine(void)
+ {
+     const char *cursor;
+@@ -226,8 +255,25 @@
+     DiagKind kind;
+     CanFrame check;
+     if (line[0] == '\0') { return; }
++#if APP_GIMBAL_REMOTE_STARTUP_ENABLED
++    if (strcmp(line, "GIMBAL") == 0) { PublishStartup(0U); return; }
++    if (strcmp(line, "GIMBAL READY") == 0) {
++        SendText(StartupRequest() ? "G|BUSY|READY|BASELINE|CURRENT_SUPPORTED_HORIZONTAL\r\n" :
++            "G|ERROR|READY_REQUIRES_FRESH_SAFE_OFF_AND_CAN\r\n"); return;
++    }
++    if (strcmp(line, "GIMBAL HELP") == 0) {
++        SendText("G|HELP|BOOT|SAFE_OFF_HORIZONTAL_THEN_CH5_MIDDLE|REZERO|GIMBAL READY|STEP|YAW STEP;PITCH STEP|RETURN|YAW HOME;PITCH HOME|RESULT|YAW RESULT;PITCH RESULT\r\n"); return;
++    }
++    /* Explicit legacy preparation/stop takes ownership; auto startup must not overwrite it. */
++    if (strcmp(line, "STOP") == 0 || strcmp(line, "DIAG ON") == 0 ||
++        strcmp(line, "YAW READY") == 0 || strcmp(line, "YAW ZERO") == 0 ||
++        strcmp(line, "YAW ON") == 0 || strcmp(line, "YAW OFF") == 0 || strcmp(line, "YAW CLEAR") == 0 ||
++        strcmp(line, "PITCH READY") == 0 || strcmp(line, "PITCH ZERO") == 0 || strcmp(line, "PITCH OFF") == 0 ||
++        strcmp(line, "PITCH GHORIZ") == 0 || strncmp(line, "PITCH GOFF ", 11U) == 0 ||
++        strncmp(line, "PITCH COORD ", 12U) == 0) { GimbalStartup_ManualOverride(); }
++#endif
+     if (strcmp(line, "HELP") == 0) {
+-        SendText("C|HELP|AXIS|YAW;PITCH|READ|axis;axis PID;axis RESULT|ACTION|axis READY;axis OFF|VIEW|axis VIEW|TELEM|TELEM OFF;TELEM ON|DETAIL|axis HELP\r\n"); return;
++        SendText("C|HELP|AXIS|YAW;PITCH|AUTO|GIMBAL;GIMBAL READY|READ|axis;axis PID;axis RESULT|ACTION|axis READY;axis OFF|VIEW|axis VIEW|TELEM|TELEM OFF;TELEM ON|DETAIL|axis HELP\r\n"); return;
+     }
+     if (strcmp(line, "TELEM OFF") == 0 || strcmp(line, "TELEM ON") == 0) {
+         telemetry_enabled = (uint8_t)(strcmp(line, "TELEM ON") == 0);
+@@ -770,6 +816,9 @@
+ #if APP_PITCH_ENABLED
+     if (!diagnostic_mode && PitchConsole_Poll(telemetry, sizeof(telemetry))) { SendText(telemetry); }
+ #endif
++#if APP_GIMBAL_REMOTE_STARTUP_ENABLED
++    PublishStartup(1U);
++#endif
+     if (diagnostic_mode) { PublishDiagnostics(HAL_GetTick()); }
+     else { PublishTelemetry(HAL_GetTick()); }
+ }

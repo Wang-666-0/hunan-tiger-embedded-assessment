@@ -1,0 +1,37 @@
+{
+  "version": "GL60II_CASCADE_FF_V2J",
+  "hardware_tested": false,
+  "flashed": false,
+  "groups": 62,
+  "checks": 476440,
+  "success": true,
+  "production_sources": 66,
+  "optimization": "AC5 level-0",
+  "source_sha256": {
+    "App/app_config.h": "7d86d92c1dadd10c14374d6faa129687bbfeecacff12beda3f8351d4b80eed2f",
+    "App/yaw_cascade.h": "6112e323d7e4ece7a60d01bee9d3d23bdc8d20959017fed4f29022f58beadb55",
+    "App/yaw_cascade.c": "a2589f9bddb38e53c5f0fd1ecdbec6fe2155faec85738f08c6d642d4d59b841c",
+    "App/yaw_controller.h": "2a6f13fdd2c815a77e0df61a43f6210e541a8a6e7e5004af18e9447edc26006c",
+    "App/yaw_controller.c": "f8c4263df16d25c2043efe5eb77e24ef1ef7870321ada8305520b0ea6cfb5428",
+    "App/yaw_backend.h": "3a82408f22fdc4536631a8d03d84be70531c097867cf52e40e06e2dde8276674",
+    "App/yaw_backend.c": "d420c65d0139d0500b4220448728625f4c7a05ccffd4746c981144fc2a67cfbd",
+    "App/yaw_console.c": "6763c23cf2446d5c53317444d54af72f6dce5ab72308ecaca61638a5d9316d7f",
+    "App/yaw_step.h": "93318ad69d07e309f2315a1ec6366357efa7f3e40f6c986745ce190726327a5a",
+    "App/yaw_step.c": "fdff58ac876d7055dee1370cfe082e2b41959585b56e539df34fcd45509cfadd",
+    "App/pitch_step.c": "cc80fb8aec1b9aff51c98668b654d4b5fe8dc8b90fcb9119f6e51ffc25fc0dae",
+    "App/app_console.c": "415feb9a154271268752630bf8e5b729108a06a38c45c98e415499dad73426d9"
+  },
+  "hex_sha256": "e05133ac856631069d9d6121500e2f51f704e8d468346080cef2f38c61e22146",
+  "panel_validation": {
+    "schema": "VOFA+ native export v100",
+    "commands": 30,
+    "tabs": 3,
+    "channels": 64,
+    "baud": 921600,
+    "delta_t_ms": 5,
+    "checks": "JSON, command paths, data indices, LF, loop off",
+    "source": "D:\\Project\\27电软正式批考核\\16_云台调试\\Output\\VOFA_Pitch_20261017",
+    "native_import_verified": false,
+    "hardware_used": false
+  }
+}

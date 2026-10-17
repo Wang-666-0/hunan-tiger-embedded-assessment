@@ -1,0 +1,106 @@
+--- before/Output/Gimbal_Control/App/pitch_console.c
++++ Output/Gimbal_Control/App/pitch_console.c
+@@ -94,7 +94,7 @@
+     int length;
+     PitchBackend_GetState(&pitch); CanBus_GetState(&bus);
+     length = snprintf(response, capacity,
+-        "P|%s|%s|QUERY|%s|CTRL|CASCADE|ONLINE|%u|ACTIVE|%u|REQUESTED|%u|ENABLING|%u|STATUS|%u|FAULT|%lu|AGE_MS|%lu|RX|%lu|STOP_PENDING|%u|COORD_CONFIRMED|%u|FEEDBACK_DIVISOR|%u|RAW_RAD|%.6f|RAW_RAD_S|%.5f|ANGLE|%.3f|TARGET|%.3f|VREF_DPS|%.2f|VEL_DPS|%.2f|TORQUE_NM|%.5f|FB_NM|%.5f|PKP|%.6g|PKI|%.6g|PKD|%.6g|VKP|%.6g|VKI|%.6g|VKD|%.6g|OUTPUT_LIMITS|0|PROTOCOL_NM|10|MIN_DEG|%.0f|MAX_DEG|%.0f|HARD_MIN_DEG|%.0f|HARD_MAX_DEG|%.0f|ZERO_SET|%u|D_TEMP|%u|M_TEMP|%u|CAN_EPOCH|%lu|REMOTE|%s|TELEM_MS|%u|BAUD|%lu|READ_ONLY_MONITOR|%u|P_STOP_ID|%lu|P_STOP|%s|SUPPORT_REQUIRED|1\r\n",
++        "P|%s|%s|QUERY|%s|CTRL|CASCADE|ONLINE|%u|ACTIVE|%u|REQUESTED|%u|ENABLING|%u|STATUS|%u|FAULT|%lu|AGE_MS|%lu|RX|%lu|STOP_PENDING|%u|COORD_CONFIRMED|%u|FEEDBACK_DIVISOR|%u|RAW_RAD|%.6f|RAW_RAD_S|%.5f|ANGLE|%.3f|TARGET|%.3f|VREF_DPS|%.2f|VEL_DPS|%.2f|TORQUE_NM|%.5f|FB_NM|%.5f|PKP|%.6g|PKI|%.6g|PKD|%.6g|VKP|%.6g|VKI|%.6g|VKD|%.6g|OUTPUT_LIMITS|0|PROTOCOL_NM|10|MIN_DEG|%.0f|MAX_DEG|%.0f|HARD_MIN_DEG|%.0f|HARD_MAX_DEG|%.0f|ZERO_SET|%u|D_TEMP|%u|M_TEMP|%u|CAN_EPOCH|%lu|REMOTE|%s|TELEM_MS|%u|BAUD|%lu|READ_ONLY_MONITOR|%u|P_STOP_ID|%lu|P_STOP|%s|KG|%.6g|GOFF_DEG|%.6g|G_CAL|%u|SUPPORT_REQUIRED|1\r\n",
+         kind, APP_PITCH_VERSION, query_result, (unsigned)pitch.online, (unsigned)pitch.active,
+         (unsigned)pitch.requested, (unsigned)pitch.enabling, (unsigned)pitch.feedback.status,
+         (unsigned long)pitch.controller.faults, (unsigned long)pitch.feedback_age_ms,
+@@ -113,20 +113,42 @@
+         (unsigned)pitch.feedback.temp_mos, (unsigned)pitch.feedback.temp_rotor,
+         (unsigned long)bus.fault_epoch, RemoteReason(1U), (unsigned)APP_TELEMETRY_PERIOD_MS,
+         (unsigned long)APP_CONSOLE_BAUDRATE, (unsigned)pitch.monitoring,
+-        (unsigned long)pitch.stop_id, StopName(pitch.stop_reason));
++        (unsigned long)pitch.stop_id, StopName(pitch.stop_reason), (double)pitch.controller.gravity_kg_nm,
++        (double)pitch.controller.gravity_offset_deg, (unsigned)pitch.controller.gravity_calibrated);
+     return (uint8_t)(length > 0 && (size_t)length < capacity);
+ }
+ 
++static uint8_t GravityReport(const char *kind, char *response, size_t capacity)
++{
++    PitchBackendState pitch;
++    const PitchController *p;
++    const YawCascade *c;
++    float speed_error, proportional, derivative;
++    int length;
++    PitchBackend_GetState(&pitch); p = &pitch.controller; c = &p->cascade;
++    speed_error = c->target_velocity_dps - c->velocity_dps;
++    proportional = p->active ? c->speed.kp * speed_error : 0.0f;
++    derivative = p->active ? -c->speed.kd * c->acceleration_dps2 : 0.0f;
++    length = snprintf(response, capacity,
++        "P|%s|KG|%.6g|GOFF_DEG|%.6g|G_CAL|%u|PHYSICAL_DEG|%.3f|GFF_NM|%.6g|VP_NM|%.6g|VI_NM|%.6g|VD_NM|%.6g|PID_NM|%.6g|SUM_NM|%.6g|OUT_NM|%.6g|SAT|%u|I_TRANSFER|%u|RAM_ONLY|1\r\n",
++        kind, (double)p->gravity_kg_nm, (double)p->gravity_offset_deg, (unsigned)p->gravity_calibrated,
++        (double)(p->angle_deg + p->gravity_offset_deg), (double)p->gravity_torque_nm,
++        (double)proportional, (double)c->speed_i, (double)derivative, (double)p->pid_torque_nm,
++        (double)c->unsaturated_torque_nm, (double)p->torque_nm, (unsigned)c->torque_limited,
++        (unsigned)p->gravity_i_transferred);
++    return (uint8_t)(length > 0 && (size_t)length < capacity);
++}
++
+ static uint8_t StepReport(const PitchStep *value, char *response, size_t capacity)
+ {
+     static const char *phases[] = { "IDLE", "RUNNING", "DONE", "ABORTED" };
+-    static const char *reasons[] = { "NONE", "STOP", "FAULT", "PID_CHANGE", "TARGET_CHANGE", "MANUAL", "GAP", "DATA" };
++    static const char *reasons[] = { "NONE", "STOP", "FAULT", "PID_CHANGE", "TARGET_CHANGE", "MANUAL", "GAP", "DATA", "FF_CHANGE" };
+     uint32_t rise = value->t10_ms != PITCH_STEP_UNREACHED && value->t90_ms != PITCH_STEP_UNREACHED ?
+         value->t90_ms - value->t10_ms : PITCH_STEP_UNREACHED;
+     int length = snprintf(response, capacity,
+-        "P|STEP|ID|%lu|STATE|%s|REASON|%s|VALID|%u|START|%.3f|TARGET|%.3f|WINDOW_MS|%lu|RESP_MS|%ld|T90_MS|%ld|RISE_MS|%ld|SETTLE_MS|%ld|OS_DEG|%.3f|OS_PCT|%.3f|SSE_DEG|%.3f|SSE_VALID|%u|PASS|%u|FAULT|%lu|VMAX_DPS|%.2f|TMAX_NM|%.5f|N|%lu|GAP_MS|%lu|SAT_N|%lu|CMD_N|%lu|FIRST_NM|%.5f|CTRL|CASCADE|PKP|%.6g|PKI|%.6g|PKD|%.6g|VKP|%.6g|VKI|%.6g|VKD|%.6g|OUTPUT_LIMITS|0|RESP_LIMIT_MS|300|RESPONSE|FIRST_IN_BAND\r\n",
++        "P|STEP|ID|%lu|STATE|%s|REASON|%s|VALID|%u|START|%.3f|TARGET|%.3f|WINDOW_MS|%lu|RESP_MS|%ld|T90_MS|%ld|RISE_MS|%ld|SETTLE_MS|%ld|OS_DEG|%.3f|OS_PCT|%.3f|SSE_DEG|%.3f|SSE_VALID|%u|PASS|%u|FAULT|%lu|VMAX_DPS|%.2f|TMAX_NM|%.5f|N|%lu|GAP_MS|%lu|SAT_N|%lu|CMD_N|%lu|FIRST_NM|%.5f|CTRL|CASCADE|PKP|%.6g|PKI|%.6g|PKD|%.6g|VKP|%.6g|VKI|%.6g|VKD|%.6g|OUTPUT_LIMITS|0|RESP_LIMIT_MS|300|RESPONSE|FIRST_IN_BAND|KG|%.6g|GOFF_DEG|%.6g|G_CAL|%u\r\n",
+         (unsigned long)value->id, value->phase <= PITCH_STEP_ABORTED ? phases[value->phase] : "UNKNOWN",
+-        value->reason <= PITCH_STEP_DATA ? reasons[value->reason] : "UNKNOWN",
++        value->reason <= PITCH_STEP_FF_CHANGE ? reasons[value->reason] : "UNKNOWN",
+         (unsigned)(value->phase == PITCH_STEP_DONE), (double)value->start_deg, (double)value->target_deg,
+         (unsigned long)value->elapsed_ms, (long)(int32_t)value->response_ms, (long)(int32_t)value->t90_ms,
+         (long)(int32_t)rise, (long)(int32_t)value->settle_ms, (double)value->overshoot_deg,
+@@ -135,7 +157,8 @@
+         (double)value->peak_torque_nm, (unsigned long)value->samples, (unsigned long)value->max_gap_ms,
+         (unsigned long)value->limited_samples, (unsigned long)value->command_samples,
+         (double)value->first_command_nm, (double)value->kp, (double)value->ki, (double)value->kd,
+-        (double)value->vkp, (double)value->vki, (double)value->vkd);
++        (double)value->vkp, (double)value->vki, (double)value->vkd,
++        (double)value->gravity_kg_nm, (double)value->gravity_offset_deg, (unsigned)value->gravity_calibrated);
+     return (uint8_t)(length > 0 && (size_t)length < capacity);
+ }
+ 
+@@ -284,6 +307,9 @@
+             (double)pitch.controller.cascade.speed.ki, (double)pitch.controller.cascade.speed.kd);
+         return 1U;
+     }
++    if (strcmp(line, "PITCH FF") == 0) {
++        (void)GravityReport("FF", response, capacity); return 1U;
++    }
+     if (pending_operation) {
+         (void)snprintf(response, capacity, "P|BUSY|%s|USE_PITCH_OFF_TO_CANCEL\r\n",
+             pending_operation == 1U ? "CHECK" : "READY"); return 1U;
+@@ -317,6 +343,27 @@
+         } else { (void)snprintf(response, capacity, "P|ERROR|%s|%s\r\n", ready ? "READY" : "CHECK", reason); }
+         return 1U;
+     }
++    if (strncmp(line, "PITCH KG ", 9U) == 0 || strcmp(line, "PITCH FF OFF") == 0) {
++        uint8_t parsed = (uint8_t)(strcmp(line, "PITCH FF OFF") == 0 || Number(line + 9U, &value));
++        taskENTER_CRITICAL();
++        if (parsed && !AppConsole_IsDiagnosticMode()) { accepted = PitchBackend_SetGravityGain(value); }
++        taskEXIT_CRITICAL();
++        if (accepted) { (void)GravityReport("OK|KG_SET", response, capacity); }
++        else { (void)snprintf(response, capacity, "P|ERROR|KG_REQUIRES_CALIBRATED_HEALTHY_ZERO_AND_RANGE_MINUS10_PLUS10\r\n"); }
++        return 1U;
++    }
++    if (strncmp(line, "PITCH GOFF ", 11U) == 0 || strcmp(line, "PITCH GHORIZ") == 0) {
++        uint8_t horizontal = (uint8_t)(strcmp(line, "PITCH GHORIZ") == 0);
++        uint8_t parsed = (uint8_t)(horizontal || Number(line + 11U, &value));
++        taskENTER_CRITICAL();
++        if (parsed && strcmp(RemoteReason(1U), "OK") == 0) {
++            accepted = PitchBackend_SetGravityOffset(value, horizontal);
++        }
++        taskEXIT_CRITICAL();
++        if (accepted) { (void)GravityReport("OK|HORIZONTAL_SET", response, capacity); }
++        else { (void)snprintf(response, capacity, "P|ERROR|GOFF_REQUIRES_OFF_ZERO_FRESH_DISABLED_AND_RANGE_MINUS180_PLUS180\r\n"); }
++        return 1U;
++    }
+     if (strncmp(line, "PITCH COORD ", 12U) == 0) {
+         uint8_t parsed = (uint8_t)(Number(line + 12U, &value) && (value == 1.0f || value == 7.0f));
+         taskENTER_CRITICAL();

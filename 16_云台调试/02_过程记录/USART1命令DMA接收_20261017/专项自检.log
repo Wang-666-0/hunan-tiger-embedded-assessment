@@ -1,0 +1,4 @@
+{"name": "pitch_console_dma", "checks": 618, "failures": 0, "first_failed_line": 0, "stage": 3, "finished": 1, "returned": true, "compile_defines": ["-DAPP_CONSOLE_RX_DMA_ENABLED=1"]}
+{"name": "pitch_console", "checks": 129, "failures": 0, "first_failed_line": 0, "stage": 4, "finished": 1, "returned": true, "compile_defines": ["-DAPP_CONSOLE_RX_DMA_ENABLED=0"]}
+{"name": "pitch_telemetry", "checks": 21292, "failures": 0, "first_failed_line": 0, "stage": 4, "finished": 1, "returned": true, "compile_defines": ["-DAPP_CONSOLE_RX_DMA_ENABLED=0"], "telemetry_max_bytes": 244, "telemetry_max_wire_us": 2648}
+Report: D:\Project\27电软正式批考核\16_云台调试\Output\Gimbal_Control\Tests\selftest_results_selected.json

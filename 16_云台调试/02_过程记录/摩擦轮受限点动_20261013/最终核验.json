@@ -1,0 +1,13 @@
+{
+  "recorded_at": "2026-10-13T09:02:11.5806602+08:00",
+  "verified_app_files": 34,
+  "source_mismatches": 0,
+  "hex_sha256": "1F39AD42AF490232AD83043A6466914A38086673C6FF03654CBD24B59F929E51",
+  "c_test_groups": 12,
+  "c_checks": 156229.0,
+  "c_failures": 0.0,
+  "pc_unittest_count": 14,
+  "pc_unittest_passed": true,
+  "hardware_connected": false,
+  "firmware_flashed": false
+}

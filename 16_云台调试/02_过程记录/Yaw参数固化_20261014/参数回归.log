@@ -1,0 +1,6 @@
+{"name": "yaw_cascade", "checks": 6103, "failures": 0, "first_failed_line": 0, "stage": 8, "finished": 1, "returned": true, "compile_defines": ["-DYAW_CASCADE_OUTPUT_LIMITS_ENABLED=1", "-DAPP_YAW_POSITION_KP=8.0f", "-DAPP_YAW_POSITION_KI=0.0f", "-DAPP_YAW_POSITION_KD=0.0f", "-DAPP_YAW_SPEED_KP=0.001f", "-DAPP_YAW_SPEED_KI=0.004f", "-DAPP_YAW_SPEED_KD=0.0f"]}
+{"name": "yaw_cascade_console", "checks": 1659, "failures": 0, "first_failed_line": 0, "stage": 4, "finished": 1, "returned": true, "compile_defines": ["-DYAW_CASCADE_OUTPUT_LIMITS_ENABLED=1", "-DAPP_YAW_POSITION_KP=8.0f", "-DAPP_YAW_POSITION_KI=0.0f", "-DAPP_YAW_POSITION_KD=0.0f", "-DAPP_YAW_SPEED_KP=0.001f", "-DAPP_YAW_SPEED_KI=0.004f", "-DAPP_YAW_SPEED_KD=0.0f"]}
+{"name": "yaw_cascade_unlimited", "checks": 6168, "failures": 0, "first_failed_line": 0, "stage": 5, "finished": 1, "returned": true, "compile_defines": []}
+{"name": "yaw_cascade_unlimited_console", "checks": 1602, "failures": 0, "first_failed_line": 0, "stage": 4, "finished": 1, "returned": true, "compile_defines": []}
+{"name": "yaw_performance", "checks": 13130, "failures": 0, "first_failed_line": 0, "stage": 4, "finished": 1, "returned": true, "compile_defines": []}
+Report: D:\Project\27电软正式批考核\16_云台调试\Output\Gimbal_Control\Tests\selftest_results_selected.json

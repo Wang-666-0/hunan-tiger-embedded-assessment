@@ -1,0 +1,56 @@
+--- before/Output/Gimbal_Control/App/pitch_backend.c
++++ Output/Gimbal_Control/App/pitch_backend.c
+@@ -101,6 +101,7 @@
+         if (accepted) {
+             state.coord_confirmed = 1U; state.zero_set = 0U;
+             state.controller.have_reference = 0U;
++            PitchController_ClearGravity(&state.controller);
+             PitchStep_Abort(&step, HAL_GetTick(), PITCH_STEP_TARGET_CHANGE, 0U);
+         }
+     }
+@@ -201,6 +202,35 @@
+             PitchStep_Abort(&step, HAL_GetTick(), PITCH_STEP_TARGET_CHANGE, 0U);
+             state.step_hold = 1U;
+         }
++    }
++    taskEXIT_CRITICAL(); return accepted;
++}
++
++uint8_t PitchBackend_SetGravityGain(float kg_nm)
++{
++    uint8_t accepted = 0U;
++    float previous;
++    taskENTER_CRITICAL(); previous = state.controller.gravity_kg_nm;
++    if (kg_nm == 0.0f || (state.coord_confirmed && state.zero_set && Online(HAL_GetTick()) &&
++        !state.enabling && !state.stop_pending && !state.controller.faults &&
++        ((!state.active && state.feedback.status == 0U) ||
++         (state.active && state.feedback.status == 1U && CanBus_PitchAllowed())))) {
++        accepted = PitchController_SetGravityGain(&state.controller, kg_nm);
++        if (accepted && previous != state.controller.gravity_kg_nm) {
++            PitchStep_Abort(&step, HAL_GetTick(), PITCH_STEP_FF_CHANGE, 0U);
++        }
++    }
++    taskEXIT_CRITICAL(); return accepted;
++}
++uint8_t PitchBackend_SetGravityOffset(float offset_deg, uint8_t capture_horizontal)
++{
++    uint8_t accepted = 0U;
++    taskENTER_CRITICAL();
++    if (state.coord_confirmed && state.zero_set && Online(HAL_GetTick()) &&
++        !state.active && !state.enabling && !state.stop_pending && state.feedback.status == 0U &&
++        !state.controller.faults) {
++        accepted = capture_horizontal ? PitchController_CaptureHorizontal(&state.controller) :
++            PitchController_SetGravityOffset(&state.controller, offset_deg);
+     }
+     taskEXIT_CRITICAL(); return accepted;
+ }
+@@ -228,6 +258,9 @@
+                 step.vkp = state.controller.cascade.speed.kp;
+                 step.vki = state.controller.cascade.speed.ki;
+                 step.vkd = state.controller.cascade.speed.kd;
++                step.gravity_kg_nm = state.controller.gravity_kg_nm;
++                step.gravity_offset_deg = state.controller.gravity_offset_deg;
++                step.gravity_calibrated = state.controller.gravity_calibrated;
+                 step.cascade = 1U; step.output_limits = 0U; step.vmax_dps = 0.0f;
+                 step.last_velocity_dps = state.controller.velocity_dps;
+                 step.last_torque_nm = submitted_torque;

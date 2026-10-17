@@ -1,0 +1,97 @@
+--- before/Output/Gimbal_Control/App/pitch_console.c
++++ Output/Gimbal_Control/App/pitch_console.c
+@@ -94,7 +94,7 @@
+     int length;
+     PitchBackend_GetState(&pitch); CanBus_GetState(&bus);
+     length = snprintf(response, capacity,
+-        "P|%s|%s|QUERY|%s|CTRL|CASCADE|ONLINE|%u|ACTIVE|%u|REQUESTED|%u|ENABLING|%u|STATUS|%u|FAULT|%lu|AGE_MS|%lu|RX|%lu|STOP_PENDING|%u|COORD_CONFIRMED|%u|FEEDBACK_DIVISOR|%u|RAW_RAD|%.6f|RAW_RAD_S|%.5f|ANGLE|%.3f|TARGET|%.3f|VREF_DPS|%.2f|VEL_DPS|%.2f|TORQUE_NM|%.5f|FB_NM|%.5f|PKP|%.6g|PKI|%.6g|PKD|%.6g|VKP|%.6g|VKI|%.6g|VKD|%.6g|OUTPUT_LIMITS|0|PROTOCOL_NM|10|MIN_DEG|%.0f|MAX_DEG|%.0f|HARD_MIN_DEG|%.0f|HARD_MAX_DEG|%.0f|ZERO_SET|%u|D_TEMP|%u|M_TEMP|%u|CAN_EPOCH|%lu|REMOTE|%s|TELEM_MS|%u|BAUD|%lu|READ_ONLY_MONITOR|%u|P_STOP_ID|%lu|P_STOP|%s|KG|%.6g|GOFF_DEG|%.6g|G_CAL|%u|SUPPORT_REQUIRED|1\r\n",
++        "P|%s|%s|QUERY|%s|CTRL|CASCADE|ONLINE|%u|ACTIVE|%u|REQUESTED|%u|ENABLING|%u|STATUS|%u|FAULT|%lu|AGE_MS|%lu|RX|%lu|STOP_PENDING|%u|COORD_CONFIRMED|%u|FEEDBACK_DIVISOR|%u|RAW_RAD|%.6f|RAW_RAD_S|%.5f|ANGLE|%.3f|TARGET|%.3f|VREF_DPS|%.2f|VEL_DPS|%.2f|TORQUE_NM|%.5f|FB_NM|%.5f|PKP|%.6g|PKI|%.6g|PKD|%.6g|VKP|%.6g|VKI|%.6g|VKD|%.6g|OUTPUT_LIMITS|0|PROTOCOL_NM|10|MIN_DEG|%.0f|MAX_DEG|%.0f|HARD_MIN_DEG|%.0f|HARD_MAX_DEG|%.0f|ZERO_SET|%u|D_TEMP|%u|M_TEMP|%u|CAN_EPOCH|%lu|REMOTE|%s|TELEM_MS|%u|BAUD|%lu|READ_ONLY_MONITOR|%u|P_STOP_ID|%lu|P_STOP|%s|KG|%.6g|GOFF_DEG|%.6g|G_CAL|%u|G_REQUIRED|%u|MANUAL_DPS|%.0f|SUPPORT_REQUIRED|1\r\n",
+         kind, APP_PITCH_VERSION, query_result, (unsigned)pitch.online, (unsigned)pitch.active,
+         (unsigned)pitch.requested, (unsigned)pitch.enabling, (unsigned)pitch.feedback.status,
+         (unsigned long)pitch.controller.faults, (unsigned long)pitch.feedback_age_ms,
+@@ -114,7 +114,9 @@
+         (unsigned long)bus.fault_epoch, RemoteReason(1U), (unsigned)APP_TELEMETRY_PERIOD_MS,
+         (unsigned long)APP_CONSOLE_BAUDRATE, (unsigned)pitch.monitoring,
+         (unsigned long)pitch.stop_id, StopName(pitch.stop_reason), (double)pitch.controller.gravity_kg_nm,
+-        (double)pitch.controller.gravity_offset_deg, (unsigned)pitch.controller.gravity_calibrated);
++        (double)pitch.controller.gravity_offset_deg, (unsigned)pitch.controller.gravity_calibrated,
++        (unsigned)(pitch.controller.gravity_kg_nm != 0.0f && !pitch.controller.gravity_calibrated),
++        (double)APP_PITCH_RATE_LIMIT_DPS);
+     return (uint8_t)(length > 0 && (size_t)length < capacity);
+ }
+ 
+@@ -130,8 +132,9 @@
+     proportional = p->active ? c->speed.kp * speed_error : 0.0f;
+     derivative = p->active ? -c->speed.kd * c->acceleration_dps2 : 0.0f;
+     length = snprintf(response, capacity,
+-        "P|%s|KG|%.6g|GOFF_DEG|%.6g|G_CAL|%u|PHYSICAL_DEG|%.3f|GFF_NM|%.6g|VP_NM|%.6g|VI_NM|%.6g|VD_NM|%.6g|PID_NM|%.6g|SUM_NM|%.6g|OUT_NM|%.6g|SAT|%u|I_TRANSFER|%u|RAM_ONLY|1\r\n",
++        "P|%s|KG|%.6g|GOFF_DEG|%.6g|G_CAL|%u|G_REQUIRED|%u|PHYSICAL_DEG|%.3f|GFF_NM|%.6g|VP_NM|%.6g|VI_NM|%.6g|VD_NM|%.6g|PID_NM|%.6g|SUM_NM|%.6g|OUT_NM|%.6g|SAT|%u|I_TRANSFER|%u|RAM_ONLY|1\r\n",
+         kind, (double)p->gravity_kg_nm, (double)p->gravity_offset_deg, (unsigned)p->gravity_calibrated,
++        (unsigned)(p->gravity_kg_nm != 0.0f && !p->gravity_calibrated),
+         (double)(p->angle_deg + p->gravity_offset_deg), (double)p->gravity_torque_nm,
+         (double)proportional, (double)c->speed_i, (double)derivative, (double)p->pid_torque_nm,
+         (double)c->unsaturated_torque_nm, (double)p->torque_nm, (unsigned)c->torque_limited,
+@@ -219,7 +222,7 @@
+                 taskEXIT_CRITICAL();
+                 if (prepared) {
+                     (void)snprintf(response, capacity,
+-                        "P|OK|READY|ZERO_SET|1|REQUESTED|1|ACTIVE|0|FC_SENT|0|FD_SENT|0|NEXT|NEW_CH5_OFF_THEN_MANUAL_OR_TEST|SUPPORT_REQUIRED|1\r\n");
++                        "P|OK|READY|ZERO_SET|1|REQUESTED|1|ACTIVE|0|FC_SENT|0|FD_SENT|0|NEXT|GHORIZ_IF_KG_NONZERO_THEN_NEW_CH5_OFF_THEN_MANUAL_OR_TEST|SUPPORT_REQUIRED|1\r\n");
+                     return 1U;
+                 }
+             }
+@@ -278,12 +281,31 @@
+     return 0U;
+ }
+ 
++static void BriefStatus(char *response, size_t capacity)
++{
++    PitchBackendState state;
++    PitchBackend_GetState(&state);
++    (void)snprintf(response, capacity,
++        "P|STATE|%s|ONLINE|%u|ACTIVE|%u|REQUESTED|%u|ZERO_SET|%u|FAULT|%lu|AGE_MS|%lu|ANGLE|%.3f|TARGET|%.3f|VEL_DPS|%.2f|TORQUE_NM|%.5f|KG|%.6g|G_CAL|%u\r\n",
++        APP_PITCH_VERSION, (unsigned)state.online, (unsigned)state.active, (unsigned)state.requested,
++        (unsigned)state.zero_set, (unsigned long)state.controller.faults, (unsigned long)state.feedback_age_ms,
++        (double)state.controller.angle_deg, (double)state.controller.target_deg,
++        (double)state.controller.cascade.velocity_dps, (double)state.controller.torque_nm, (double)state.controller.gravity_kg_nm, (unsigned)state.controller.gravity_calibrated);
++}
++
+ uint8_t PitchConsole_Handle(const char *line, char *response, size_t capacity)
+ {
+     PitchBackendState pitch;
+     uint8_t accepted = 0U;
+     float value = 0.0f;
+-    if (!line || !response || !capacity || strncmp(line, "PITCH ", 6U) != 0) { return 0U; }
++    if (!line || !response || !capacity ||
++        (strcmp(line, "PITCH") != 0 && strncmp(line, "PITCH ", 6U) != 0)) { return 0U; }
++    if (strcmp(line, "PITCH") == 0) { BriefStatus(response, capacity); return 1U; }
++    if (strcmp(line, "PITCH HELP") == 0 || strcmp(line, "PITCH ?") == 0) {
++        (void)snprintf(response, capacity,
++            "P|HELP|READ|PITCH;PID;RESULT;STATUS|PREPARE|READY|STOP|OFF|VIEW|PITCH VIEW|TUNE|POS kp ki kd;VEL kp ki kd;PKP/PKI/PKD/VKP/VKI/VKD value|TELEM|TELEM OFF/ON|TEST|REMOTE_CH5_CH7|PITCH_ONLY|COORD 1;GHORIZ;FF;KG value;GOFF degrees\r\n");
++        return 1U;
++    }
+     if (strcmp(line, "PITCH OFF") == 0) {
+         taskENTER_CRITICAL(); pending_operation = 0U;
+         (void)PitchBackend_Request(0U); AppTasks_RequestStop(); taskEXIT_CRITICAL();
+@@ -301,10 +323,11 @@
+     if (strcmp(line, "PITCH PID") == 0) {
+         PitchBackend_GetState(&pitch);
+         (void)snprintf(response, capacity,
+-            "P|PID|POS|%.6g,%.6g,%.6g|VEL|%.6g,%.6g,%.6g|OUTPUT_LIMITS|0|RAM_ONLY|1|INITIAL_NOT_TUNED|1\r\n",
++            "P|PID|POS|%.6g,%.6g,%.6g|VEL|%.6g,%.6g,%.6g|KG|%.6g|G_CAL|%u|OUTPUT_LIMITS|0|RUNTIME_RAM_ONLY|1|BOOT_DEFAULTS_SAVED|1\r\n",
+             (double)pitch.controller.cascade.position.kp, (double)pitch.controller.cascade.position.ki,
+             (double)pitch.controller.cascade.position.kd, (double)pitch.controller.cascade.speed.kp,
+-            (double)pitch.controller.cascade.speed.ki, (double)pitch.controller.cascade.speed.kd);
++            (double)pitch.controller.cascade.speed.ki, (double)pitch.controller.cascade.speed.kd,
++            (double)pitch.controller.gravity_kg_nm, (unsigned)pitch.controller.gravity_calibrated);
+         return 1U;
+     }
+     if (strcmp(line, "PITCH FF") == 0) {
+@@ -425,5 +448,5 @@
+     if (strncmp(line, "PITCH VMAX", 10U) == 0) {
+         (void)snprintf(response, capacity, "P|ERROR|OUTPUT_LIMITS_DISABLED\r\n"); return 1U;
+     }
+-    (void)snprintf(response, capacity, "P|ERROR|UNKNOWN_COMMAND_USE_PITCH_STATUS_OR_PID\r\n"); return 1U;
+-}
++    (void)snprintf(response, capacity, "P|ERROR|UNKNOWN_COMMAND|USE|PITCH HELP\r\n"); return 1U;
++}

@@ -1,0 +1,21 @@
+--- before/Output/Gimbal_Control/App/pitch_backend.c
++++ Output/Gimbal_Control/App/pitch_backend.c
+@@ -101,7 +101,7 @@
+         if (accepted) {
+             state.coord_confirmed = 1U; state.zero_set = 0U;
+             state.controller.have_reference = 0U;
+-            PitchController_ClearGravity(&state.controller);
++            PitchController_InvalidateGravity(&state.controller);
+             PitchStep_Abort(&step, HAL_GetTick(), PITCH_STEP_TARGET_CHANGE, 0U);
+         }
+     }
+@@ -317,7 +317,8 @@
+     }
+     wanted = (uint8_t)(APP_PITCH_ENABLED && state.requested && state.coord_confirmed &&
+         state.zero_set && allowed && !diagnostic && request && Online(now) &&
+-        !state.controller.faults && !state.stop_pending);
++        !state.controller.faults && !state.stop_pending &&
++        (state.controller.gravity_kg_nm == 0.0f || state.controller.gravity_calibrated));
+     if (!wanted) {
+         if (event) { Notice(request, 3U); }
+         if (state.active || state.enabling) { StopWithReason(PITCH_STOP_PERMISSION); rearm_request = 1U; }

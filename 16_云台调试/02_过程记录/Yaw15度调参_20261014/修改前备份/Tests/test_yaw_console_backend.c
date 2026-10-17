@@ -1,0 +1,198 @@
+﻿/* Reuse the backend transport substitute, fixtures and assertion counters;
+ * this group links the real console, backend, controller and remote logic. */
+#define test_run backend_standalone_test_run
+#include "test_yaw_backend.c"
+#undef test_run
+#include "yaw_console.h"
+#include "app_tasks.h"
+#include "app_console.h"
+#include "remote_input.h"
+
+static RemoteInput_State receiver;
+static AppState application;
+static uint32_t stop_sequence, stop_calls;
+static uint8_t diagnostic_mode;
+static char response[512];
+
+void RemoteInput_GetState(RemoteInput_State *out) { if (out) { *out = receiver; } }
+void AppTasks_GetState(AppState *out) { if (out) { *out = application; } }
+uint8_t AppConsole_IsDiagnosticMode(void) { return diagnostic_mode; }
+void AppTasks_RequestStop(void)
+{
+    ++stop_sequence; ++stop_calls;
+    YawBackend_Stop(); /* actual effect which formerly prevented fault recovery */
+}
+
+static void ConsoleReset(uint32_t timestamp)
+{
+    uint32_t i;
+    Reset(timestamp);
+    memset(&receiver, 0, sizeof(receiver)); memset(&application, 0, sizeof(application));
+    for (i = 0U; i < 14U; ++i) { receiver.channels[i] = RC_CENTER; }
+    receiver.channels[RC_ARM_CHANNEL] = 1000U;
+    receiver.channels[RC_FRICTION_CHANNEL] = 1000U;
+    receiver.has_frame = 1U; receiver.received_ms = timestamp;
+    receiver.valid_frames = 1U; stop_sequence = stop_calls = 0U; diagnostic_mode = 0U;
+    AppLogic_Init(&application.logic);
+}
+
+/* Model the real task's remote protection and Yaw submission order. CH6 stays
+ * OFF and no wheel feedback is supplied. Each call receives a new iBUS frame. */
+static void Control(uint32_t timestamp, uint8_t mode_on)
+{
+    SafetyInput input;
+    now_ms = timestamp;
+    receiver.channels[RC_ARM_CHANNEL] = mode_on ? 1500U : 1000U;
+    receiver.received_ms = timestamp; ++receiver.valid_frames;
+    Read(); memset(&input, 0, sizeof(input));
+    memcpy(input.remote.channels, receiver.channels, sizeof(input.remote.channels));
+    input.remote.has_frame = receiver.has_frame;
+    input.remote.received_ms = timestamp; input.remote.sequence = receiver.valid_frames;
+    input.now_ms = timestamp; input.stop_sequence = stop_sequence; input.can_epoch = bus.fault_epoch;
+    input.backend_ready = state.requested;
+    input.feedback_ready = state.online && !state.stop_pending && !state.controller.faults;
+    input.actuator_fault = state.requested && state.controller.faults != 0U;
+    AppLogic_Step(&application.logic, &input, 0U);
+    request = application.logic.targets.request;
+    YawBackend_Apply(&request, application.logic.safety.output_allowed, diagnostic_mode);
+    if (YawBackend_TakeRearmRequest()) {
+        AppTasks_RequestStop();
+        application.logic.safety.operator_armed = application.logic.safety.output_allowed = 0U;
+    }
+    Read();
+}
+
+static void Command(uint32_t timestamp, const char *line, const char *expected)
+{
+    now_ms = timestamp; memset(response, 0, sizeof(response));
+    CHECK(YawConsole_Handle(line, response, sizeof(response)) == 1U);
+    CHECK(strstr(response, expected) != 0); Read();
+}
+
+static void ConsolePrepare(uint32_t timestamp)
+{
+    ConsoleReset(timestamp); Control(timestamp, 0U);
+    Command(timestamp + 2U, "YAW ON", "Y|OK|PREPARE");
+    CHECK(state.requested && state.stop_pending && enable_calls == 0U && torque_calls == 0U);
+    Control(timestamp + 4U, 0U);
+    CHECK(disable_calls == 1U && enable_calls == 0U);
+    Feed(timestamp + 6U, 0U); Control(timestamp + 6U, 0U);
+    Feed(timestamp + 28U, 0U); Control(timestamp + 28U, 0U);
+    CHECK(!state.stop_pending && state.online && !application.logic.safety.operator_armed);
+    Control(timestamp + 30U, 1U);
+    CHECK(application.logic.safety.operator_armed && state.enabling && !state.active && enable_calls == 1U);
+}
+
+static void ConsoleActivate(uint32_t timestamp)
+{
+    uint32_t t;
+    ConsolePrepare(timestamp);
+    Feed(timestamp + 32U, 1U); Control(timestamp + 32U, 1U);
+    CHECK(state.active && !state.enabling && torque_calls == 0U);
+    for (t = timestamp + 34U; t <= timestamp + 40U; t += 2U) { Control(t, 1U); }
+    CHECK(state.active && torque_calls == 1U && permission);
+}
+
+static void RecoverThroughConsole(uint32_t timestamp)
+{
+    uint32_t before_enables = enable_calls, before_stops;
+    uint32_t fault = state.controller.faults;
+    CHECK(fault != 0U && !state.active && !permission);
+    Control(timestamp, 0U);
+    Command(timestamp + 2U, "YAW OFF", "Y|OK|OFF");
+    CHECK(!state.requested && state.stop_pending && state.controller.faults != 0U);
+    Feed(timestamp + 4U, 0U); Control(timestamp + 4U, 0U);
+    Feed(timestamp + 26U, 0U); Control(timestamp + 26U, 0U);
+    CHECK(!state.stop_pending && state.online && !application.logic.safety.operator_armed);
+    before_stops = stop_calls;
+    Command(timestamp + 28U, "YAW ON", "Y|OK|PREPARE");
+    CHECK(stop_calls == before_stops + 1U); /* actual STOP precedes Request */
+    CHECK(state.requested && state.controller.faults == 0U && state.stop_pending);
+    CHECK(!state.active && !state.enabling && enable_calls == before_enables);
+    /* Switching CH5 ON immediately cannot outrun the STOP/new-feedback barrier. */
+    Control(timestamp + 30U, 1U); Control(timestamp + 32U, 1U);
+    CHECK(enable_calls == before_enables && !state.active && state.stop_pending);
+    Feed(timestamp + 34U, 0U); Control(timestamp + 34U, 1U);
+    CHECK(!state.stop_pending && enable_calls == before_enables && !application.logic.safety.operator_armed);
+    /* New healthy status0 is insufficient: operator must issue fresh OFF->ON. */
+    Control(timestamp + 36U, 0U); Control(timestamp + 38U, 1U);
+    CHECK(application.logic.safety.operator_armed && state.enabling && enable_calls == before_enables + 1U);
+    Feed(timestamp + 40U, 1U); Control(timestamp + 40U, 1U);
+    CHECK(state.active && !state.enabling);
+    Control(timestamp + 42U, 1U); Control(timestamp + 44U, 1U);
+    Control(timestamp + 46U, 1U); Control(timestamp + 48U, 1U);
+    CHECK(state.active && permission && state.controller.faults == 0U);
+}
+
+void test_run(void)
+{
+    uint32_t t, before;
+    CanFrame frame;
+    test_stage = 1U;
+    ConsoleActivate(100U);
+    Command(142U, "YAW TARGET 2", "Y|OK|PARAMETER");
+    CHECK(state.controller.target_deg == 2.0f);
+    Command(144U, "YAW ON", "Y|ERROR|SAFE_OFF_REQUIRED");
+    CHECK(state.active && permission); /* rejected ON does not interrupt active axis */
+    Control(232U, 1U); /* age100: actual feedback timeout and unified lock */
+    CHECK(state.controller.faults & YAW_CONTROLLER_FAULT_FEEDBACK);
+    CHECK(!state.active && !permission && state.stop_pending);
+    CHECK(state.controller.target_deg != 2.0f && !application.logic.safety.operator_armed);
+    RecoverThroughConsole(234U);
+
+    test_stage = 2U;
+    ConsoleActivate(1000U); Feed(1042U, 0U); Read();
+    CHECK(state.controller.faults & (1UL << 18)); /* unexpected driver disable */
+    RecoverThroughConsole(1044U);
+
+    test_stage = 3U;
+    ConsolePrepare(2000U);
+    for (t = 2032U; t <= 2130U; t += 2U) { Feed(t, 0U); Control(t, 1U); }
+    CHECK(state.controller.faults & (1UL << 16)); /* FC never acknowledged */
+    CHECK(!state.active && !state.enabling && !permission);
+    RecoverThroughConsole(2132U);
+
+    test_stage = 4U;
+    ConsoleActivate(3000U); now_ms = 3042U;
+    frame = Feedback(now_ms, 1U, 60U, 30U); CHECK(YawBackend_OnFrame(&frame) == 1U); Read();
+    CHECK(state.controller.faults & YAW_CONTROLLER_FAULT_TEMPERATURE);
+    RecoverThroughConsole(3044U);
+
+    test_stage = 5U;
+    ConsoleActivate(4000U); torque_result = HAL_ERROR;
+    for (t = 4042U; t <= 4050U; t += 2U) { Control(t, 1U); }
+    CHECK(state.controller.faults & (1UL << 17)); /* TX fault cannot be cleared by console */
+    Control(4052U, 0U); Command(4054U, "YAW OFF", "Y|OK|OFF");
+    Feed(4056U, 0U); Control(4056U, 0U); Feed(4078U, 0U); Control(4078U, 0U);
+    before = enable_calls; Command(4080U, "YAW ON", "Y|ERROR|SAFE_OFF_REQUIRED");
+    CHECK(state.controller.faults & (1UL << 17));
+    CHECK(!state.requested && !permission && enable_calls == before);
+    test_stage = 6U;
+    ConsoleReset(5000U); Control(5000U, 0U);
+    Command(5002U, "YAW ON", "Y|OK|PREPARE"); Control(5004U, 0U);
+    Feed(5006U, 13U); Control(5006U, 0U);
+    Feed(5028U, 13U); Control(5028U, 0U);
+    CHECK(state.online && state.feedback.status == 13U && state.controller.faults == 4U);
+    CHECK(state.requested && state.stop_pending && !state.active && enable_calls == 0U);
+    Command(5030U, "YAW CLEAR", "Y|ERROR|CLEAR|REMOTE|");
+    CHECK(strstr(response, "|LAST_BLOCKS|2|") != 0);
+    CHECK(clear_calls == 0U);
+    Command(5032U, "YAW OFF", "Y|OK|OFF"); Control(5034U, 0U);
+    Feed(5036U, 13U); Control(5036U, 0U); Feed(5058U, 13U); Control(5058U, 0U);
+    Command(5060U, "YAW CLEAR", "Y|OK|CLEAR_SENT");
+    CHECK(clear_calls == 1U && pending && !state.requested && !state.active && !permission);
+    Control(5062U, 0U); Feed(5064U, 0U); Control(5064U, 0U);
+    CHECK(state.stop_pending && enable_calls == 0U && torque_calls == 0U);
+    pending = 0U; Control(5072U, 0U); Feed(5074U, 0U); Control(5074U, 0U);
+    Feed(5096U, 0U); Control(5096U, 0U);
+    CHECK(!state.stop_pending && state.feedback.status == 0U && state.controller.faults == 4U);
+    CHECK(!state.requested && !state.active && enable_calls == 0U && torque_calls == 0U);
+    Command(5098U, "YAW ON", "Y|OK|PREPARE");
+    CHECK(state.controller.faults == 0U && state.stop_pending && enable_calls == 0U);
+    Control(5100U, 0U); Feed(5102U, 0U); Control(5102U, 0U);
+    Feed(5124U, 0U); Control(5124U, 0U);
+    CHECK(!state.active && enable_calls == 0U);
+    Control(5126U, 1U); CHECK(state.enabling && enable_calls == 1U && torque_calls == 0U);
+    Feed(5128U, 1U); Control(5128U, 1U); CHECK(state.active && !state.enabling);
+    test_done = 1U;
+}

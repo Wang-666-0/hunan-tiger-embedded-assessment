@@ -1,0 +1,29 @@
+>>> info
+
+Compiler Full Name: Product: ARM Compiler 5.06
+Compiler Version: 5.06
+Builder Mode: Incremental
+The amount of C files: 0
+The amount of C++ files: 0
+The amount of Asm files: 0
+
+>>> prebuild
+
+
+
+>>> cc
+
+
+
+>>> ld
+
+Error: L6218E: Undefined symbol FlywheelSpeed_RecordFeedback (referred from flywheel_jog.o).
+Error: L6218E: Undefined symbol FlywheelSpeed_Start (referred from flywheel_jog.o).
+Error: L6218E: Undefined symbol FlywheelSpeed_Step (referred from flywheel_jog.o).
+Error: L6218E: Undefined symbol FlywheelSpeed_Stop (referred from flywheel_jog.o).
+Not enough information to list image symbols.
+Finished: 1 information, 0 warning and 4 error messages.
+
+
+>>> postbuild
+

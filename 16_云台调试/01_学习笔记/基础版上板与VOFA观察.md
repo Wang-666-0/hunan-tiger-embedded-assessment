@@ -1,13 +1,13 @@
 # 基础版上板与 VOFA 观察
 
-当前固件已补入只读参数采集，动力控制与闭环仍锁定。获取电机数据请先看[USART1电机参数采集步骤](USART1电机参数采集步骤.md)。本页用于VOFA遥控保护观察；默认沿用第15项CH1/5/6，离线通过与实机验收分别记录。
+当前固件已加入参数采集和受限摩擦轮点动，未选轮时不运行；本页继续用于逻辑电源下遥控保护观察。实际点动按[受限点动步骤](摩擦轮受限点动操作.md)，参数读取见[采集步骤](USART1电机参数采集步骤.md)。默认沿用第15项CH1/5/6。
 
 ## 1. 编译与接线
 
 1. 在 `Output/Gimbal_Control/MDK-ARM` 打开 Keil工程或EIDE工作区，完整编译。也可以在仓库根运行 `Scripts/build.ps1`，具体路径见[工程说明](../Output/Gimbal_Control/README.md)。
 2. 首次检查只给云台板和接收机逻辑电源，先断开电机动力。通过现有ST-Link自行下载本次生成的HEX，复位后开始观察。本次代码生成未执行烧录。
 3. 遥控配置沿用第15项，硬件更新为Cherrycoast4.8.1：FS-iA10B的i-BUS SERVO信号S接新板P2上层pin4 / PA1，+接P2 pin5 / 5V，−接P2 pin6 / GND。新板P1是GPIO，不照旧接口名插接。按原理图针号核对，上层不是照片方位；不要接下层反相DBUS信号。详见[4.8.1接收机接线](Cherrycoast4.8.1接收机接线.md)。
-4. USART1继续接电脑串口，115200 / 8N1、VOFA选择FireWater。发送频率20 Hz，固定29通道，映射见[工程说明](../Output/Gimbal_Control/README.md)。
+4. USART1接电脑串口，115200 / 8N1、FireWater、20 Hz；现为39通道，前29编号保持原样，映射见[工程说明](../Output/Gimbal_Control/README.md)。
 
 ## 2. 先核对通道
 

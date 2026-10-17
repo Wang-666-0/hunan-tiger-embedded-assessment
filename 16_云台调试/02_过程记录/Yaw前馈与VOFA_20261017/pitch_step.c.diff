@@ -1,0 +1,11 @@
+--- before/App/pitch_step.c
++++ after/App/pitch_step.c
+@@ -13,6 +13,8 @@
+     uint8_t running = (uint8_t)(step && step->phase == PITCH_STEP_RUNNING);
+     YawStep_Sample(step, received_ms, angle_deg, velocity_dps, torque_nm, limited);
+     if (running && step->phase == PITCH_STEP_DONE) {
++        step->pass05 = (uint8_t)(!step->faults && absolute(step->span_deg - 30.0f) <= 0.2f &&
++            step->settle05_ms != PITCH_STEP_UNREACHED && step->settle05_ms <= PITCH_STEP_RESPONSE_LIMIT_MS);
+         step->pass = (uint8_t)(!step->faults && absolute(step->span_deg - 30.0f) <= PITCH_STEP_BAND_DEG &&
+             step->response_ms != PITCH_STEP_UNREACHED && step->response_ms <= PITCH_STEP_RESPONSE_LIMIT_MS &&
+             step->overshoot_deg <= PITCH_STEP_BAND_DEG && step->sse_valid &&

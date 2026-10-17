@@ -1,0 +1,43 @@
+--- before/Output/Gimbal_Control/App/app_tasks.c
++++ Output/Gimbal_Control/App/app_tasks.c
+@@ -5,6 +5,7 @@
+ #include "can_bus.h"
+ #include "app_console.h"
+ #include "app_diagnostics.h"
++#include "gimbal_startup.h"
+ #if APP_YAW_ENABLED
+ #include "yaw_backend.h"
+ #endif
+@@ -144,6 +145,11 @@
+             AppTasks_RequestStop(); /* 自动准备也必须等待此后新OFF帧，禁止旧帧解锁。 */
+         }
+ #endif
++        input.control_late = current.control_gap_ms > APP_CONTROL_MAX_GAP_MS;
++#if APP_GIMBAL_REMOTE_STARTUP_ENABLED
++        input.stop_sequence = stop_sequence;
++        GimbalStartup_Update(&input, AppConsole_IsDiagnosticMode());
++#endif
+         MotorBackend_GetHealth(&current.motors);
+         input.backend_ready = current.motors.ready;
+         input.feedback_ready = current.motors.feedback_ready;
+@@ -164,7 +170,9 @@
+ #endif
+         AppLogic_CombineActuatorHealth(&input, &yaw_health, &pitch_health, wheels_wanted);
+ #endif
+-        input.control_late = current.control_gap_ms > APP_CONTROL_MAX_GAP_MS;
++#if APP_GIMBAL_REMOTE_STARTUP_ENABLED
++        if (!GimbalStartup_OutputReady()) { input.feedback_ready = 0U; }
++#endif
+         input.stop_sequence = stop_sequence;
+ #if APP_YAW_ENABLED && APP_PITCH_ENABLED
+         /* 串口和遥控真正接受的新阶跃均记住轴，先同步再消费CH7回参考。 */
+@@ -269,6 +277,9 @@
+ #if APP_PITCH_ENABLED
+     PitchBackend_Init();
+ #endif
++#if APP_GIMBAL_REMOTE_STARTUP_ENABLED
++    GimbalStartup_Init();
++#endif
+     RemoteInput_CreateQueue();
+     CanBus_CreateQueue();
+     AppConsole_CreateQueue();

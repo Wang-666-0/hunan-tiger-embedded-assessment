@@ -1,0 +1,10 @@
+--- before/App/yaw_backend.h
++++ after/App/yaw_backend.h
+@@ -49,6 +49,7 @@
+ uint8_t YawBackend_SetLoopPid(char loop, float kp, float ki, float kd);
+ uint8_t YawBackend_SetLoopParameter(char loop, char parameter, float value);
+ uint8_t YawBackend_SetVelocityLimit(float dps);
++uint8_t YawBackend_SetFeedforward(char parameter, float value);
+ uint8_t YawBackend_CaptureReference(void);
+ /* 先安全OFF/ZERO、ON和人工CH5重解锁。STEP只在健康静止近零活动状态接受；
+  * ±30是相对软件零点的绝对目标，完成5秒测量后继续保持，不自动失能。 */

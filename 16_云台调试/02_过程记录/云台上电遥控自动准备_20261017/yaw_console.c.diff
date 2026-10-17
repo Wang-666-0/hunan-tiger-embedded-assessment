@@ -1,0 +1,43 @@
+--- before/Output/Gimbal_Control/App/yaw_console.c
++++ Output/Gimbal_Control/App/yaw_console.c
+@@ -105,7 +105,7 @@
+     RemoteMapper_Map(&frame, &command);
+     return (uint8_t)(remote.has_frame && (uint32_t)(HAL_GetTick() - remote.received_ms) < REMOTE_TIMEOUT_MS &&
+         command.valid && command.failsafe_ok && command.neutral && command.arm == RC_HIGH &&
+-        command.gimbal_mode == GIMBAL_MANUAL &&
++        (command.gimbal_mode == GIMBAL_MANUAL || command.gimbal_mode == GIMBAL_TEST) &&
+         app.logic.safety.operator_armed && !AppConsole_IsDiagnosticMode());
+ }
+ 
+@@ -153,7 +153,7 @@
+         taskENTER_CRITICAL(); result = PreparationTick(); taskEXIT_CRITICAL();
+         if (result) {
+             if (strcmp(result, "OK") == 0) {
+-                (void)snprintf(response, capacity, "Y|OK|READY|ZERO_SET|1|REQUESTED|1|ACTIVE|0|NEXT|CH5_TEST\r\n");
++                (void)snprintf(response, capacity, "Y|OK|READY|ZERO_SET|1|REQUESTED|1|ACTIVE|0|NEXT|NEW_CH5_OFF_THEN_MANUAL_OR_TEST\r\n");
+             } else { (void)snprintf(response, capacity, "Y|ERROR|READY|%s\r\n", result); }
+             return 1U;
+         }
+@@ -275,7 +275,7 @@
+     if (strcmp(line, "YAW") == 0) { BriefStatus(response, capacity); return 1U; }
+     if (strcmp(line, "YAW HELP") == 0 || strcmp(line, "YAW ?") == 0) {
+         (void)snprintf(response, capacity,
+-            "Y|HELP|READ|YAW;PID;RESULT;STATUS|PREPARE|READY|STOP|OFF|VIEW|YAW VIEW|TUNE|POS kp ki kd;VEL kp ki kd;PKP/PKI/PKD/VKP/VKI/VKD value|TELEM|TELEM OFF/ON|TEST|REMOTE_CH5_CH7|DETAIL|INFO;CHECK;BUS;ZERO;CLEAR\r\n");
++            "Y|HELP|READ|YAW;PID;RESULT;STATUS|PREPARE|READY|STOP|OFF|VIEW|YAW VIEW|TUNE|POS kp ki kd;VEL kp ki kd;PKP/PKI/PKD/VKP/VKI/VKD value|TELEM|TELEM OFF/ON|TEST|STEP [30];HOME;REMOTE_CH5_CH7|DETAIL|INFO;CHECK;BUS;ZERO;CLEAR\r\n");
+         return 1U;
+     }
+     if (strcmp(line, "YAW BUS") == 0) {
+@@ -289,6 +289,13 @@
+         strcmp(line, "YAW CHECK") != 0 && strcmp(line, "YAW STATUS") != 0 && strcmp(line, "YAW INFO") != 0 &&
+         strcmp(line, "YAW PID") != 0) {
+         (void)snprintf(response, capacity, "Y|ERROR|READY_BUSY_USE_YAW_OFF\r\n"); return 1U;
++    }
++    if (strcmp(line, "YAW HOME") == 0) {
++        taskENTER_CRITICAL();
++        if (SafeStep()) { accepted = YawBackend_SetParameter('T', 0.0f); }
++        taskEXIT_CRITICAL();
++        (void)snprintf(response, capacity, accepted ? "Y|OK|HOME|TARGET|0\r\n" :
++            "Y|ERROR|HOME_REQUIRES_ARMED_ACTIVE_NEUTRAL\r\n"); return 1U;
+     }
+     if (strcmp(line, "YAW STEP") == 0 || strncmp(line, "YAW STEP ", 9U) == 0) {
+         value = 30.0f;

@@ -1,0 +1,81 @@
+--- before/Output/Gimbal_Control/App/pitch_controller.c
++++ Output/Gimbal_Control/App/pitch_controller.c
+@@ -19,10 +19,11 @@
+ { x = fmodf(x, 360.0f); if (x > 180.0f) { x -= 360.0f; } else if (x < -180.0f) { x += 360.0f; } return x; }
+ static float gravity_at(const PitchController *pitch, float kg)
+ { return kg * cosf((pitch->angle_deg + pitch->gravity_offset_deg) / RAD_TO_DEG); }
+-void PitchController_ClearGravity(PitchController *pitch)
++void PitchController_InvalidateGravity(PitchController *pitch)
+ {
+     if (!pitch) { return; }
+-    pitch->gravity_kg_nm = pitch->gravity_offset_deg = pitch->gravity_torque_nm = 0.0f;
++    /* 坐标失效只取消物理相位，不丢用户的力矩系数。 */
++    pitch->gravity_offset_deg = pitch->gravity_torque_nm = 0.0f;
+     pitch->pid_torque_nm = 0.0f; pitch->gravity_calibrated = pitch->gravity_i_transferred = 0U;
+ }
+ static void fault(PitchController *pitch, uint32_t reasons)
+@@ -39,13 +40,14 @@
+     if (!pitch) { return; }
+     memset(pitch, 0, sizeof(*pitch)); pitch->feedback_divisor = 1U;
+     YawCascade_Init(&pitch->cascade);
+-    /* 首轮探索值，尚未经过Pitch实物调定；不改变Yaw默认增益。 */
++    /* 用户确认写入的上电默认；不改变Yaw默认增益。 */
+     pitch->cascade.position.kp = APP_PITCH_POSITION_KP;
+     pitch->cascade.position.ki = APP_PITCH_POSITION_KI;
+     pitch->cascade.position.kd = APP_PITCH_POSITION_KD;
+     pitch->cascade.speed.kp = APP_PITCH_SPEED_KP;
+     pitch->cascade.speed.ki = APP_PITCH_SPEED_KI;
+     pitch->cascade.speed.kd = APP_PITCH_SPEED_KD;
++    pitch->gravity_kg_nm = APP_PITCH_GRAVITY_KG_NM;
+     pitch->cascade.velocity_limit_dps = 0.0f;
+ }
+ void PitchController_Stop(PitchController *pitch)
+@@ -90,7 +92,7 @@
+     pitch->last_status = feedback->status; pitch->temp_mos = feedback->temp_mos;
+     pitch->temp_rotor = feedback->temp_rotor;
+     if (first || rebase) {
+-        PitchController_ClearGravity(pitch);
++        PitchController_InvalidateGravity(pitch);
+         pitch->continuous_rad = pitch->reference_rad = feedback->position_rad;
+         pitch->angle_deg = pitch->target_deg = 0.0f;
+         pitch->have_reference = 0U; pitch->stationary_samples = 0U;
+@@ -128,7 +130,7 @@
+     /* 改软件零时保持已标定的物理水平，不把新零误认为水平。 */
+     if (pitch->have_reference && pitch->gravity_calibrated) {
+         pitch->gravity_offset_deg = normalize_degrees(pitch->gravity_offset_deg + pitch->angle_deg);
+-    } else { PitchController_ClearGravity(pitch); }
++    } else { PitchController_InvalidateGravity(pitch); }
+     PitchController_Stop(pitch); pitch->reference_rad = pitch->continuous_rad;
+     pitch->angle_deg = pitch->target_deg = 0.0f; pitch->have_reference = 1U;
+     YawCascade_ResetObserver(&pitch->cascade); pitch->faults &= ~(uint32_t)RECOVERABLE_FAULTS;
+@@ -140,7 +142,7 @@
+         (pitch->have_feedback && pitch->last_status != 0U)) { return 0U; }
+     if (pitch->feedback_divisor == divisor) { return 1U; }
+     PitchController_Stop(pitch); pitch->feedback_divisor = divisor; pitch->have_reference = 0U;
+-    PitchController_ClearGravity(pitch);
++    PitchController_InvalidateGravity(pitch);
+     pitch->reference_rad = pitch->continuous_rad; pitch->angle_deg = pitch->target_deg = 0.0f;
+     pitch->velocity_dps = pitch->velocity_dps * (divisor == 7U ? 1.0f / 7.0f : 7.0f);
+     pitch->stationary_samples = 0U; YawCascade_ResetObserver(&pitch->cascade);
+@@ -207,8 +209,7 @@
+     if (!pitch) { return 0.0f; }
+     if (!finite_value(rate_dps) || !finite_value(pitch->gravity_kg_nm) ||
+         !finite_value(pitch->gravity_offset_deg) || absolute(pitch->gravity_kg_nm) > PITCH_CONTROLLER_TORQUE_LIMIT_NM ||
+-        absolute(pitch->gravity_offset_deg) > 180.0f ||
+-        (pitch->gravity_kg_nm != 0.0f && !pitch->gravity_calibrated)) {
++        absolute(pitch->gravity_offset_deg) > 180.0f) {
+         fault(pitch, PITCH_CONTROLLER_FAULT_DATA); return 0.0f;
+     }
+     age = now_ms - pitch->last_feedback_ms;
+@@ -217,7 +218,10 @@
+         else { PitchController_Stop(pitch); }
+         return 0.0f;
+     }
+-    if (!allowed || !pitch->have_reference || pitch->faults) { PitchController_Stop(pitch); return 0.0f; }
++    if (!allowed || !pitch->have_reference || pitch->faults ||
++        (pitch->gravity_kg_nm != 0.0f && !pitch->gravity_calibrated)) {
++        PitchController_Stop(pitch); return 0.0f;
++    }
+     if (pitch->last_status != 1U) { fault(pitch, PITCH_CONTROLLER_FAULT_STATUS); return 0.0f; }
+     if (pitch->angle_deg < PITCH_CONTROLLER_HARD_MIN_DEG || pitch->angle_deg > PITCH_CONTROLLER_HARD_MAX_DEG) {
+         fault(pitch, PITCH_CONTROLLER_FAULT_LIMIT); return 0.0f;

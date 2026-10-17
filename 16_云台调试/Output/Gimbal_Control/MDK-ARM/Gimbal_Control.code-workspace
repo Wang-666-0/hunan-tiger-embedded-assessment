@@ -4,12 +4,6 @@
             "path": "."
         }
     ],
-    "settings": {
-        "files.encoding": "utf8"
-    },
-    "extensions": {
-        "recommendations": [
-            "cl.eide"
-        ]
-    }
+    "settings": {},
+    "extensions": {}
 }

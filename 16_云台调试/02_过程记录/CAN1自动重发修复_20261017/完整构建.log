@@ -1,0 +1,112 @@
+[ INFO ] start building at 2026-10-17 10:21:23
+
+[ TOOL ] Product: ARM Compiler 5.06
+
+[ INFO ] file statistics (rebuild mode)
+
++---------+-----------+-----------+---------------+--------+
+| C Files | Cpp Files | Asm Files | Lib/Obj Files | Totals |
++---------+-----------+-----------+---------------+--------+
+| 64      | 0         | 1         | 0             | 65     |
++---------+-----------+-----------+---------------+--------+
+
+[ INFO ] start compiling (jobs: 8) ...
+
+>> [  1%] AS 'startup_stm32f405xx.s'
+>> [  3%] CC '../Core/Src/can.c'
+>> [  4%] CC '../Core/Src/gpio.c'
+>> [  6%] CC '../Core/Src/main.c'
+>> [  7%] CC '../Core/Src/freertos.c'
+>> [  9%] CC '../Core/Src/usart.c'
+>> [ 10%] CC '../Core/Src/stm32f4xx_it.c'
+>> [ 12%] CC '../Core/Src/stm32f4xx_hal_msp.c'
+>> [ 13%] CC '../Core/Src/stm32f4xx_hal_timebase_tim.c'
+>> [ 15%] CC '../Drivers/STM32F4xx_HAL_Driver/Src/stm32f4xx_hal_rcc.c'
+>> [ 16%] CC '../Drivers/STM32F4xx_HAL_Driver/Src/stm32f4xx_hal_can.c'
+>> [ 18%] CC '../Drivers/STM32F4xx_HAL_Driver/Src/stm32f4xx_hal_tim_ex.c'
+>> [ 20%] CC '../Drivers/STM32F4xx_HAL_Driver/Src/stm32f4xx_hal_rcc_ex.c'
+>> [ 21%] CC '../Drivers/STM32F4xx_HAL_Driver/Src/stm32f4xx_hal_tim.c'
+>> [ 23%] CC '../Drivers/STM32F4xx_HAL_Driver/Src/stm32f4xx_hal_flash.c'
+>> [ 24%] CC '../Drivers/STM32F4xx_HAL_Driver/Src/stm32f4xx_hal_flash_ex.c'
+>> [ 26%] CC '../Drivers/STM32F4xx_HAL_Driver/Src/stm32f4xx_hal_flash_ramfunc.c'
+>> [ 27%] CC '../Drivers/STM32F4xx_HAL_Driver/Src/stm32f4xx_hal_dma_ex.c'
+>> [ 29%] CC '../Drivers/STM32F4xx_HAL_Driver/Src/stm32f4xx_hal_gpio.c'
+>> [ 30%] CC '../Drivers/STM32F4xx_HAL_Driver/Src/stm32f4xx_hal_dma.c'
+>> [ 32%] CC '../Drivers/STM32F4xx_HAL_Driver/Src/stm32f4xx_hal_pwr.c'
+>> [ 33%] CC '../Drivers/STM32F4xx_HAL_Driver/Src/stm32f4xx_hal_pwr_ex.c'
+>> [ 35%] CC '../Middlewares/Third_Party/FreeRTOS/Source/croutine.c'
+>> [ 36%] CC '../Drivers/STM32F4xx_HAL_Driver/Src/stm32f4xx_hal_cortex.c'
+>> [ 38%] CC '../Drivers/STM32F4xx_HAL_Driver/Src/stm32f4xx_hal.c'
+>> [ 40%] CC '../Drivers/STM32F4xx_HAL_Driver/Src/stm32f4xx_hal_exti.c'
+>> [ 41%] CC '../Middlewares/Third_Party/FreeRTOS/Source/event_groups.c'
+>> [ 43%] CC '../Middlewares/Third_Party/FreeRTOS/Source/list.c'
+>> [ 44%] CC '../Core/Src/system_stm32f4xx.c'
+>> [ 46%] CC '../Drivers/STM32F4xx_HAL_Driver/Src/stm32f4xx_hal_uart.c'
+>> [ 47%] CC '../Middlewares/Third_Party/FreeRTOS/Source/queue.c'
+>> [ 49%] CC '../Middlewares/Third_Party/FreeRTOS/Source/stream_buffer.c'
+>> [ 50%] CC '../Middlewares/Third_Party/FreeRTOS/Source/timers.c'
+>> [ 52%] CC '../Middlewares/Third_Party/FreeRTOS/Source/tasks.c'
+>> [ 53%] CC '../Middlewares/Third_Party/FreeRTOS/Source/portable/MemMang/heap_4.c'
+>> [ 55%] CC '../App/gl60_ii.c'
+>> [ 56%] CC '../App/yaw_controller.c'
+>> [ 58%] CC '../App/yaw_cascade.c'
+>> [ 60%] CC '../Middlewares/Third_Party/FreeRTOS/Source/portable/RVDS/ARM_CM4F/port.c'
+>> [ 61%] CC '../App/yaw_step.c'
+>> [ 63%] CC '../Middlewares/Third_Party/FreeRTOS/Source/CMSIS_RTOS_V2/cmsis_os2.c'
+>> [ 64%] CC '../App/dm3507.c'
+>> [ 66%] CC '../App/pitch_controller.c'
+>> [ 67%] CC '../App/pitch_step.c'
+>> [ 69%] CC '../App/yaw_backend.c'
+>> [ 70%] CC '../App/yaw_console.c'
+>> [ 72%] CC '../App/flywheel_speed.c'
+>> [ 73%] CC '../App/flywheel_jog.c'
+>> [ 75%] CC '../App/dm_diag.c'
+>> [ 76%] CC '../App/pitch_backend.c'
+>> [ 78%] CC '../App/vesc_diag.c'
+>> [ 80%] CC '../App/pitch_console.c'
+>> [ 81%] CC '../App/app_logic.c'
+>> [ 83%] CC '../App/app_diagnostics.c'
+>> [ 84%] CC '../App/can_frame.c'
+>> [ 86%] CC '../App/app_fault.c'
+>> [ 87%] CC '../App/app_tasks.c'
+>> [ 89%] CC '../App/safety_manager.c'
+>> [ 90%] CC '../App/can_bus.c'
+>> [ 92%] CC '../App/target_manager.c'
+>> [ 93%] CC '../App/ibus.c'
+>> [ 95%] CC '../App/motor_backend.c'
+>> [ 96%] CC '../App/remote_mapper.c'
+>> [ 98%] CC '../App/app_console.c'
+>> [100%] CC '../App/remote_input.c'
+
+[ INFO ] start linking ...
+
+Program Size: Code=81060 RO-data=4908 RW-data=568 ZI-data=34768  
+
+Total RO  Size (Code + RO Data)                85968 (  83.95kB)
+Total RW  Size (RW Data + ZI Data)             35336 (  34.51kB)
+Total ROM Size (Code + RO Data + RW Data)      86056 (  84.04kB)
+
+Total Memory Usage:
+
+  RAM: [#####               ] 27.0%     34.5KB/128.0KB
+  ROM: [###                 ] 16.4%     84.0KB/512.0KB
+
+Section Memory Usage:
+
+  LR_IROM1 (0x08000000): [###                 ] 16.5%     84.5KB/512.0KB
+    - ER_IROM1 (0x08000000): [###                 ] 16.4%     84.0KB/512.0KB
+    - RW_IRAM1 (0x20000000): [######              ] 30.8%     34.5KB/112.0KB
+    - RW_IRAM2 (0x2001C000): [                    ] 0.0%      0B/16.0KB
+
+[ INFO ] start outputting files ...
+
+>> output hex file		[done]
+
+file path: "build/Gimbal_Control/Gimbal_Control.hex"
+
+>> output s19 file		[done]
+
+file path: "build/Gimbal_Control/Gimbal_Control.s19"
+
+[ DONE ] build successfully !, elapsed time 0:0:6
+

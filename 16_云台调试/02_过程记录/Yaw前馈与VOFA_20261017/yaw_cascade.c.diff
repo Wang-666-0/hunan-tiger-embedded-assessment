@@ -1,0 +1,54 @@
+--- before/App/yaw_cascade.c
++++ after/App/yaw_cascade.c
+@@ -12,7 +12,8 @@
+ {
+     loop->position_i = loop->speed_i = 0.0f;
+     loop->torque_nm = loop->unsaturated_torque_nm = loop->target_velocity_dps = 0.0f;
+-    loop->have_update = loop->torque_limited = loop->velocity_limited = 0U;
++    loop->feedforward_nm = 0.0f;
++    loop->have_update = loop->torque_limited = loop->velocity_limited = loop->feedforward_limited = 0U;
+ }
+ void YawCascade_ResetObserver(YawCascade *loop)
+ { loop->velocity_dps = loop->acceleration_dps2 = 0.0f; YawCascade_Stop(loop); }
+@@ -72,8 +73,9 @@
+ {
+     return YawCascade_UpdateWithFeedforward(loop, error_deg, feedback_ms, sequence, torque_limit_nm, 0.0f);
+ }
+-float YawCascade_UpdateWithFeedforward(YawCascade *loop, float error_deg, uint32_t feedback_ms,
+-                        uint32_t sequence, float torque_limit_nm, float feedforward_nm)
++static float update(YawCascade *loop, float error_deg, uint32_t feedback_ms,
++                        uint32_t sequence, float torque_limit_nm, float feedforward_nm,
++                        const YawCascadeFeedforward *ff)
+ {
+     float dt = 0.0f, wanted, candidate, change, speed_error;
+     uint32_t gap = feedback_ms - loop->feedback_ms;
+@@ -97,6 +99,15 @@
+     loop->target_velocity_dps = loop->position.kp * error_deg + loop->position_i - loop->position.kd * loop->velocity_dps;
+     loop->velocity_limited = 0U;
+ #endif
++    loop->feedforward_limited = 0U;
++    if (ff) {
++        float speed_abs = loop->target_velocity_dps < 0.0f ? -loop->target_velocity_dps : loop->target_velocity_dps;
++        float wanted_ff = ff->bias_nm + ff->velocity_gain * loop->target_velocity_dps +
++            ff->friction_nm * loop->target_velocity_dps / (speed_abs + ff->friction_velocity_dps);
++        feedforward_nm = clamp(wanted_ff, -ff->limit_nm, ff->limit_nm);
++        loop->feedforward_limited = (uint8_t)(wanted_ff > ff->limit_nm || wanted_ff < -ff->limit_nm);
++    }
++    loop->feedforward_nm = feedforward_nm;
+     speed_error = loop->target_velocity_dps - loop->velocity_dps;
+     if (loop->speed.ki == 0.0f) { loop->speed_i = 0.0f; }
+     change = loop->speed.ki * speed_error * dt;
+@@ -108,3 +119,13 @@
+     loop->torque_limited = (uint8_t)(loop->unsaturated_torque_nm > torque_limit_nm || loop->unsaturated_torque_nm < -torque_limit_nm);
+     return loop->torque_nm;
+ }
++float YawCascade_UpdateWithFeedforward(YawCascade *loop, float error_deg, uint32_t feedback_ms,
++                        uint32_t sequence, float torque_limit_nm, float feedforward_nm)
++{
++    return update(loop, error_deg, feedback_ms, sequence, torque_limit_nm, feedforward_nm, 0);
++}
++float YawCascade_UpdateWithCompensation(YawCascade *loop, float error_deg, uint32_t feedback_ms,
++                        uint32_t sequence, float torque_limit_nm, const YawCascadeFeedforward *ff)
++{
++    return update(loop, error_deg, feedback_ms, sequence, torque_limit_nm, 0.0f, ff);
++}

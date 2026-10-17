@@ -1,0 +1,16 @@
+https://www.cubemars.com/
+10 / 41
+2.2 S-link 接口及定义
+序号 接口功能 引脚 说明
+1 通讯接口
+1 CAN 通讯低侧（CAN_L）
+2 CAN 通讯高侧（CAN_H）
+3 串口信号输入（RX）
+4 串口信号输出（TX）
+5 串口信号地（GND）
+2 USB 接口
+1 VBUS
+2 D-
+3 D+
+4 ID
+5 GND

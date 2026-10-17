@@ -1,0 +1,30 @@
+--- before/App/yaw_cascade.h
++++ after/App/yaw_cascade.h
+@@ -9,13 +9,18 @@
+ #endif
+ 
+ typedef struct { float kp, ki, kd; } YawCascadePid;
++/* 力矩补偿使用内环速度参考，不对理想位置阶跃或实际加速度作前馈。 */
++typedef struct {
++    float bias_nm, velocity_gain, friction_nm, friction_velocity_dps, limit_nm;
++} YawCascadeFeedforward;
+ typedef struct {
+     YawCascadePid position, speed;
+     float velocity_limit_dps, velocity_dps, acceleration_dps2, target_velocity_dps;
+     /* 积分状态直接保存输出单位：外环deg/s，内环协议Nm。 */
+     float position_i, speed_i, torque_nm, unsaturated_torque_nm;
+     uint32_t revision, feedback_ms, sequence;
+-    uint8_t have_update, torque_limited, velocity_limited;
++    float feedforward_nm;
++    uint8_t have_update, torque_limited, velocity_limited, feedforward_limited;
+ } YawCascade;
+ 
+ #define YAW_CASCADE_VELOCITY_FILTER_MS 10U
+@@ -37,4 +42,7 @@
+ /* 前馈参加力矩求和及抗饱和；原Yaw入口始终传0。单位均为协议Nm。 */
+ float YawCascade_UpdateWithFeedforward(YawCascade *loop, float error_deg, uint32_t feedback_ms,
+                         uint32_t sequence, float torque_limit_nm, float feedforward_nm);
++/* bias + Kv*vref + Fc*vref/(|vref|+Vs)，先裁前馈再参加总力矩抗饱和。 */
++float YawCascade_UpdateWithCompensation(YawCascade *loop, float error_deg, uint32_t feedback_ms,
++                         uint32_t sequence, float torque_limit_nm, const YawCascadeFeedforward *ff);
+ #endif

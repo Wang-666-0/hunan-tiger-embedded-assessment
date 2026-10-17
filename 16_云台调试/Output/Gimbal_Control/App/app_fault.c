@@ -3,6 +3,7 @@
 void AppFault_Fatal(AppFault fault)
 {
     (void)fault;
-    /* 基础版没有动力输出；资源或初始化失败后不继续运行不完整的系统。 */
+    /* 致命错误进入Error_Handler后无法调度停机重试。电调自身通信超时
+     * 是最后兜底；此处不能在堆损坏/ISR环境依赖RTOS或阻塞发送。 */
     Error_Handler();
 }

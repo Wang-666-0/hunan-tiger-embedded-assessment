@@ -1,0 +1,11 @@
+--- before/Output/Gimbal_Control/App/app_config.h
++++ Output/Gimbal_Control/App/app_config.h
+@@ -15,7 +15,7 @@
+ #ifndef APP_PITCH_ENABLED
+ #define APP_PITCH_ENABLED 1U
+ #endif
+-#define APP_PITCH_VERSION "DM3507_CASCADE_V1C"
++#define APP_PITCH_VERSION "DM3507_CASCADE_V1D"
+ #define APP_PITCH_COMMAND_PERIOD_MS 2U
+ #define APP_PITCH_ENABLE_TIMEOUT_MS 100U
+ #define APP_PITCH_POSITION_KP 12.0f

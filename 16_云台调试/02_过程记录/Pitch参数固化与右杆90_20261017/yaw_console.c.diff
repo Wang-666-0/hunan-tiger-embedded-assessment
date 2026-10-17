@@ -1,0 +1,63 @@
+--- before/Output/Gimbal_Control/App/yaw_console.c
++++ Output/Gimbal_Control/App/yaw_console.c
+@@ -251,6 +251,18 @@
+     return 0U;
+ }
+ 
++static void BriefStatus(char *response, size_t capacity)
++{
++    YawBackendState state;
++    YawBackend_GetState(&state);
++    (void)snprintf(response, capacity,
++        "Y|STATE|%s|ONLINE|%u|ACTIVE|%u|REQUESTED|%u|ZERO_SET|%u|FAULT|%lu|AGE_MS|%lu|ANGLE|%.3f|TARGET|%.3f|VEL_DPS|%.2f|TORQUE_NM|%.5f\r\n",
++        APP_YAW_VERSION, (unsigned)state.online, (unsigned)state.active, (unsigned)state.requested,
++        (unsigned)state.zero_set, (unsigned long)state.controller.faults, (unsigned long)state.feedback_age_ms,
++        (double)state.controller.angle_deg, (double)state.controller.target_deg,
++        (double)(YAW_CONTROLLER_CASCADE_ENABLED ? state.controller.cascade.velocity_dps : state.controller.velocity_dps), (double)state.controller.torque_nm);
++}
++
+ uint8_t YawConsole_Handle(const char *line, char *response, size_t capacity)
+ {
+     YawBackendState yaw;
+@@ -258,7 +270,14 @@
+     char parameter = 0;
+     const char *number = 0;
+     float value;
+-    if (!line || !response || !capacity || strncmp(line, "YAW ", 4U) != 0) { return 0U; }
++    if (!line || !response || !capacity ||
++        (strcmp(line, "YAW") != 0 && strncmp(line, "YAW ", 4U) != 0)) { return 0U; }
++    if (strcmp(line, "YAW") == 0) { BriefStatus(response, capacity); return 1U; }
++    if (strcmp(line, "YAW HELP") == 0 || strcmp(line, "YAW ?") == 0) {
++        (void)snprintf(response, capacity,
++            "Y|HELP|READ|YAW;PID;RESULT;STATUS|PREPARE|READY|STOP|OFF|VIEW|YAW VIEW|TUNE|POS kp ki kd;VEL kp ki kd;PKP/PKI/PKD/VKP/VKI/VKD value|TELEM|TELEM OFF/ON|TEST|REMOTE_CH5_CH7|DETAIL|INFO;CHECK;BUS;ZERO;CLEAR\r\n");
++        return 1U;
++    }
+     if (strcmp(line, "YAW BUS") == 0) {
+         BusReport(response, capacity); return 1U;
+     }
+@@ -267,7 +286,8 @@
+         (void)StepReport(&snapshot, response, capacity); return 1U;
+     }
+     if (ready_phase && strcmp(line, "YAW READY") != 0 && strcmp(line, "YAW OFF") != 0 &&
+-        strcmp(line, "YAW CHECK") != 0 && strcmp(line, "YAW STATUS") != 0 && strcmp(line, "YAW INFO") != 0) {
++        strcmp(line, "YAW CHECK") != 0 && strcmp(line, "YAW STATUS") != 0 && strcmp(line, "YAW INFO") != 0 &&
++        strcmp(line, "YAW PID") != 0) {
+         (void)snprintf(response, capacity, "Y|ERROR|READY_BUSY_USE_YAW_OFF\r\n"); return 1U;
+     }
+     if (strcmp(line, "YAW STEP") == 0 || strncmp(line, "YAW STEP ", 9U) == 0) {
+@@ -430,7 +450,14 @@
+     else if (strncmp(line, "YAW KI ", 7U) == 0) { parameter = 'I'; number = line + 7U; }
+     else if (strncmp(line, "YAW KD ", 7U) == 0) { parameter = 'D'; number = line + 7U; }
+     else if (strncmp(line, "YAW TARGET ", 11U) == 0) { parameter = 'T'; number = line + 11U; }
+-    if (number && Number(number, &value) && !AppConsole_IsDiagnosticMode()) {
++    if (!number) {
++        if (strcmp(line, "YAW KP") == 0 || strcmp(line, "YAW KI") == 0 ||
++            strcmp(line, "YAW KD") == 0 || strcmp(line, "YAW TARGET") == 0) {
++            (void)snprintf(response, capacity, "Y|ERROR|PARAMETER_OR_STATE\r\n");
++        } else { (void)snprintf(response, capacity, "Y|ERROR|UNKNOWN_COMMAND|USE|YAW HELP\r\n"); }
++        return 1U;
++    }
++    if (Number(number, &value) && !AppConsole_IsDiagnosticMode()) {
+         accepted = YawBackend_SetParameter(parameter, value);
+     }
+     (void)snprintf(response, capacity, accepted ? "Y|OK|PARAMETER\r\n" : "Y|ERROR|PARAMETER_OR_STATE\r\n");

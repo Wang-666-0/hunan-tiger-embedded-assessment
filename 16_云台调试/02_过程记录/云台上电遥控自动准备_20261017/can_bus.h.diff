@@ -1,0 +1,11 @@
+--- before/Output/Gimbal_Control/App/can_bus.h
++++ Output/Gimbal_Control/App/can_bus.h
+@@ -38,7 +38,7 @@
+ HAL_StatusTypeDef CanBus_YawTorque(float torque_nm);
+ /* 固定FD可在撤权后发送；HAL_OK仅代表邮箱提交，须反馈status0确认失能。 */
+ HAL_StatusTypeDef CanBus_YawDisable(uint8_t cancel_old);
+-/* 固定FB人工恢复接口：两路许可必须均关闭、CAN无故障、CAN1邮箱已空。
++/* 固定FB恢复接口：人工或受控上电调用，许可须关闭、CAN无故障、CAN1邮箱已空。
+  * 返回BUSY时不发送；不取消旧FD、不使能、不开放其他任意命令。 */
+ HAL_StatusTypeDef CanBus_YawClearComms(void);
+ /* 只读CAN1待发状态；不取消、不提交任何报文。 */

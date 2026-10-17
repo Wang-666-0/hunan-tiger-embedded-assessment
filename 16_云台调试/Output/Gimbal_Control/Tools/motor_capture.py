@@ -1,4 +1,4 @@
-"""Collect motor read replies through Comet USART1 (115200 8N1).
+"""Collect motor read replies through Comet USART1 (V2C 921600 8N1).
 
 No motor enable, motion, configuration write, flash, zeroing or detection command
 is exposed. Close VOFA before running: only one program can own the COM port.
@@ -18,6 +18,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent / ".deps"))
 from vesc_decode import DecodeError, decode_vesc, finite_float
 
 FIRMWARE_ID = "GIMBAL_DIAG_1"
+DEFAULT_BAUDRATE = 921600
 DM_FIELDS = {
     7: ("MST_ID", "uint32"), 8: ("ESC_ID", "uint32"),
     9: ("TIMEOUT", "uint32"), 10: ("CTRL_MODE", "uint32"),
@@ -100,7 +101,7 @@ class Capture:
         self.log = []
         self.report = {
             "format": "comet_motor_capture_1", "started_at": now_iso(),
-            "firmware": None, "serial": {"baudrate": 115200, "data_bits": 8, "parity": "N", "stop_bits": 1},
+            "firmware": None, "serial": {"baudrate": getattr(transport, "baudrate", DEFAULT_BAUDRATE), "data_bits": 8, "parity": "N", "stop_bits": 1},
             "hardware": {"yaw": "GL60 II, CAN1 ID1", "pitch": "DM3507, CAN1 ID2",
                          "flywheels": "VESC N630, CAN2 ID70/71", "feeder": "C610, CAN2 ID5"},
             "status": [], "passive_can": [], "dm": {}, "vesc": {"70": {}, "71": {}},
@@ -269,6 +270,7 @@ def main(argv=None) -> int:
     parser = argparse.ArgumentParser(description="Comet USART1 电机只读参数采集；先关闭 VOFA 串口。")
     parser.add_argument("--list", action="store_true", help="仅列出可用串口，不连接")
     parser.add_argument("--port", help="USART1 USB 转串口端口，例如 COM5")
+    parser.add_argument("--baud", type=int, default=DEFAULT_BAUDRATE, help="USART1波特率；V2C默认921600，旧固件可指定115200")
     parser.add_argument("--output", type=Path, help="报告输出目录")
     parser.add_argument("--timeout", type=float, default=4.0, help="每项接收超时秒数，3~30，默认4")
     args = parser.parse_args(argv)
@@ -281,6 +283,8 @@ def main(argv=None) -> int:
         return 2
     if not 3 <= args.timeout <= 30:
         parser.error("--timeout 必须在3~30秒范围内")
+    if args.baud <= 0:
+        parser.error("--baud 必须为正整数")
     ports = list(list_ports.comports())
     if args.list or not args.port:
         for port in ports:
@@ -294,7 +298,7 @@ def main(argv=None) -> int:
         args.port = input("输入 USART1 所用串口名称（例如 COM5）：").strip()
     output = args.output or (Path(__file__).resolve().parents[3] / "02_过程记录" / ("参数采集_" + datetime.now().strftime("%Y%m%d_%H%M%S")))
     try:
-        with serial.Serial(args.port, baudrate=115200, bytesize=serial.EIGHTBITS, parity=serial.PARITY_NONE,
+        with serial.Serial(args.port, baudrate=args.baud, bytesize=serial.EIGHTBITS, parity=serial.PARITY_NONE,
                            stopbits=serial.STOPBITS_ONE, timeout=0.05, write_timeout=1,
                            xonxoff=False, rtscts=False, dsrdtr=False) as transport:
             capture = Capture(transport, timeout=args.timeout)

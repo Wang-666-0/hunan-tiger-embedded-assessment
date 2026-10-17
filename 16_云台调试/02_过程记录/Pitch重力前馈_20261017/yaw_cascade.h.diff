@@ -1,0 +1,10 @@
+--- before/Output/Gimbal_Control/App/yaw_cascade.h
++++ Output/Gimbal_Control/App/yaw_cascade.h
+@@ -34,4 +34,7 @@
+  * 生产torque_limit_nm应为协议映射端点10，不是原0.10业务限制。 */
+ float YawCascade_Update(YawCascade *loop, float error_deg, uint32_t feedback_ms,
+                         uint32_t sequence, float torque_limit_nm);
++/* 前馈参加力矩求和及抗饱和；原Yaw入口始终传0。单位均为协议Nm。 */
++float YawCascade_UpdateWithFeedforward(YawCascade *loop, float error_deg, uint32_t feedback_ms,
++                        uint32_t sequence, float torque_limit_nm, float feedforward_nm);
+ #endif

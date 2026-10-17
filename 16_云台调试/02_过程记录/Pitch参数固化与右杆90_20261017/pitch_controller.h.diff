@@ -1,0 +1,21 @@
+--- before/Output/Gimbal_Control/App/pitch_controller.h
++++ Output/Gimbal_Control/App/pitch_controller.h
+@@ -36,7 +36,8 @@
+     YawCascade cascade;
+     float reference_rad, last_position_rad, continuous_rad;
+     float angle_deg, target_deg, velocity_dps, torque_nm;
+-    /* 实际水平角=angle_deg+gravity_offset_deg。Kg带符号，默认0；仅RAM。 */
++    /* 实际水平角=angle_deg+gravity_offset_deg。Kg载入固化默认，在线改值仅RAM。
++     * 未标定时保留系数，禁止使能；不保存跨重启的软件零点/相位。 */
+     float gravity_kg_nm, gravity_offset_deg, gravity_torque_nm, pid_torque_nm;
+     uint8_t gravity_calibrated, gravity_i_transferred;
+     uint32_t last_feedback_ms, last_sequence, faults, last_control_ms;
+@@ -54,7 +55,7 @@
+ /* P:deg->deg/s；V:deg/s->协议Nm。参数输入范围并非PID输出限幅。 */
+ uint8_t PitchController_SetPid(PitchController *pitch, char which, float kp, float ki, float kd);
+ uint8_t PitchController_SetTarget(PitchController *pitch, float degrees);
+-void PitchController_ClearGravity(PitchController *pitch);
++void PitchController_InvalidateGravity(PitchController *pitch);
+ uint8_t PitchController_SetGravityGain(PitchController *pitch, float kg_nm);
+ /* 关闭且已建立软件零点时声明水平偏置；不改变软件零点。 */
+ uint8_t PitchController_SetGravityOffset(PitchController *pitch, float offset_deg);

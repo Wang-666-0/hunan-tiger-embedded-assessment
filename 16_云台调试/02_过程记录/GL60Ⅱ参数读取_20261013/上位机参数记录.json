@@ -1,0 +1,110 @@
+{
+  "format": "gl60ii_gui_capture_1",
+  "record_date": "2026-10-13",
+  "source": "参数设置截图.png，用户在CubeMars上位机读取后提供",
+  "capture_kind": "gui_display_transcription",
+  "serial": {
+    "port": "COM10",
+    "baudrate": 921600,
+    "data_bits": 8,
+    "parity": "N",
+    "stop_bits": 1,
+    "usb_mode": "UART",
+    "adapter": "用户提供的普通USB转TTL"
+  },
+  "software_version_display": "V1.6.8.5",
+  "motor_firmware_version": 4407,
+  "motor_firmware_sub_version": 2,
+  "motor_firmware_sub_version_display": "002",
+  "motor_driver_banner": "CubeMars Motor Driver--V3.0",
+  "bootloader_version": null,
+  "device": {
+    "model_user_confirmed": "GL60 II",
+    "can_bus_from_existing_wiring": 1,
+    "can_id": 1,
+    "can_id_display": "0x01",
+    "master_id": 0,
+    "master_id_display": "0x00",
+    "control_mode": 1,
+    "control_mode_display": "MIT模式",
+    "configured_pole_pairs": 14,
+    "configured_gear_ratio": 1,
+    "can_timeout_raw": 20000,
+    "can_timeout_unit": null,
+    "can_baudrate_from_gui": null
+  },
+  "control_amplitudes": {
+    "PMAX": 3.141593,
+    "VMAX": 200,
+    "TMAX": 10,
+    "KT_OUT": 0,
+    "gear_coefficient": 1,
+    "damping_factor": 4
+  },
+  "control_settings": {
+    "current_bandwidth": 1000,
+    "speed_kp": 0.003703401,
+    "speed_ki": 0.003926991,
+    "position_kp": 54,
+    "position_ki": 0
+  },
+  "motor_parameters_ui": {
+    "phase_resistance": {"value": 2969.084, "display_unit": "mR"},
+    "phase_inductance": {"value": 2562.335, "display_unit": "uH"},
+    "flux_linkage": {"value": 0.01677939, "display_unit": "Wb"},
+    "viscous_coefficient": {"value": 0.000388859, "display_unit": null},
+    "rotational_inertia": {"value": 0.0001335702, "display_unit": "kg*m"}
+  },
+  "driver_limits_ui": {
+    "under_voltage": 15,
+    "over_voltage": 32,
+    "over_temperature": 100,
+    "over_current": 0.8,
+    "acceleration": 2,
+    "deceleration": -2,
+    "speed_limit": 53.08929
+  },
+  "observations": {
+    "receive_count_display": 175,
+    "send_count_display": 0,
+    "parameters_filled_after_read": true,
+    "previous_read_timed_out": true,
+    "small_oscillation_reported_after_read_click": true,
+    "calibration_button_may_have_been_clicked": true,
+    "possible_oscillation_trigger_update": "用户后续补充：摆动原因好像是因为点击了校准；原因及校准是否成功仍未验证",
+    "power_off_and_stopped_confirmed_before_latest_screenshot": true,
+    "oscillation_resolved_after_latest_read": null
+  },
+  "serial_log_observation": {
+    "source": "串口启动与模式记录.txt，复制自用户保存的文件202610130815.txt",
+    "firmware_version": 4407,
+    "sub_version_display": "002",
+    "can_id": 1,
+    "master_id": 0,
+    "control_mode_display": "1:MIT Mode <----",
+    "bus_voltage_v": 23.9484,
+    "output_position_raw": 0.1706,
+    "Imax_raw": 20.522388,
+    "current_sample_offsets_raw": {"I_U": 2053.2129, "I_V": 2034.6270, "I_W": 2099.0410},
+    "position_sensor_electrical_offset_raw": 0.2928,
+    "mechanical_offset_raw": 4.0248,
+    "phase_resistance_milliohm": 2969.0845,
+    "phase_inductance_microhenry": 2562.3350,
+    "flux_linkage_display_wb": 0.0168,
+    "entered_motor_mode_reported": true,
+    "raw_binary_parameter_response_captured": false
+  },
+  "limitations": [
+    "本记录抄录上位机显示值，不是原始UART回包，也不证明Flash持久化。",
+    "V1.6.8.5是上位机软件显示版本；电机固件4407/002从后续串口日志确认，Bootloader版本仍未知。",
+    "CAN总线编号1来自既有实物接线；当前页面没有显示或验证CAN波特率。",
+    "CAN Timeout单位未在已核对手册中明确，保留原值20000，不直接换算为ms或s。",
+    "PMAX/VMAX/TMAX用于报文映射，不能当作机械安全范围或额定参数。",
+    "KT_OUT为界面读值0，尚未核验含义，不能据此进行扭矩到电流除法。",
+    "底部发送计数不覆盖所有内部查询，0不能解释成没有发送读参数。",
+    "读取成功不代表之前的摆动原因已查明或已经通过停机保护验收。",
+    "串口日志Imax仅有数值，不能当作允许运行电流；采样Offset也不代表实际相电流。",
+    "Output Position是当时的位置读值，不能当作永久零点或机械限位。",
+    "日志出现Entering Motor Mode，但没有发送时序，不能单独证明摆动原因或重复重启。"
+  ]
+}
