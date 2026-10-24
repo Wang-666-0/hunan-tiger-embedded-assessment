@@ -1,0 +1,14 @@
+--- before/Output/Gimbal_Control/App/pitch_controller.h
++++ after/Output/Gimbal_Control/App/pitch_controller.h
+@@ -39,8 +39,9 @@
+ 
+ typedef struct {
+     float torque_nm, direction, target_deg, previous_angle_deg, safe_velocity_dps;
+-    uint32_t sequence, feedback_ms;
+-    uint8_t enabled, tracking, arrived, active;
++    float peak_abs_nm, return_peak_nm;
++    uint32_t sequence, feedback_ms, arrival_ms, active_frames, return_frames;
++    uint8_t enabled, tracking, arrived, active, approach_done;
+ } PitchTerminalBrake;
+ 
+ typedef struct {

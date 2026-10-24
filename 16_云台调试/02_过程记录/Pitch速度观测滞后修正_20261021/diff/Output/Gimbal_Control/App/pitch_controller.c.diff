@@ -1,0 +1,33 @@
+--- before/Output/Gimbal_Control/App/pitch_controller.c
++++ after/Output/Gimbal_Control/App/pitch_controller.c
+@@ -18,6 +18,21 @@
+ static float clamp(float x, float lo, float hi) { return x < lo ? lo : (x > hi ? hi : x); }
+ static float normalize_degrees(float x)
+ { x = fmodf(x, 360.0f); if (x > 180.0f) { x -= 360.0f; } else if (x < -180.0f) { x += 360.0f; } return x; }
++static void observe_pitch(PitchController *pitch, float delta_deg, uint32_t gap_ms)
++{
++    YawCascade *loop = &pitch->cascade;
++    float previous, dt, alpha;
++    if (!gap_ms || gap_ms >= PITCH_CONTROLLER_FEEDBACK_TIMEOUT_MS || !finite_value(delta_deg)) {
++        YawCascade_ResetObserver(loop); return;
++    }
++    dt = (float)gap_ms * 0.001f;
++    previous = loop->velocity_dps;
++    alpha = (float)gap_ms / ((float)APP_PITCH_VELOCITY_FILTER_MS + (float)gap_ms);
++    loop->velocity_dps += alpha * (delta_deg / dt - loop->velocity_dps);
++    /* 保留测量微分的平滑，短速度滤波不等于直接放大速度D噪声。 */
++    alpha = (float)gap_ms / ((float)APP_PITCH_ACCEL_FILTER_MS + (float)gap_ms);
++    loop->acceleration_dps2 += alpha * ((loop->velocity_dps - previous) / dt - loop->acceleration_dps2);
++}
+ static float gravity_at(const PitchController *pitch, float kg)
+ { return kg * cosf((pitch->angle_deg + pitch->gravity_offset_deg) / RAD_TO_DEG); }
+ static void reset_shape(PitchController *pitch)
+@@ -263,7 +278,7 @@
+     } else {
+         pitch->continuous_rad += delta;
+         pitch->angle_deg = (pitch->continuous_rad - pitch->reference_rad) * RAD_TO_DEG / divisor;
+-        YawCascade_Observe(&pitch->cascade, delta * RAD_TO_DEG / divisor, gap);
++        observe_pitch(pitch, delta * RAD_TO_DEG / divisor, gap);
+     }
+     if (stationary_safe(pitch) && (first || rebase ||
+         absolute(delta) * RAD_TO_DEG / divisor <= 0.05f + 0.5f * (float)gap * 0.001f)) {

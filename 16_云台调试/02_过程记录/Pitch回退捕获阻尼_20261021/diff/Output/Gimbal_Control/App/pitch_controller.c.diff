@@ -1,0 +1,121 @@
+--- before/Output/Gimbal_Control/App/pitch_controller.c
++++ after/Output/Gimbal_Control/App/pitch_controller.c
+@@ -28,16 +28,23 @@
+ static void reset_brake(PitchController *pitch)
+ {
+     pitch->brake.torque_nm = pitch->brake.safe_velocity_dps = 0.0f;
+-    pitch->brake.tracking = pitch->brake.arrived = pitch->brake.active = 0U;
++    pitch->brake.tracking = pitch->brake.arrived = pitch->brake.active = pitch->brake.approach_done = 0U;
+     pitch->brake.sequence = pitch->last_sequence;
+     pitch->brake.feedback_ms = pitch->last_feedback_ms;
+     pitch->brake.previous_angle_deg = pitch->angle_deg;
+ }
++static void clear_brake_statistics(PitchController *pitch)
++{
++    pitch->brake.peak_abs_nm = pitch->brake.return_peak_nm = 0.0f;
++    pitch->brake.active_frames = pitch->brake.return_frames = 0U;
++}
+ static float terminal_brake(PitchController *pitch, uint32_t age)
+ {
+     PitchTerminalBrake *brake = &pitch->brake;
+-    float remaining, closing, raw_closing, delta, weight, wanted, rise;
++    float remaining, closing, raw_closing, delta, weight, wanted = 0.0f, rise, previous;
++    float output_direction, return_speed;
+     uint32_t gap;
++    uint8_t returning = 0U;
+     if (!brake->enabled || !brake->tracking || pitch->shape.active ||
+         pitch->target_deg != brake->target_deg) { reset_brake(pitch); return 0.0f; }
+     if (age > APP_PITCH_TERMINAL_BRAKE_MAX_AGE_MS) {
+@@ -51,29 +58,62 @@
+     remaining = brake->direction * (pitch->target_deg - pitch->angle_deg);
+     closing = brake->direction * pitch->cascade.velocity_dps;
+     raw_closing = brake->direction * pitch->velocity_dps;
++    if (!brake->arrived && remaining <= 0.2f) {
++        brake->arrived = 1U; brake->arrival_ms = pitch->last_feedback_ms;
++    }
++    if (brake->arrived) {
++        if (pitch->last_feedback_ms - brake->arrival_ms > APP_PITCH_CAPTURE_BRAKE_WINDOW_MS) {
++            reset_brake(pitch); return 0.0f;
++        }
++        if (closing <= APP_PITCH_TERMINAL_BRAKE_FLOOR_DPS ||
++            raw_closing <= APP_PITCH_TERMINAL_BRAKE_FLOOR_DPS || delta < -0.0001f) {
++            brake->approach_done = 1U;
++        }
++    }
++    output_direction = -brake->direction;
++    if (brake->approach_done && remaining > APP_PITCH_CAPTURE_BRAKE_ERROR_DEG &&
++        remaining < APP_PITCH_TERMINAL_BRAKE_WINDOW_DEG && delta < -0.0001f &&
++        closing < -APP_PITCH_CAPTURE_BRAKE_FLOOR_DPS &&
++        raw_closing < -APP_PITCH_CAPTURE_BRAKE_FLOOR_DPS) {
++        /* 只抵抗实际远离目标的回退；两路速度与位置增量必须一致。 */
++        return_speed = -closing < -raw_closing ? -closing : -raw_closing;
++        weight = clamp(APP_PITCH_TERMINAL_BRAKE_WINDOW_DEG - remaining, 0.0f, 1.0f);
++        weight = weight * weight * (3.0f - 2.0f * weight);
++        wanted = clamp(APP_PITCH_CAPTURE_BRAKE_GAIN *
++            (return_speed - APP_PITCH_CAPTURE_BRAKE_FLOOR_DPS) * weight,
++            0.0f, APP_PITCH_CAPTURE_BRAKE_LIMIT_NM);
++        output_direction = brake->direction; returning = 1U;
++    }
+     /* 两路速度均指向目标才加阻尼；不沿用滤波滞后在静止/反向时继续加力。 */
+     if (raw_closing < closing) { closing = raw_closing; }
+-    if (remaining <= 0.2f) { brake->arrived = 1U; }
+-    if (brake->arrived && (closing <= APP_PITCH_TERMINAL_BRAKE_FLOOR_DPS || delta < -0.0001f)) {
+-        reset_brake(pitch); return 0.0f;
+-    }
+     brake->safe_velocity_dps = sqrtf(2.0f * APP_PITCH_TERMINAL_BRAKE_DECEL_DPS2 *
+         (remaining > 0.0f ? remaining : 0.0f));
+     if (brake->safe_velocity_dps < APP_PITCH_TERMINAL_BRAKE_FLOOR_DPS) {
+         brake->safe_velocity_dps = APP_PITCH_TERMINAL_BRAKE_FLOOR_DPS;
+     }
+-    if (absolute(remaining) >= APP_PITCH_TERMINAL_BRAKE_WINDOW_DEG || delta < -0.0001f ||
+-        closing <= brake->safe_velocity_dps) {
++    if (!brake->approach_done && absolute(remaining) < APP_PITCH_TERMINAL_BRAKE_WINDOW_DEG &&
++        delta >= -0.0001f && closing > brake->safe_velocity_dps) {
++        weight = 1.0f - absolute(remaining) / APP_PITCH_TERMINAL_BRAKE_WINDOW_DEG;
++        weight = weight * weight * (3.0f - 2.0f * weight);
++        wanted = clamp(APP_PITCH_TERMINAL_BRAKE_GAIN * (closing - brake->safe_velocity_dps) * weight,
++            0.0f, APP_PITCH_TERMINAL_BRAKE_LIMIT_NM);
++    }
++    if (wanted <= 0.0f) {
+         brake->torque_nm = 0.0f; brake->active = 0U; return 0.0f;
+     }
+-    weight = 1.0f - absolute(remaining) / APP_PITCH_TERMINAL_BRAKE_WINDOW_DEG;
+-    weight = weight * weight * (3.0f - 2.0f * weight);
+-    wanted = clamp(APP_PITCH_TERMINAL_BRAKE_GAIN * (closing - brake->safe_velocity_dps) * weight,
+-        0.0f, APP_PITCH_TERMINAL_BRAKE_LIMIT_NM);
+-    rise = APP_PITCH_TERMINAL_BRAKE_RISE_NM_S * (float)(gap > 10U ? 10U : gap) * 0.001f;
+-    if (wanted > absolute(brake->torque_nm) + rise) { wanted = absolute(brake->torque_nm) + rise; }
+-    brake->torque_nm = -brake->direction * wanted;
++    rise = (returning ? APP_PITCH_CAPTURE_BRAKE_RISE_NM_S : APP_PITCH_TERMINAL_BRAKE_RISE_NM_S) *
++        (float)(gap > 10U ? 10U : gap) * 0.001f;
++    /* 换向时先撤掉旧方向力矩，再从0缓升，避免跨零突跳。 */
++    previous = brake->torque_nm * output_direction > 0.0f ? absolute(brake->torque_nm) : 0.0f;
++    if (wanted > previous + rise) { wanted = previous + rise; }
++    brake->torque_nm = output_direction * wanted;
+     brake->active = (uint8_t)(wanted > 0.0f);
++    if (wanted > brake->peak_abs_nm) { brake->peak_abs_nm = wanted; }
++    ++brake->active_frames;
++    if (returning) {
++        if (wanted > brake->return_peak_nm) { brake->return_peak_nm = wanted; }
++        ++brake->return_frames;
++    }
+     return brake->torque_nm;
+ }
+ static void update_shape(PitchController *pitch, uint32_t now_ms)
+@@ -252,6 +292,7 @@
+         degrees > PITCH_CONTROLLER_TARGET_MAX_DEG || !pitch->have_reference || pitch->faults) { return 0U; }
+     pitch->target_deg = degrees; reset_shape(pitch);
+     reset_brake(pitch);
++    clear_brake_statistics(pitch);
+     return 1U;
+ }
+ uint8_t PitchController_SetShape(PitchController *pitch, uint32_t duration_ms, float velocity_gain)
+@@ -275,7 +316,7 @@
+     if (pitch->shape.duration_ms && absolute(degrees - pitch->angle_deg) >= 1.0f) {
+         if (absolute(pitch->velocity_dps) > PITCH_CONTROLLER_STATIONARY_SPEED_DPS ||
+             absolute(pitch->cascade.velocity_dps) > PITCH_CONTROLLER_STATIONARY_SPEED_DPS) { return 0U; }
+-        pitch->target_deg = degrees; reset_shape(pitch); reset_brake(pitch);
++        pitch->target_deg = degrees; reset_shape(pitch); reset_brake(pitch); clear_brake_statistics(pitch);
+         pitch->shape.start_ms = now_ms; pitch->shape.start_deg = pitch->angle_deg;
+         pitch->shape.position_deg = pitch->angle_deg; pitch->shape.active = 1U;
+         return 1U;

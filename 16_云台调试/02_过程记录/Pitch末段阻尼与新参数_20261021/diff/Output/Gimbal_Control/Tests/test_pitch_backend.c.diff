@@ -1,0 +1,10 @@
+--- before/Output/Gimbal_Control/Tests/test_pitch_backend.c
++++ after/Output/Gimbal_Control/Tests/test_pitch_backend.c
+@@ -102,6 +102,7 @@
+         Apply(t, 1U);
+     }
+     CHECK(state.active && !state.controller.faults && torque_calls && permission);
++    CHECK(PitchBackend_SetShape(200U, 0.2f)); /* Keep legacy-profile fixtures explicit. */
+ }
+ 
+ void test_run(void)

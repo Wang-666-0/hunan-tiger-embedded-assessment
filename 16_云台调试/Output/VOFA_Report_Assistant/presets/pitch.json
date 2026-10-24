@@ -1,0 +1,38 @@
+{
+  "schemaVersion": 1,
+  "name": "当前云台 Pitch · DM3507_FAST_OBSERVER_V2F",
+  "source": "Output/Gimbal_Control/App/pitch_console.c and app_console.c, checked 2026-10-22",
+  "lineEnding": "CRLF",
+  "telemetryGroups": ["pitch", "gimbal", "feeder"],
+  "telemetryRule": "Only a complete known-group FireWater line whose comma-separated fields are all numeric is telemetry; retain other text.",
+  "maxReports": 100,
+  "automaticCommands": [],
+  "favorites": [
+    {"label": "Pitch 状态", "command": "PITCH STATUS", "readOnly": true},
+    {"label": "Pitch 参数", "command": "PITCH PID", "readOnly": true},
+    {"label": "Pitch 检查", "command": "PITCH CHECK", "readOnly": true},
+    {"label": "Pitch 成绩", "command": "PITCH RESULT", "readOnly": true},
+    {"label": "Pitch 保护", "command": "PITCH GUARD", "readOnly": true},
+    {"label": "命令帮助", "command": "PITCH HELP", "readOnly": true}
+  ],
+  "rules": [
+    {"command": "PITCH", "terminalPrefix": "P|STATE|"},
+    {"command": "PITCH STATUS", "aliases": ["PITCH INFO"], "terminalPrefix": "P|STATUS|"},
+    {"command": "PITCH PID", "terminalPrefix": "P|PID|"},
+    {"command": "PITCH HELP", "aliases": ["PITCH ?"], "terminalPrefix": "P|HELP|"},
+    {"command": "PITCH CHECK", "intermediatePrefix": "P|BUSY|CHECK|QUERY|", "terminalPrefixes": ["P|CHECK|", "P|ERROR|CHECK|"], "note": "QUERY|TIMEOUT is a board-side failed query, not a successful check."},
+    {"command": "PITCH GUARD", "terminalPrefix": "P|GUARD|", "uncertain": true, "note": "The same line is also emitted spontaneously on guard changes."},
+    {"command": "PITCH RESULT", "terminalPrefix": "P|STEP|", "uncertain": true, "note": "The same line can be an asynchronous serial or remote step result; STATE may be IDLE/RUNNING/DONE/ABORTED."},
+    {"command": "PITCH FF", "terminalPrefix": "P|FF|"},
+    {"command": "PITCH SHAPE", "terminalPrefix": "P|SHAPE|"},
+    {"command": "PITCH SHAPEV", "terminalPrefix": "P|SHAPEV|"},
+    {"command": "PITCH BRAKE", "terminalPrefix": "P|BRAKE|"},
+    {"command": "PITCH READY", "intermediatePrefix": "P|BUSY|READY|QUERY|", "terminalPrefixes": ["P|OK|READY|", "P|OK|ALREADY_READY|", "P|ERROR|READY|"], "changesState": true},
+    {"commandPattern": "^PITCH STEP(?: [+-]?(?:[0-9]+(?:\\.[0-9]*)?|\\.[0-9]+))?$", "intermediatePrefix": "P|OK|STEP_STARTED|", "terminalPrefix": "P|STEP|", "terminalStates": ["DONE", "ABORTED"], "uncertain": true, "changesState": true, "note": "ACK has no step ID; do not claim strict request identity or finish on RUNNING."},
+    {"command": "PITCH HOME", "terminalPrefixes": ["P|OK|HOME|", "P|ERROR|HOME_"], "changesState": true, "note": "ACK means target accepted, not that the axis has reached home."},
+    {"command": "PITCH VIEW", "aliases": ["TELEM PITCH"], "terminalPrefix": "P|VIEW|PITCH|", "changesState": true, "note": "Changes firmware telemetry group; never send automatically."}
+  ],
+  "activeMessagePrefixes": ["P|REMOTE_STEP|", "P|GUARD|", "P|STEP|", "R|", "C|UART_FAULT|", "G|"],
+  "association": "No request ID exists in current firmware; only one command waits at once. Unknown, unrelated and uncertain messages remain visible. Telemetry and active events do not reset a report's timeout or terminate it.",
+  "purpose": "Protocol reference and default UI preset. Actual runtime rule loading is documented by the implementation; this JSON alone is not proof that every listed command is recognized."
+}

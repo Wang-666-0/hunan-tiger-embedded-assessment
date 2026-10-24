@@ -1,0 +1,196 @@
+--- before/App/app_config.h
++++ after/App/app_config.h
+@@ -168,7 +168,7 @@
+ #ifndef APP_FEEDER_ENABLED
+ #define APP_FEEDER_ENABLED (APP_REMOTE_PROFILE_ASSESSMENT && APP_YAW_ENABLED && APP_PITCH_ENABLED)
+ #endif
+-#define APP_FEEDER_VERSION "C610_FEEDBACK_TIME_V1F"
++#define APP_FEEDER_VERSION "C610_PHASE_50MS_V1G"
+ #define APP_FEEDER_CURRENT_HARD_LIMIT 3000
+ #define APP_FEEDER_COMMAND_PERIOD_MS 2U
+ 
+--- before/App/app_console.c
++++ after/App/app_console.c
+@@ -326,6 +326,7 @@
+     }
+ #endif
+     if (strcmp(line, "FEEDER VIEW") == 0 || strcmp(line, "TELEM FEEDER") == 0 ||
++        strcmp(line, "FEEDER ANGLE VIEW") == 0 || strcmp(line, "TELEM FEEDER ANGLE") == 0 ||
+         strcmp(line, "PITCH VIEW") == 0 || strcmp(line, "TELEM PITCH") == 0 ||
+         strcmp(line, "YAW VIEW") == 0 || strcmp(line, "TELEM YAW") == 0) { speed_view = 0U; }
+ #if APP_PITCH_ENABLED
+@@ -339,14 +340,16 @@
+     if (strcmp(line, "STOP") == 0 || strcmp(line, "PITCH OFF") == 0 ||
+         strcmp(line, "DIAG ON") == 0 || strcmp(line, "YAW VIEW") == 0 ||
+         strcmp(line, "TELEM YAW") == 0 || strcmp(line, "FEEDER VIEW") == 0 ||
++        strcmp(line, "FEEDER ANGLE VIEW") == 0 || strcmp(line, "TELEM FEEDER ANGLE") == 0 ||
+         strcmp(line, "TELEM FEEDER") == 0) {
+         PitchDisplaySim_Reset(&pitch_display, pitch_display.enabled);
+     }
+ #endif
+ #if APP_FEEDER_ENABLED
+-    if (strcmp(line, "FEEDER VIEW") == 0 || strcmp(line, "TELEM FEEDER") == 0) {
++    if (strcmp(line, "FEEDER VIEW") == 0 || strcmp(line, "TELEM FEEDER") == 0 ||
++        strcmp(line, "FEEDER ANGLE VIEW") == 0 || strcmp(line, "TELEM FEEDER ANGLE") == 0) {
+         feeder_view = 1U;
+-        SendText("F|VIEW|FEEDER|GROUP|feeder|COLS|39|BAUD|921600|PERIOD_MS|5\r\n"); return;
++        SendText("F|VIEW|ANGLE|GROUP|feeder|COLS|39|ACTUAL_SHAFT_DEG_I|0|TARGET_SHAFT_DEG_I|1|ACTUAL_ROTOR_RPM_I|2|TARGET_ROTOR_RPM_I|3|UNWRAPPED|1|REQUEST_MS|50|CONTROL_MS|2|BAUD|921600|PERIOD_MS|5\r\n"); return;
+     }
+     if (strcmp(line, "YAW VIEW") == 0 || strcmp(line, "TELEM YAW") == 0 ||
+         strcmp(line, "PITCH VIEW") == 0 || strcmp(line, "TELEM PITCH") == 0) { feeder_view = 0U; }
+--- before/App/target_manager.c
++++ after/App/target_manager.c
+@@ -30,6 +30,18 @@
+     manager->last_gimbal_mode = GIMBAL_MANUAL;
+     manager->wheel_off_seen = 0U;
+     manager->last_step_switch = RC_MIDDLE;
++}
++
++static void RepeatShot(TargetManager *manager, uint32_t now_ms)
++{
++    uint32_t late_ms = now_ms - manager->next_shot_ms;
++    manager->request.shot_event = 1U;
++    manager->request.shot_sequence++;
++    /* Keep the 50ms phase through normal one-control-tick jitter. A genuinely
++     * late control call emits only one event and starts a new interval; it
++     * must never squeeze missed requests into a catch-up burst. */
++    manager->next_shot_ms = late_ms <= APP_CONTROL_PERIOD_MS ?
++        manager->next_shot_ms + APP_FIRE_INTERVAL_MS : now_ms + APP_FIRE_INTERVAL_MS;
+ }
+ 
+ #if APP_REMOTE_PROFILE_ASSESSMENT
+@@ -114,8 +126,7 @@
+         manager->next_shot_ms = now_ms + APP_FIRE_INTERVAL_MS;
+     } else if (manager->firing && command->trigger == RC_HIGH &&
+                (int32_t)(now_ms - manager->next_shot_ms) >= 0) {
+-        request->shot_event = 1U; request->shot_sequence++;
+-        manager->next_shot_ms = now_ms + APP_FIRE_INTERVAL_MS;
++        RepeatShot(manager, now_ms);
+     }
+     /* Observation of the existing release/trigger latch; no new shot source. */
+     request->continuous_fire = manager->firing && command->trigger == RC_HIGH;
+@@ -194,10 +205,7 @@
+     }
+     else if (manager->firing && command->trigger == RC_HIGH &&
+              (int32_t)(now_ms - manager->next_shot_ms) >= 0) {
+-        request->shot_event = 1U;
+-        request->shot_sequence++;
+-        /* 最小间隔50ms；迟到只产生一次事件，不追赶积压的发射请求。 */
+-        manager->next_shot_ms = now_ms + APP_FIRE_INTERVAL_MS;
++        RepeatShot(manager, now_ms);
+     }
+ #endif
+ }
+--- before/Tests/run_selftests.py
++++ after/Tests/run_selftests.py
+@@ -47,6 +47,7 @@
+     output = Path(tempfile.mkdtemp(prefix="gimbal-foundation-selftests-"))
+     groups = {
+         "feeder_controller": [root / "test_feeder_controller.c", app / "feeder_controller.c"],
++        "feeder_cadence": [root / "test_feeder_cadence.c", app / "target_manager.c"],
+         "feeder_can": [root / "test_feeder_can.c"] + [app / (n + ".c") for n in (
+             "can_bus", "dm3507", "gl60_ii", "can_frame", "dm_diag", "vesc_diag")],
+         "feeder_backend": [root / "test_feeder_backend.c"] + [app / (n + ".c") for n in (
+--- before/Tests/test_feeder_backend.c
++++ after/Tests/test_feeder_backend.c
+@@ -371,7 +371,7 @@
+     before = current_calls; accepted = stop_calls;
+     memset(response, '~', sizeof(response));
+     CHECK(FeederConsole_Handle("FEEDER CHECK", response, 1024U));
+-    CHECK(strstr(response, "F|CHECK|C610_FEEDBACK_TIME_V1F|FAULT|4|"));
++    CHECK(strstr(response, "F|CHECK|" APP_FEEDER_VERSION "|FAULT|4|"));
+     CHECK(strstr(response, "|JUMP_VALID|1|JUMP_COUNT|1|CAUSE|DELTA|FLAGS|1|"));
+     CHECK(strstr(response, "|PREV_RAW|0|RAW|400|DELTA_COUNTS|400|GAP_MS|1|"));
+     CHECK(strstr(response, "|GAP_BOUND_MS|2|GAP_MARGIN_MS|1|TS_ALLOW|0|"));
+--- before/Tests/test_feeder_speed_telemetry.c
++++ after/Tests/test_feeder_speed_telemetry.c
+@@ -6,6 +6,8 @@
+ {
+     char *cursor, *end;
+     float value[9];
++    float angle[39];
++    FeederBackendState before, after;
+     unsigned i;
+     test_stage = 1U;
+     Reset(10U);
+@@ -19,5 +21,28 @@
+     CHECK(value[0] == -3568 && value[1] == 0 && value[2] == -100 && value[3] == 0);
+     CHECK(value[4] == 35.68f && value[5] == 1 && value[6] == 0 && value[7] == 0 && value[8] == 5);
+     CHECK(state.controller.raw_rpm == -3568 && !nonzero_calls);
++    test_stage = 2U;
++    StartNormal(100U, 2000U, 1U);
++    rotor_counts = 227; rotor_rpm = 600; Tick(now_ms + 1U);
++    before = state;
++    FeederConsole_Telemetry(response, sizeof(response));
++    CHECK(strncmp(response, "feeder:", 7U) == 0); cursor = response + 7U;
++    for (i = 0U; i < 39U; ++i) {
++        angle[i] = strtof(cursor, &end); CHECK(end != cursor);
++        if (i < 38U) { CHECK(*end == ','); cursor = end + 1U; }
++        else { CHECK(strcmp(end, "\r\n") == 0); }
++    }
++    CHECK(angle[0] > 9.97f && angle[0] < 9.98f && angle[1] == 40.0f);
++    CHECK(angle[2] == 600.0f && angle[18] == 1 && angle[21] == 1);
++    Read(); after = state; CHECK(!memcmp(&before, &after, sizeof(before)));
++    test_stage = 3U;
++    Reset(1000U); Feed(1001U); Feed(1002U); Feed(1003U);
++    CHECK(FeederBackend_Zero());
++    rotor_counts = -227; rotor_rpm = -600; Feed(1004U);
++    FeederConsole_Telemetry(response, sizeof(response));
++    angle[0] = strtof(response + 7U, &end); CHECK(*end == ',');
++    angle[1] = strtof(end + 1U, &end);
++    CHECK(angle[0] < -0.27f && angle[0] > -0.29f && angle[1] == 0.0f);
++    CHECK(state.controller.config.direction == -1 && state.controller.config.gear_ratio == 35.68f);
+     test_done = 1U;
+ }
+--- before/Tests/test_feeder_speed_view.c
++++ after/Tests/test_feeder_speed_view.c
+@@ -48,6 +48,14 @@
+     CHECK(columns[0] == 3000 && columns[1] == 5000 && columns[2] == 4000 && columns[3] == 6000);
+     CHECK(columns[6] == 3 && columns[7] == 4 && columns[11] == 7);
+     CHECK(feeder_detail_frames == 1U && feeder_speed_frames == 1U);
++    clear_output(); command_line("FEEDER ANGLE VIEW");
++    CHECK(strstr(output, "GROUP|feeder|COLS|39|ACTUAL_SHAFT_DEG_I|0|TARGET_SHAFT_DEG_I|1"));
++    CHECK(strstr(output, "REQUEST_MS|50|CONTROL_MS|2"));
++    frame("feeder:", 3U); CHECK(columns[0] == 1 && columns[1] == 2 && feeder_detail_frames == 2U);
++    clear_output(); command_line("FEEDER SPEED VIEW"); frame("feeder_speed:", 9U);
++    clear_output(); command_line("TELEM FEEDER ANGLE"); frame("feeder:", 3U);
++    CHECK(feeder_detail_frames == 3U);
++    clear_output(); command_line("WHEEL VIEW"); frame("wheel_speed:", 12U);
+     clear_output(); command_line("YAW VIEW"); frame("gimbal:", 72U);
+     clear_output(); command_line("FEEDER SPEED VIEW"); frame("feeder_speed:", 9U);
+     clear_output(); command_line("PITCH VIEW"); frame("pitch:", 65U);
+@@ -94,6 +102,8 @@
+     pitch_step_sample.start_ms = now + 5U; frame("pitch_demo:", 68U); CHECK(columns[66] == 1);
+     clear_output(); command_line("TELEM OFF"); now += 10U; clear_output(); AppConsole_Poll(); CHECK(!output_length);
+     clear_output(); command_line("TELEM ON"); frame("pitch_demo:", 68U); CHECK(columns[66] == 0);
++    clear_output(); command_line("FEEDER ANGLE VIEW"); frame("feeder:", 3U);
++    clear_output(); command_line("PITCH VIEW"); frame("pitch_demo:", 68U); CHECK(columns[66] == 0);
+     CHECK(!stops && !selections && !pitch_cancel_count && !pitch_commands && !yaw_commands);
+     test_done = 1U;
+ }
+--- before/Tests/test_feeder_stream.c
++++ after/Tests/test_feeder_stream.c
+@@ -161,5 +161,23 @@
+     CHECK(!state.armed && state.controller.have_zero);
+     Console("FEEDER ARM", 1U); Tick(now_ms + 1U);
+     CHECK(state.armed);
++
++    test_stage = 8U;
++    /* Production 2ms control cadence: target advances 40 shaft degrees per
++     * 50ms event, while fresh feedback is closed every control call. */
++    auto_prepare(9000U); launch(2000U);
++    accepted = current_calls;
++    for (i = 2U; i <= 600U; i += APP_CONTROL_PERIOD_MS) {
++        stream_sample(i);
++        CHECK(state.controller.accepted == 1U + i / APP_FIRE_INTERVAL_MS);
++        CHECK(state.controller.axis_target_deg < -40.0 * state.controller.accepted + 0.01 &&
++              state.controller.axis_target_deg > -40.0 * state.controller.accepted - 0.01);
++        CHECK(state.controller.last_control_sequence == state.controller.feedback_sequence);
++        CHECK(state.controller.last_control_ms == start_stream + i);
++    }
++    CHECK(current_calls - accepted == 300U && !state.controller.rejected);
++    CHECK(state.controller.completed == 11U && state.controller.accepted == 13U);
++    SetRemote(now_ms + 2U, 1500U, 2000U, 1500U);
++    CHECK(state.controller.motion_kind == FEEDER_MOTION_TAIL && state.controller.outstanding == 1U);
+     test_done = 1U;
+ }

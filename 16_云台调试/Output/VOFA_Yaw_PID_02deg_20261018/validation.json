@@ -1,0 +1,12 @@
+{
+  "schema": "VOFA+ native export v100",
+  "commands": 19,
+  "tabs": 2,
+  "channels": 72,
+  "baud": 921600,
+  "delta_t_ms": 5,
+  "checks": "JSON, command paths, data indices, LF, loop off, retired commands absent",
+  "source": "D:\\Project\\27电软正式批考核\\16_云台调试\\Output\\VOFA_Pitch_20261017",
+  "native_import_verified": false,
+  "hardware_used": false
+}

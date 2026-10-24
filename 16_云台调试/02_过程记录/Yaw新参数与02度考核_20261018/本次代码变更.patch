@@ -1,0 +1,738 @@
+--- before/Output\Gimbal_Control\App\app_config.h
++++ after/Output\Gimbal_Control\App\app_config.h
+@@ -7,7 +7,7 @@
+ #ifndef APP_YAW_ENABLED
+ #define APP_YAW_ENABLED 1U
+ #endif
+-#define APP_YAW_VERSION "GL60II_FIXED_PID_V2N"
++#define APP_YAW_VERSION "GL60II_FIXED_PID_V2P"
+ /* 达标实测为SHAPE=0、SHAPEV=0，正式控制仅保留双环。
+  * 1仅供旧规划/前馈的离线回归，不在正式VOFA面板开放。 */
+ #ifndef APP_YAW_EXPERIMENTAL_TRACKING
+@@ -20,7 +20,7 @@
+ #ifndef APP_PITCH_ENABLED
+ #define APP_PITCH_ENABLED 1U
+ #endif
+-#define APP_PITCH_VERSION "DM3507_CASCADE_V1F"
++#define APP_PITCH_VERSION "DM3507_CASCADE_V1G"
+ #define APP_PITCH_COMMAND_PERIOD_MS 2U
+ #define APP_PITCH_ENABLE_TIMEOUT_MS 100U
+ #define APP_PITCH_POSITION_KP 18.2f
+@@ -36,25 +36,26 @@
+ #endif
+ #define APP_GIMBAL_STARTUP_OFF_HOLD_MS 100U
+ #define APP_GIMBAL_STARTUP_TIMEOUT_MS 5000U
+-/* 2026-10-18用户截图达标参数：SETTLE05=218ms、PASS05=1。
++/* 2026-10-18用户最新截图六参数；新考核为±0.2度稳定时间、超调与稳态误差。
++ * 截图超调0.410608度，本组参数尚未通过更新后的考核。
+  * 在线调参仍只作用于本次RAM会话；下面允许离线历史用例明确覆盖。 */
+ #ifndef APP_YAW_POSITION_KP
+-#define APP_YAW_POSITION_KP 14.0f
++#define APP_YAW_POSITION_KP 16.63f
+ #endif
+ #ifndef APP_YAW_POSITION_KI
+-#define APP_YAW_POSITION_KI 0.15f
++#define APP_YAW_POSITION_KI 0.12f
+ #endif
+ #ifndef APP_YAW_POSITION_KD
+-#define APP_YAW_POSITION_KD 0.15f
++#define APP_YAW_POSITION_KD 0.269f
+ #endif
+ #ifndef APP_YAW_SPEED_KP
+-#define APP_YAW_SPEED_KP 0.0075f
++#define APP_YAW_SPEED_KP 0.0081f
+ #endif
+ #ifndef APP_YAW_SPEED_KI
+-#define APP_YAW_SPEED_KI 0.005f
++#define APP_YAW_SPEED_KI 0.003f
+ #endif
+ #ifndef APP_YAW_SPEED_KD
+-#define APP_YAW_SPEED_KD 0.00018f
++#define APP_YAW_SPEED_KD 0.000209f
+ #endif
+ #ifndef APP_FLYWHEEL_JOG_ENABLED
+ #define APP_FLYWHEEL_JOG_ENABLED 1U
+--- before/Output\Gimbal_Control\App\app_console.c
++++ after/Output\Gimbal_Control\App\app_console.c
+@@ -297,19 +297,19 @@
+ #if APP_PITCH_ENABLED
+     if (strcmp(line, "TELEM PITCH") == 0 || strcmp(line, "PITCH VIEW") == 0) {
+         pitch_view = 1U;
+-        SendText("P|VIEW|PITCH|GROUP|pitch|COLS|58|PID_I|7_12|GFF_I|52_57\r\n"); return;
++        SendText("P|VIEW|PITCH|GROUP|pitch|COLS|58|PID_I|7_12|GFF_I|52_57|RESP02_I|26|SETTLE02_I|27|OS_DEG_I|28|SSE_DEG_I|30|PASS02_I|32|BAND_DEG|0.2|TIME_LIMIT_MS|300|OS_LIMIT_DEG|0.2|SSE_LIMIT_DEG|0.2\r\n"); return;
+     }
+     if (strcmp(line, "TELEM YAW") == 0 || strcmp(line, "YAW VIEW") == 0) {
+         pitch_view = 0U;
+-        SendText(strcmp(line, "YAW VIEW") == 0 ? "Y|VIEW|YAW|GROUP|gimbal|COLS|72|PID_I|7_12|FF_I|48_59|BAND05_I|60_62\r\n" :
+-            "P|VIEW|YAW|GROUP|gimbal|COLS|72|PID_I|7_12|FF_I|48_59|BAND05_I|60_62\r\n"); return;
++        SendText(strcmp(line, "YAW VIEW") == 0 ? "Y|VIEW|YAW|GROUP|gimbal|COLS|72|PID_I|7_12|RESP02_I|60|SETTLE02_I|61|OS_DEG_I|28|SSE_DEG_I|30|PASS02_I|62|BAND_DEG|0.2|TIME_LIMIT_MS|250|OS_LIMIT_DEG|0.2|SSE_LIMIT_DEG|0.2\r\n" :
++            "P|VIEW|YAW|GROUP|gimbal|COLS|72|PID_I|7_12|RESP02_I|60|SETTLE02_I|61|OS_DEG_I|28|SSE_DEG_I|30|PASS02_I|62|BAND_DEG|0.2|TIME_LIMIT_MS|250|OS_LIMIT_DEG|0.2|SSE_LIMIT_DEG|0.2\r\n"); return;
+     }
+     if (PitchConsole_Handle(line, telemetry, sizeof(telemetry))) { SendText(telemetry); return; }
+ #endif
+ #if APP_YAW_ENABLED
+ #if !APP_PITCH_ENABLED
+     if (strcmp(line, "YAW VIEW") == 0 || strcmp(line, "TELEM YAW") == 0) {
+-        SendText("Y|VIEW|YAW|GROUP|gimbal|COLS|72|PID_I|7_12|FF_I|48_59|BAND05_I|60_62\r\n"); return;
++        SendText("Y|VIEW|YAW|GROUP|gimbal|COLS|72|PID_I|7_12|RESP02_I|60|SETTLE02_I|61|OS_DEG_I|28|SSE_DEG_I|30|PASS02_I|62|BAND_DEG|0.2|TIME_LIMIT_MS|250|OS_LIMIT_DEG|0.2|SSE_LIMIT_DEG|0.2\r\n"); return;
+     }
+ #endif
+     if (YawConsole_Handle(line, telemetry, sizeof(telemetry))) { SendText(telemetry); return; }
+@@ -656,7 +656,9 @@
+ #endif
+     age = remote.has_frame ? (uint32_t)(now - remote.received_ms) : 0U;
+ #if APP_YAW_ENABLED
+-    /* 原索引不移动，共72列。I49~I53旧补偿保留零占位，I54前馈限幅、I55加速度前馈，
++    /* 原索引不移动，共72列。I60/I61/I62改为±0.2首次/最终进入时间/总判定，
++     * 与I26/I27/I32为同一份结果；总判定同时检查最终稳定时间、超调与稳态。
++     * I49~I53旧补偿保留零占位，I54前馈限幅、I55加速度前馈，
+      * I64~I69为规划时间/活动/位置/速度/加速度/跟踪误差，I70速度前馈权重、I71加速度系数。
+      * 前馈参数4位有效数字，诊断5位，减少5ms/921600线路开销。 */
+     length = snprintf(telemetry, sizeof(telemetry),
+@@ -696,7 +698,7 @@
+         (double)yaw.controller.ff.limit_nm, (double)yaw.controller.cascade.feedforward_nm,
+         (double)yaw.controller.pid_torque_nm, (double)yaw.controller.cascade.speed_i,
+         (double)yaw.controller.cascade.position_i, (unsigned)yaw.controller.cascade.feedforward_limited,
+-        (long)(int32_t)step.response05_ms, (long)(int32_t)step.settle05_ms, (unsigned)step.pass05,
++        (long)(int32_t)step.response_ms, (long)(int32_t)step.settle_ms, (unsigned)step.pass,
+         (unsigned long)yaw.controller.last_feedback_ms,
+         (unsigned long)yaw.controller.shape.duration_ms, (unsigned)yaw.controller.shape.active,
+         (double)yaw.controller.shape.position_deg, (double)yaw.controller.shape.velocity_dps,
+--- before/Output\Gimbal_Control\App\pitch_console.c
++++ after/Output\Gimbal_Control\App\pitch_console.c
+@@ -152,7 +152,7 @@
+     uint32_t rise = value->t10_ms != PITCH_STEP_UNREACHED && value->t90_ms != PITCH_STEP_UNREACHED ?
+         value->t90_ms - value->t10_ms : PITCH_STEP_UNREACHED;
+     int length = snprintf(response, capacity,
+-        "P|STEP|ID|%lu|STATE|%s|REASON|%s|VALID|%u|START|%.3f|TARGET|%.3f|WINDOW_MS|%lu|RESP_MS|%ld|T90_MS|%ld|RISE_MS|%ld|SETTLE_MS|%ld|OS_DEG|%.3f|OS_PCT|%.3f|SSE_DEG|%.3f|SSE_VALID|%u|PASS|%u|FAULT|%lu|VMAX_DPS|%.2f|TMAX_NM|%.5f|N|%lu|GAP_MS|%lu|SAT_N|%lu|CMD_N|%lu|FIRST_NM|%.5f|CTRL|CASCADE|PKP|%.6g|PKI|%.6g|PKD|%.6g|VKP|%.6g|VKI|%.6g|VKD|%.6g|OUTPUT_LIMITS|0|RESP_LIMIT_MS|300|RESPONSE|FIRST_IN_BAND|KG|%.6g|GOFF_DEG|%.6g|G_CAL|%u\r\n",
++        "P|STEP|ID|%lu|STATE|%s|REASON|%s|VALID|%u|START|%.3f|TARGET|%.3f|WINDOW_MS|%lu|RESP_MS|%ld|T90_MS|%ld|RISE_MS|%ld|SETTLE_MS|%ld|OS_DEG|%.6f|OS_PCT|%.3f|SSE_DEG|%.6f|SSE_VALID|%u|PASS|%u|FAULT|%lu|VMAX_DPS|%.2f|TMAX_NM|%.5f|N|%lu|GAP_MS|%lu|SAT_N|%lu|CMD_N|%lu|FIRST_NM|%.5f|CTRL|CASCADE|PKP|%.6g|PKI|%.6g|PKD|%.6g|VKP|%.6g|VKI|%.6g|VKD|%.6g|OUTPUT_LIMITS|0|RESP_LIMIT_MS|300|RESPONSE|FIRST_IN_BAND|BAND02|0.2|RESP02_MS|%ld|SETTLE02_MS|%ld|PASS02|%u|TIME_LIMIT_MS|300|OS_LIMIT_DEG|0.2|SSE_LIMIT_DEG|0.2|SSE_PEAK_DEG|%.6g|ASSESSMENT|FINAL_SETTLE|KG|%.6g|GOFF_DEG|%.6g|G_CAL|%u\r\n",
+         (unsigned long)value->id, value->phase <= PITCH_STEP_ABORTED ? phases[value->phase] : "UNKNOWN",
+         value->reason <= PITCH_STEP_FF_CHANGE ? reasons[value->reason] : "UNKNOWN",
+         (unsigned)(value->phase == PITCH_STEP_DONE), (double)value->start_deg, (double)value->target_deg,
+@@ -164,6 +164,8 @@
+         (unsigned long)value->limited_samples, (unsigned long)value->command_samples,
+         (double)value->first_command_nm, (double)value->kp, (double)value->ki, (double)value->kd,
+         (double)value->vkp, (double)value->vki, (double)value->vkd,
++        (long)(int32_t)value->response_ms, (long)(int32_t)value->settle_ms, (unsigned)value->pass,
++        (double)value->ss_max_error,
+         (double)value->gravity_kg_nm, (double)value->gravity_offset_deg, (unsigned)value->gravity_calibrated);
+     return (uint8_t)(length > 0 && (size_t)length < capacity);
+ }
+--- before/Output\Gimbal_Control\App\pitch_step.c
++++ after/Output\Gimbal_Control\App\pitch_step.c
+@@ -13,12 +13,7 @@
+     uint8_t running = (uint8_t)(step && step->phase == PITCH_STEP_RUNNING);
+     YawStep_Sample(step, received_ms, angle_deg, velocity_dps, torque_nm, limited);
+     if (running && step->phase == PITCH_STEP_DONE) {
+-        step->pass05 = (uint8_t)(!step->faults && absolute(step->span_deg - 30.0f) <= 0.2f &&
+-            step->settle05_ms != PITCH_STEP_UNREACHED && step->settle05_ms <= PITCH_STEP_RESPONSE_LIMIT_MS);
+-        step->pass = (uint8_t)(!step->faults && absolute(step->span_deg - 30.0f) <= PITCH_STEP_BAND_DEG &&
+-            step->response_ms != PITCH_STEP_UNREACHED && step->response_ms <= PITCH_STEP_RESPONSE_LIMIT_MS &&
+-            step->overshoot_deg <= PITCH_STEP_BAND_DEG && step->sse_valid &&
+-            absolute(step->steady_error_deg) <= PITCH_STEP_BAND_DEG);
++        step->pass = YawStep_Passed(step, PITCH_STEP_RESPONSE_LIMIT_MS);
+     }
+ }
+ void PitchStep_Command(PitchStep *step, uint32_t now_ms, float torque_nm)
+--- before/Output\Gimbal_Control\App\yaw_console.c
++++ after/Output\Gimbal_Control\App\yaw_console.c
+@@ -132,7 +132,7 @@
+     uint32_t rise = step->t10_ms != YAW_STEP_UNREACHED && step->t90_ms != YAW_STEP_UNREACHED ?
+         step->t90_ms - step->t10_ms : YAW_STEP_UNREACHED;
+     int length = snprintf(response, capacity,
+-        "Y|STEP|ID|%lu|STATE|%s|REASON|%s|VALID|%u|START|%.3f|TARGET|%.3f|WINDOW_MS|%lu|RESP_MS|%ld|T90_MS|%ld|RISE_MS|%ld|SETTLE_MS|%ld|OS_DEG|%.3f|OS_PCT|%.3f|SSE_DEG|%.3f|SSE_VALID|%u|PASS|%u|FAULT|%lu|VMAX_DPS|%.2f|TMAX_NM|%.5f|N|%lu|GAP_MS|%lu|%s|%lu|%s|%.4f|%s|%.4f|%s|%.4f|CMD_N|%lu|FIRST_NM|%.5f",
++        "Y|STEP|ID|%lu|STATE|%s|REASON|%s|VALID|%u|START|%.3f|TARGET|%.3f|WINDOW_MS|%lu|RESP_MS|%ld|T90_MS|%ld|RISE_MS|%ld|SETTLE_MS|%ld|OS_DEG|%.6f|OS_PCT|%.3f|SSE_DEG|%.6f|SSE_VALID|%u|PASS|%u|FAULT|%lu|VMAX_DPS|%.2f|TMAX_NM|%.5f|N|%lu|GAP_MS|%lu|%s|%lu|%s|%.4f|%s|%.4f|%s|%.4f|CMD_N|%lu|FIRST_NM|%.5f",
+         (unsigned long)step->id, step->phase <= YAW_STEP_ABORTED ? phases[step->phase] : "UNKNOWN",
+         step->reason <= YAW_STEP_FF_CHANGE ? reasons[step->reason] : "UNKNOWN",
+         (unsigned)(step->phase == YAW_STEP_DONE), (double)step->start_deg, (double)step->target_deg,
+@@ -152,11 +152,13 @@
+         if (step->cascade) {
+             length = snprintf(response + used, capacity - used,
+                 "|CTRL|CASCADE|VKP|%.6f|VKI|%.6f|VKD|%.6f|VREF_MAX_DPS|%.1f|VFILTER_MS|%u|OUTPUT_LIMITS|%u"
+-                "|BAND05|0.5|RESP05_MS|%ld|SETTLE05_MS|%ld|PASS05|%u"
++                "|BAND02|0.2|RESP02_MS|%ld|SETTLE02_MS|%ld|PASS02|%u"
++                "|TIME_LIMIT_MS|250|OS_LIMIT_DEG|0.2|SSE_LIMIT_DEG|0.2|SSE_PEAK_DEG|%.6g|ASSESSMENT|FINAL_SETTLE"
+                 "|FF_ON|%u|FF_TYPE|ACCEL|FKA|%.6g|FMAX|%.6g|SHAPE_MS|%lu|SHAPE_V|%.6g\r\n",
+                 (double)step->vkp, (double)step->vki, (double)step->vkd,
+                 (double)step->vmax_dps, (unsigned)YAW_CASCADE_VELOCITY_FILTER_MS, (unsigned)step->output_limits,
+-                (long)(int32_t)step->response05_ms, (long)(int32_t)step->settle05_ms, (unsigned)step->pass05,
++                (long)(int32_t)step->response_ms, (long)(int32_t)step->settle_ms, (unsigned)step->pass,
++                (double)step->ss_max_error,
+                 (unsigned)step->ff_enabled, (double)step->ff_acceleration_gain,
+                 (double)step->ff_limit_nm, (unsigned long)step->shape_ms,
+                 (double)step->shape_velocity_gain);
+--- before/Output\Gimbal_Control\App\yaw_controller.h
++++ after/Output\Gimbal_Control\App\yaw_controller.h
+@@ -112,7 +112,7 @@
+  * 双环由yaw_cascade接口调参，不能复用这组三个数字。 */
+ uint8_t YawController_SetPid(YawController *yaw, float kp, float ki, float kd);
+ uint8_t YawController_SetTarget(YawController *yaw, float degrees);
+-/* V2N生产编译关闭实验规划/前馈；仅接受显式关闭和零规划配置。
++/* V2P生产编译关闭实验规划/前馈；仅接受显式关闭和零规划配置。
+  * 以下接口保留历史离线回归，APP_YAW_EXPERIMENTAL_TRACKING=1才可启用。
+  * A=规划加速度系数(0~0.001)，L=前馈限幅(0~1)，E=使能。
+  * 运动规划中只允许关闭；不再把前馈转存到积分中。旧B/V/C/S已删除。 */
+--- before/Output\Gimbal_Control\App\yaw_step.c
++++ after/Output\Gimbal_Control\App\yaw_step.c
+@@ -9,7 +9,6 @@
+     if (!step) { return; }
+     memset(step, 0, sizeof(*step));
+     step->t10_ms = step->t90_ms = step->response_ms = step->settle_ms = YAW_STEP_UNREACHED;
+-    step->response05_ms = step->settle05_ms = YAW_STEP_UNREACHED;
+ }
+ uint8_t YawStep_Start(YawStep *step, uint32_t now_ms, float start_deg, float target_deg)
+ {
+@@ -40,7 +39,15 @@
+     if (!step || step->phase != YAW_STEP_RUNNING) { return; }
+     step->phase = YAW_STEP_ABORTED; step->reason = (uint8_t)reason;
+     step->faults = faults; step->elapsed_ms = now_ms - step->start_ms;
+-    step->pending = 1U; step->sse_valid = step->pass = step->pass05 = 0U;
++    step->pending = 1U; step->sse_valid = step->pass = 0U;
++}
++uint8_t YawStep_Passed(const YawStep *step, uint32_t limit_ms)
++{
++    return (uint8_t)(step && step->phase == YAW_STEP_DONE && !step->faults &&
++        absolute(step->span_deg - 30.0f) <= YAW_STEP_BAND_DEG + YAW_STEP_COMPARE_EPS_DEG &&
++        step->settle_ms != YAW_STEP_UNREACHED && step->settle_ms <= limit_ms &&
++        step->overshoot_deg <= YAW_STEP_OVERSHOOT_LIMIT_DEG + YAW_STEP_COMPARE_EPS_DEG &&
++        step->sse_valid && absolute(step->steady_error_deg) <= YAW_STEP_SSE_LIMIT_DEG + YAW_STEP_COMPARE_EPS_DEG);
+ }
+ void YawStep_Sample(YawStep *step, uint32_t received_ms, float angle_deg,
+                     float velocity_dps, float torque_nm, uint8_t limited)
+@@ -72,16 +79,12 @@
+     overshoot = progress - step->span_deg;
+     if (overshoot > step->overshoot_deg) { step->overshoot_deg = overshoot; }
+     step->overshoot_pct = step->overshoot_deg * 100.0f / step->span_deg;
+-    if (absolute(step->target_deg - angle) <= YAW_STEP_BAND_DEG) {
++    if (absolute(step->target_deg - angle) <= YAW_STEP_BAND_DEG + YAW_STEP_COMPARE_EPS_DEG) {
+         if (!step->band_active) { step->band_active = 1U; step->band_since_ms = end; }
+         if (step->response_ms == YAW_STEP_UNREACHED) {
+             step->response_ms = end;
+         }
+     } else { step->band_active = 0U; }
+-    if (absolute(step->target_deg - angle) <= YAW_STEP_ASSESSMENT_BAND_DEG) {
+-        if (!step->band05_active) { step->band05_active = 1U; step->band05_since_ms = end; }
+-        if (step->response05_ms == YAW_STEP_UNREACHED) { step->response05_ms = end; }
+-    } else { step->band05_active = 0U; }
+     low = previous > YAW_STEP_WINDOW_MS - YAW_STEP_STEADY_MS ?
+         previous : YAW_STEP_WINDOW_MS - YAW_STEP_STEADY_MS;
+     if (end > low) {
+@@ -102,14 +105,7 @@
+             step->settle_ms = step->band_since_ms;
+         }
+         step->sse_valid = (uint8_t)(step->ss_duration_ms == YAW_STEP_STEADY_MS &&
+-            step->ss_samples >= 10U && step->ss_max_error <= YAW_STEP_BAND_DEG);
+-        step->pass = (uint8_t)(absolute(step->span_deg - 30.0f) <= 0.2f &&
+-            step->response_ms != YAW_STEP_UNREACHED && step->response_ms <= 250U &&
+-            step->overshoot_deg <= 0.2f && step->sse_valid && absolute(step->steady_error_deg) <= 0.2f);
+-        if (step->band05_active && end - step->band05_since_ms >= YAW_STEP_SETTLE_HOLD_MS) {
+-            step->settle05_ms = step->band05_since_ms;
+-        }
+-        step->pass05 = (uint8_t)(!step->faults && absolute(step->span_deg - 30.0f) <= 0.2f &&
+-            step->settle05_ms != YAW_STEP_UNREACHED && step->settle05_ms <= YAW_STEP_ASSESSMENT_LIMIT_MS);
++            step->ss_samples >= 10U && step->ss_max_error <= YAW_STEP_BAND_DEG + YAW_STEP_COMPARE_EPS_DEG);
++        step->pass = YawStep_Passed(step, YAW_STEP_RESPONSE_LIMIT_MS);
+     }
+ }
+--- before/Output\Gimbal_Control\App\yaw_step.h
++++ after/Output\Gimbal_Control\App\yaw_step.h
+@@ -5,9 +5,12 @@
+ #define YAW_STEP_STEADY_MS 1000U
+ #define YAW_STEP_BAND_DEG 0.2f
+ #define YAW_STEP_SETTLE_HOLD_MS 50U
+-/* 新考核独立跟踪，原±0.2统计/近零启动门禁保持。 */
+-#define YAW_STEP_ASSESSMENT_BAND_DEG 0.5f
+-#define YAW_STEP_ASSESSMENT_LIMIT_MS 250U
++/* 正式考核：最终进入±0.2后保持到窗口末，同时限制超调和稳态误差。 */
++#define YAW_STEP_RESPONSE_LIMIT_MS 250U
++#define YAW_STEP_OVERSHOOT_LIMIT_DEG 0.2f
++#define YAW_STEP_SSE_LIMIT_DEG 0.2f
++/* 仅吸收单精度相减的边界舍入，远小于一个编码器刻度。 */
++#define YAW_STEP_COMPARE_EPS_DEG 0.00001f
+ #define YAW_STEP_UNREACHED 0xFFFFFFFFUL
+ typedef enum { YAW_STEP_IDLE, YAW_STEP_RUNNING, YAW_STEP_DONE, YAW_STEP_ABORTED } YawStepPhase;
+ typedef enum {
+@@ -17,7 +20,6 @@
+ typedef struct {
+     uint32_t id, start_ms, last_ms, elapsed_ms, samples, max_gap_ms;
+     uint32_t t10_ms, t90_ms, response_ms, settle_ms, band_since_ms;
+-    uint32_t response05_ms, settle05_ms, band05_since_ms;
+     uint32_t ss_duration_ms, ss_samples, faults, limited_samples;
+     uint32_t command_samples;
+     uint32_t shape_ms;
+@@ -29,7 +31,7 @@
+     float ss_integral, ss_max_error, kp, ki, kd;
+     float vkp, vki, vkd, vmax_dps;
+     float ff_acceleration_gain, ff_limit_nm;
+-    uint8_t ff_enabled, band05_active, pass05;
++    uint8_t ff_enabled;
+     /* Pitch冻结试验条件；Yaw保持0，不使用这些字段。 */
+     float gravity_kg_nm, gravity_offset_deg;
+     uint8_t gravity_calibrated;
+@@ -40,7 +42,8 @@
+  * t0为命令接受时刻，后续时间来自CAN实际接收戳；不使用VOFA绘图dt。
+  * RESP=首次反馈进入目标±0.2度的时刻，不要求持续保持；一旦取得不改写。
+  * SETTLE=窗口末仍在带内至少50ms的最后一次进入时刻；
+- * 稳态值是第4~5秒的时间加权均值。 */
++ * 稳态值是第4~5秒的时间加权均值；有效还要求该段始终在±0.2内。
++ * PASS用SETTLE判时间；首次进入很快但随后离带不算通过。 */
+ void YawStep_Init(YawStep *step);
+ uint8_t YawStep_Start(YawStep *step, uint32_t now_ms, float start_deg, float target_deg);
+ void YawStep_Sample(YawStep *step, uint32_t received_ms, float angle_deg,
+@@ -49,4 +52,6 @@
+  * 独立于反馈采样，首个反馈即故障也不丢失已提交的首段指令。 */
+ void YawStep_Command(YawStep *step, uint32_t now_ms, float torque_nm);
+ void YawStep_Abort(YawStep *step, uint32_t now_ms, YawStepReason reason, uint32_t faults);
++/* 共用完成判定，调用轴提供250/300ms时限；无输出副作用。 */
++uint8_t YawStep_Passed(const YawStep *step, uint32_t limit_ms);
+ #endif
+--- before/Output\Gimbal_Control\Tests\test_pitch_console.c
++++ after/Output\Gimbal_Control\Tests\test_pitch_console.c
+@@ -94,9 +94,9 @@
+     ConsoleReset(100U);
+     CHECK(!PitchConsole_Handle("YAW STATUS", response, sizeof(response)));
+     Command("PITCH STATUS", "COORD_CONFIRMED|0"); CHECK(!query_calls && !disable_calls && !enable_calls);
+-    CHECK(strstr(response, "DM3507_CASCADE_V1F") && strstr(response, "MIN_DEG|-18|MAX_DEG|33"));
++    CHECK(strstr(response, "DM3507_CASCADE_V1G") && strstr(response, "MIN_DEG|-18|MAX_DEG|33"));
+     CHECK(strstr(response, "HARD_MIN_DEG|-19|HARD_MAX_DEG|34") && strstr(response, "SUPPORT_REQUIRED|1\r\n"));
+-    Command("PITCH", "P|STATE|DM3507_CASCADE_V1F"); CHECK(strlen(response) < 300U);
++    Command("PITCH", "P|STATE|DM3507_CASCADE_V1G"); CHECK(strlen(response) < 300U);
+     Command("PITCH HELP", "P|HELP|READ|PITCH;PID;RESULT;STATUS");
+     Command("PITCH ?", "PITCH_ONLY|COORD 1;GHORIZ");
+     Command("PITCH PID", "POS|18.2,0.44,0.04|VEL|0.0065,0.014,4e-06|KG|-0.13");
+@@ -133,6 +133,8 @@
+     Command("PITCH STEP 1", "P|ERROR|"); Command("PITCH STEP 30", "P|OK|STEP_STARTED|");
+     Command("PITCH STEP -30", "STEP_OUTSIDE_MECHANICAL_RANGE");
+     Command("PITCH RESULT", "STATE|RUNNING"); CHECK(strstr(response, "RESP_LIMIT_MS|300"));
++    CHECK(strstr(response, "|BAND02|0.2|") && strstr(response, "|TIME_LIMIT_MS|300|OS_LIMIT_DEG|0.2|SSE_LIMIT_DEG|0.2|"));
++    CHECK(strstr(response, "|ASSESSMENT|FINAL_SETTLE|") && !strstr(response, "PASS05"));
+     Command("PITCH PKP 18.2", "P|OK|PARAMETER"); PitchBackend_GetStep(&measurement);
+     CHECK(measurement.phase == PITCH_STEP_RUNNING);
+     Command("PITCH PKP 13", "P|OK|PARAMETER"); PitchBackend_GetStep(&measurement); Read();
+--- before/Output\Gimbal_Control\Tests\test_pitch_step.c
++++ after/Output\Gimbal_Control\Tests\test_pitch_step.c
+@@ -43,7 +43,7 @@
+         float angle = t == 150U || t >= 2000U ? 30.0f : 29.5f;
+         PitchStep_Sample(&pitch, 100U + t, angle, 0.0f, 0.5f, 0U);
+     }
+-    CHECK(pitch.response_ms == 150U && pitch.settle_ms == 2000U && pitch.sse_valid && pitch.pass);
++    CHECK(pitch.response_ms == 150U && pitch.settle_ms == 2000U && pitch.sse_valid && !pitch.pass);
+     test_stage = 4U;
+     PitchStep_Init(&pitch); CHECK(PitchStep_Start(&pitch, 0U, 0.0f, 30.0f));
+     for (t = 10U; t <= 5000U; t += 10U) {
+@@ -68,6 +68,8 @@
+     for (t = 10U; t <= 5000U; t += 10U) {
+         PitchStep_Sample(&pitch, t, t < 300U ? 0.0f : 29.7f, 0.0f, 0.1f, 0U);
+     }
+-    CHECK(pitch.settle05_ms == 300U && pitch.pass05 && !pitch.pass);
++    CHECK(pitch.response_ms == PITCH_STEP_UNREACHED && pitch.settle_ms == PITCH_STEP_UNREACHED && !pitch.pass);
++    ramp(0U, 300U, 30.0f); CHECK(pitch.pass && !yaw.pass && pitch.settle_ms == 300U);
++    ramp(0U, 310U, 30.0f); CHECK(!pitch.pass && pitch.settle_ms == 310U);
+     test_done = 1U;
+ }
+--- before/Output\Gimbal_Control\Tests\test_pitch_telemetry.c
++++ after/Output\Gimbal_Control\Tests\test_pitch_telemetry.c
+@@ -91,7 +91,7 @@
+     pitch_sample.rx_count = 210U; pitch_sample.feedback_age_ms = 2U;
+     pitch_sample.feedback.position_rad = 0.2f; pitch_sample.feedback.velocity_rad_s = 1.6f;
+     pitch_step_sample.id = 3U; pitch_step_sample.phase = PITCH_STEP_DONE;
+-    pitch_step_sample.response_ms = 290U; pitch_step_sample.settle_ms = 800U;
++    pitch_step_sample.response_ms = 290U; pitch_step_sample.settle_ms = 290U;
+     pitch_step_sample.overshoot_deg = 0.1f; pitch_step_sample.steady_error_deg = -0.02f;
+     pitch_step_sample.sse_valid = pitch_step_sample.pass = 1U;
+     pitch_step_sample.t10_ms = 30U; pitch_step_sample.t90_ms = 180U;
+@@ -102,7 +102,7 @@
+     CHECK(columns[10] == 0.02f && columns[11] == 0.03f && columns[12] == 0.00005f);
+     CHECK(columns[14] == 1 && columns[15] == 1 && columns[17] == 1 && columns[19] == 2);
+     CHECK(columns[21] == 1 && columns[23] == 1 && columns[24] == 3);
+-    CHECK(columns[26] == 290 && columns[27] == 800 && columns[31] == 1 && columns[32] == 1);
++    CHECK(columns[26] == 290 && columns[27] == 290 && columns[31] == 1 && columns[32] == 1);
+     CHECK(columns[33] == 180 && columns[34] == 150 && columns[37] == 1 && columns[38] == 210);
+     CHECK(columns[46] == 38 && columns[47] == 41);
+     CHECK(columns[41] == 1000 && columns[42] == 1500 && columns[43] == 1500 && columns[44] == 2000);
+@@ -170,6 +170,7 @@
+     clear_output(); command_line("TELEM ON"); CHECK(strstr(output, "C|OK|TELEM|ON"));
+     now += 5U; clear_output(); AppConsole_Poll(); parse("pitch:");
+     clear_output(); command_line("YAW VIEW"); CHECK(strstr(output, "Y|VIEW|YAW|GROUP|gimbal|COLS|72"));
++    CHECK(strstr(output, "PASS02_I|62|BAND_DEG|0.2|TIME_LIMIT_MS|250|"));
+     now += 5U; clear_output(); AppConsole_Poll(); parse("gimbal:");
+     clear_output(); command_line("STOP"); CHECK(stops == 1 && pitch_cancel_count == 1);
+     test_stage = 6U;
+--- before/Output\Gimbal_Control\Tests\test_yaw_cascade_console.c
++++ after/Output\Gimbal_Control\Tests\test_yaw_cascade_console.c
+@@ -71,9 +71,9 @@
+     CHECK(saved.phase == YAW_STEP_DONE && saved.pass && saved.sse_valid && saved.response_ms == 200);
+     CHECK(state.active && state.step_hold && state.controller.target_deg == 30);
+     CHECK(YawConsole_Poll(report, sizeof(report)));
+-    CHECK(strstr(report, "|RESP_MS|200|") && strstr(report, "|OS_DEG|0.000|") && strstr(report, "|SSE_VALID|1|PASS|1|"));
++    CHECK(strstr(report, "|RESP_MS|200|") && strstr(report, "|OS_DEG|0.000000|") && strstr(report, "|SSE_VALID|1|PASS|1|"));
+     CHECK(strstr(report, "|SAT_N|") && strstr(report, "|PKP|8.0000|PKI|0.0000|PKD|0.0000|"));
+-    CHECK(strstr(report, "|CTRL|CASCADE|VKP|0.001000|VKI|0.004000|VKD|0.000000|VREF_MAX_DPS|180.0|VFILTER_MS|10|OUTPUT_LIMITS|1|BAND05|0.5|"));
++    CHECK(strstr(report, "|CTRL|CASCADE|VKP|0.001000|VKI|0.004000|VKD|0.000000|VREF_MAX_DPS|180.0|VFILTER_MS|10|OUTPUT_LIMITS|1|BAND02|0.2|"));
+     CHECK(strlen(report) < 900U && !YawConsole_Poll(report, sizeof(report)));
+     Command(10072U, "YAW VKI 0.006", "Y|OK|PARAMETER");
+     Command(10072U, "YAW RESULT", "|VKI|0.004000|");
+--- before/Output\Gimbal_Control\Tests\test_yaw_cascade_unlimited.c
++++ after/Output\Gimbal_Control\Tests\test_yaw_cascade_unlimited.c
+@@ -35,11 +35,11 @@
+     test_stage = 1;
+     CHECK(!YAW_CASCADE_OUTPUT_LIMITS_ENABLED && YAW_CONTROLLER_TORQUE_LIMIT_NM == 10);
+     ready(100, 0); CHECK(yaw.cascade.velocity_limit_dps == 0);
+-    CHECK(yaw.cascade.position.kp == 14.0f && yaw.cascade.position.ki == 0.15f && yaw.cascade.position.kd == 0.15f);
+-    CHECK(yaw.cascade.speed.kp == 0.0075f && yaw.cascade.speed.ki == 0.005f && yaw.cascade.speed.kd == 0.00018f);
++    CHECK(yaw.cascade.position.kp == 16.63f && yaw.cascade.position.ki == 0.12f && yaw.cascade.position.kd == 0.269f);
++    CHECK(yaw.cascade.speed.kp == 0.0081f && yaw.cascade.speed.ki == 0.003f && yaw.cascade.speed.kd == 0.000209f);
+     CHECK(YawController_SetTarget(&yaw, 30));
+-    CHECK(near(YawController_Update(&yaw, 0, 120, 1), 3.15f, 0.000001f));
+-    CHECK(yaw.cascade.target_velocity_dps == 420 && !yaw.cascade.velocity_limited);
++    CHECK(near(YawController_Update(&yaw, 0, 120, 1), 4.04109f, 0.000001f));
++    CHECK(near(yaw.cascade.target_velocity_dps, 498.9f, 0.0001f) && !yaw.cascade.velocity_limited);
+     CHECK(!YawCascade_SetVelocityLimit(&yaw.cascade, 180));
+     /* 截图增益：首次510deg/s、2.448协议Nm，不再被180/.10截断。 */
+     CHECK(YawCascade_SetPid(&yaw.cascade, 'P', 17, 1.25f, 0));
+--- before/Output\Gimbal_Control\Tests\test_yaw_cascade_unlimited_console.c
++++ after/Output\Gimbal_Control\Tests\test_yaw_cascade_unlimited_console.c
+@@ -9,16 +9,16 @@
+     test_stage = 1;
+     CHECK(!YAW_CASCADE_OUTPUT_LIMITS_ENABLED);
+     ConsoleReset(1000); Control(1000, 0);
+-    Command(1000, "YAW", "Y|STATE|GL60II_FIXED_PID_V2N"); CHECK(strlen(response) < 300U);
++    Command(1000, "YAW", "Y|STATE|GL60II_FIXED_PID_V2P"); CHECK(strlen(response) < 300U);
+     Command(1000, "YAW HELP", "Y|HELP|CTRL|FIXED_CASCADE_PID|READ|YAW;PID;RESULT;STATUS;STEP CHECK");
+     CHECK(!strstr(response, "FKA") && !strstr(response, "SHAPE"));
+     Command(1000, "YAW ?", "VIEW|YAW VIEW");
+     Command(1000, "YAW BAD", "UNKNOWN_COMMAND|USE|YAW HELP");
+     CHECK(!enable_calls && !disable_calls && !torque_calls && !clear_calls && !stop_calls);
+-    Command(1000, "YAW PID", "Y|PID|POS|14.0000,0.1500,0.1500|VEL|0.007500,0.005000,0.000180");
++    Command(1000, "YAW PID", "Y|PID|POS|16.6300,0.1200,0.2690|VEL|0.008100,0.003000,0.000209");
+     Command(1002, "YAW READY", "Y|BUSY|READY");
+     Command(1002, "YAW", "Y|STATE|"); Command(1002, "YAW HELP", "Y|HELP|");
+-    Command(1002, "YAW PID", "Y|PID|POS|14.0000");
++    Command(1002, "YAW PID", "Y|PID|POS|16.6300");
+     for (t = 1004; t < 1200; t += 2) {
+         if (t % 10 == 6) { pending = 0; Feed(t, clear_calls ? 0 : 13); }
+         Control(t, 0);
+@@ -36,8 +36,8 @@
+     YawBackend_GetStep(&result);
+     CHECK(result.cascade && !result.output_limits && result.vmax_dps == 0);
+     Control(3076, 2); Control(3078, 2); Control(3080, 2); Control(3082, 2);
+-    CHECK(last_torque > 3.14f && last_torque < 3.18f);
+-    CHECK(state.controller.cascade.target_velocity_dps > 419 && state.active && !state.controller.faults);
++    CHECK(last_torque > 4.03f && last_torque < 4.08f);
++    CHECK(state.controller.cascade.target_velocity_dps > 498 && state.active && !state.controller.faults);
+     Command(3082, "YAW POS 17 1.25 0", "Y|OK|POS");
+     Command(3082, "YAW VEL 0.0048 0.013 0", "Y|OK|VEL");
+     YawBackend_GetStep(&result);
+@@ -62,12 +62,14 @@
+     CHECK(saved.peak_torque_nm > 0.2f && saved.command_samples > 400 && !saved.output_limits);
+     CHECK(state.active && state.step_hold && state.controller.target_deg == 30);
+     CHECK(YawConsole_Poll(report, sizeof(report)));
+-    CHECK(strstr(report, "|RESP_MS|200|") && strstr(report, "|OS_DEG|0.000|") && strstr(report, "|SSE_VALID|1|PASS|1|"));
+-    CHECK(strstr(report, "|PKP|14.0000|PKI|0.1500|PKD|0.1500|") != 0);
+-    CHECK(strstr(report, "|VKP|0.007500|VKI|0.005000|VKD|0.000180|") != 0);
+-    CHECK(strstr(report, "|VREF_MAX_DPS|0.0|VFILTER_MS|10|OUTPUT_LIMITS|0|BAND05|0.5|"));
++    CHECK(strstr(report, "|RESP_MS|200|") && strstr(report, "|OS_DEG|0.000000|") && strstr(report, "|SSE_VALID|1|PASS|1|"));
++    CHECK(strstr(report, "|PKP|16.6300|PKI|0.1200|PKD|0.2690|") != 0);
++    CHECK(strstr(report, "|VKP|0.008100|VKI|0.003000|VKD|0.000209|") != 0);
++    CHECK(strstr(report, "|VREF_MAX_DPS|0.0|VFILTER_MS|10|OUTPUT_LIMITS|0|BAND02|0.2|"));
++    CHECK(strstr(report, "|SETTLE02_MS|200|PASS02|1|TIME_LIMIT_MS|250|OS_LIMIT_DEG|0.2|SSE_LIMIT_DEG|0.2|") != 0);
++    CHECK(strstr(report, "|ASSESSMENT|FINAL_SETTLE|") && !strstr(report, "PASS05"));
+     Command(10072, "YAW VKI 0.006", "Y|OK|PARAMETER");
+-    Command(10072, "YAW RESULT", "|VKI|0.005000|");
++    Command(10072, "YAW RESULT", "|VKI|0.003000|");
+     YawBackend_GetStep(&result); CHECK(result.phase == YAW_STEP_DONE && result.response_ms == saved.response_ms);
+     Command(10072, "YAW OFF", "Y|OK|OFF");
+     CHECK(!state.active && !state.requested && !permission && !state.controller.cascade.speed_i);
+@@ -82,7 +84,7 @@
+     Command(12000, "YAW PID", "Y|PID|POS|9.5000,0.2000,0.0200|VEL|0.002900,0.006000,0.000000");
+     CHECK(!state.active && !state.requested && !state.zero_set && !enable_calls && !torque_calls);
+     ConsoleReset(13000); Read();
+-    Command(13000, "YAW PID", "Y|PID|POS|14.0000,0.1500,0.1500|VEL|0.007500,0.005000,0.000180");
++    Command(13000, "YAW PID", "Y|PID|POS|16.6300,0.1200,0.2690|VEL|0.008100,0.003000,0.000209");
+     CHECK(!state.active && !state.requested && !state.zero_set && !enable_calls && !torque_calls);
+     CHECK(!state.controller.cascade.speed_i && !state.controller.cascade.position_i);
+     test_done = 1;
+--- before/Output\Gimbal_Control\Tests\test_yaw_feedforward_console.c
++++ after/Output\Gimbal_Control\Tests\test_yaw_feedforward_console.c
+@@ -93,9 +93,9 @@
+         Control(t, 2);
+     }
+     YawBackend_GetStep(&snapshot);
+-    CHECK(snapshot.phase == YAW_STEP_DONE && !snapshot.pass && snapshot.pass05 && snapshot.settle05_ms == 200);
++    CHECK(snapshot.phase == YAW_STEP_DONE && !snapshot.pass && snapshot.settle_ms == YAW_STEP_UNREACHED);
+     CHECK(YawConsole_Poll(report, sizeof(report)));
+-    CHECK(strstr(report, "|BAND05|0.5|RESP05_MS|200|SETTLE05_MS|200|PASS05|1|") != 0);
++    CHECK(strstr(report, "|BAND02|0.2|RESP02_MS|-1|SETTLE02_MS|-1|PASS02|0|") != 0);
+     CHECK(strlen(report) < sizeof(report) - 1);
+     ConsoleReset(12000); Read();
+     CHECK(!state.controller.ff.enabled && state.controller.ff.acceleration_gain == 0);
+--- before/Output\Gimbal_Control\Tests\test_yaw_manual50.c
++++ after/Output\Gimbal_Control\Tests\test_yaw_manual50.c
+@@ -43,13 +43,13 @@
+     float held, before;
+     YawStep step;
+     test_stage = 1U;
+-    CHECK(APP_YAW_POSITION_KP == 14.0f && !YAW_CASCADE_OUTPUT_LIMITS_ENABLED);
++    CHECK(APP_YAW_POSITION_KP == 16.63f && !YAW_CASCADE_OUTPUT_LIMITS_ENABLED);
+     CHECK(YAW_CONTROLLER_TARGET_LIMIT_DEG == 50 && YAW_CONTROLLER_HARD_LIMIT_DEG == 60);
+     CHECK(YAW_CONTROLLER_MANUAL_RATE_LIMIT_DPS == 90 && APP_STEP_DEGREES == 30);
+     ConsoleZeroActivate(1000U); clock_ms = 1066U;
+-    Command(clock_ms, "YAW STATUS", "GL60II_FIXED_PID_V2N");
++    Command(clock_ms, "YAW STATUS", "GL60II_FIXED_PID_V2P");
+     CHECK(strstr(response, "|TARGET_LIMIT_DEG|50.0|HARD_LIMIT_DEG|60.0|") != 0);
+-    Command(clock_ms, "YAW PID", "|POS|14.0000,0.1500,0.1500|VEL|0.007500,0.005000,0.000180");
++    Command(clock_ms, "YAW PID", "|POS|16.6300,0.1200,0.2690|VEL|0.008100,0.003000,0.000209");
+     before = state.controller.target_deg;
+     ManualRun(&clock_ms, 100U, 1765U); /* 半杆精确45deg/s，100ms目标前进4.5度。 */
+     CHECK(request.yaw_rate_dps == 45 && state.controller.target_deg - before > 4.499f &&
+@@ -122,6 +122,6 @@
+     test_stage = 7U;
+     ConsoleReset(50000U); Read();
+     CHECK(!state.active && !state.requested && !state.zero_set && !enable_calls && !torque_calls);
+-    Command(50000U, "YAW PID", "|POS|14.0000,0.1500,0.1500|VEL|0.007500,0.005000,0.000180");
++    Command(50000U, "YAW PID", "|POS|16.6300,0.1200,0.2690|VEL|0.008100,0.003000,0.000209");
+     test_done = 1U;
+ }
+--- before/Output\Gimbal_Control\Tests\test_yaw_repeat_step.c
++++ after/Output\Gimbal_Control\Tests\test_yaw_repeat_step.c
+@@ -21,7 +21,7 @@
+     test_stage = 1;
+     CHECK(!APP_YAW_EXPERIMENTAL_TRACKING);
+     ConsoleReset(1000);
+-    Command(1000, "YAW PID", "POS|14.0000,0.1500,0.1500|VEL|0.007500,0.005000,0.000180");
++    Command(1000, "YAW PID", "POS|16.6300,0.1200,0.2690|VEL|0.008100,0.003000,0.000209");
+     Command(1000, "YAW SHAPE 80", "Y|ERROR|REMOVED|SHAPE");
+     Command(1000, "YAW SHAPEV 0.15", "Y|ERROR|REMOVED|SHAPEV");
+     Command(1000, "YAW FF ON", "Y|ERROR|REMOVED|FF");
+@@ -54,7 +54,7 @@
+                 Command(start + t, "YAW STEP CHECK", "WHY|WAIT_5S_WINDOW");
+             }
+         }
+-        YawBackend_GetStep(&snap); CHECK(snap.phase == YAW_STEP_DONE && snap.id == id && snap.pass05);
++        YawBackend_GetStep(&snap); CHECK(snap.phase == YAW_STEP_DONE && snap.id == id && snap.pass);
+         /* Holding CH7 high after DONE must not replay the rejected request. */
+         Drive(start + 5000, 100, 30, 30);
+         YawBackend_GetStep(&snap); CHECK(snap.id == id && state.controller.target_deg == 30);
+--- before/Output\Gimbal_Control\Tests\test_yaw_shape_console.c
++++ after/Output\Gimbal_Control\Tests\test_yaw_shape_console.c
+@@ -53,9 +53,9 @@
+     }
+     YawBackend_GetStep(&snapshot);
+     CHECK(snapshot.phase == YAW_STEP_DONE && snapshot.shape_ms == 160 && snapshot.start_ms == start);
+-    CHECK(snapshot.response05_ms == 200 && snapshot.settle05_ms == 200 && snapshot.pass05);
++    CHECK(snapshot.response_ms == 200 && snapshot.settle_ms == 200 && snapshot.pass);
+     CHECK(YawConsole_Poll(report, sizeof(report)));
+-    CHECK(strstr(report, "|SHAPE_MS|160|SHAPE_V|1\r\n") && strstr(report, "|RESP05_MS|200|SETTLE05_MS|200|PASS05|1|"));
++    CHECK(strstr(report, "|SHAPE_MS|160|SHAPE_V|1\r\n") && strstr(report, "|RESP02_MS|200|SETTLE02_MS|200|PASS02|1|"));
+     Command(start + 5010, "YAW SHAPEV 0.25", "Y|OK|SHAPEV|0.25");
+     Command(start + 5010, "YAW SHAPE 0", "Y|OK|SHAPE|MS|0");
+     Command(start + 5010, "YAW RESULT", "SHAPE_MS|160"); /* Frozen trial condition. */
+--- before/Output\Gimbal_Control\Tests\test_yaw_step.c
++++ after/Output\Gimbal_Control\Tests\test_yaw_step.c
+@@ -134,7 +134,7 @@
+             CHECK(step.response_ms == 150U);
+         }
+         CHECK(step.phase == YAW_STEP_DONE && step.settle_ms == 500U);
+-        CHECK(step.sse_valid && step.pass && step.steady_error_deg == 0.0f);
++        CHECK(step.sse_valid && !step.pass && step.steady_error_deg == 0.0f);
+     }
+     test_done = 1U;
+ }
+--- before/Output\Gimbal_Control\Tests\test_yaw_step_assessment.c
++++ after/Output\Gimbal_Control\Tests\test_yaw_step_assessment.c
+@@ -2,40 +2,69 @@
+ #include "test_yaw_step.c"
+ #undef test_run
+ 
++static void window(uint32_t start, float direction, uint32_t entry, uint32_t settled,
++                   float peak, float tail_error, uint32_t later_exit)
++{
++    uint32_t t;
++    YawStep_Init(&step); CHECK(YawStep_Start(&step, start, 0, direction * 30));
++    for (t = 10; t <= 5000; t += 10) {
++        float angle = t < entry ? 0 : (t == entry ? 30 + peak :
++            (t < settled ? 29.6f : 30 - tail_error));
++        if (later_exit && t == later_exit) { angle = 29.7f; }
++        YawStep_Sample(&step, start + t, direction * angle, 0, 0.01f, 0);
++    }
++    CHECK(step.phase == YAW_STEP_DONE && step.ss_duration_ms == 1000);
++}
++
+ void test_run(void)
+ {
+-    uint32_t direction_index, t, start;
++    uint32_t d, start;
+     float direction;
+-    test_stage = 1U;
+-    for (direction_index = 0; direction_index < 2; ++direction_index) {
+-        direction = direction_index ? -1.0f : 1.0f;
+-        start = direction_index ? 0xFFFFFFC0UL : 1000U;
+-        YawStep_Init(&step); CHECK(YawStep_Start(&step, start, 0, direction * 30));
+-        for (t = 10; t <= 5000; t += 10) {
+-            float angle = t < 150 ? 0 : (t < 200 ? 30.7f : (t < 230 ? 29.4f : 29.7f));
+-            YawStep_Sample(&step, start + t, direction * angle, 0, 0.01f, 0);
+-        }
+-        CHECK(step.phase == YAW_STEP_DONE && step.response05_ms == 230 && step.settle05_ms == 230 && step.pass05);
+-        CHECK(!step.pass && !step.sse_valid && step.overshoot_deg > 0.6f);
++    CHECK(YAW_STEP_BAND_DEG == 0.2f && YAW_STEP_RESPONSE_LIMIT_MS == 250);
++    CHECK(!YawStep_Passed(0, 250));
++    for (d = 0; d < 2; ++d) {
++        direction = d ? -1.0f : 1.0f;
++        start = d ? 0xFFFFFFC0UL : 1000U;
++        test_stage = 1;
++        /* Screenshot-like fast settling, but 0.410608-degree overshoot fails. */
++        window(start, direction, 200, 200, 0.410608f, 0, 0);
++        CHECK(step.response_ms == 210 && step.settle_ms == 210 && step.sse_valid);
++        CHECK(step.overshoot_deg > 0.4105f && !step.pass);
++        test_stage = 2;
++        /* First entry is fast; a later rebound must determine settling time. */
++        window(start, direction, 200, 500, 0, 0, 0);
++        CHECK(step.response_ms == 200 && step.settle_ms == 500 && !step.pass && step.sse_valid);
++        window(start, direction, 200, 200, 0, 0, 1000);
++        CHECK(step.response_ms == 200 && step.settle_ms == 1010 && !step.pass);
++        test_stage = 3;
++        window(start, direction, 250, 250, 0, 0, 0);
++        CHECK(step.settle_ms == 250 && step.pass);
++        window(start, direction, 260, 260, 0, 0, 0);
++        CHECK(step.settle_ms == 260 && !step.pass);
++        CHECK(YawStep_Passed(&step, 300));
++        test_stage = 4;
++        /* Inclusive 0.2 boundaries tolerate float roundoff, not 0.2001. */
++        window(start, direction, 200, 200, 0.2f, 0, 0);
++        CHECK(step.overshoot_deg > 0.1999f && step.pass);
++        window(start, direction, 200, 200, 0.2001f, 0, 0);
++        CHECK(step.overshoot_deg > 0.20009f && !step.pass);
++        window(start, direction, 200, 200, 0, 0.2f, 0);
++        CHECK(absolute(step.steady_error_deg) > 0.1999f && step.sse_valid && step.pass);
++        window(start, direction, 200, 200, 0, 0.2001f, 0);
++        CHECK(absolute(step.steady_error_deg) > 0.20009f && !step.sse_valid && !step.pass);
++        test_stage = 5;
++        window(start, direction, 200, 200, 0, 0, 4000);
++        CHECK(absolute(step.steady_error_deg) < 0.01f && step.ss_max_error > 0.29f);
++        CHECK(!step.sse_valid && !step.pass); /* Mean cannot hide tail excursions. */
++        window(start, direction, 200, 200, 0, 0, 0);
++        CHECK(step.pass);
++        step.faults = 16; CHECK(!YawStep_Passed(&step, 250));
+     }
+-    test_stage = 2U;
+-    YawStep_Init(&step); CHECK(YawStep_Start(&step, 0, 0, 30));
+-    for (t = 10; t <= 5000; t += 10) {
+-        float angle = t < 250 ? 0 : 29.5f;
+-        YawStep_Sample(&step, t, angle, 0, 0.01f, 0);
+-    }
+-    CHECK(step.settle05_ms == 250 && step.pass05 && !step.pass);
+-    test_stage = 3U;
+-    YawStep_Init(&step); CHECK(YawStep_Start(&step, 0, 0, 30));
+-    for (t = 10; t <= 5000; t += 10) {
+-        float angle = t < 200 ? 0 : (t == 1000 ? 29.49f : 30.0f);
+-        YawStep_Sample(&step, t, angle, 0, 0.01f, 0);
+-    }
+-    CHECK(step.response05_ms == 200 && step.settle05_ms == 1010 && !step.pass05 && step.pass);
+-    test_stage = 4U;
++    test_stage = 6;
+     YawStep_Init(&step); CHECK(YawStep_Start(&step, 0, 0, 30));
+     YawStep_Sample(&step, 10, 30, 0, 0.01f, 0);
++    CHECK(!step.pass && !YawStep_Passed(&step, 250));
+     YawStep_Abort(&step, 12, YAW_STEP_FF_CHANGE, 0);
+-    CHECK(!step.pass05 && step.settle05_ms == YAW_STEP_UNREACHED);
+-    test_done = 1U;
++    CHECK(!step.pass && step.settle_ms == YAW_STEP_UNREACHED);
++    test_done = 1;
+ }
+--- before/Output\Gimbal_Control\Tests\test_yaw_telemetry.c
++++ after/Output\Gimbal_Control\Tests\test_yaw_telemetry.c
+@@ -63,7 +63,6 @@
+     yaw_sample.controller.ff.limit_nm = 0.1f; yaw_sample.controller.cascade.feedforward_nm = -0.015f;
+     yaw_sample.controller.pid_torque_nm = 0.115f; yaw_sample.controller.cascade.speed_i = 0.04f;
+     yaw_sample.controller.cascade.position_i = 0.25f; yaw_sample.controller.cascade.feedforward_limited = 1U;
+-    step_sample.response05_ms = 190U; step_sample.settle05_ms = 240U; step_sample.pass05 = 1U;
+     yaw_sample.controller.last_feedback_ms = 4294967200UL;
+     yaw_sample.controller.shape.duration_ms = 160;
+     yaw_sample.controller.shape.active = 1;
+@@ -91,11 +90,20 @@
+     CHECK(columns[48] == 1 && columns[49] == 0 && columns[50] == 0 && columns[51] == 0);
+     CHECK(columns[52] == 0 && columns[53] == 0 && columns[54] == 0.1f && columns[55] == -0.015f);
+     CHECK(columns[56] == 0.115f && columns[57] == 0.04f && columns[58] == 0.25f && columns[59] == 1);
+-    CHECK(columns[60] == 190 && columns[61] == 240 && columns[62] == 1);
++    CHECK(columns[60] == 240 && columns[61] == -1 && columns[62] == 0);
++    CHECK(columns[60] == columns[26] && columns[61] == columns[27] && columns[62] == columns[32]);
+     CHECK(columns[64] == 160 && columns[65] == 1 && columns[66] == 15);
+     CHECK(columns[67] > 351.55f && columns[67] < 351.58f && columns[68] == -3000);
+     CHECK(columns[69] > 13.765f && columns[69] < 13.767f);
+     CHECK(columns[70] == 0.25f && columns[71] == 0.000002f);
++    clear_output(); command_line("YAW VIEW");
++    CHECK(strstr(output, "RESP02_I|60|SETTLE02_I|61|") && strstr(output, "PASS02_I|62|BAND_DEG|0.2|"));
++    CHECK(!strstr(output, "BAND05"));
++    step_sample.response_ms = 190; step_sample.settle_ms = 240; step_sample.pass = step_sample.sse_valid = 1;
++    step_sample.overshoot_deg = 0.1f; step_sample.steady_error_deg = 0.02f;
++    clear_output(); now += 5; AppConsole_Poll(); ParseColumns();
++    CHECK(columns[60] == 190 && columns[61] == 240 && columns[62] == 1);
++    CHECK(columns[26] == columns[60] && columns[27] == columns[61] && columns[32] == columns[62]);
+     test_stage = 2U;
+     clear_output(); command_line("YAW VKP 0.001000");
+     CHECK(yaw_commands == 1 && strcmp(output, "Y|MOCK\r\n") == 0);
+@@ -144,7 +152,6 @@
+     yaw_sample.controller.pid_torque_nm = -11;
+     yaw_sample.controller.cascade.speed_i = -10;
+     yaw_sample.controller.cascade.position_i = -1234567890.0f;
+-    step_sample.response05_ms = step_sample.settle05_ms = 5000;
+     yaw_sample.controller.shape.duration_ms = 500;
+     yaw_sample.controller.shape.position_deg = -50;
+     yaw_sample.controller.shape.velocity_dps = -708;
+--- before/Output\Gimbal_Control\Tools\generate_yaw_ff_vofa.py
++++ after/Output\Gimbal_Control\Tools\generate_yaw_ff_vofa.py
+@@ -10,7 +10,7 @@
+ 
+ PROJECT = Path(__file__).resolve().parents[1]
+ REFERENCE = PROJECT.parent / "VOFA_Pitch_20261017"
+-OUTPUT = PROJECT.parent / "VOFA_Yaw_PID_20261018"
++OUTPUT = PROJECT.parent / "VOFA_Yaw_PID_02deg_20261018"
+ 
+ 
+ def read(name):
+@@ -28,7 +28,7 @@
+     button_template = next(w for w in templates if w["path"] == "bound_bt")
+     wave_template = next(w for w in templates if w["path"] == "WaveChart")
+     gauge_template = next(w for w in templates if w["path"] == "gauge")
+-    commands["ctx"].update(name="Yaw V2N 达标双环PID", loop_on=False, loop_count=1, down=True)
++    commands["ctx"].update(name="Yaw V2P ±0.2度考核", loop_on=False, loop_count=1, down=True)
+     commands["ctx"]["subCmds"] = []
+ 
+     def command(name, text):
+@@ -94,12 +94,12 @@
+ 
+     pid_widgets = [chart([0, 1], 10, 10, 760, 420, -2, 33)]
+     pid_parameters = [
+-        ("位置 KP", "YAW PKP %f", 7, 0, 25, 0.5, 14, 2),
+-        ("位置 KI", "YAW PKI %f", 8, 0, 1, 0.05, 0.15, 3),
+-        ("位置 KD", "YAW PKD %f", 9, 0, 1, 0.01, 0.15, 3),
+-        ("速度 KP", "YAW VKP %f", 10, 0, 0.015, 0.0001, 0.0075, 5),
+-        ("速度 KI", "YAW VKI %f", 11, 0, 0.02, 0.0005, 0.005, 4),
+-        ("速度 KD", "YAW VKD %f", 12, 0, 0.0005, 0.00001, 0.00018, 6),
++        ("位置 KP", "YAW PKP %f", 7, 0, 25, 0.01, 16.63, 3),
++        ("位置 KI", "YAW PKI %f", 8, 0, 1, 0.01, 0.12, 3),
++        ("位置 KD", "YAW PKD %f", 9, 0, 1, 0.001, 0.269, 3),
++        ("速度 KP", "YAW VKP %f", 10, 0, 0.015, 0.0001, 0.0081, 5),
++        ("速度 KI", "YAW VKI %f", 11, 0, 0.02, 0.0001, 0.003, 5),
++        ("速度 KD", "YAW VKD %f", 12, 0, 0.0005, 0.000001, 0.000209, 6),
+     ]
+     for i, spec in enumerate(pid_parameters):
+         pid_widgets.append(slider(*spec, 790 + (i // 3) * 290, 10 + i % 3 * 115))
+@@ -108,11 +108,16 @@
+         ("回零 HOME", "YAW HOME"), ("完整结果", "YAW RESULT"), ("阶跃就绪检查", "YAW STEP CHECK"), ("安全准备 READY", "YAW READY"), ("Yaw 波形", "YAW VIEW"), ("停止 STOP", "STOP"),
+     ]):
+         pid_widgets.append(button(label, text, 790 + i % 3 * 185, 365 + i // 3 * 75))
++    pid_widgets.extend([
++        gauge("±0.2稳定时间 ms ≤250", 61, 10, 440, 0, 500, 0),
++        gauge("超调 ° ≤0.2", 28, 195, 440, 0, 0.5, 4),
++        gauge("稳态误差 ° ±0.2", 30, 380, 440, -0.3, 0.3, 4),
++        gauge("总通过 1=通过", 62, 565, 440, 0, 1, 0)])
+     diagnostics = [chart([0, 1], 10, 10, 660, 310, -2, 33),
+         chart([2, 3], 690, 10, 660, 310, -400, 400),
+         chart([5, 6, 56, 57], 10, 340, 660, 310, -1, 1),
+         chart([58], 690, 340, 660, 310, -2, 2)]
+-    tabs["ctx"][0].update(tabs=[tab("Yaw 达标PID", pid_widgets),
++    tabs["ctx"][0].update(tabs=[tab("Yaw ±0.2度考核", pid_widgets),
+         tab("角度-速度-力矩诊断", diagnostics)], currentIndex=0, lastIndex=0, width=1920, height=1080, file_url="")
+     # Additional read-only commands are available in the command list, not action sliders.
+     command("阶跃就绪检查", "YAW STEP CHECK")

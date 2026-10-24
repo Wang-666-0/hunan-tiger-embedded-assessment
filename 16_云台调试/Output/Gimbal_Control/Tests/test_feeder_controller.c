@@ -4,6 +4,7 @@
 volatile uint32_t test_checks, test_failures, test_failed_line, test_done, test_stage;
 #define CHECK(x) do { ++test_checks; if (!(x)) { ++test_failures; if (!test_failed_line) { test_failed_line = __LINE__; } } } while (0)
 static FeederController c;
+static FeederController previous;
 static CanFrame frame;
 static double absolute(double value) { return value < 0.0 ? -value : value; }
 static uint8_t near(double a, double b) { return (uint8_t)(absolute(a - b) < 0.00001); }
@@ -26,6 +27,13 @@ static void ready(uint32_t ms)
 {
     FeederConfig config;
     Feeder_Init(&c); config = c.config; config.direction = 1; config.calibrated = 1U;
+    config.gear_ratio = 1.0f; config.pos_kp = 5.0f;
+    /* Keep the original numerical cases; production defaults are checked
+     * separately with a multi-turn output-shaft step below. */
+    config.max_rpm = 300.0f; config.current_limit = 1000.0f;
+    config.single_decel_rpm_s = 0.0f; /* Explicit legacy numerical cases. */
+    config.tolerance_deg = 1.0f; config.settle_rpm = 10.0f; config.settle_ms = 20U;
+    config.motion_timeout_ms = 1000U; config.jam_current_raw = 800.0f; config.jam_ms = 150U;
     CHECK(Feeder_SetConfig(&c, &config));
     sample(ms, 0U, 0, 0); sample(ms + 1U, 0U, 0, 0); sample(ms + 2U, 0U, 0, 0);
     CHECK(Feeder_Zero(&c, ms + 2U));
@@ -33,8 +41,11 @@ static void ready(uint32_t ms)
 void test_run(void)
 {
     FeederConfig config;
-    uint32_t ms, accepted, sequence;
+    uint32_t ms, accepted, sequence, pass, base, elapsed;
+    int64_t counts, target_counts;
+    double first_target;
     int16_t output;
+    FeederJumpDiagnostic first_jump;
     union { uint32_t bits; float value; } invalid;
     test_stage = 1U;
     Feeder_Init(0); Feeder_Stop(0);
@@ -43,8 +54,11 @@ void test_run(void)
     CHECK(!Feeder_Clear(0, 0U) && !Feeder_Zero(0, 0U));
     CHECK(Feeder_Step(0, 0U, 1U, 1U, 1U, 1U) == 0);
     Feeder_Init(&c); CHECK(Feeder_ConfigValid(&c.config));
-    CHECK(c.config.step_deg == 40.0f && c.config.gear_ratio == 1.0f && !c.config.direction && !c.config.calibrated);
-    CHECK(c.config.current_limit == 1000.0f && c.config.max_rpm == 300.0f);
+    CHECK(c.config.step_deg == 40.0f && c.config.gear_ratio == 35.68f && c.config.direction == -1 && c.config.calibrated);
+    CHECK(c.config.current_limit == 3000.0f && c.config.max_rpm == 3600.0f);
+    CHECK(c.config.continuous_max_rpm == 5800.0f && Feeder_ContinuousRpm(&c) > 4757.0f && Feeder_ContinuousRpm(&c) < 4758.0f);
+    CHECK(c.config.tolerance_deg == 1.5f && c.config.settle_rpm == 30.0f && c.config.settle_ms == 10U);
+    CHECK(c.config.motion_timeout_ms == 3000U && c.config.jam_ms == 300U);
     CHECK(!c.have_zero && !c.have_feedback && !c.faults);
     CHECK(Feeder_Step(&c, 0U, 1U, 1U, 1U, 1U) == 0 && c.rejected == 1U);
     CHECK(!Feeder_Zero(&c, 0U));
@@ -68,7 +82,7 @@ void test_run(void)
     CHECK(Feeder_Step(&c, 204U, 1U, 1U, 1U, 2U) == output && c.rejected == 1U);
     sample(204U, 30U, 150, 100);
     CHECK(Feeder_Step(&c, 204U, 1U, 1U, 0U, 0U) > 0 && c.integral > 0.0f);
-    CHECK(Feeder_Step(&c, 205U, 1U, 0U, 1U, 3U) == 0 && !c.busy && c.aborted == 1U && c.rejected == 2U);
+    CHECK(Feeder_Step(&c, 205U, 0U, 0U, 1U, 3U) == 0 && !c.busy && c.aborted == 1U && c.rejected == 2U);
     CHECK(c.command_raw == 0 && c.integral == 0.0f && near(c.target_deg, c.position_deg));
     CHECK(Feeder_Step(&c, 206U, 1U, 1U, 1U, 3U) == 0 && c.accepted == 1U);
     CHECK(Feeder_Step(&c, 207U, 1U, 1U, 1U, 4U) > 0 && c.accepted == 2U);
@@ -113,7 +127,7 @@ void test_run(void)
     CHECK(!c.have_zero);
     ready(410U); sample(413U, 0U, 6001, 0); CHECK(c.faults & FEEDER_FAULT_OVERSPEED);
     ready(420U); sample(423U, 0U, 0, -10001); CHECK(c.faults & FEEDER_FAULT_CURRENT);
-    ready(430U); sample(433U, 200U, 0, 0); CHECK(c.faults & FEEDER_FAULT_JUMP);
+    ready(430U); sample(433U, 400U, 0, 0); CHECK(c.faults & FEEDER_FAULT_JUMP);
     ready(440U); sample(452U, 0U, 3000, 0); CHECK(c.faults & FEEDER_FAULT_JUMP);
 
     test_stage = 5U;
@@ -160,5 +174,169 @@ void test_run(void)
     Feeder_Stop(&c);
     CHECK(Feeder_Step(&c, 4002U, 1U, 1U, 1U, 0U) > 0 && c.accepted == accepted + 2U);
     CHECK(c.command_raw <= 1000 && c.command_raw >= -1000);
+    test_stage = 7U;
+    ready(5000U);
+    CHECK(Feeder_Step(&c, 5002U, 1U, 1U, 1U, 1U) == 400);
+    sample(5003U, 400U, 0, -22);
+    CHECK((c.faults & FEEDER_FAULT_JUMP) && c.jump.valid && c.jump.events == 1U);
+    CHECK(c.jump.flags == FEEDER_JUMP_DELTA && c.jump.at_ms == 5003U && c.jump.gap_ms == 1U);
+    CHECK(c.jump.previous_angle == 0U && c.jump.angle == 400U && c.jump.delta_counts == 400);
+    CHECK(!c.jump.previous_rpm && !c.jump.rpm && c.jump.feedback_raw == -22);
+    CHECK(c.jump.command_raw == 400 && c.jump.busy && c.jump.zero_valid);
+    CHECK(c.jump.limit_counts > 288.0f && c.jump.limit_counts < 289.0f && !c.jump.expected_counts);
+    CHECK(c.jump.bound_gap_ms == 2U);
+    CHECK(!c.accumulated_counts && !c.busy && !c.have_zero && c.aborted == 1U);
+    CHECK(c.jump.data[0] == 1U && c.jump.data[1] == 144U && c.jump.data[6] == 255U && c.jump.data[7] == 255U);
+    first_jump = c.jump;
+    sample(5004U, 800U, 0, 0);
+    CHECK(c.jump.events == 2U && c.jump.angle == first_jump.angle && c.jump.at_ms == first_jump.at_ms);
+    CHECK(c.jump.feedback_raw == -22 && c.jump.command_raw == 400 && c.jump.busy && c.jump.zero_valid);
+    Feeder_Stop(&c); CHECK(c.jump.valid && c.jump.delta_counts == 400);
+    CHECK(!Feeder_Clear(&c, 5004U) && c.jump.valid); /* No quiet recovery samples yet. */
+    sample(5005U, 800U, 0, 0); sample(5006U, 800U, 0, 0); sample(5007U, 800U, 0, 0);
+    CHECK(Feeder_Clear(&c, 5007U) && !c.jump.valid && c.jump.events == 2U && !c.faults);
+    sample(5008U, 400U, 0, 0);
+    CHECK(c.jump.valid && c.jump.events == 3U && c.jump.at_ms == 5008U);
+    CHECK(c.jump.previous_angle == 800U && c.jump.angle == 400U && c.jump.delta_counts == -400);
+    CHECK(!c.jump.busy && !c.jump.zero_valid && !c.jump.command_raw);
+    ready(5100U); sample(5112U, 0U, 3000, 0);
+    CHECK(c.jump.valid && c.jump.flags == FEEDER_JUMP_HALF_TURN && c.jump.gap_ms == 10U);
+    CHECK(c.jump.expected_counts >= 4064.0f && c.jump.delta_counts == 0);
+    ready(0xFFFFFFFCU); sample(0xFFFFFFFFU, 400U, 0, 0);
+    CHECK(c.jump.valid && c.jump.at_ms == 0xFFFFFFFFU && c.jump.gap_ms == 1U);
+    sample(0U, 400U, 0, 0);
+    CHECK(c.jump.at_ms == 0xFFFFFFFFU && c.jump.events == 1U);
+
+    test_stage = 8U;
+    /* Replay the exact first field failure: 249 counts in 1ms, rpm 40.
+     * Larger discontinuities and half-turn ambiguity still fail above. */
+    Feeder_Init(&c); sample(6000U, 6906U, 40, 104); sample(6001U, 6657U, 40, 104);
+    CHECK(!c.faults && !c.jump.valid && c.accumulated_counts == -249);
+    sample(6002U, 6906U, 40, 104);
+    CHECK(!c.faults && !c.accumulated_counts);
+
+    /* Synthetic fresh encoder walk through several wraps. This checks control
+     * semantics, not a plant model or a claim of real 1200rpm performance. */
+    Feeder_Init(&c); config = c.config;
+    config.direction = -1; config.gear_ratio = 35.68f; config.calibrated = 1U;
+    CHECK(Feeder_SetConfig(&c, &config));
+    sample(6100U, 0U, 0, 0); sample(6101U, 0U, 0, 0); sample(6102U, 0U, 0, 0);
+    CHECK(Feeder_Zero(&c, 6102U));
+    CHECK(Feeder_Step(&c, 6102U, 1U, 1U, 1U, 1U) == -3000 && c.accepted == 1U);
+    first_target = c.target_deg; counts = 0;
+    target_counts = (int64_t)(first_target * 8192.0 / 360.0);
+    for (ms = 6103U; ms <= 6350U; ++ms) {
+        if (counts > target_counts) {
+            counts -= counts - target_counts > 164 ? 164 : counts - target_counts;
+            output = -1200;
+        } else { output = 0; }
+        sample(ms, (uint16_t)((counts % 8192 + 8192) % 8192), output, -100);
+        (void)Feeder_Step(&c, ms, 1U, 0U, ms == 6120U, 2U);
+        CHECK(c.accepted == 1U && c.aborted == 0U && !c.faults);
+        CHECK(c.command_raw >= -3000 && c.command_raw <= 3000);
+    }
+    CHECK(c.completed == 1U && !c.busy && c.have_zero && c.rejected == 1U);
+    CHECK(near(c.target_deg, first_target) && absolute(c.axis_position_deg + 40.0) < 0.001);
+    CHECK(Feeder_Step(&c, 6350U, 1U, 0U, 1U, 3U) == 0 && c.rejected == 2U);
+    CHECK(Feeder_Step(&c, 6350U, 1U, 1U, 0U, 0U) == 0 && c.accepted == 1U);
+    CHECK(Feeder_Step(&c, 6350U, 1U, 1U, 1U, 3U) == 0 && c.accepted == 1U);
+    CHECK(Feeder_Step(&c, 6350U, 1U, 1U, 1U, 4U) < 0 && c.accepted == 2U);
+    CHECK(near(c.target_deg, first_target * 2.0));
+    CHECK(Feeder_Step(&c, 6350U, 0U, 0U, 0U, 0U) == 0 && c.aborted == 1U);
+
+    test_stage = 9U;
+    /* New default stall window is longer, finite and still latches a fault. */
+    Feeder_Init(&c); config = c.config;
+    config.direction = 1; config.gear_ratio = 35.68f; config.calibrated = 1U;
+    CHECK(Feeder_SetConfig(&c, &config));
+    sample(7000U, 0U, 0, 0); sample(7001U, 0U, 0, 0); sample(7002U, 0U, 0, 0);
+    CHECK(Feeder_Zero(&c, 7002U));
+    CHECK(Feeder_Step(&c, 7002U, 1U, 1U, 1U, 1U) == 3000);
+    for (ms = 7003U; ms < 7302U; ++ms) {
+        sample(ms, 0U, 0, 1700); (void)Feeder_Step(&c, ms, 1U, 0U, 0U, 0U);
+        CHECK(c.busy && !c.faults);
+    }
+    sample(7302U, 0U, 0, 1700);
+    CHECK(Feeder_Step(&c, 7302U, 1U, 0U, 0U, 0U) == 0);
+    CHECK(c.faults == FEEDER_FAULT_JAM && !c.have_zero && c.aborted == 1U);
+
+    test_stage = 10U;
+    /* Exact V1E first-fault frame. Millisecond timestamps permit almost 2ms
+     * between these receipts, so 604 counts need not be a discontinuity. */
+    Feeder_Init(&c);
+    sample(11290U, 6444U, -2048, -1584);
+    sample(11291U, 5840U, -2234, -1584);
+    CHECK(!c.faults && !c.jump.valid && c.accumulated_counts == -604);
+    CHECK(c.timestamp_allowances == 1U && !c.jump.events);
+    sequence = c.feedback_sequence;
+    make_frame(11291U, 4000U, -2234, -1584, 0U);
+    CHECK(!Feeder_OnFrame(&c, &frame, 11291U, 0U)); /* Same tick is still ignored. */
+    CHECK(c.feedback_sequence == sequence && c.raw_angle == 5840U && c.accumulated_counts == -604);
+    sample(11292U, 5236U, -2234, -1584);
+    CHECK(!c.faults && c.accumulated_counts == -1208 && c.timestamp_allowances == 2U);
+    sample(11293U, 4236U, -2234, -1584); /* Larger delta still fails immediately. */
+    CHECK(c.faults == FEEDER_FAULT_JUMP && c.jump.flags == FEEDER_JUMP_DELTA);
+    CHECK(c.jump.delta_counts == -1000 && c.jump.gap_ms == 1U && c.jump.bound_gap_ms == 2U);
+    CHECK(c.jump.limit_counts > 898.0f && c.jump.limit_counts < 899.0f);
+    CHECK(c.jump.expected_counts > 610.0f && c.jump.expected_counts < 611.0f);
+    CHECK(c.accumulated_counts == -1208 && c.timestamp_allowances == 2U);
+    sample(11294U, 4236U, 0, 0); sample(11295U, 4236U, 0, 0); sample(11296U, 4236U, 0, 0);
+    CHECK(Feeder_Clear(&c, 11296U) && !c.jump.valid && c.timestamp_allowances == 2U);
+    CHECK(!c.have_zero && c.jump.events == 1U);
+    Feeder_Init(&c); sample(12000U, 0U, 2234, 0); sample(12001U, 898U, 2234, 0);
+    CHECK(!c.faults && c.accumulated_counts == 898 && c.timestamp_allowances == 1U);
+    sample(12002U, 1797U, 2234, 0);
+    CHECK(c.faults == FEEDER_FAULT_JUMP && c.jump.delta_counts == 899);
+    /* Conservative interval also applies to half-turn ambiguity: it must not
+     * make high-speed missed frames look like a trustworthy shortest path. */
+    Feeder_Init(&c); sample(13000U, 0U, 6000, 0); sample(13003U, 3000U, 6000, 0);
+    CHECK(!c.faults && c.accumulated_counts == 3000);
+    sample(13007U, 3000U, 6000, 0);
+    CHECK(c.faults == FEEDER_FAULT_JUMP && c.jump.flags == FEEDER_JUMP_HALF_TURN);
+    CHECK(c.jump.gap_ms == 4U && c.jump.bound_gap_ms == 5U && c.jump.expected_counts >= 4096.0f);
+    CHECK(c.accumulated_counts == 3000);
+    Feeder_Init(&c); sample(0xFFFFFFFEU, 6444U, -2048, 0);
+    sample(0xFFFFFFFFU, 5840U, -2234, 0); sample(0U, 5236U, -2234, 0);
+    CHECK(!c.faults && c.accumulated_counts == -1208 && c.timestamp_allowances == 2U);
+
+    test_stage = 11U;
+    /* Replay identical encoder inputs into the old and new tuning. This
+     * verifies removal of the software phase lag and stronger catch-up,
+     * not an identified plant or an actual motor settling-time claim. */
+    for (pass = 0U; pass < 2U; ++pass) {
+        base = 14000U + pass * 200U;
+        Feeder_Init(&c); config = c.config; config.direction = pass ? 1 : -1;
+        CHECK(Feeder_SetConfig(&c, &config));
+        sample(base, 0U, 0, 0); sample(base + 1U, 0U, 0, 0); sample(base + 2U, 0U, 0, 0);
+        CHECK(Feeder_Zero(&c, base + 2U));
+        previous = c;
+        previous.config.pos_kp = 8.0f; previous.config.speed_ki = 5.0f;
+        previous.config.continuous_phase_ms = 10.0f;
+        CHECK(Feeder_Run(&c, base + 2U, 1U, 1U, 1U, 1U, 1U) == config.direction * 3000);
+        (void)Feeder_Run(&previous, base + 2U, 1U, 1U, 1U, 1U, 1U);
+        CHECK(c.stream_reference_deg == 0.0 && absolute(previous.stream_reference_deg) > 285.0);
+        CHECK(absolute(c.target_rpm) > 4757.0 && absolute(previous.target_rpm) < 2500.0);
+        for (elapsed = 2U; elapsed <= 52U; elapsed += 2U) {
+            counts = config.direction * (int64_t)((double)elapsed * 0.64 *
+                (double)config.gear_ratio * 8192.0 / 360.0);
+            make_frame(base + 2U + elapsed, (uint16_t)((counts % 8192 + 8192) % 8192),
+                       (int16_t)(config.direction * 3806), 0, 0U);
+            CHECK(Feeder_OnFrame(&c, &frame, frame.received_ms, 0U));
+            CHECK(Feeder_OnFrame(&previous, &frame, frame.received_ms, 0U));
+            (void)Feeder_Run(&c, frame.received_ms, 1U, 1U, elapsed == 50U, 2U, elapsed <= 50U);
+            (void)Feeder_Run(&previous, frame.received_ms, 1U, 1U, elapsed == 50U, 2U, elapsed <= 50U);
+            CHECK(!c.faults && !previous.faults && c.accepted == previous.accepted);
+            CHECK(c.command_raw >= -3000 && c.command_raw <= 3000);
+            CHECK(absolute(c.target_rpm) <= c.config.continuous_max_rpm);
+            if (elapsed == 20U) {
+                CHECK(absolute(c.target_rpm) > absolute(previous.target_rpm) + 2000.0);
+                CHECK(c.command_raw * config.direction > previous.command_raw * config.direction);
+            }
+        }
+        CHECK(c.motion_kind == FEEDER_MOTION_TAIL && c.outstanding == 1U && c.cancelled == 1U);
+        CHECK(absolute(c.axis_target_deg - config.direction * 40.0) < 0.001);
+        CHECK(c.command_raw * config.direction < 0); /* Release still brakes. */
+        CHECK(Feeder_Run(&c, base + 56U, 0U, 1U, 0U, 0U, 0U) == 0 && !c.busy);
+    }
     test_done = 1U;
 }

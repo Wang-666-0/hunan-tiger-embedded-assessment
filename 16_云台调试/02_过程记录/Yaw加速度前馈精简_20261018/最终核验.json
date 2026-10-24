@@ -1,0 +1,33 @@
+{
+  "version": "GL60II_CASCADE_ACCEL_V2M",
+  "groups": 69,
+  "checks": 541008,
+  "failures": 0,
+  "source_hashes_verified": 126,
+  "other_production_files_unchanged": 72,
+  "changed_files": [
+    "App\\app_console.c",
+    "App\\yaw_backend.c",
+    "App\\yaw_cascade.c",
+    "App\\yaw_console.c",
+    "App\\yaw_controller.c",
+    "App\\app_config.h",
+    "App\\yaw_cascade.h",
+    "App\\yaw_controller.h",
+    "App\\yaw_step.h",
+    "Tests\\test_pitch_telemetry.c",
+    "Tests\\test_yaw_cascade_unlimited_console.c",
+    "Tests\\test_yaw_feedforward.c",
+    "Tests\\test_yaw_feedforward_console.c",
+    "Tests\\test_yaw_manual50.c",
+    "Tests\\test_yaw_shape_console.c",
+    "Tests\\test_yaw_telemetry.c",
+    "Tools\\generate_yaw_ff_vofa.py",
+    "README.md",
+    "App\\README.md",
+    "Tests\\README.md"
+  ],
+  "hex_sha256": "f9e45319d4de249bf4356917c30f68bec484daf7975ca32ad63dc721f0d37ef6",
+  "hardware_verified": false,
+  "native_vofa_import_verified": false
+}

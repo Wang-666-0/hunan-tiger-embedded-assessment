@@ -1,0 +1,11 @@
+--- before/Output/Gimbal_Control/Tests/test_pitch_shape.c
++++ after/Output/Gimbal_Control/Tests/test_pitch_shape.c
+@@ -121,7 +121,7 @@
+     test_stage = 1U;
+     PitchController_Init(&pitch);
+     CHECK(pitch.shape.duration_ms == 0U && pitch.shape.velocity_gain == 0.0f && !pitch.shape.active);
+-    CHECK(pitch.cascade.position.kp == 14.4f && pitch.cascade.position.ki == 0.672f);
++    CHECK(pitch.cascade.position.kp == 14.4f && pitch.cascade.position.ki == 0.687f);
+     CHECK(pitch.cascade.position.kd == 0.009f && pitch.cascade.speed.kp == 0.0063f);
+     CHECK(pitch.cascade.speed.ki == 0.0874f && pitch.cascade.speed.kd == 0.000008f);
+     CHECK(pitch.gravity_kg_nm == -0.47f);

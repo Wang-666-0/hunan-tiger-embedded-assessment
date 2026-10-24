@@ -1,0 +1,13 @@
+--- before/Output/Gimbal_Control/App/yaw_cascade.h
++++ after/Output/Gimbal_Control/App/yaw_cascade.h
+@@ -47,6 +47,10 @@
+ /* 前馈参加力矩求和及抗饱和；原Yaw入口始终传0。单位均为协议Nm。 */
+ float YawCascade_UpdateWithFeedforward(YawCascade *loop, float error_deg, uint32_t feedback_ms,
+                         uint32_t sequence, float torque_limit_nm, float feedforward_nm);
++/* Pitch参考速度直接相加，位置D仅作用于实测速度，避免隐含放大前馈。 */
++float YawCascade_UpdateReference(YawCascade *loop, float error_deg, uint32_t feedback_ms,
++                        uint32_t sequence, float torque_limit_nm, float feedforward_nm,
++                        float velocity_ff_dps, uint8_t freeze_position_i);
+ /* Yaw平滑阶跃专用：已知参考速度进入外环，D对速度跟踪误差作用。
+  * 仅规划运动段冻结外环积分；内环积分/抗饱和仍按实际CAN反馈更新。 */
+ float YawCascade_UpdateTracking(YawCascade *loop, float error_deg, uint32_t feedback_ms,

@@ -1,0 +1,43 @@
+--- before/Output/Gimbal_Control/App/pitch_controller.h
++++ after/Output/Gimbal_Control/App/pitch_controller.h
+@@ -32,6 +32,12 @@
+ } PitchControllerFault;
+ 
+ typedef struct {
++    uint32_t duration_ms, start_ms;
++    float velocity_gain, start_deg, position_deg, velocity_dps, acceleration_dps2;
++    uint8_t active;
++} PitchShape;
++
++typedef struct {
+     /* 复用已验证双环数学；参数与状态完全独立于Yaw实例。 */
+     YawCascade cascade;
+     float reference_rad, last_position_rad, continuous_rad;
+@@ -40,11 +46,8 @@
+      * 未标定时保留系数，禁止使能；不保存跨重启的软件零点/相位。 */
+     float gravity_kg_nm, gravity_offset_deg, gravity_torque_nm, pid_torque_nm;
+     uint8_t gravity_calibrated, gravity_i_transferred;
+-    /* 首次到位后只抵抗向起点回退的运动；实际位置增量与滤波速度须同向。
+-     * brake_torque_nm独立于PID/重力项，参加同一总力矩抗饱和。 */
+-    float brake_torque_nm, brake_direction, brake_target_deg, brake_previous_angle_deg;
+-    uint32_t brake_sequence, brake_feedback_ms;
+-    uint8_t brake_enabled, brake_tracking, brake_arrived;
++    /* target_deg始终是最终目标；shape.position_deg仅供内环跟踪。 */
++    PitchShape shape;
+     uint32_t last_feedback_ms, last_sequence, faults, last_control_ms;
+     uint32_t stationary_started_ms;
+     uint8_t have_feedback, have_reference, active, have_control_tick;
+@@ -59,8 +62,12 @@
+ uint8_t PitchController_SetFeedbackDivisor(PitchController *pitch, uint8_t divisor);
+ /* P:deg->deg/s；V:deg/s->协议Nm。参数输入范围并非PID输出限幅。 */
+ uint8_t PitchController_SetPid(PitchController *pitch, char which, float kp, float ki, float kd);
++/* 即时目标入口，无条件取消规划；离散业务运动用StartMove。 */
+ uint8_t PitchController_SetTarget(PitchController *pitch, float degrees);
+-uint8_t PitchController_SetBrakeEnabled(PitchController *pitch, uint8_t enabled);
++/* 静止到静止轨迹；运动中不同目标拒绝，同目标不重启。不清双环积分。 */
++uint8_t PitchController_StartMove(PitchController *pitch, float degrees, uint32_t now_ms);
++/* duration=0关闭规划，或100..250ms；速度参考权重0..1。 */
++uint8_t PitchController_SetShape(PitchController *pitch, uint32_t duration_ms, float velocity_gain);
+ void PitchController_InvalidateGravity(PitchController *pitch);
+ uint8_t PitchController_SetGravityGain(PitchController *pitch, float kg_nm);
+ /* 关闭且已建立软件零点时声明水平偏置；不改变软件零点。 */

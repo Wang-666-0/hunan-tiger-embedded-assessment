@@ -1,0 +1,318 @@
+{
+  "filesChecked": 76,
+  "changed": 0,
+  "pluginDirectory": "D:\\VOFA+\\x64\\plugins\\widgets\\report_assistant",
+  "newFiles": [
+    ".report-assistant-install.json",
+    ".report-assistant-package.json",
+    "HostBridge.js",
+    "report_assistant.qml",
+    "ReportEngine.js"
+  ],
+  "checks": [
+    {
+      "path": "D:\\VOFA+\\x64\\plugins\\widgets\\RQILPJ.json",
+      "unchanged": true
+    },
+    {
+      "path": "D:\\VOFA+\\x64\\plugins\\widgets\\zPnXxb.json",
+      "unchanged": true
+    },
+    {
+      "path": "D:\\VOFA+\\x64\\plugins\\widgets\\bound_bt\\bound_bt.qml",
+      "unchanged": true
+    },
+    {
+      "path": "D:\\VOFA+\\x64\\plugins\\widgets\\circular_gauge\\circular_gauge.qml",
+      "unchanged": true
+    },
+    {
+      "path": "D:\\VOFA+\\x64\\plugins\\widgets\\circular_gauge\\images\\needle.svg",
+      "unchanged": true
+    },
+    {
+      "path": "D:\\VOFA+\\x64\\plugins\\widgets\\cube\\Arrow.qml",
+      "unchanged": true
+    },
+    {
+      "path": "D:\\VOFA+\\x64\\plugins\\widgets\\cube\\cube.qml",
+      "unchanged": true
+    },
+    {
+      "path": "D:\\VOFA+\\x64\\plugins\\widgets\\cube\\cube.stl",
+      "unchanged": true
+    },
+    {
+      "path": "D:\\VOFA+\\x64\\plugins\\widgets\\cube\\Mesh.qml",
+      "unchanged": true
+    },
+    {
+      "path": "D:\\VOFA+\\x64\\plugins\\widgets\\ExtraButtonDelay\\ExtraButtonDelay.qml",
+      "unchanged": true
+    },
+    {
+      "path": "D:\\VOFA+\\x64\\plugins\\widgets\\ExtraButtonToggle\\ExtraButtonToggle.qml",
+      "unchanged": true
+    },
+    {
+      "path": "D:\\VOFA+\\x64\\plugins\\widgets\\ExtraDial\\ExtraDial.qml",
+      "unchanged": true
+    },
+    {
+      "path": "D:\\VOFA+\\x64\\plugins\\widgets\\gauge\\gauge.qml",
+      "unchanged": true
+    },
+    {
+      "path": "D:\\VOFA+\\x64\\plugins\\widgets\\image\\image.qml",
+      "unchanged": true
+    },
+    {
+      "path": "D:\\VOFA+\\x64\\plugins\\widgets\\image\\effects\\Effect.qml",
+      "unchanged": true
+    },
+    {
+      "path": "D:\\VOFA+\\x64\\plugins\\widgets\\image\\effects\\EffectBillboard.qml",
+      "unchanged": true
+    },
+    {
+      "path": "D:\\VOFA+\\x64\\plugins\\widgets\\image\\effects\\EffectBlackAndWhite.qml",
+      "unchanged": true
+    },
+    {
+      "path": "D:\\VOFA+\\x64\\plugins\\widgets\\image\\effects\\EffectEmboss.qml",
+      "unchanged": true
+    },
+    {
+      "path": "D:\\VOFA+\\x64\\plugins\\widgets\\image\\effects\\EffectGaussianBlur.qml",
+      "unchanged": true
+    },
+    {
+      "path": "D:\\VOFA+\\x64\\plugins\\widgets\\image\\effects\\EffectGlow.qml",
+      "unchanged": true
+    },
+    {
+      "path": "D:\\VOFA+\\x64\\plugins\\widgets\\image\\effects\\EffectIsolate.qml",
+      "unchanged": true
+    },
+    {
+      "path": "D:\\VOFA+\\x64\\plugins\\widgets\\image\\effects\\EffectPassThrough.qml.default",
+      "unchanged": true
+    },
+    {
+      "path": "D:\\VOFA+\\x64\\plugins\\widgets\\image\\effects\\EffectPassThrough.qml.defaultc",
+      "unchanged": true
+    },
+    {
+      "path": "D:\\VOFA+\\x64\\plugins\\widgets\\image\\effects\\EffectPixelate.qml",
+      "unchanged": true
+    },
+    {
+      "path": "D:\\VOFA+\\x64\\plugins\\widgets\\image\\effects\\EffectPosterize.qml",
+      "unchanged": true
+    },
+    {
+      "path": "D:\\VOFA+\\x64\\plugins\\widgets\\image\\effects\\EffectSepia.qml",
+      "unchanged": true
+    },
+    {
+      "path": "D:\\VOFA+\\x64\\plugins\\widgets\\image\\effects\\EffectSharpen.qml",
+      "unchanged": true
+    },
+    {
+      "path": "D:\\VOFA+\\x64\\plugins\\widgets\\image\\effects\\EffectShockwave.qml",
+      "unchanged": true
+    },
+    {
+      "path": "D:\\VOFA+\\x64\\plugins\\widgets\\image\\effects\\EffectSobelEdgeDetection1.qml",
+      "unchanged": true
+    },
+    {
+      "path": "D:\\VOFA+\\x64\\plugins\\widgets\\image\\effects\\EffectTiltShift.qml",
+      "unchanged": true
+    },
+    {
+      "path": "D:\\VOFA+\\x64\\plugins\\widgets\\image\\effects\\EffectToon.qml",
+      "unchanged": true
+    },
+    {
+      "path": "D:\\VOFA+\\x64\\plugins\\widgets\\image\\effects\\EffectVignette.qml",
+      "unchanged": true
+    },
+    {
+      "path": "D:\\VOFA+\\x64\\plugins\\widgets\\image\\effects\\EffectWarhol.qml",
+      "unchanged": true
+    },
+    {
+      "path": "D:\\VOFA+\\x64\\plugins\\widgets\\image\\effects\\EffectWobble.qml",
+      "unchanged": true
+    },
+    {
+      "path": "D:\\VOFA+\\x64\\plugins\\widgets\\image\\shaders\\billboard.fsh",
+      "unchanged": true
+    },
+    {
+      "path": "D:\\VOFA+\\x64\\plugins\\widgets\\image\\shaders\\blackandwhite.fsh",
+      "unchanged": true
+    },
+    {
+      "path": "D:\\VOFA+\\x64\\plugins\\widgets\\image\\shaders\\emboss.fsh",
+      "unchanged": true
+    },
+    {
+      "path": "D:\\VOFA+\\x64\\plugins\\widgets\\image\\shaders\\gaussianblur_h.fsh",
+      "unchanged": true
+    },
+    {
+      "path": "D:\\VOFA+\\x64\\plugins\\widgets\\image\\shaders\\gaussianblur_v.fsh",
+      "unchanged": true
+    },
+    {
+      "path": "D:\\VOFA+\\x64\\plugins\\widgets\\image\\shaders\\glow.fsh",
+      "unchanged": true
+    },
+    {
+      "path": "D:\\VOFA+\\x64\\plugins\\widgets\\image\\shaders\\isolate.fsh",
+      "unchanged": true
+    },
+    {
+      "path": "D:\\VOFA+\\x64\\plugins\\widgets\\image\\shaders\\magnify.fsh",
+      "unchanged": true
+    },
+    {
+      "path": "D:\\VOFA+\\x64\\plugins\\widgets\\image\\shaders\\pagecurl.fsh",
+      "unchanged": true
+    },
+    {
+      "path": "D:\\VOFA+\\x64\\plugins\\widgets\\image\\shaders\\pixelate.fsh",
+      "unchanged": true
+    },
+    {
+      "path": "D:\\VOFA+\\x64\\plugins\\widgets\\image\\shaders\\posterize.fsh",
+      "unchanged": true
+    },
+    {
+      "path": "D:\\VOFA+\\x64\\plugins\\widgets\\image\\shaders\\selectionpanel.fsh",
+      "unchanged": true
+    },
+    {
+      "path": "D:\\VOFA+\\x64\\plugins\\widgets\\image\\shaders\\sepia.fsh",
+      "unchanged": true
+    },
+    {
+      "path": "D:\\VOFA+\\x64\\plugins\\widgets\\image\\shaders\\sharpen.fsh",
+      "unchanged": true
+    },
+    {
+      "path": "D:\\VOFA+\\x64\\plugins\\widgets\\image\\shaders\\shockwave.fsh",
+      "unchanged": true
+    },
+    {
+      "path": "D:\\VOFA+\\x64\\plugins\\widgets\\image\\shaders\\sobeledgedetection1.fsh",
+      "unchanged": true
+    },
+    {
+      "path": "D:\\VOFA+\\x64\\plugins\\widgets\\image\\shaders\\tiltshift.fsh",
+      "unchanged": true
+    },
+    {
+      "path": "D:\\VOFA+\\x64\\plugins\\widgets\\image\\shaders\\toon.fsh",
+      "unchanged": true
+    },
+    {
+      "path": "D:\\VOFA+\\x64\\plugins\\widgets\\image\\shaders\\vignette.fsh",
+      "unchanged": true
+    },
+    {
+      "path": "D:\\VOFA+\\x64\\plugins\\widgets\\image\\shaders\\warhol.fsh",
+      "unchanged": true
+    },
+    {
+      "path": "D:\\VOFA+\\x64\\plugins\\widgets\\image\\shaders\\wobble.fsh",
+      "unchanged": true
+    },
+    {
+      "path": "D:\\VOFA+\\x64\\plugins\\widgets\\Library\\Extras\\DelayButtonStyle.qml",
+      "unchanged": true
+    },
+    {
+      "path": "D:\\VOFA+\\x64\\plugins\\widgets\\Library\\Extras\\Dial.qml",
+      "unchanged": true
+    },
+    {
+      "path": "D:\\VOFA+\\x64\\plugins\\widgets\\Library\\Extras\\DialStyle.qml",
+      "unchanged": true
+    },
+    {
+      "path": "D:\\VOFA+\\x64\\plugins\\widgets\\Library\\Extras\\ToggleButtonStyle.qml",
+      "unchanged": true
+    },
+    {
+      "path": "D:\\VOFA+\\x64\\plugins\\widgets\\Library\\Material\\Dial.qml",
+      "unchanged": true
+    },
+    {
+      "path": "D:\\VOFA+\\x64\\plugins\\widgets\\Library\\Material\\Joystick.qml",
+      "unchanged": true
+    },
+    {
+      "path": "D:\\VOFA+\\x64\\plugins\\widgets\\Library\\Material\\SliderHandle.qml",
+      "unchanged": true
+    },
+    {
+      "path": "D:\\VOFA+\\x64\\plugins\\widgets\\Library\\Modules\\MyRipple.qml",
+      "unchanged": true
+    },
+    {
+      "path": "D:\\VOFA+\\x64\\plugins\\widgets\\Library\\Modules\\MySlider.qml",
+      "unchanged": true
+    },
+    {
+      "path": "D:\\VOFA+\\x64\\plugins\\widgets\\light\\light.qml",
+      "unchanged": true
+    },
+    {
+      "path": "D:\\VOFA+\\x64\\plugins\\widgets\\MaterialDial\\MaterialDial.qml",
+      "unchanged": true
+    },
+    {
+      "path": "D:\\VOFA+\\x64\\plugins\\widgets\\MaterialJoystick\\MaterialJoystick.qml",
+      "unchanged": true
+    },
+    {
+      "path": "D:\\VOFA+\\x64\\plugins\\widgets\\slider\\slider.qml",
+      "unchanged": true
+    },
+    {
+      "path": "D:\\VOFA+\\x64\\plugins\\widgets\\translations\\English.qm",
+      "unchanged": true
+    },
+    {
+      "path": "D:\\VOFA+\\x64\\plugins\\widgets\\translations\\TraditionalChinese.qm",
+      "unchanged": true
+    },
+    {
+      "path": "C:\\Users\\Administrator\\AppData\\Local\\vofa+\\100\\context\\vofa+.cmds.json",
+      "unchanged": true
+    },
+    {
+      "path": "C:\\Users\\Administrator\\AppData\\Local\\vofa+\\100\\context\\vofa+.config.json",
+      "unchanged": true
+    },
+    {
+      "path": "C:\\Users\\Administrator\\AppData\\Local\\vofa+\\100\\context\\vofa+.tabviews.json",
+      "unchanged": true
+    },
+    {
+      "path": "C:\\Users\\Administrator\\AppData\\Local\\vofa+\\100\\rpttest\\vofa+.cmds.json",
+      "unchanged": true
+    },
+    {
+      "path": "C:\\Users\\Administrator\\AppData\\Local\\vofa+\\100\\rpttest\\vofa+.config.json",
+      "unchanged": true
+    },
+    {
+      "path": "C:\\Users\\Administrator\\AppData\\Local\\vofa+\\100\\rpttest\\vofa+.tabviews.json",
+      "unchanged": true
+    }
+  ]
+}

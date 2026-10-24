@@ -1,0 +1,30 @@
+--- before/Output/Gimbal_Control/Tests/test_gimbal_startup.c
++++ after/Output/Gimbal_Control/Tests/test_gimbal_startup.c
+@@ -151,7 +151,7 @@
+     CHECK(!yc && !pc && !cc && !yfd && !pfd && !startup.ready);
+     Run(400U, 1000U);
+     CHECK(startup.ready && startup.reference_latched && yaw.zero_set && pitch.zero_set);
+-    CHECK(pitch.controller.gravity_calibrated && pitch.controller.gravity_kg_nm == -0.48f);
++    CHECK(pitch.controller.gravity_calibrated && pitch.controller.gravity_kg_nm == -0.47f);
+     CHECK(fabsf(yaw.controller.angle_deg) < 0.01f && fabsf(pitch.controller.angle_deg) < 0.01f);
+     CHECK(!yc && !pc && yfd && pfd && cc && rearm_barriers);
+     CHECK(GimbalStartup_TakeEvent(&event) && event.ready && !GimbalStartup_TakeEvent(&event));
+@@ -190,7 +190,7 @@
+     Run(100U, 1500U); Run(200U, 1000U);
+     CHECK(!yaw.active && !pitch.active && yc == before_y && pc == before_p);
+     CHECK(startup.phase == GIMBAL_STARTUP_BLOCKED && startup.reason == GIMBAL_STARTUP_REFERENCE_LOST);
+-    CHECK(pitch.controller.gravity_kg_nm == -0.48f && !pitch.controller.gravity_calibrated);
++    CHECK(pitch.controller.gravity_kg_nm == -0.47f && !pitch.controller.gravity_calibrated);
+     physical_yaw = 10.0f; physical_pitch = 100.0f; Run(50U, 1000U);
+     CHECK(GimbalStartup_Request(&input.remote, now, 0U)); AppTasks_RequestStop(); Run(400U, 1000U);
+     CHECK(startup.ready && pitch.controller.gravity_calibrated && !pitch.controller.faults);
+@@ -227,6 +227,9 @@
+     CHECK(PitchConsole_Handle("PITCH STEP", reply, sizeof(reply)) && strstr(reply, "P|OK|STEP_STARTED|TARGET|30.0"));
+     Read(); CHECK(pitch.controller.target_deg == 30.0f && yaw.controller.target_deg == 0.0f);
+     follow_target = 1U; Run(50U, 1500U);
++    CHECK(PitchConsole_Handle("PITCH HOME", reply, sizeof(reply)) && strstr(reply, "P|ERROR|HOME_REQUIRES_ARMED_ACTIVE_IDLE_PROFILE_AND_STATIONARY"));
++    Read(); CHECK(pitch.controller.shape.active && pitch.controller.target_deg == 30.0f);
++    Run(200U, 1500U); /* The synthetic motor follows immediately; wait for the planned reference to finish. */
+     CHECK(PitchConsole_Handle("PITCH HOME", reply, sizeof(reply)) && strstr(reply, "P|OK|HOME|TARGET|0"));
+     Run(100U, 1500U); Read(); CHECK(pitch.controller.target_deg == 0.0f && pitch.active);
+     Run(30U, 2000U);

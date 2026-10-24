@@ -68,6 +68,7 @@ static void Apply(uint32_t timestamp, uint8_t allowed)
 { now_ms = timestamp; YawBackend_Apply(&request, allowed, 0U); Read(); }
 static void Reset(uint32_t timestamp)
 {
+    YawStep snapshot;
     memset(&bus, 0, sizeof(bus)); memset(&request, 0, sizeof(request));
     bus.started = 1U; now_ms = timestamp;
     enable_calls = torque_calls = disable_calls = cancel_calls = 0U;
@@ -75,6 +76,8 @@ static void Reset(uint32_t timestamp)
     permission = deny_permission = pending = keep_pending = 0U;
     enable_result = torque_result = disable_result = HAL_OK; last_torque = 0.0f;
     YawBackend_Init(); Read();
+    YawBackend_GetStep(&snapshot);
+    CHECK(snapshot.id == 0U && YawBackend_GetStepId() == snapshot.id);
 }
 static void Prepare(uint32_t timestamp)
 {

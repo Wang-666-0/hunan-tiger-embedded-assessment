@@ -111,6 +111,10 @@ static void Prepare(uint32_t ms)
     FeederConfig config;
     Reset(ms); Feed(ms + 1U); Feed(ms + 2U); Feed(ms + 3U);
     config = state.controller.config; config.direction = 1; config.calibrated = 1U;
+    config.gear_ratio = 1.0f; config.pos_kp = 5.0f;
+    config.max_rpm = 300.0f; config.current_limit = 1000.0f;
+    config.tolerance_deg = 1.0f; config.settle_rpm = 10.0f; config.settle_ms = 20U;
+    config.motion_timeout_ms = 1000U; config.jam_current_raw = 800.0f; config.jam_ms = 150U;
     CHECK(FeederBackend_SetConfig(&config)); CHECK(FeederBackend_Zero());
     CHECK(FeederBackend_Arm()); Read();
     CHECK(state.armed && state.stop_pending && !current_calls && !nonzero_calls);
@@ -140,7 +144,7 @@ static void CompleteShot(uint32_t start_ms)
 {
     uint32_t ms;
     int64_t target;
-    Read(); target = state.controller.zero_counts + (int64_t)(state.controller.target_deg * 8192.0 / 360.0);
+    Read(); target = state.controller.zero_counts + (int64_t)(state.controller.target_deg * 8192.0 / 360.0) + 1;
     for (ms = start_ms + 1U; ms <= start_ms + 31U; ++ms) {
         if (rotor_counts < target) {
             rotor_counts += target - rotor_counts > 100 ? 100 : target - rotor_counts;
@@ -148,7 +152,7 @@ static void CompleteShot(uint32_t start_ms)
         } else { rotor_rpm = 0; }
         Tick(ms);
     }
-    CHECK(!state.controller.busy && !state.controller.faults);
+    CHECK((!state.controller.busy || state.controller.motion_kind == FEEDER_MOTION_STREAM) && !state.controller.faults);
 }
 static void Console(const char *command, uint8_t ok)
 {
@@ -164,7 +168,14 @@ void test_run(void)
     test_stage = 1U;
     Reset(100U); config = state.controller.config;
     CHECK(!FeederBackend_Arm() && !FeederBackend_Zero() && !FeederBackend_Single());
-    Console("FEEDER STATUS", 1U); CHECK(strstr(response, "|CAL|0|") && strstr(response, "|DIR|0|"));
+    Console("FEEDER STATUS", 1U); CHECK(strstr(response, "|CAL|1|") && strstr(response, "|DIR|-1|"));
+    Console("FEEDER SINGLE_DECEL 999", 0U);
+    Console("FEEDER SINGLE_DECEL 0", 1U);
+    CHECK(state.controller.config.single_decel_rpm_s == 0.0f);
+    Console("FEEDER SINGLE_DECEL 50000", 1U);
+    CHECK(FeederConsole_Handle("FEEDER RESULT", response, sizeof(response)));
+    CHECK(strstr(response, "|SINGLE_DECEL_RPM_S|50000|BRAKE_DELAY_MS|8|PREVIEW_MS|12|I_RELAX_MS|12|"));
+    Console("FEEDER CAL 0", 1U); Console("FEEDER DIR 0", 1U);
     Console("FEEDER CAL 1", 0U); Console("FEEDER DIR 1", 1U); Console("FEEDER GEAR 1", 1U);
     Console("FEEDER CAL 1", 1U); Console("FEEDER LIMIT 3001", 0U);
     Console("FEEDER RPM nan", 0U); Console("FEEDER RPM 301x", 0U);
@@ -204,10 +215,15 @@ void test_run(void)
     CompleteShot(457U); RunTo(506U); CHECK(state.controller.accepted == 2U);
     Tick(507U); CHECK(state.controller.accepted == 3U && state.controller.target_deg == 120.0);
     CompleteShot(507U);
+    CHECK(state.controller.continuous_completed == 3U && state.controller.single_completed == 0U);
+    SetRemote(539U, 1500U, 2000U, 1500U); RunTo(561U);
+    CHECK(!state.controller.busy && state.armed && !state.controller.aborted);
     StartNormal(600U, 2000U, 1U); RunTo(707U);
-    CHECK(state.controller.accepted == 1U && state.controller.rejected == 2U && state.controller.busy);
+    CHECK(state.controller.accepted == 2U && state.controller.rejected == 1U && state.controller.busy);
+    CHECK(state.controller.outstanding == FEEDER_STREAM_MAX_PENDING);
     SetRemote(708U, 1500U, 2000U, 1500U); CompleteShot(708U);
-    RunTo(808U); CHECK(state.controller.accepted == 1U && state.controller.completed == 1U);
+    RunTo(808U); CHECK(state.controller.accepted == 2U && state.controller.completed == 1U);
+    CHECK(state.controller.cancelled == 1U && !state.controller.aborted && !state.controller.busy && state.armed);
 
     test_stage = 4U;
     StartNormal(900U, 1500U, 0U); wheels.flywheels_ready = 0U;
@@ -243,9 +259,18 @@ void test_run(void)
     RunTo(1212U); CHECK(state.controller.accepted == 1U);
     StartNormal(1300U, 1500U, 1U); before = nonzero_calls;
     wheels.flywheels_ready = 0U; Tick(1308U);
-    CHECK(!state.armed && !state.controller.busy && !permission && state.controller.aborted == 1U);
-    CHECK(rearm_calls == 1U && nonzero_calls == before);
-    wheels.flywheels_ready = 1U; RunTo(1312U); CHECK(state.controller.accepted == 1U);
+    CHECK(state.armed && state.controller.busy && permission && !state.controller.aborted);
+    CHECK(!rearm_calls && nonzero_calls > before && !FeederBackend_Single());
+    CompleteShot(1308U); Tick(1340U);
+    CHECK(state.armed && !state.controller.busy && !permission && state.controller.have_zero);
+    CHECK(state.controller.completed == 1U && state.controller.accepted == 1U && !rearm_calls);
+    wheels.flywheels_ready = 1U; RunTo(1342U); CHECK(state.controller.accepted == 1U);
+    SetRemote(1343U, 1500U, 1500U, 1500U);
+    SetRemote(1344U, 1500U, 1500U, 2000U);
+    CHECK(state.controller.accepted == 2U && state.controller.busy);
+    before = nonzero_calls; wheels.feedback_ready = 0U; Tick(1345U);
+    CHECK(!state.armed && !state.controller.busy && !permission && !state.controller.have_zero);
+    CHECK(state.controller.aborted == 1U && rearm_calls == 1U && nonzero_calls == before);
 
     test_stage = 6U;
     StartNormal(1400U, 2000U, 1U); before = nonzero_calls;
@@ -346,5 +371,57 @@ void test_run(void)
     CHECK(state.controller.position_deg > 4.0 && state.controller.target_deg == state.controller.position_deg);
     rotor_rpm = 0; SetRemote(1916U, 1500U, 1500U, 2000U); RunTo(1920U);
     CHECK(state.controller.accepted == 1U && !state.controller.have_zero && !state.controller.busy);
+    test_stage = 10U;
+    Reset(2100U); Feed(2101U); rotor_counts = 400; Feed(2102U);
+    CHECK(state.controller.faults == FEEDER_FAULT_JUMP && state.controller.jump.valid);
+    before = current_calls; accepted = stop_calls;
+    memset(response, '~', sizeof(response));
+    CHECK(FeederConsole_Handle("FEEDER CHECK", response, 1024U));
+    CHECK(strstr(response, "F|CHECK|" APP_FEEDER_VERSION "|FAULT|4|"));
+    CHECK(strstr(response, "|JUMP_VALID|1|JUMP_COUNT|1|CAUSE|DELTA|FLAGS|1|"));
+    CHECK(strstr(response, "|PREV_RAW|0|RAW|400|DELTA_COUNTS|400|GAP_MS|1|"));
+    CHECK(strstr(response, "|GAP_BOUND_MS|2|GAP_MARGIN_MS|1|TS_ALLOW|0|"));
+    CHECK(strstr(response, "|FRAME|0190000000000000|"));
+    CHECK(strstr(response, "|CH|1500,1500,1500,1500,1000,1000,1500,1500|"));
+    CHECK(strstr(response, "|CAN_EPOCH|0\r\n") && strlen(response) < 1023U && response[1024] == '~');
+    CHECK(current_calls == before && stop_calls == accepted && state.controller.faults == FEEDER_FAULT_JUMP);
+    Feed(2103U); Feed(2104U); Feed(2105U);
+    CHECK(FeederConsole_Handle("FEEDER CHECK", response, sizeof(response)));
+    CHECK(strstr(response, "|AT_MS|2102|") && strstr(response, "|DELTA_COUNTS|400|"));
+    Console("FEEDER CLEAR", 1U);
+    CHECK(FeederConsole_Handle("FEEDER CHECK", response, sizeof(response)));
+    CHECK(strstr(response, "|JUMP_VALID|0|JUMP_COUNT|1|CAUSE|NONE|"));
+    CHECK(!state.controller.have_zero && !state.armed && !current_calls);
+    StartNormal(2200U, 1500U, 1U); before = current_calls; accepted = stop_calls;
+    CHECK(FeederConsole_Handle("FEEDER CHECK", response, sizeof(response)));
+    Read(); CHECK(state.armed && state.controller.busy && current_calls == before && stop_calls == accepted);
+    CHECK(strstr(response, "|ARMED|1|BUSY|1|CAL|1|DIR|1|STEP|40|"));
+
+    test_stage = 11U;
+    for (ms = 2300U; ms <= 2400U; ms += 100U) {
+        uint16_t ch6 = ms == 2300U ? 1500U : 2000U;
+        Reset(ms); rotor_counts = 6444;
+        Feed(ms + 1U); Feed(ms + 2U); Feed(ms + 3U);
+        CHECK(FeederBackend_Zero() && FeederBackend_Arm()); LogicApply(ms + 4U, 1U);
+        wheels.flywheels_ready = 1U;
+        SetRemote(ms + 5U, 1500U, 1000U, 1500U);
+        SetRemote(ms + 6U, 1500U, ch6, 1500U);
+        SetRemote(ms + 7U, 1500U, ch6, 2000U);
+        CHECK(state.controller.busy && state.controller.accepted == 1U && state.controller.command_raw == -3000);
+        rotor_rpm = -2048; feedback_current = -1584; Tick(ms + 8U);
+        CHECK(last_current < 0 && last_current >= -3000); /* 2ms CAN period; stream reference starts with a phase delay. */
+        rotor_counts = 5840; rotor_rpm = -2234; Tick(ms + 9U);
+        CHECK(!state.controller.faults && state.armed && state.controller.have_zero && permission);
+        CHECK(state.controller.busy && !state.controller.aborted && !rearm_calls);
+        CHECK(state.controller.accumulated_counts == -604 && state.controller.timestamp_allowances == 1U);
+        CHECK(FeederConsole_Handle("FEEDER STATUS", response, sizeof(response)));
+        CHECK(strstr(response, "|GAP_MARGIN_MS|1|TS_ALLOW|1|"));
+        /* A genuine larger discontinuity still revokes the common operator
+         * latch; fixing timestamp quantization must not mask real faults. */
+        rotor_counts -= 1000; Tick(ms + 10U);
+        CHECK(state.controller.faults == FEEDER_FAULT_JUMP && !state.armed && !permission);
+        CHECK(state.controller.aborted == 1U && rearm_calls == 1U && !state.controller.have_zero);
+        CHECK(!app.logic.safety.operator_armed && !state.controller.busy);
+    }
     test_done = 1U;
 }

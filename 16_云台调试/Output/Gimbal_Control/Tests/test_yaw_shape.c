@@ -46,6 +46,12 @@ void test_run(void)
     test_stage = 1;
     YawController_Init(&yaw);
     CHECK(!yaw.shape.duration_ms && !yaw.shape.active);
+    CHECK(yaw.shape.velocity_gain == 0);
+    CHECK(!YawController_SetShapeVelocityGain(0, 0.1f));
+    CHECK(!YawController_SetShapeVelocityGain(&yaw, -0.01f));
+    CHECK(!YawController_SetShapeVelocityGain(&yaw, 1.01f));
+    CHECK(YawController_SetShapeVelocityGain(&yaw, 0.25f));
+    CHECK(YawController_SetShapeVelocityGain(&yaw, 0));
     CHECK(!YawController_SetShape(0, 160));
     CHECK(!YawController_SetShape(&yaw, 79) && !YawController_SetShape(&yaw, 501));
     CHECK(!YawController_SetShape(&yaw, 0xFFFFFFFFUL));
@@ -96,5 +102,35 @@ void test_run(void)
     CHECK(YawController_SetShape(&yaw, 160)); CHECK(YawController_SetTarget(&yaw, 30));
     YawController_StartShape(&yaw, 5020); yaw.shape.duration_ms = 0;
     CHECK(YawController_Update(&yaw, 0, 5022, 1) == 0 && (yaw.faults & YAW_CONTROLLER_FAULT_DATA));
+    test_stage = 5;
+    for (dt = 0; dt < 3; ++dt) {
+        uint32_t tick, start = 6000U + dt * 1000U;
+        float gain = dt == 0 ? 0.0f : (dt == 1 ? 0.25f : 1.0f);
+        ready(start - 20U, 0);
+        CHECK(YawController_SetShape(&yaw, 160));
+        CHECK(YawController_SetShapeVelocityGain(&yaw, gain));
+        yaw.cascade.position.kp = yaw.cascade.position.ki = 0;
+        yaw.cascade.position.kd = 0.05f;
+        yaw.cascade.speed.ki = yaw.cascade.speed.kd = 0;
+        (void)YawController_Update(&yaw, 0, start, 1);
+        CHECK(YawController_SetTarget(&yaw, 30)); YawController_StartShape(&yaw, start);
+        CHECK(!YawController_SetShapeVelocityGain(&yaw, 0.1f));
+        for (tick = 0; tick <= 80; tick += 2) {
+            if (tick && tick % 10 == 0) {
+                frame(start + tick, 0, 0); CHECK(YawController_OnFeedback(&yaw, &feedback));
+            }
+            (void)YawController_Update(&yaw, 0, start + tick, 1);
+        }
+        CHECK(!yaw.ff.enabled && !yaw.cascade.feedforward_nm);
+        CHECK(near(yaw.cascade.target_velocity_dps, 1.05f * gain * 351.5625f, 0.001f));
+        if (gain == 0) { CHECK(yaw.torque_nm == 0); }
+        YawController_Stop(&yaw); CHECK(yaw.shape.velocity_gain == gain);
+    }
+    ready(10000, 0);
+    { union { uint32_t bits; float value; } invalid;
+      invalid.bits = 0x7FC00000UL; CHECK(!YawController_SetShapeVelocityGain(&yaw, invalid.value));
+      invalid.bits = 0x7F800000UL; CHECK(!YawController_SetShapeVelocityGain(&yaw, invalid.value));
+      yaw.shape.velocity_gain = invalid.value;
+      CHECK(YawController_Update(&yaw, 0, 10020, 1) == 0 && (yaw.faults & YAW_CONTROLLER_FAULT_DATA)); }
     test_done = 1;
 }

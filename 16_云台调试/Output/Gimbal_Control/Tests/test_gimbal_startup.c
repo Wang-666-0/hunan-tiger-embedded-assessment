@@ -8,6 +8,7 @@
 #include "yaw_console.h"
 #include "pitch_console.h"
 #include "remote_input.h"
+#include "gimbal_step_sync.h"
 #include <math.h>
 #include <string.h>
 
@@ -19,6 +20,8 @@ static SafetyInput input;
 static YawBackendState yaw;
 static PitchBackendState pitch;
 static GimbalStartupState startup;
+static GimbalStepSync step_sync;
+static uint8_t view_hold_request;
 static uint32_t now, stops, rearm_barriers, yc, pc, yfd, pfd, cc, fb;
 static uint8_t yp, pp, wheel_permission, device_yaw, device_pitch;
 static uint8_t diagnostic, follow_target;
@@ -102,6 +105,7 @@ static void Tick(uint32_t ms, uint16_t ch5, uint8_t remote_fresh, uint8_t yaw_fe
     }
     input.now_ms = now; input.can_epoch = bus.fault_epoch; input.stop_sequence = stops;
     GimbalStartup_Update(&input, diagnostic); Read();
+    GimbalStepSync_ApplyViewHold(view_hold_request);
     memset(&yh, 0, sizeof(yh)); memset(&ph, 0, sizeof(ph));
     yh.requested = yaw.requested; yh.online = yaw.online; yh.stop_pending = yaw.stop_pending;
     yh.faulted = (uint8_t)(yaw.controller.faults != 0U);
@@ -111,12 +115,19 @@ static void Tick(uint32_t ms, uint16_t ch5, uint8_t remote_fresh, uint8_t yaw_fe
     AppLogic_CombineActuatorHealth(&input, &yh, &ph, 0U);
     if (!GimbalStartup_OutputReady()) { input.feedback_ready = 0U; }
     input.stop_sequence = stops;
+    GimbalStepSync_Update(&step_sync, &logic.targets,
+        ch5 == 2000U && logic.safety.output_allowed && !diagnostic);
     AppLogic_Step(&logic, &input, 0U); request = logic.targets.request;
+    GimbalStepSync_FilterViewRequest(&request, view_hold_request);
     YawBackend_Apply(&request, logic.safety.output_allowed, diagnostic);
+    GimbalStepSync_Update(&step_sync, &logic.targets,
+        request.gimbal_mode == GIMBAL_TEST && logic.safety.output_allowed && !diagnostic);
     if (YawBackend_TakeRearmRequest()) {
         AppTasks_RequestStop(); logic.safety.output_allowed = logic.safety.operator_armed = 0U;
     }
     PitchBackend_Apply(&request, logic.safety.output_allowed, diagnostic);
+    GimbalStepSync_Update(&step_sync, &logic.targets,
+        request.gimbal_mode == GIMBAL_TEST && logic.safety.output_allowed && !diagnostic);
     if (PitchBackend_TakeRearmRequest()) {
         AppTasks_RequestStop(); logic.safety.output_allowed = logic.safety.operator_armed = 0U;
     }
@@ -132,6 +143,8 @@ static void Reset(uint32_t ms)
     uint32_t i;
     now = ms; memset(&bus, 0, sizeof(bus)); bus.started = 1U;
     memset(&input, 0, sizeof(input)); AppLogic_Init(&logic);
+    memset(&step_sync, 0, sizeof(step_sync));
+    view_hold_request = 0U;
     for (i = 0U; i < 14U; ++i) { input.remote.channels[i] = 1500U; }
     input.remote.channels[4] = input.remote.channels[5] = 1000U;
     yp = pp = wheel_permission = device_yaw = device_pitch = diagnostic = follow_target = 0U;
@@ -224,9 +237,13 @@ void test_run(void)
     CHECK(startup.phase == GIMBAL_STARTUP_BLOCKED && !yc && !pc && !cc);
     test_stage = 8U;
     Reset(60000U); Run(400U, 1000U); Run(100U, 1500U); CHECK(yaw.active && pitch.active);
+    CHECK(PitchBackend_SetShape(200U, 0.2f)); /* Explicit optional legacy-profile path. */
     CHECK(PitchConsole_Handle("PITCH STEP", reply, sizeof(reply)) && strstr(reply, "P|OK|STEP_STARTED|TARGET|30.0"));
     Read(); CHECK(pitch.controller.target_deg == 30.0f && yaw.controller.target_deg == 0.0f);
     follow_target = 1U; Run(50U, 1500U);
+    CHECK(PitchConsole_Handle("PITCH HOME", reply, sizeof(reply)) && strstr(reply, "P|ERROR|HOME_REQUIRES_ARMED_ACTIVE_IDLE_PROFILE_AND_STATIONARY"));
+    Read(); CHECK(pitch.controller.shape.active && pitch.controller.target_deg == 30.0f);
+    Run(200U, 1500U); /* The synthetic motor follows immediately; wait for the planned reference to finish. */
     CHECK(PitchConsole_Handle("PITCH HOME", reply, sizeof(reply)) && strstr(reply, "P|OK|HOME|TARGET|0"));
     Run(100U, 1500U); Read(); CHECK(pitch.controller.target_deg == 0.0f && pitch.active);
     Run(30U, 2000U);

@@ -70,13 +70,14 @@ typedef enum {
 
 typedef struct { float kp, ki, kd; } YawPid;
 typedef struct {
-    float bias_nm, angle_gain, velocity_gain, friction_nm, friction_velocity_dps, limit_nm;
+    /* 协议Nm/(deg/s^2)，仅乘规划加速度；不对编码器加速度作正反馈。 */
+    float acceleration_gain, limit_nm;
     uint32_t revision;
-    uint8_t enabled, i_transferred;
+    uint8_t enabled;
 } YawFeedforward;
 typedef struct {
     uint32_t duration_ms, start_ms;
-    float start_deg, position_deg, velocity_dps, acceleration_dps2;
+    float start_deg, position_deg, velocity_dps, acceleration_dps2, velocity_gain;
     uint8_t active;
 } YawShape;
 typedef struct {
@@ -111,12 +112,16 @@ uint8_t YawController_CaptureReference(YawController *yaw);
  * 双环由yaw_cascade接口调参，不能复用这组三个数字。 */
 uint8_t YawController_SetPid(YawController *yaw, float kp, float ki, float kd);
 uint8_t YawController_SetTarget(YawController *yaw, float degrees);
-/* B偏置/A角度斜率/V速度系数/C摩擦/S平滑速度/L前馈限幅/E使能。
- * 在线改值只转移内环积分以减小力矩突变，不改变软件零点及目标。 */
+/* V2P生产编译关闭实验规划/前馈；仅接受显式关闭和零规划配置。
+ * 以下接口保留历史离线回归，APP_YAW_EXPERIMENTAL_TRACKING=1才可启用。
+ * A=规划加速度系数(0~0.001)，L=前馈限幅(0~1)，E=使能。
+ * 运动规划中只允许关闭；不再把前馈转存到积分中。旧B/V/C/S已删除。 */
 uint8_t YawController_SetFeedforward(YawController *yaw, char parameter, float value);
 /* 默认duration=0关闭。只在正式STEP入口启动；配置不启动电机。
  * 80~500ms为五次多项式全程时间，0恢复原始阶跃；计时仍从原指令开始。 */
 uint8_t YawController_SetShape(YawController *yaw, uint32_t duration_ms);
+/* 规划速度前馈权重0~1，默认0；与加速度力矩前馈的FF开关独立。 */
+uint8_t YawController_SetShapeVelocityGain(YawController *yaw, float gain);
 void YawController_StartShape(YawController *yaw, uint32_t now_ms);
 void YawController_Stop(YawController *yaw);
 /* allowed由后端综合遥控、CAN、驱动使能和停机提交状态。无新反馈不积分，

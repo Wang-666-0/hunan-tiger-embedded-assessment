@@ -18,16 +18,16 @@ uint8_t YawConsole_Handle(const char *line, char *response, size_t capacity)
     if (strncmp(line, "YAW ", 4U)) { return 0U; }
     ++yaw_commands; (void)snprintf(response, capacity, "Y|MOCK\r\n"); return 1U;
 }
-static float columns[70];
+static float columns[72];
 static void ParseColumns(void)
 {
     const char *cursor = output + 7U;
     char *end;
     uint32_t index;
     CHECK(strncmp(output, "gimbal:", 7U) == 0);
-    for (index = 0U; index < 70U; ++index) {
+    for (index = 0U; index < 72U; ++index) {
         columns[index] = strtof(cursor, &end); CHECK(end != cursor);
-        if (index < 69U) { CHECK(*end == ','); cursor = end + 1U; }
+        if (index < 71U) { CHECK(*end == ','); cursor = end + 1U; }
         else { CHECK(strcmp(end, "\r\n") == 0); }
     }
     if (output_length > test_max_wire_bytes) { test_max_wire_bytes = output_length; }
@@ -59,19 +59,17 @@ void test_run(void)
     step_sample.response_ms = 240U; step_sample.settle_ms = YAW_STEP_UNREACHED;
     step_sample.t10_ms = 50U; step_sample.t90_ms = 180U;
     step_sample.overshoot_deg = 1.23f; step_sample.overshoot_pct = 4.1f; step_sample.steady_error_deg = -0.2f;
-    yaw_sample.controller.ff.enabled = 1U; yaw_sample.controller.ff.bias_nm = -0.025f;
-    yaw_sample.controller.ff.angle_gain = 0.001f; yaw_sample.controller.ff.velocity_gain = 0.0001f;
-    yaw_sample.controller.ff.friction_nm = 0.02f; yaw_sample.controller.ff.friction_velocity_dps = 5.0f;
+    yaw_sample.controller.ff.enabled = 1U; yaw_sample.controller.ff.acceleration_gain = 0.000002f;
     yaw_sample.controller.ff.limit_nm = 0.1f; yaw_sample.controller.cascade.feedforward_nm = -0.015f;
     yaw_sample.controller.pid_torque_nm = 0.115f; yaw_sample.controller.cascade.speed_i = 0.04f;
     yaw_sample.controller.cascade.position_i = 0.25f; yaw_sample.controller.cascade.feedforward_limited = 1U;
-    step_sample.response05_ms = 190U; step_sample.settle05_ms = 240U; step_sample.pass05 = 1U;
     yaw_sample.controller.last_feedback_ms = 4294967200UL;
     yaw_sample.controller.shape.duration_ms = 160;
     yaw_sample.controller.shape.active = 1;
     yaw_sample.controller.shape.position_deg = 15;
     yaw_sample.controller.shape.velocity_dps = 351.5625f;
     yaw_sample.controller.shape.acceleration_dps2 = -3000;
+    yaw_sample.controller.shape.velocity_gain = 0.25f;
     jog_state.active = 1U; jog_state.speed.filtered_erpm = 42000;
     jog_state.speed_right.filtered_erpm = 41300; jog_state.health.faults = 16U;
     app_armed = output_allowed = 1U;
@@ -89,13 +87,23 @@ void test_run(void)
     CHECK(columns[35] == 1 && columns[36] == 6000 && columns[37] == 5900 && columns[38] == 16);
     CHECK(columns[39] == 1 && columns[40] == 1 && columns[41] == 1000 && columns[42] == 1500);
     CHECK(columns[43] == 1500 && columns[44] == 2000 && columns[45] == 6 && columns[46] == -3 && columns[47] == 42);
-    CHECK(columns[48] == 1 && columns[49] == -0.025f && columns[50] == 0.001f && columns[51] == 0.0001f);
-    CHECK(columns[52] == 0.02f && columns[53] == 5 && columns[54] == 0.1f && columns[55] == -0.015f);
+    CHECK(columns[48] == 1 && columns[49] == 0 && columns[50] == 0 && columns[51] == 0);
+    CHECK(columns[52] == 0 && columns[53] == 0 && columns[54] == 0.1f && columns[55] == -0.015f);
     CHECK(columns[56] == 0.115f && columns[57] == 0.04f && columns[58] == 0.25f && columns[59] == 1);
-    CHECK(columns[60] == 190 && columns[61] == 240 && columns[62] == 1);
+    CHECK(columns[60] == 240 && columns[61] == -1 && columns[62] == 0);
+    CHECK(columns[60] == columns[26] && columns[61] == columns[27] && columns[62] == columns[32]);
     CHECK(columns[64] == 160 && columns[65] == 1 && columns[66] == 15);
     CHECK(columns[67] > 351.55f && columns[67] < 351.58f && columns[68] == -3000);
     CHECK(columns[69] > 13.765f && columns[69] < 13.767f);
+    CHECK(columns[70] == 0.25f && columns[71] == 0.000002f);
+    clear_output(); command_line("YAW VIEW");
+    CHECK(strstr(output, "RESP02_I|60|SETTLE02_I|61|") && strstr(output, "PASS02_I|62|BAND_DEG|0.2|"));
+    CHECK(!strstr(output, "BAND05"));
+    step_sample.response_ms = 190; step_sample.settle_ms = 240; step_sample.pass = step_sample.sse_valid = 1;
+    step_sample.overshoot_deg = 0.1f; step_sample.steady_error_deg = 0.02f;
+    clear_output(); now += 5; AppConsole_Poll(); ParseColumns();
+    CHECK(columns[60] == 190 && columns[61] == 240 && columns[62] == 1);
+    CHECK(columns[26] == columns[60] && columns[27] == columns[61] && columns[32] == columns[62]);
     test_stage = 2U;
     clear_output(); command_line("YAW VKP 0.001000");
     CHECK(yaw_commands == 1 && strcmp(output, "Y|MOCK\r\n") == 0);
@@ -138,17 +146,12 @@ void test_run(void)
     step_sample.overshoot_pct = 133.333f; step_sample.steady_error_deg = -69.9999f;
     jog_state.speed.filtered_erpm = jog_state.speed_right.filtered_erpm = -46200;
     jog_state.health.faults = 0xFFFFFFFFUL;
-    yaw_sample.controller.ff.bias_nm = -1;
-    yaw_sample.controller.ff.angle_gain = -0.02f;
-    yaw_sample.controller.ff.velocity_gain = 0.01f;
-    yaw_sample.controller.ff.friction_nm = 0.5f;
-    yaw_sample.controller.ff.friction_velocity_dps = 100;
+    yaw_sample.controller.ff.acceleration_gain = 0.001f;
     yaw_sample.controller.ff.limit_nm = 1;
     yaw_sample.controller.cascade.feedforward_nm = -1;
     yaw_sample.controller.pid_torque_nm = -11;
     yaw_sample.controller.cascade.speed_i = -10;
     yaw_sample.controller.cascade.position_i = -1234567890.0f;
-    step_sample.response05_ms = step_sample.settle05_ms = 5000;
     yaw_sample.controller.shape.duration_ms = 500;
     yaw_sample.controller.shape.position_deg = -50;
     yaw_sample.controller.shape.velocity_dps = -708;

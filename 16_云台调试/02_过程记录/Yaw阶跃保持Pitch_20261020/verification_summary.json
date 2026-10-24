@@ -1,0 +1,28 @@
+{
+  "success": true,
+  "scope": "Yaw STEP holds Pitch only",
+  "groups": 71,
+  "checks": 550675,
+  "failures": 0,
+  "all_finished_and_returned": true,
+  "test_source_hashes_match": true,
+  "configuration_changed_only_yaw_version": true,
+  "pitch_backend_has_no_yaw_dependency": true,
+  "unchanged_math_telemetry_and_guard_sources": [
+    "App/yaw_controller.c",
+    "App/pitch_controller.c",
+    "App/yaw_cascade.c",
+    "App/yaw_step.c",
+    "App/pitch_step.c",
+    "App/app_console.c",
+    "App/pitch_console.c",
+    "App/gimbal_startup.c",
+    "App/remote_mapper.c",
+    "App/target_manager.c",
+    "App/can_bus.c"
+  ],
+  "compiler_errors": 0,
+  "compiler_warnings": 0,
+  "hardware_flashed": false,
+  "vofa_configuration_changed": false
+}

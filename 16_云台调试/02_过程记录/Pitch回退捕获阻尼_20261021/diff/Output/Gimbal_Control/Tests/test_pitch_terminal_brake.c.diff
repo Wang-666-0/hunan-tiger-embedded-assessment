@@ -1,0 +1,97 @@
+--- before/Output/Gimbal_Control/Tests/test_pitch_terminal_brake.c
++++ after/Output/Gimbal_Control/Tests/test_pitch_terminal_brake.c
+@@ -75,7 +75,7 @@
+     CHECK(PitchController_OnFeedback(&baseline, &feedback));
+     torque = PitchController_Update(&pitch, 0.0f, now, 1U);
+     original = PitchController_Update(&baseline, 0.0f, now, 1U);
+-    CHECK(!pitch.brake.active && !pitch.brake.tracking && pitch.brake.torque_nm == 0.0f);
++    CHECK(!pitch.brake.active && pitch.brake.tracking && pitch.brake.approach_done && pitch.brake.torque_nm == 0.0f);
+     CHECK(near(torque, original)); /* No residual brake at standstill despite filtered speed. */
+     sample(now + 2U, reverse ? 0.0f : 30.0f, -sign * 200.0f, 1U);
+     CHECK(PitchController_OnFeedback(&baseline, &feedback));
+@@ -84,7 +84,75 @@
+     CHECK(pitch.brake.torque_nm == 0.0f && near(torque, original));
+     before_pi = pitch.cascade.position_i; before_vi = pitch.cascade.speed_i;
+     CHECK(PitchController_StartMove(&pitch, target, now + 2U));
+-    CHECK(!pitch.brake.tracking && pitch.cascade.position_i == before_pi && pitch.cascade.speed_i == before_vi);
++    CHECK(pitch.brake.tracking && pitch.cascade.position_i == before_pi && pitch.cascade.speed_i == before_vi);
++    for (i = 4U; i <= 260U; i += 2U) {
++        sample(now + i, target, 0.0f, 1U);
++        (void)PitchController_Update(&pitch, 0.0f, now + i, 1U);
++    }
++    CHECK(!pitch.brake.tracking && pitch.brake.peak_abs_nm > 0.0f);
++    CHECK(pitch.brake.active_frames > 0U && pitch.brake.return_frames == 0U);
++}
++
++static void capture_rebound(uint32_t base, uint8_t reverse)
++{
++    uint32_t now = prepare_move(base, reverse ? 30.0f : 0.0f), i, arrival;
++    float sign = reverse ? -1.0f : 1.0f, target = reverse ? 0.0f : 30.0f;
++    float previous, peak, pi, vi;
++    uint32_t frames;
++    CHECK(PitchController_StartMove(&pitch, target, now));
++    for (i = 1U; i <= 75U; ++i) {
++        float travelled = 0.4f * (float)i;
++        sample(now + i * 2U, reverse ? 30.0f - travelled : travelled, sign * 200.0f, 1U);
++        (void)PitchController_Update(&pitch, 0.0f, now + i * 2U, 1U);
++    }
++    arrival = pitch.brake.arrival_ms;
++    CHECK(pitch.brake.arrived && pitch.brake.tracking);
++    now += 152U; sample(now, target, 0.0f, 1U);
++    (void)PitchController_Update(&pitch, 0.0f, now, 1U);
++    CHECK(pitch.brake.approach_done && pitch.brake.torque_nm == 0.0f);
++    previous = 0.0f;
++    for (i = 1U; i <= 25U; ++i) {
++        sample(now + i * 2U, target - sign * 0.12f * (float)i, -sign * 60.0f, 1U);
++        (void)PitchController_Update(&pitch, 0.0f, now + i * 2U, 1U);
++        CHECK(!pitch.faults && pitch.brake.tracking && pitch.brake.arrival_ms == arrival);
++        CHECK(pitch.brake.torque_nm * sign >= 0.0f);
++        CHECK(pitch.brake.torque_nm * pitch.velocity_dps <= 0.0f);
++        CHECK(pitch.brake.torque_nm * pitch.cascade.velocity_dps <= 0.0f);
++        CHECK(absolute(pitch.brake.torque_nm) <= 0.200001f);
++        CHECK(absolute(pitch.brake.torque_nm) <= previous + 0.016001f);
++        previous = absolute(pitch.brake.torque_nm);
++    }
++    CHECK(pitch.brake.return_frames > 0U && pitch.brake.return_peak_nm > 0.12f);
++    peak = pitch.brake.return_peak_nm; frames = pitch.brake.return_frames;
++    pi = pitch.cascade.position_i; vi = pitch.cascade.speed_i;
++    (void)PitchController_Update(&pitch, 0.0f, now + 50U, 1U);
++    CHECK(pitch.brake.return_frames == frames && pitch.brake.return_peak_nm == peak);
++    CHECK(pitch.cascade.position_i == pi && pitch.cascade.speed_i == vi);
++    now += 52U;
++    sample(now, target - sign * 2.9f, -sign * 60.0f, 1U);
++    (void)PitchController_Update(&pitch, 0.0f, now, 1U);
++    CHECK(pitch.brake.torque_nm == 0.0f); /* Position increment vetoes stale reverse velocity. */
++    /* Do not damp the corrective motion back towards the goal, even with observer lag. */
++    for (i = 1U; i <= 25U; ++i) {
++        sample(now + i * 2U, target - sign * (3.0f - 0.12f * (float)i), sign * 60.0f, 1U);
++        (void)PitchController_Update(&pitch, 0.0f, now + i * 2U, 1U);
++        CHECK(pitch.brake.torque_nm == 0.0f && !pitch.brake.active);
++        CHECK(pitch.brake.return_frames == frames && pitch.brake.return_peak_nm == peak);
++    }
++    now += 50U;
++    for (i = 2U; i <= 200U; i += 2U) {
++        sample(now + i, target, 0.0f, 1U);
++        (void)PitchController_Update(&pitch, 0.0f, now + i, 1U);
++    }
++    CHECK(!pitch.brake.tracking && pitch.brake.torque_nm == 0.0f);
++    CHECK(pitch.brake.return_peak_nm == peak && pitch.brake.return_frames == frames);
++    PitchController_Stop(&pitch);
++    CHECK(pitch.brake.return_peak_nm == peak && pitch.brake.return_frames == frames);
++    sample(now + 202U, target, 0.0f, 1U);
++    (void)PitchController_Update(&pitch, 0.0f, now + 202U, 1U);
++    CHECK(PitchController_StartMove(&pitch, reverse ? 30.0f : 0.0f, now + 202U));
++    CHECK(pitch.brake.peak_abs_nm == 0.0f && pitch.brake.return_peak_nm == 0.0f);
++    CHECK(pitch.brake.active_frames == 0U && pitch.brake.return_frames == 0U);
+ }
+ 
+ void test_run(void)
+@@ -158,5 +226,8 @@
+     CHECK(PitchController_SetShape(&pitch, 200U, 0.2f));
+     CHECK(PitchController_StartMove(&pitch, 30.0f, now));
+     CHECK(pitch.shape.active && !pitch.brake.tracking);
++    test_stage = 9U; capture_rebound(13000U, 0U);
++    test_stage = 10U; capture_rebound(14000U, 1U);
++    test_stage = 11U; capture_rebound(0xFFFFFF50UL, 0U);
+     test_done = 1U;
+ }

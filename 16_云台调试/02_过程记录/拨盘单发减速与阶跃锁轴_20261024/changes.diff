@@ -1,0 +1,977 @@
+--- before/App/app_config.h
++++ after/App/app_config.h
+@@ -168,7 +168,7 @@
+ #ifndef APP_FEEDER_ENABLED
+ #define APP_FEEDER_ENABLED (APP_REMOTE_PROFILE_ASSESSMENT && APP_YAW_ENABLED && APP_PITCH_ENABLED)
+ #endif
+-#define APP_FEEDER_VERSION "C610_FAST_TRACK_V1I"
++#define APP_FEEDER_VERSION "C610_SINGLE_BRAKE_V1J"
+ #define APP_FEEDER_CURRENT_HARD_LIMIT 3000
+ #define APP_FEEDER_COMMAND_PERIOD_MS 2U
+ 
+--- before/App/app_tasks.c
++++ after/App/app_tasks.c
+@@ -14,6 +14,9 @@
+ #endif
+ #if APP_PITCH_ENABLED
+ #include "pitch_backend.h"
++#endif
++#if APP_YAW_ENABLED && APP_PITCH_ENABLED
++#include "gimbal_step_sync.h"
+ #endif
+ #include "task.h"
+ #include <string.h>
+@@ -104,12 +107,14 @@
+ #if APP_YAW_ENABLED
+     YawBackendState yaw;
+ #if APP_PITCH_ENABLED
+-    uint32_t yaw_step_observed = 0U, yaw_step_current;
++    GimbalStepSync step_sync = {0U, 0U};
+ #endif
+ #endif
+ #if APP_PITCH_ENABLED
+     PitchBackendState pitch;
++#if !APP_YAW_ENABLED
+     uint32_t pitch_step_observed = 0U, pitch_step_current;
++#endif
+ #endif
+ #if APP_YAW_ENABLED || APP_PITCH_ENABLED
+     RemoteCommand demanded;
+@@ -176,14 +181,10 @@
+ #endif
+         input.stop_sequence = stop_sequence;
+ #if APP_YAW_ENABLED && APP_PITCH_ENABLED
+-        /* 串口和遥控真正接受的新阶跃均记住轴，先同步再消费CH7回参考。 */
+-        yaw_step_current = YawBackend_GetStepId();
+-        if (yaw_step_current != yaw_step_observed) {
+-            TargetManager_RecordAcceptedTestAxis(&current.logic.targets, GIMBAL_STEP_YAW);
+-            yaw_step_observed = yaw_step_current;
+-        }
+-#endif
+-#if APP_PITCH_ENABLED
++        GimbalStepSync_Update(&step_sync, &current.logic.targets,
++            demanded.gimbal_mode == GIMBAL_TEST && current.logic.safety.output_allowed &&
++            !AppConsole_IsDiagnosticMode());
++#elif APP_PITCH_ENABLED
+         pitch_step_current = PitchBackend_GetStepId();
+         if (pitch_step_current != pitch_step_observed) {
+             TargetManager_RecordAcceptedTestAxis(&current.logic.targets, GIMBAL_STEP_PITCH);
+@@ -214,11 +215,9 @@
+ #if APP_YAW_ENABLED
+         YawBackend_Apply(&jog_request, current.logic.safety.output_allowed, AppConsole_IsDiagnosticMode());
+ #if APP_PITCH_ENABLED
+-        yaw_step_current = YawBackend_GetStepId();
+-        if (yaw_step_current != yaw_step_observed) {
+-            TargetManager_RecordAcceptedTestAxis(&current.logic.targets, GIMBAL_STEP_YAW);
+-            yaw_step_observed = yaw_step_current;
+-        }
++        GimbalStepSync_Update(&step_sync, &current.logic.targets,
++            jog_request.gimbal_mode == GIMBAL_TEST && current.logic.safety.output_allowed &&
++            !AppConsole_IsDiagnosticMode());
+ #endif
+         if (YawBackend_TakeRearmRequest()) {
+             AppLogic_RecordStop(&current.logic, &input, APP_STOP_SOURCE_YAW);
+@@ -228,11 +227,17 @@
+ #endif
+ #if APP_PITCH_ENABLED
+         PitchBackend_Apply(&jog_request, current.logic.safety.output_allowed, AppConsole_IsDiagnosticMode());
++#if APP_YAW_ENABLED
++        GimbalStepSync_Update(&step_sync, &current.logic.targets,
++            jog_request.gimbal_mode == GIMBAL_TEST && current.logic.safety.output_allowed &&
++            !AppConsole_IsDiagnosticMode());
++#else
+         pitch_step_current = PitchBackend_GetStepId();
+         if (pitch_step_current != pitch_step_observed) {
+             TargetManager_RecordAcceptedTestAxis(&current.logic.targets, GIMBAL_STEP_PITCH);
+             pitch_step_observed = pitch_step_current;
+         }
++#endif
+         if (PitchBackend_TakeRearmRequest()) {
+             AppLogic_RecordStop(&current.logic, &input, APP_STOP_SOURCE_PITCH);
+             AppTasks_RequestStop();
+--- before/App/feeder_console.c
++++ after/App/feeder_console.c
+@@ -47,7 +47,7 @@
+     const FeederController *c;
+     FeederBackend_GetState(&state); c = &state.controller;
+     (void)snprintf(out, capacity,
+-        "F|RESULT|%s|COUNT_SOURCE|ENCODER_40DEG|ACCEPT|%lu|DONE|%lu|SINGLE_DONE|%lu|CONT_DONE|%lu|REJECT|%lu|ABORT|%lu|CANCEL|%lu|PENDING|%u|KIND|%u|SHOT_MS|%lu|SHOT_ERR_DEG|%.4f|BURST_DONE|%lu|WINDOW_MS|%lu|RATE_HZ|%.3f|RATE_VALID|%u|REQUEST_MS|%u|REQUIRED_RPM|%.2f|CONT_MAX_RPM|%.6g|PHASE_MS|%.6g|BRAKE_KP|%.6g|RATE_BLOCK|%u|FAULT|%lu\r\n",
++        "F|RESULT|%s|COUNT_SOURCE|ENCODER_40DEG|ACCEPT|%lu|DONE|%lu|SINGLE_DONE|%lu|CONT_DONE|%lu|REJECT|%lu|ABORT|%lu|CANCEL|%lu|PENDING|%u|KIND|%u|SHOT_MS|%lu|SHOT_ERR_DEG|%.4f|BURST_DONE|%lu|WINDOW_MS|%lu|RATE_HZ|%.3f|RATE_VALID|%u|REQUEST_MS|%u|REQUIRED_RPM|%.2f|CONT_MAX_RPM|%.6g|PHASE_MS|%.6g|BRAKE_KP|%.6g|RATE_BLOCK|%u|FAULT|%lu|SINGLE_DECEL_RPM_S|%.6g|BRAKE_DELAY_MS|%u|PREVIEW_MS|%u|I_RELAX_MS|%u|SINGLE_BRAKE|%u|SINGLE_BRAKE_N|%lu|SINGLE_OVERSHOOT_DEG|%.4f\r\n",
+         APP_FEEDER_VERSION, (unsigned long)c->accepted, (unsigned long)c->completed,
+         (unsigned long)c->single_completed, (unsigned long)c->continuous_completed,
+         (unsigned long)c->rejected, (unsigned long)c->aborted, (unsigned long)c->cancelled,
+@@ -58,7 +58,11 @@
+         (unsigned)APP_FIRE_INTERVAL_MS, (double)Feeder_ContinuousRpm(c),
+         (double)c->config.continuous_max_rpm, (double)c->config.continuous_phase_ms,
+         (double)c->config.continuous_brake_kp, (unsigned)c->rate_blocked,
+-        (unsigned long)c->faults);
++        (unsigned long)c->faults, (double)c->config.single_decel_rpm_s,
++        (unsigned)FEEDER_SINGLE_BRAKE_DELAY_MS, (unsigned)FEEDER_SINGLE_PREVIEW_MS,
++        (unsigned)FEEDER_SINGLE_I_RELAX_MS,
++        (unsigned)c->single_braking, (unsigned long)c->single_brake_frames,
++        (double)c->single_overshoot_deg);
+ }
+ 
+ static void Check(char *out, size_t capacity)
+@@ -125,7 +129,7 @@
+     if (strncmp(line, "FEEDER", 6U) != 0 || (line[6] && line[6] != ' ')) { return 0U; }
+     if (!strcmp(line, "FEEDER HELP")) {
+         (void)snprintf(out, capacity,
+-            "F|HELP|READ|FEEDER INFO;STATUS;RESULT;PID;VIEW;ANGLE VIEW;SPEED VIEW;CHECK|ANGLE_I|0_ACTUAL_1_TARGET_SHAFT_DEG|REQUEST_MS|50|CONTROL_MS|2|CHECK|FIRST_JUMP_SINCE_CLEAR|SAFE_OFF|AUTO_PREPARE_OR_READY;OFF;CLEAR;ZERO;ARM|ACTION|SINGLE_REQUIRES_NORMAL_AND_REAL_WHEELS_READY|TUNE|PKP;VKP;VKI;RPM;CONT_RPM;PHASE_MS;BRAKE_KP;LIMIT;TOL;SETTLE;TIMEOUT;STEP;DIR;GEAR;CAL|BOOT|CAL1_DIR-1_GEAR35.68_SAFE_OFF_AUTO_ZERO_ARM|SHAFT|40DEG_CLOCKWISE_FROM_TOP|RAM_TUNING|1\r\n"); return 1U;
++            "F|HELP|READ|FEEDER INFO;STATUS;RESULT;PID;VIEW;ANGLE VIEW;SPEED VIEW;CHECK|ANGLE_I|0_ACTUAL_1_TARGET_SHAFT_DEG|REQUEST_MS|50|CONTROL_MS|2|CHECK|FIRST_JUMP_SINCE_CLEAR|SAFE_OFF|AUTO_PREPARE_OR_READY;OFF;CLEAR;ZERO;ARM|ACTION|SINGLE_REQUIRES_NORMAL_AND_REAL_WHEELS_READY|TUNE|PKP;VKP;VKI;RPM;CONT_RPM;PHASE_MS;BRAKE_KP;SINGLE_DECEL;LIMIT;TOL;SETTLE;TIMEOUT;STEP;DIR;GEAR;CAL|BOOT|CAL1_DIR-1_GEAR35.68_SAFE_OFF_AUTO_ZERO_ARM|SHAFT|40DEG_CLOCKWISE_FROM_TOP|RAM_TUNING|1\r\n"); return 1U;
+     }
+     if (!strcmp(line, "FEEDER RESULT")) { Result(out, capacity); return 1U; }
+     if (!strcmp(line, "FEEDER CHECK")) { Check(out, capacity); return 1U; }
+@@ -157,6 +161,7 @@
+         else if (!strcmp(key, "CONT_RPM")) { config.continuous_max_rpm = value; }
+         else if (!strcmp(key, "PHASE_MS")) { config.continuous_phase_ms = value; }
+         else if (!strcmp(key, "BRAKE_KP")) { config.continuous_brake_kp = value; }
++        else if (!strcmp(key, "SINGLE_DECEL")) { config.single_decel_rpm_s = value; }
+         else if (!strcmp(key, "LIMIT")) { config.current_limit = value; }
+         else if (!strcmp(key, "TOL")) { config.tolerance_deg = value; }
+         else if (!strcmp(key, "STEP")) { config.step_deg = value; }
+--- before/App/feeder_controller.c
++++ after/App/feeder_controller.c
+@@ -1,6 +1,7 @@
+ #include "feeder_controller.h"
+ #include "app_config.h"
+ #include <float.h>
++#include <math.h>
+ #include <string.h>
+ 
+ #define HALF_TICK_RANGE 0x80000000UL
+@@ -23,6 +24,7 @@
+ static void reset_output(FeederController *c)
+ {
+     c->command_raw = 0; c->target_rpm = c->integral = 0.0f;
++    c->single_braking = 0U;
+     c->settling = c->jamming = c->have_control_tick = 0U;
+ }
+ void Feeder_Stop(FeederController *c)
+@@ -61,6 +63,7 @@
+         within(p->continuous_max_rpm, 1.0f, p->max_feedback_rpm) &&
+         within(p->continuous_brake_kp, 0.001f, 1000.0f) &&
+         within(p->continuous_phase_ms, 0.0f, (float)APP_FIRE_INTERVAL_MS * 0.8f) &&
++        (p->single_decel_rpm_s == 0.0f || within(p->single_decel_rpm_s, 1000.0f, 200000.0f)) &&
+         within(p->current_limit, 1.0f, (float)FEEDER_CURRENT_CONFIG_LIMIT) &&
+         within(p->tolerance_deg, 0.05f, 5.0f) &&
+         within(p->settle_rpm, 0.0f, 100.0f) &&
+@@ -82,6 +85,7 @@
+     /* Track from the trigger time; the previous 10ms lag intentionally lost
+      * 8 shaft degrees at 40deg/50ms. Keep the existing boundary brake. */
+     c->config.continuous_brake_kp = 30.0f; c->config.continuous_phase_ms = 0.0f;
++    c->config.single_decel_rpm_s = 50000.0f;
+     c->config.current_limit = 3000.0f; c->config.tolerance_deg = 1.5f;
+     c->config.settle_rpm = 30.0f; c->config.settle_ms = 10U;
+     c->config.motion_timeout_ms = 3000U;
+@@ -256,6 +260,19 @@
+     c->motion_kind = FEEDER_MOTION_TAIL; c->motion_started_ms = now; c->settling = 0U;
+ }
+ 
++static float single_speed_limit(const FeederController *c, float error)
++{
++    /* Rotor distance = 6*v*delay + 3*v*v/decel, with v in rpm.
++     * Solve for a speed that leaves a stopping margin. This is a controller
++     * setting, not a measurement of available mechanical deceleration. */
++    float lead = c->config.single_decel_rpm_s *
++        ((float)FEEDER_SINGLE_BRAKE_DELAY_MS * 0.001f);
++    float distance_term = c->config.single_decel_rpm_s * absolute(error) / 3.0f;
++    float root = sqrtf(lead * lead + distance_term);
++    /* Rationalized form retains precision for very small position errors. */
++    return distance_term / (root + lead);
++}
++
+ int16_t Feeder_Run(FeederController *c, uint32_t now, uint8_t allowed,
+                    uint8_t wheels_ready, uint8_t shot_event, uint32_t sequence, uint8_t continuous)
+ {
+@@ -296,6 +313,8 @@
+                 c->busy = 1U; c->motion_started_ms = now; c->outstanding = 0U;
+                 c->motion_kind = continuous ? FEEDER_MOTION_STREAM : FEEDER_MOTION_SINGLE;
+                 c->integral = 0.0f; c->settling = c->jamming = 0U; started = 1U;
++                c->single_braking = 0U;
++                if (!continuous) { c->single_brake_frames = 0U; c->single_overshoot_deg = 0.0f; }
+                 c->last_control_sequence = c->feedback_sequence - 1U;
+                 c->last_pi_feedback_ms = c->last_feedback_ms;
+                 if (continuous) {
+@@ -328,6 +347,11 @@
+     new_feedback = c->last_control_sequence != c->feedback_sequence;
+     if (new_feedback) {
+         c->last_control_sequence = c->feedback_sequence;
++        c->single_braking = 0U;
++        if (c->motion_kind == FEEDER_MOTION_SINGLE) {
++            forward = -error * c->config.direction / c->config.gear_ratio;
++            if (forward > c->single_overshoot_deg) { c->single_overshoot_deg = forward; }
++        }
+         if (c->motion_kind != FEEDER_MOTION_STREAM &&
+             abs_double(c->target_deg - c->position_deg) <=
+             (double)c->config.tolerance_deg * (double)c->config.gear_ratio &&
+@@ -339,6 +363,20 @@
+             }
+         } else { c->settling = 0U; }
+         c->target_rpm = clamp(error * c->config.pos_kp, -c->config.max_rpm, c->config.max_rpm);
++        if (c->motion_kind == FEEDER_MOTION_SINGLE && c->config.single_decel_rpm_s > 0.0f) {
++            ceiling = single_speed_limit(c, error);
++            /* Velocity damping through a short position preview. At rest the
++             * original full-speed launch is retained; moving toward the goal
++             * lowers vref before crossing it. 6 converts rotor rpm to deg/s. */
++            p = c->config.pos_kp * (error - 6.0f * (float)c->raw_rpm *
++                ((float)FEEDER_SINGLE_PREVIEW_MS * 0.001f));
++            c->target_rpm = clamp(p, -c->config.max_rpm, c->config.max_rpm);
++            c->target_rpm = clamp(c->target_rpm, -ceiling, ceiling);
++            /* Unload stored driving current only when speed feedback calls
++             * for braking. No fixed reverse-current pulse and no sign latch. */
++            c->single_braking = (uint8_t)(absolute((float)c->raw_rpm) > c->config.settle_rpm &&
++                (c->target_rpm - (float)c->raw_rpm) * (float)c->raw_rpm < 0.0f);
++        }
+         if (c->motion_kind == FEEDER_MOTION_STREAM && c->outstanding && error * c->config.direction > 0.0f) {
+             p = feedforward * c->config.direction +
+                 c->config.pos_kp * (float)(c->stream_reference_deg - c->position_deg);
+@@ -352,8 +390,15 @@
+         speed_error = c->target_rpm - (float)c->raw_rpm;
+         feedback_gap = c->last_feedback_ms - c->last_pi_feedback_ms;
+         c->last_pi_feedback_ms = c->last_feedback_ms; dt = (float)feedback_gap * 0.001f;
++        if (c->single_braking) {
++            c->integral *= (float)FEEDER_SINGLE_I_RELAX_MS /
++                ((float)FEEDER_SINGLE_I_RELAX_MS + (float)feedback_gap);
++            ++c->single_brake_frames;
++        }
+         p = c->config.speed_kp * speed_error;
+-        candidate = clamp(c->integral + c->config.speed_ki * speed_error * dt,
++        /* During braking, release toward zero instead of accumulating an
++         * opposite integral that would provoke another return swing. */
++        candidate = clamp(c->integral + (c->single_braking ? 0.0f : c->config.speed_ki * speed_error * dt),
+             -c->config.current_limit, c->config.current_limit);
+         output = p + candidate;
+         if ((output <= c->config.current_limit && output >= -c->config.current_limit) ||
+--- before/App/feeder_controller.h
++++ after/App/feeder_controller.h
+@@ -14,6 +14,9 @@
+ #define FEEDER_STREAM_MAX_PENDING 2U
+ #define FEEDER_CURRENT_PROTOCOL_LIMIT 10000
+ #define FEEDER_CURRENT_CONFIG_LIMIT 3000
++#define FEEDER_SINGLE_BRAKE_DELAY_MS 8U
++#define FEEDER_SINGLE_PREVIEW_MS 12U
++#define FEEDER_SINGLE_I_RELAX_MS 12U
+ 
+ typedef enum {
+     FEEDER_FAULT_NONE = 0U,
+@@ -40,6 +43,9 @@
+     float pos_kp, speed_kp, speed_ki;
+     float max_rpm, max_feedback_rpm, current_limit;
+     float continuous_max_rpm, continuous_brake_kp, continuous_phase_ms;
++    /* Rotor rpm/s used only for single-shot stopping-distance limiting.
++     * Zero selects the previous P/PI law for an explicit comparison. */
++    float single_decel_rpm_s;
+     /* tolerance_deg is controlled-shaft degrees; all RPM are rotor RPM. */
+     float tolerance_deg, settle_rpm, jam_rpm, jam_current_raw;
+     uint32_t settle_ms, motion_timeout_ms, jam_ms;
+@@ -84,10 +90,13 @@
+     uint32_t pending_started_ms[FEEDER_STREAM_MAX_PENDING];
+     uint32_t last_motion_ms, last_completed_ms, burst_first_ms, burst_completed, burst_elapsed_ms;
+     uint32_t stream_last_event_ms;
++    uint32_t single_brake_frames;
+     float measured_hz, last_motion_error_deg;
++    float single_overshoot_deg;
+     uint8_t have_feedback, have_zero, busy, have_control_tick;
+     uint8_t settling, jamming, have_shot_sequence, recovery_samples;
+     uint8_t motion_kind, outstanding, rate_blocked;
++    uint8_t single_braking;
+ } FeederController;
+ 
+ void Feeder_Init(FeederController *controller);
+--- before/App/pitch_backend.c
++++ after/App/pitch_backend.c
+@@ -66,6 +66,7 @@
+     CanBus_SetPitchPermission(0U);
+     PitchController_Stop(&state.controller);
+     state.requested = state.active = state.enabling = state.step_hold = 0U;
++    last_mode = GIMBAL_MANUAL;
+     if (had_session && !state.stop_pending) {
+         ++state.stop_id; state.stopped_ms = HAL_GetTick(); state.stop_reason = reason;
+         state.stop_pending = 1U; cancel_pending = 1U; disable_submitted = 0U;
+@@ -337,14 +338,39 @@
+     remote_event.result = result; remote_pending = 1U;
+ }
+ 
++uint8_t PitchBackend_HoldCurrent(void)
++{
++    uint8_t accepted = 0U;
++    float target;
++    taskENTER_CRITICAL();
++    target = state.controller.angle_deg;
++    if (target > PITCH_CONTROLLER_TARGET_MAX_DEG &&
++        target <= PITCH_CONTROLLER_TARGET_MAX_DEG + PITCH_STEP_BAND_DEG) {
++        target = PITCH_CONTROLLER_TARGET_MAX_DEG;
++    } else if (target < PITCH_CONTROLLER_TARGET_MIN_DEG &&
++        target >= PITCH_CONTROLLER_TARGET_MIN_DEG - PITCH_STEP_BAND_DEG) {
++        target = PITCH_CONTROLLER_TARGET_MIN_DEG;
++    }
++    if (state.active && state.requested && !state.enabling && !state.stop_pending &&
++        Online(HAL_GetTick()) && state.feedback.status == 1U && CanBus_PitchAllowed() &&
++        !state.controller.faults && PitchController_SetTarget(&state.controller, target)) {
++        PitchStep_Abort(&step, HAL_GetTick(), PITCH_STEP_MANUAL, 0U);
++        state.controller.cascade.position_i = 0.0f;
++        /* speed_i and gravity calibration continue supporting the load. */
++        state.step_hold = 1U; accepted = 1U;
++    }
++    taskEXIT_CRITICAL(); return accepted;
++}
++
+ void PitchBackend_Apply(const TargetRequest *request, uint8_t allowed, uint8_t diagnostic)
+ {
+     uint32_t now = HAL_GetTick();
+     HAL_StatusTypeDef result;
+-    uint8_t wanted, event = 0U;
++    uint8_t wanted, event = 0U, new_step = 0U;
+     taskENTER_CRITICAL();
+     if (request && request->step_event && request->step_sequence != last_step_sequence) {
+         last_step_sequence = request->step_sequence;
++        new_step = 1U;
+         event = (uint8_t)(request->step_axis == GIMBAL_STEP_PITCH);
+     }
+     if ((state.active || state.enabling) && !Online(now)) {
+@@ -391,7 +417,6 @@
+         result = CanBus_PitchEnable(); last_tx_ms = now;
+         if (result == HAL_OK) {
+             state.enabling = 1U; actuation_started = 1U; enable_ms = now;
+-            last_mode = (uint8_t)request->gimbal_mode;
+         } else {
+             state.controller.faults |= PITCH_BACKEND_FAULT_TX;
+             StopWithReason(PITCH_STOP_ENABLE_TX); rearm_request = 1U;
+@@ -418,6 +443,15 @@
+         PitchStep_Abort(&step, now, PITCH_STEP_MANUAL, 0U);
+         StopWithReason(PITCH_STOP_MODE_EXIT); rearm_request = 1U; taskEXIT_CRITICAL(); return;
+     }
++#if APP_REMOTE_PROFILE_ASSESSMENT
++    if (request->gimbal_mode == GIMBAL_TEST &&
++        (last_mode != GIMBAL_TEST || (new_step && request->step_axis == GIMBAL_STEP_YAW))) {
++        if (!PitchBackend_HoldCurrent()) {
++            if (event) { Notice(request, 3U); }
++            StopWithReason(PITCH_STOP_START_LIMIT); rearm_request = 1U; taskEXIT_CRITICAL(); return;
++        }
++    }
++#endif
+     last_mode = (uint8_t)request->gimbal_mode;
+     if (event) {
+         if (request->gimbal_mode != GIMBAL_TEST) { Notice(request, 3U); }
+--- before/App/pitch_backend.h
++++ after/App/pitch_backend.h
+@@ -35,6 +35,8 @@
+ /* READY/Request(1) records preparation only. A new remote unlock is still required. */
+ uint8_t PitchBackend_Request(uint8_t enabled);
+ void PitchBackend_Stop(void);
++/* Active hold at the measured pose; preserve gravity calibration and speed I. */
++uint8_t PitchBackend_HoldCurrent(void);
+ void PitchBackend_Apply(const TargetRequest *request, uint8_t allowed, uint8_t diagnostic);
+ uint8_t PitchBackend_TakeRearmRequest(void);
+ uint8_t PitchBackend_SetTarget(float degrees);
+--- before/App/yaw_backend.c
++++ after/App/yaw_backend.c
+@@ -10,6 +10,7 @@
+ static YawRemoteStepEvent remote_step_event;
+ static uint32_t last_step_sequence;
+ static uint8_t remote_event_pending, step_from_remote;
++static GimbalMode last_mode;
+ static uint8_t monitoring, cancel_pending, sent, rearm_request;
+ static uint8_t preparation_hold;
+ static float last_submitted_torque_nm;
+@@ -101,6 +102,7 @@
+     YawStep_Init(&step);
+     memset(&remote_step_event, 0, sizeof(remote_step_event));
+     last_step_sequence = 0U; remote_event_pending = step_from_remote = 0U;
++    last_mode = GIMBAL_MANUAL;
+     state.controller.motion_guard_active = 0U;
+     monitoring = cancel_pending = sent = rearm_request = 0U;
+     preparation_hold = 0U;
+@@ -137,6 +139,7 @@
+     YawStep_Abort(&step, HAL_GetTick(), state.controller.faults ? YAW_STEP_FAULT : YAW_STEP_STOP,
+                   state.controller.faults);
+     state.step_hold = 0U;
++    last_mode = GIMBAL_MANUAL;
+     state.step_still_samples = 0U;
+     step_from_remote = 0U;
+     CanBus_SetYawPermission(0U);
+@@ -567,6 +570,34 @@
+     taskEXIT_CRITICAL(); return accepted;
+ }
+ 
++uint8_t YawBackend_HoldCurrent(void)
++{
++    uint8_t accepted = 0U;
++    float target;
++    taskENTER_CRITICAL();
++    target = state.controller.angle_deg;
++    /* Match the existing start-capture allowance for endpoint quantization. */
++    if (target > YAW_CONTROLLER_TARGET_LIMIT_DEG &&
++        target <= YAW_CONTROLLER_TARGET_LIMIT_DEG + YAW_STEP_BAND_DEG) {
++        target = YAW_CONTROLLER_TARGET_LIMIT_DEG;
++    } else if (target < -YAW_CONTROLLER_TARGET_LIMIT_DEG &&
++        target >= -YAW_CONTROLLER_TARGET_LIMIT_DEG - YAW_STEP_BAND_DEG) {
++        target = -YAW_CONTROLLER_TARGET_LIMIT_DEG;
++    }
++    if (state.active && state.requested && !state.enabling && !state.stop_pending &&
++        Online(HAL_GetTick()) && state.feedback.status == 1U && CanBus_YawAllowed() &&
++        !state.controller.faults && YawController_SetTarget(&state.controller, target)) {
++        YawStep_Abort(&step, HAL_GetTick(), YAW_STEP_MANUAL, 0U);
++        /* Remove the old position command bias, keeping observer and inner
++         * load compensation alive so holding does not drop actuator torque. */
++        state.controller.cascade.position_i = 0.0f;
++        state.controller.integral = 0.0f;
++        state.step_hold = step_from_remote = 1U;
++        accepted = 1U;
++    }
++    taskEXIT_CRITICAL(); return accepted;
++}
++
+ void YawBackend_Apply(const TargetRequest *request, uint8_t allowed, uint8_t diagnostic)
+ {
+     uint32_t now = HAL_GetTick();
+@@ -636,6 +667,16 @@
+         YawStep_Abort(&step, now, YAW_STEP_MANUAL, 0U);
+         YawBackend_Stop(); rearm_request = 1U; taskEXIT_CRITICAL(); return;
+     }
++#if APP_REMOTE_PROFILE_ASSESSMENT
++    if (request->gimbal_mode == GIMBAL_TEST &&
++        (last_mode != GIMBAL_TEST || (new_step && request->step_axis == GIMBAL_STEP_PITCH))) {
++        if (!YawBackend_HoldCurrent()) {
++            if (new_step) { RemoteNotice(request, 3U); }
++            YawBackend_Stop(); rearm_request = 1U; taskEXIT_CRITICAL(); return;
++        }
++    }
++#endif
++    last_mode = request->gimbal_mode;
+     if (new_step) {
+         if (request->gimbal_mode != GIMBAL_TEST) { RemoteNotice(request, 3U); }
+         else if (request->step_return_event
+@@ -651,7 +692,7 @@
+         } else { RemoteNotice(request, 3U); }
+     }
+     /* 测试模式保留TargetManager的CH4选方向、CH7确认/回参考；回中不清目标。 */
+-    if (state.step_hold && request->yaw_rate_dps != 0.0f) {
++    if (state.step_hold && request->gimbal_mode == GIMBAL_MANUAL && request->yaw_rate_dps != 0.0f) {
+         YawStep_Abort(&step, now, YAW_STEP_MANUAL, 0U);
+         YawBackend_Stop(); rearm_request = 1U; taskEXIT_CRITICAL(); return;
+     }
+--- before/App/yaw_backend.h
++++ after/App/yaw_backend.h
+@@ -60,6 +60,9 @@
+ /* READY全部条件已确认后释放准备门禁；仍需新的遥控人工解锁。 */
+ void YawBackend_ReleasePreparation(void);
+ void YawBackend_Stop(void);
++/* Latch the measured pose once, retain software zero/observer/load integral,
++ * cancel an old move and keep the already enabled position loop running. */
++uint8_t YawBackend_HoldCurrent(void);
+ void YawBackend_Apply(const TargetRequest *request, uint8_t allowed, uint8_t diagnostic);
+ uint8_t YawBackend_SetParameter(char parameter, float value);
+ uint8_t YawBackend_SetPid(float kp, float ki, float kd);
+--- before/MDK-ARM/拨盘50ms连发操作说明.md
++++ after/MDK-ARM/拨盘50ms连发操作说明.md
+@@ -1,6 +1,8 @@
+ # 拨盘 50ms 连发与 VOFA 角度显示
+ 
+-本次直接修改当前 VS Code 工程，拨盘版本为 `C610_FAST_TRACK_V1I`。
++本次直接修改当前 VS Code 工程，拨盘版本为 `C610_SINGLE_BRAKE_V1J`。
++
++最新单发减速和CH5锁轴操作见 [单发优化与阶跃锁轴操作说明](单发优化与阶跃锁轴操作说明.md)。本文连发节拍及通道映射继续适用。
+ 
+ ## 连发行为
+ 
+@@ -75,7 +77,7 @@
+ FEEDER RESULT
+ ```
+ 
+-版本应显示 `C610_FAST_TRACK_V1I`，结果中的 `REQUEST_MS|50` 是请求周期，`RATE_HZ` 和 `CONT_DONE` 来自编码器实际跨过角度边界的统计。请求 20Hz 不代表实机已经达到 20Hz。
++版本应显示 `C610_SINGLE_BRAKE_V1J`，结果中的 `REQUEST_MS|50` 是请求周期，`RATE_HZ` 和 `CONT_DONE` 来自编码器实际跨过角度边界的统计。请求 20Hz 不代表实机已经达到 20Hz。
+ 
+ VS Code 继续打开当前 `Gimbal_Control.code-workspace`，使用现有构建和烧录操作。产物为：
+ 
+--- before/README.md
++++ after/README.md
+@@ -1,4 +1,9 @@
+ # Gimbal_Control
++
++## 2026-10-24：拨盘单发减速与阶跃锁轴（V1J）
++
++当前拨盘版本 `C610_SINGLE_BRAKE_V1J`。单发新增12ms位置预测、停车距离限速和减速积分释放；连发50ms/40°、2ms闭环及电流上限继续保留。CH5进入测试时两轴锁实测位置，遥控或串口测试一轴时另一轴保持，打断的测量如实中止。操作见 [MDK-ARM/单发优化与阶跃锁轴操作说明.md](MDK-ARM/单发优化与阶跃锁轴操作说明.md)。原VS Code工程已编译，实机效果需烧录后验证。
++
+ 
+ 2026-10-24：拨盘V1I适度加快跟踪，PHASE_MS 10→0、PKP 8→10、VKI 5→8，速度P保持2；沿用50ms/40°请求、2ms闭环和3000电流命令上限。已编译，尚未实机验证。[拨盘操作说明](MDK-ARM/拨盘50ms连发操作说明.md)。
+ 
+--- before/Tests/README.md
++++ after/Tests/README.md
+@@ -1,4 +1,13 @@
+ > 2026-10-24 拨盘V1I：本轮8组102330项通过，包含双向同反馈回放对比旧/新跟踪输出、10ms参考滞后移除、速度/电流限幅、释放收尾和原50ms正向阶梯显示。回放不等于实机响应时间验证。原AC5/O0完整69源项重编成功，未烧录。当前选测报告对应本轮，以下为历史。[操作说明](../MDK-ARM/拨盘50ms连发操作说明.md)。
++
++## 2026-10-24 V1J：单发减速与测试锁轴
++
++本轮所选19组共139093项检查通过，0失败。新增 `feeder_single` 验证双向单发预测减速、积分释放、限幅、撤权及不同示例负载模型；新增 `pitch_test_hold` 验证非零位置进入测试、忽略手动杆、遥控/串口换轴、被打断测量如实中止和STOP不能自启。生产与集成夹具共享 `gimbal_step_sync.h`，覆盖已接受STEP编号的同步。
++
++`pitch_backend` 旧规划用例先完成模式切入再开始STEP；`yaw_manual50` 改验进入测试锁实测位置；`pitch_terminal_brake` 用当前编译参数计算预期，避免与用户已更新的11.5/24.775等参数冲突。本轮未修改这些pitch参数。原低转速数值用例显式用 `single_decel_rpm_s=0` 保留旧法对照，生产默认启用新法。
++
++主MDK-ARM工程AC5编译通过。上述结果是软件回归，示例电机模型未由实机辨识，不能证明实物超调、响应时间或考核成绩；结果文件为 `selftest_results_selected.json`。
++
+ 
+ > 2026-10-24 拨盘 V1H：本轮6组60099项通过，验证VOFA I0/I1取相反数、零值格式、每50ms目标增加40°的阶梯、2ms闭环及原始转子通道保持。原AC5/O0完整69源项重编成功，未烧录或实机验证。当前选测报告对应本轮，以下为历史。[操作说明](../MDK-ARM/拨盘50ms连发操作说明.md)。
+ 
+--- before/Tests/run_selftests.py
++++ after/Tests/run_selftests.py
+@@ -47,6 +47,7 @@
+     output = Path(tempfile.mkdtemp(prefix="gimbal-foundation-selftests-"))
+     groups = {
+         "feeder_controller": [root / "test_feeder_controller.c", app / "feeder_controller.c"],
++        "feeder_single": [root / "test_feeder_single.c", app / "feeder_controller.c"],
+         "feeder_cadence": [root / "test_feeder_cadence.c", app / "target_manager.c"],
+         "feeder_can": [root / "test_feeder_can.c"] + [app / (n + ".c") for n in (
+             "can_bus", "dm3507", "gl60_ii", "can_frame", "dm_diag", "vesc_diag")],
+@@ -151,6 +152,8 @@
+         "gimbal_startup", "yaw_console", "pitch_console", "yaw_backend", "yaw_controller", "yaw_step", "yaw_cascade", "gl60_ii",
+         "pitch_backend", "pitch_controller", "pitch_step", "dm3507", "can_frame", "app_logic",
+         "remote_mapper", "safety_manager", "target_manager")]
++    groups["pitch_test_hold"] = groups["pitch_gimbal_startup"].copy()
++    groups["pitch_test_hold"][0] = root / "test_gimbal_test_hold.c"
+     groups["pitch_manual90"] = [root / "test_pitch_manual90.c"] + [app / (n + ".c") for n in (
+         "pitch_backend", "pitch_controller", "pitch_step", "dm3507", "yaw_cascade", "yaw_step", "can_frame",
+         "app_logic", "remote_mapper", "safety_manager", "target_manager")]
+--- before/Tests/test_feeder_backend.c
++++ after/Tests/test_feeder_backend.c
+@@ -169,6 +169,12 @@
+     Reset(100U); config = state.controller.config;
+     CHECK(!FeederBackend_Arm() && !FeederBackend_Zero() && !FeederBackend_Single());
+     Console("FEEDER STATUS", 1U); CHECK(strstr(response, "|CAL|1|") && strstr(response, "|DIR|-1|"));
++    Console("FEEDER SINGLE_DECEL 999", 0U);
++    Console("FEEDER SINGLE_DECEL 0", 1U);
++    CHECK(state.controller.config.single_decel_rpm_s == 0.0f);
++    Console("FEEDER SINGLE_DECEL 50000", 1U);
++    CHECK(FeederConsole_Handle("FEEDER RESULT", response, sizeof(response)));
++    CHECK(strstr(response, "|SINGLE_DECEL_RPM_S|50000|BRAKE_DELAY_MS|8|PREVIEW_MS|12|I_RELAX_MS|12|"));
+     Console("FEEDER CAL 0", 1U); Console("FEEDER DIR 0", 1U);
+     Console("FEEDER CAL 1", 0U); Console("FEEDER DIR 1", 1U); Console("FEEDER GEAR 1", 1U);
+     Console("FEEDER CAL 1", 1U); Console("FEEDER LIMIT 3001", 0U);
+--- before/Tests/test_feeder_controller.c
++++ after/Tests/test_feeder_controller.c
+@@ -31,6 +31,7 @@
+     /* Keep the original numerical cases; production defaults are checked
+      * separately with a multi-turn output-shaft step below. */
+     config.max_rpm = 300.0f; config.current_limit = 1000.0f;
++    config.single_decel_rpm_s = 0.0f; /* Explicit legacy numerical cases. */
+     config.tolerance_deg = 1.0f; config.settle_rpm = 10.0f; config.settle_ms = 20U;
+     config.motion_timeout_ms = 1000U; config.jam_current_raw = 800.0f; config.jam_ms = 150U;
+     CHECK(Feeder_SetConfig(&c, &config));
+--- before/Tests/test_gimbal_startup.c
++++ after/Tests/test_gimbal_startup.c
+@@ -8,6 +8,7 @@
+ #include "yaw_console.h"
+ #include "pitch_console.h"
+ #include "remote_input.h"
++#include "gimbal_step_sync.h"
+ #include <math.h>
+ #include <string.h>
+ 
+@@ -19,6 +20,7 @@
+ static YawBackendState yaw;
+ static PitchBackendState pitch;
+ static GimbalStartupState startup;
++static GimbalStepSync step_sync;
+ static uint32_t now, stops, rearm_barriers, yc, pc, yfd, pfd, cc, fb;
+ static uint8_t yp, pp, wheel_permission, device_yaw, device_pitch;
+ static uint8_t diagnostic, follow_target;
+@@ -111,12 +113,18 @@
+     AppLogic_CombineActuatorHealth(&input, &yh, &ph, 0U);
+     if (!GimbalStartup_OutputReady()) { input.feedback_ready = 0U; }
+     input.stop_sequence = stops;
++    GimbalStepSync_Update(&step_sync, &logic.targets,
++        ch5 == 2000U && logic.safety.output_allowed && !diagnostic);
+     AppLogic_Step(&logic, &input, 0U); request = logic.targets.request;
+     YawBackend_Apply(&request, logic.safety.output_allowed, diagnostic);
++    GimbalStepSync_Update(&step_sync, &logic.targets,
++        request.gimbal_mode == GIMBAL_TEST && logic.safety.output_allowed && !diagnostic);
+     if (YawBackend_TakeRearmRequest()) {
+         AppTasks_RequestStop(); logic.safety.output_allowed = logic.safety.operator_armed = 0U;
+     }
+     PitchBackend_Apply(&request, logic.safety.output_allowed, diagnostic);
++    GimbalStepSync_Update(&step_sync, &logic.targets,
++        request.gimbal_mode == GIMBAL_TEST && logic.safety.output_allowed && !diagnostic);
+     if (PitchBackend_TakeRearmRequest()) {
+         AppTasks_RequestStop(); logic.safety.output_allowed = logic.safety.operator_armed = 0U;
+     }
+@@ -132,6 +140,7 @@
+     uint32_t i;
+     now = ms; memset(&bus, 0, sizeof(bus)); bus.started = 1U;
+     memset(&input, 0, sizeof(input)); AppLogic_Init(&logic);
++    memset(&step_sync, 0, sizeof(step_sync));
+     for (i = 0U; i < 14U; ++i) { input.remote.channels[i] = 1500U; }
+     input.remote.channels[4] = input.remote.channels[5] = 1000U;
+     yp = pp = wheel_permission = device_yaw = device_pitch = diagnostic = follow_target = 0U;
+--- before/Tests/test_pitch_backend.c
++++ after/Tests/test_pitch_backend.c
+@@ -202,6 +202,7 @@
+ 
+     test_stage = 7U;
+     Activate(8000U); request.gimbal_mode = GIMBAL_TEST;
++    Apply(8044U, 1U); /* Enter/latch test mode before accepting a new move. */
+     CHECK(PitchBackend_StartStep(30.0f)); Read();
+     CHECK(state.controller.shape.active && state.controller.target_deg == 30.0f);
+     CHECK(state.controller.shape.start_ms == 8044U && state.controller.shape.position_deg == state.controller.angle_deg);
+--- before/Tests/test_pitch_terminal_brake.c
++++ after/Tests/test_pitch_terminal_brake.c
+@@ -45,7 +45,7 @@
+     torque = PitchController_Update(&pitch, 0.0f, now, 1U);
+     original = PitchController_Update(&baseline, 0.0f, now, 1U);
+     CHECK(near(torque, original)); /* First command is exactly the direct PID step. */
+-    CHECK(near(pitch.cascade.target_velocity_dps, sign * 320.34f + 0.25f));
++    CHECK(near(pitch.cascade.target_velocity_dps, sign * 30.0f * APP_PITCH_POSITION_KP + 0.25f));
+     for (i = 1U; i <= 76U; ++i) {
+         float travelled = 0.4f * (float)i;
+         float angle = reverse ? 30.0f - travelled : travelled;
+@@ -178,8 +178,8 @@
+     PitchController_Init(&pitch);
+     CHECK(pitch.shape.duration_ms == 0U && pitch.shape.velocity_gain == 0.0f);
+     CHECK(pitch.brake.enabled && !pitch.brake.active && !pitch.brake.tracking);
+-    CHECK(pitch.cascade.position.kp == 10.678f && pitch.cascade.position.ki == 24.153f);
+-    CHECK(pitch.cascade.speed.kp == 0.00406f && pitch.gravity_kg_nm == -0.13f);
++    CHECK(pitch.cascade.position.kp == APP_PITCH_POSITION_KP && pitch.cascade.position.ki == APP_PITCH_POSITION_KI);
++    CHECK(pitch.cascade.speed.kp == APP_PITCH_SPEED_KP && pitch.gravity_kg_nm == APP_PITCH_GRAVITY_KG_NM);
+     CHECK(!PitchController_SetBrakeEnabled(0, 1U));
+     CHECK(!PitchController_SetBrakeEnabled(&pitch, 2U));
+     test_stage = 2U; compare_direct_step(1000U, 0U);
+--- before/Tests/test_yaw_manual50.c
++++ after/Tests/test_yaw_manual50.c
+@@ -1,5 +1,6 @@
+ #define YAW_CASCADE_CONSOLE_TEST 1
+ #include "test_yaw_console_backend.c"
++#include <math.h>
+ 
+ /* 注入跟随目标的反馈只验证遥控接口/边界，不代表实机响应性能。 */
+ static void ManualRun(uint32_t *clock_ms, uint32_t duration_ms, uint16_t channel)
+@@ -74,10 +75,11 @@
+     CHECK(state.controller.target_deg == -50 && request.yaw_rate_dps == -90);
+     ManualRun(&clock_ms, 100U, 1500U); CHECK(state.controller.target_deg == -50);
+     CHECK(!YawBackend_StartStep(50) && !YawBackend_StartStep(-50));
+-    /* CH5测试档屏蔽右摇杆；没有阶跃事件时目标继续保持。 */
+-    held = state.controller.target_deg; receiver.channels[RC_YAW_CHANNEL] = 2000U;
++    /* CH5 captures the measured pose, then ignores manual stick rates. */
++    receiver.channels[RC_YAW_CHANNEL] = 2000U;
+     clock_ms += 2U; Control(clock_ms, 2U);
+-    CHECK(request.gimbal_mode == GIMBAL_TEST && request.yaw_rate_dps == 0 && state.controller.target_deg == held);
++    CHECK(request.gimbal_mode == GIMBAL_TEST && request.yaw_rate_dps == 0 && state.active && state.step_hold);
++    CHECK(fabsf(state.controller.target_deg - state.controller.angle_deg) <= YAW_STEP_BAND_DEG);
+     receiver.channels[RC_YAW_CHANNEL] = 1500U;
+     clock_ms += 2U; Control(clock_ms, 1U);
+ 
+--- /dev/null
++++ after/App/gimbal_step_sync.h
+@@ -0,0 +1,26 @@
++#ifndef GIMBAL_STEP_SYNC_H
++#define GIMBAL_STEP_SYNC_H
++#include "yaw_backend.h"
++#include "pitch_backend.h"
++
++typedef struct { uint32_t yaw_id, pitch_id; } GimbalStepSync;
++
++/* Shared by the real control task and its integration fixture. Console STEP
++ * and remote STEP use the same accepted IDs; rejected requests do not count.
++ * A companion is latched once per new move, never to each measured sample. */
++static void GimbalStepSync_Update(GimbalStepSync *sync, TargetManager *targets,
++                                  uint8_t hold_companion)
++{
++    uint32_t yaw_id = YawBackend_GetStepId(), pitch_id = PitchBackend_GetStepId();
++    if (yaw_id != sync->yaw_id) {
++        if (hold_companion) { (void)PitchBackend_HoldCurrent(); }
++        TargetManager_RecordAcceptedTestAxis(targets, GIMBAL_STEP_YAW);
++        sync->yaw_id = yaw_id;
++    }
++    if (pitch_id != sync->pitch_id) {
++        if (hold_companion) { (void)YawBackend_HoldCurrent(); }
++        TargetManager_RecordAcceptedTestAxis(targets, GIMBAL_STEP_PITCH);
++        sync->pitch_id = pitch_id;
++    }
++}
++#endif
+--- /dev/null
++++ after/Tests/test_feeder_single.c
+@@ -0,0 +1,114 @@
++/* Actual controller with fresh encoded feedback. These illustrative motor
++ * models are robustness regressions, not identified hardware or test results. */
++#include "feeder_controller.h"
++#include <math.h>
++#include <string.h>
++
++volatile uint32_t test_checks, test_failures, test_failed_line, test_done, test_stage;
++#define CHECK(x) do { ++test_checks; if (!(x)) { ++test_failures; if (!test_failed_line) test_failed_line = __LINE__; } } while (0)
++static FeederController c;
++static CanFrame frame;
++volatile float model_old_overshoot[8], model_new_overshoot[8];
++volatile uint32_t model_old_ms[8], model_new_ms[8];
++
++static void feed(uint32_t ms, float position, float rpm)
++{
++    int64_t counts = (int64_t)((double)position * (8192.0 / 360.0));
++    uint16_t angle = (uint16_t)((counts % 8192 + 8192) % 8192);
++    int16_t speed = (int16_t)rpm;
++    memset(&frame, 0, sizeof(frame));
++    frame.bus = 2U; frame.id = 0x205U; frame.dlc = 8U; frame.received_ms = ms;
++    frame.data[0] = (uint8_t)(angle >> 8); frame.data[1] = (uint8_t)angle;
++    frame.data[2] = (uint8_t)((uint16_t)speed >> 8); frame.data[3] = (uint8_t)speed;
++    CHECK(Feeder_OnFrame(&c, &frame, ms, 0U));
++}
++
++static void prepare(uint32_t base, int8_t direction, uint8_t previous)
++{
++    FeederConfig config;
++    Feeder_Init(&c); config = c.config; config.direction = direction;
++    if (previous) config.single_decel_rpm_s = 0.0f;
++    CHECK(Feeder_SetConfig(&c, &config));
++    feed(base, 0.0f, 0.0f); feed(base + 1U, 0.0f, 0.0f); feed(base + 2U, 0.0f, 0.0f);
++    CHECK(Feeder_Zero(&c, base + 2U));
++    CHECK(Feeder_Step(&c, base + 2U, 1U, 1U, 1U, 1U) == direction * 3000);
++}
++
++static void model(uint32_t slot, uint8_t previous, int8_t direction,
++                  float gain, float drag, float lag_s)
++{
++    uint32_t t, base = 1000U + slot * 3000U + previous * 1500U;
++    float position = 0.0f, rpm = 0.0f, actuator = 0.0f, old_rpm, peak = 0.0f, over;
++    prepare(base, direction, previous);
++    for (t = 2U; t <= 1000U && c.busy; t += 2U) {
++        actuator = lag_s == 0.0f ? (float)c.command_raw :
++            actuator + 0.002f / (lag_s + 0.002f) * ((float)c.command_raw - actuator);
++        old_rpm = rpm;
++        rpm += 0.002f * (gain * actuator - drag * rpm);
++        position += 3.0f * (rpm + old_rpm) * 0.002f;
++        over = position * direction / c.config.gear_ratio - 40.0f;
++        if (over > peak) peak = over;
++        feed(base + 2U + t, position, rpm);
++        (void)Feeder_Step(&c, base + 2U + t, 1U, 1U, 0U, 0U);
++        CHECK(!c.faults && c.command_raw >= -3000 && c.command_raw <= 3000);
++        CHECK(fabsf(c.target_rpm) <= c.config.max_rpm + 0.01f);
++        CHECK(c.accepted == 1U && c.outstanding <= 1U && !c.rejected);
++    }
++    CHECK(!c.faults && c.completed == 1U && c.single_completed == 1U && !c.busy);
++    CHECK(fabs(c.axis_target_deg - direction * 40.0) < 0.001);
++    if (previous) { model_old_overshoot[slot] = peak; model_old_ms[slot] = c.last_motion_ms; }
++    else {
++        model_new_overshoot[slot] = peak; model_new_ms[slot] = c.last_motion_ms;
++        CHECK(c.single_brake_frames > 0U);
++    }
++}
++
++void test_run(void)
++{
++    uint32_t i, j, base;
++    int8_t direction;
++    float integral;
++    FeederConfig config;
++    const float gains[] = {15.0f, 20.0f, 30.0f, 40.0f};
++    const float drags[] = {5.0f, 10.0f, 5.0f, 5.0f};
++    const float lags[] = {0.008f, 0.004f, 0.0f, 0.008f};
++    test_stage = 1U;
++    Feeder_Init(&c); config = c.config;
++    CHECK(config.single_decel_rpm_s == 50000.0f);
++    config.single_decel_rpm_s = -1.0f; CHECK(!Feeder_ConfigValid(&config));
++    config.single_decel_rpm_s = 999.0f; CHECK(!Feeder_ConfigValid(&config));
++    config.single_decel_rpm_s = 200001.0f; CHECK(!Feeder_ConfigValid(&config));
++    config.single_decel_rpm_s = NAN; CHECK(!Feeder_ConfigValid(&config));
++    config.single_decel_rpm_s = 0.0f; CHECK(Feeder_ConfigValid(&config));
++    config.single_decel_rpm_s = 1000.0f; CHECK(Feeder_ConfigValid(&config));
++
++    test_stage = 2U;
++    for (j = 0U; j < 2U; ++j) {
++        direction = j ? 1 : -1; base = 30000U + j * 100U;
++        prepare(base, direction, 0U);
++        /* Same pose, speed and stored drive: the braking tick unloads I,
++         * commands opposing measured motion, and does not repeat without a frame. */
++        c.integral = direction * 2000.0f;
++        c.accumulated_counts = (int64_t)(direction * 35.0 * c.config.gear_ratio * 8192.0 / 360.0);
++        c.raw_angle = (uint16_t)((c.accumulated_counts % 8192 + 8192) % 8192);
++        feed(base + 4U, direction * 35.0f * c.config.gear_ratio, direction * 2500.0f);
++        (void)Feeder_Step(&c, base + 4U, 1U, 1U, 0U, 0U);
++        CHECK(c.single_braking && c.single_brake_frames == 1U && c.command_raw * direction < 0);
++        CHECK(fabsf(c.integral) < 2000.0f && c.integral * direction > 0.0f);
++        integral = c.integral;
++        (void)Feeder_Step(&c, base + 5U, 1U, 1U, 0U, 0U);
++        CHECK(c.integral == integral && c.single_brake_frames == 1U);
++        CHECK(Feeder_Step(&c, base + 6U, 0U, 1U, 0U, 0U) == 0 && !c.busy && !c.integral);
++        CHECK(!c.single_braking && c.aborted == 1U);
++    }
++
++    test_stage = 3U;
++    for (i = 0U; i < 8U; ++i) {
++        direction = i < 4U ? -1 : 1; j = i % 4U;
++        model(i, 1U, direction, gains[j], drags[j], lags[j]);
++        model(i, 0U, direction, gains[j], drags[j], lags[j]);
++        CHECK(model_new_overshoot[i] < model_old_overshoot[i] * 0.7f + 0.3f);
++        CHECK(model_new_ms[i] <= model_old_ms[i] + 30U);
++    }
++    test_done = 1U;
++}
+--- /dev/null
++++ after/Tests/test_gimbal_test_hold.c
+@@ -0,0 +1,90 @@
++#define test_run startup_baseline_test_run
++#include "test_gimbal_startup.c"
++#undef test_run
++
++void test_run(void)
++{
++    float held_y, held_p, yzero, pzero, speed_i;
++    YawStep ystep;
++    PitchStep pstep;
++    char reply[1024];
++    uint32_t before_y, before_p;
++    test_stage = 1U;
++    Reset(90000U); Run(400U, 1000U); Run(100U, 1500U);
++    CHECK(yaw.active && pitch.active);
++    follow_target = 1U; input.remote.channels[0] = input.remote.channels[1] = 1765U;
++    Run(80U, 1500U);
++    input.remote.channels[0] = input.remote.channels[1] = 1500U;
++    follow_target = 0U;
++    CHECK(YawBackend_SetParameter('T', yaw.controller.angle_deg + 5.0f));
++    CHECK(PitchBackend_SetTarget(pitch.controller.angle_deg + 5.0f));
++    Run(20U, 1500U);
++    CHECK(yaw.controller.target_deg > yaw.controller.angle_deg + 4.0f);
++    CHECK(pitch.controller.target_deg > pitch.controller.angle_deg + 4.0f);
++    yzero = yaw.controller.reference_rad; pzero = pitch.controller.reference_rad;
++    before_y = yc; before_p = pc;
++    Run(2U, 2000U);
++    held_y = yaw.controller.target_deg; held_p = pitch.controller.target_deg;
++    CHECK(held_y > 1.0f && held_p > 1.0f);
++    CHECK(fabsf(held_y - yaw.controller.angle_deg) < 0.001f);
++    CHECK(fabsf(held_p - pitch.controller.angle_deg) < 0.001f);
++    CHECK(yaw.active && pitch.active && yaw.step_hold && pitch.step_hold);
++    CHECK(yaw.controller.reference_rad == yzero && pitch.controller.reference_rad == pzero);
++    CHECK(pitch.controller.gravity_calibrated && pitch.controller.gravity_kg_nm == APP_PITCH_GRAVITY_KG_NM);
++    CHECK(yc == before_y && pc == before_p); /* No disable/enable cycle. */
++    speed_i = pitch.controller.cascade.speed_i;
++    CHECK(PitchBackend_HoldCurrent()); Read();
++    CHECK(pitch.controller.cascade.speed_i == speed_i && pitch.controller.cascade.position_i == 0.0f);
++    speed_i = yaw.controller.cascade.speed_i;
++    CHECK(YawBackend_HoldCurrent()); Read();
++    CHECK(yaw.controller.cascade.speed_i == speed_i && yaw.controller.cascade.position_i == 0.0f);
++    input.remote.channels[0] = 2000U; input.remote.channels[1] = 1000U;
++    input.remote.channels[3] = 2000U;
++    Run(80U, 2000U);
++    CHECK(yaw.controller.target_deg == held_y && pitch.controller.target_deg == held_p);
++
++    test_stage = 2U;
++    Reset(100000U); Run(400U, 1000U); Run(100U, 1500U); Run(30U, 2000U);
++    CHECK(PitchBackend_SetTarget(4.0f)); /* Pending old move on the companion. */
++    input.remote.channels[3] = 2000U; input.remote.channels[6] = 2000U;
++    Run(2U, 2000U);
++    CHECK(yaw.controller.target_deg == 30.0f);
++    CHECK(fabsf(pitch.controller.target_deg - pitch.controller.angle_deg) < 0.001f);
++    CHECK(fabsf(pitch.controller.target_deg) < 0.01f && !pitch.controller.shape.active);
++    held_p = pitch.controller.target_deg;
++    follow_target = 1U; Run(200U, 2000U);
++    CHECK(pitch.controller.target_deg == held_p && yaw.active && pitch.active);
++    YawBackend_GetStep(&ystep); CHECK(ystep.phase == YAW_STEP_RUNNING);
++    /* Request the other axis: the first axis is held where it really is,
++     * and its interrupted measurement is reported as aborted, never a pass. */
++    input.remote.channels[6] = 1500U; Run(10U, 2000U);
++    input.remote.channels[3] = 1500U; input.remote.channels[2] = 2000U;
++    input.remote.channels[6] = 2000U; Run(2U, 2000U);
++    held_y = yaw.controller.target_deg;
++    CHECK(pitch.controller.target_deg == 30.0f);
++    CHECK(fabsf(held_y - yaw.controller.angle_deg) < 0.001f);
++    YawBackend_GetStep(&ystep); CHECK(ystep.phase == YAW_STEP_ABORTED && !ystep.pass);
++    Run(220U, 2000U); CHECK(yaw.controller.target_deg == held_y);
++    input.remote.channels[6] = 1000U; Run(2U, 2000U);
++    CHECK(pitch.controller.target_deg == 0.0f && yaw.controller.target_deg == held_y);
++    Run(220U, 2000U); CHECK(yaw.controller.target_deg == held_y);
++
++    test_stage = 3U;
++    Reset(110000U); Run(400U, 1000U); Run(100U, 1500U); Run(30U, 2000U);
++    CHECK(PitchBackend_SetTarget(4.0f));
++    CHECK(YawConsole_Handle("YAW STEP", reply, sizeof(reply)) && strstr(reply, "Y|OK|STEP_STARTED"));
++    Run(2U, 2000U);
++    CHECK(yaw.controller.target_deg == 30.0f && fabsf(pitch.controller.target_deg) < 0.01f);
++    follow_target = 1U; Run(220U, 2000U);
++    CHECK(PitchConsole_Handle("PITCH STEP", reply, sizeof(reply)) && strstr(reply, "P|OK|STEP_STARTED"));
++    Run(2U, 2000U); held_y = yaw.controller.target_deg;
++    CHECK(pitch.controller.target_deg == 30.0f && fabsf(held_y - yaw.controller.angle_deg) < 0.001f);
++    Run(220U, 2000U); CHECK(yaw.controller.target_deg == held_y);
++    /* Healthy hold APIs cannot re-enable an axis after STOP, fault or loss. */
++    AppTasks_RequestStop(); Read(); before_y = yc; before_p = pc;
++    CHECK(!YawBackend_HoldCurrent() && !PitchBackend_HoldCurrent());
++    Run(20U, 2000U); CHECK(!yaw.active && !pitch.active && yc == before_y && pc == before_p);
++    CHECK(!YawBackend_HoldCurrent() && !PitchBackend_HoldCurrent());
++    PitchBackend_GetStep(&pstep); CHECK(pstep.phase == PITCH_STEP_ABORTED && !pstep.pass);
++    test_done = 1U;
++}
+--- /dev/null
++++ after/MDK-ARM/单发优化与阶跃锁轴操作说明.md
+@@ -0,0 +1,75 @@
++# 拨盘单发优化与云台阶跃锁轴
++
++本轮修改直接位于当前 VS Code 原工程，拨盘版本 `C610_SINGLE_BRAKE_V1J`。使用 MDK-ARM 中现有 EIDE 构建、ST-Link 烧录配置，产物为 `build/Gimbal_Control/Gimbal_Control.hex`。
++
++## 拨盘单发
++
++截图中的单发目标约增加40°，实际角度越过目标后又往复摆动。本轮保留双环结构和原电流上限，为 `SINGLE` 单发增加：
++
++1. **速度预测阻尼**：用实测转速预测12ms后的角度，接近目标时提前降低速度参考。静止起步仍允许原3600转子rpm和±3000原始电流命令。
++2. **停车距离限速**：根据剩余转子角度限制目标转速，默认减速度设置为50000转子rpm/s，并留8ms延迟余量。这是控制设置，实际可用减速度仍需实机验证。
++3. **减速释放积分**：实测速度需要减小时，将旧速度积分按12ms时间常数衰减，同时暂停反向积分累积，减少前段驱动力拖到终点及反向积分造成的再次回摆。
++
++位置P=10、速度P=2、速度I=8和±3000原始电流上限保留。控制仍为2ms；连发仍每50ms请求一发、每发40°，连发参考与松手收尾的控制分支保持原逻辑。单发完成判定仍沿用原来的位置容差、静止速度和持续时间。
++
++这轮着重减少超调后反复修正所占的稳定时间，提前减速可能让首次碰到目标略晚；不能以首次交叉代替稳定时间，也不能据软件检查承诺实机40°在50ms内稳定。
++
++### 操作与观察
++
++烧录后，先按原流程完成准备、进入普通模式、摩擦轮达到真实就绪状态。CH6中档选择单发，CH8从释放位置到触发位置发一发；连续两发之间先释放扳机。
++
++VOFA发送：
++
++```text
++FEEDER ANGLE VIEW
++TELEM ON
++```
++
++保持现有FireWater、921600/8N1；I0为实际输出轴角度的相反数，I1为目标输出轴角度的相反数，默认方向下向正数递增。I2/I3分别为实际/目标转子rpm，I4为原始电流命令。
++
++完成后发送：
++
++```text
++FEEDER RESULT
++```
++
++新增字段：
++
++| 字段 | 含义 |
++| --- | --- |
++| SINGLE_DECEL_RPM_S | 单发停车减速度设置，默认50000转子rpm/s |
++| BRAKE_DELAY_MS | 停车距离预留延迟，8ms |
++| PREVIEW_MS | 位置预测时间，12ms |
++| I_RELAX_MS | 减速时积分衰减时间常数，12ms |
++| SINGLE_BRAKE_N | 最近一次单发进入积分释放的反馈帧数 |
++| SINGLE_OVERSHOOT_DEG | 最近一次单发从接受到完成期间实测的最大越界角度，输出轴° |
++| SHOT_MS | 原有单发完成判定用时，不能等同于±0.2°稳定时间 |
++
++若需对比原单发算法，在原安全OFF、空闲、健康遥控条件下发送 `FEEDER SINGLE_DECEL 0`；恢复新算法发送 `FEEDER SINGLE_DECEL 50000`。参数仅保存在RAM，重启恢复默认。数值越小越提前减速；范围为1000～200000，0专用于关闭新单发处理。无需为正常使用额外发送这些调参命令。
++
++## CH5进入阶跃测试
++
++CH5拨到测试档（当前映射通道值约2000）时：
++
++- yaw、pitch各自把**当时实测位置**锁为目标，不再追赶进入前领先的位置目标。
++- 取消旧轨迹、刹车状态和旧位置积分，保留软件零点、观测速度、速度积分和pitch重力标定，继续闭环保持。
++- 测试档内右摇杆不再改变两轴位置。目标只在进入时锁定一次，后续反馈仍用来纠正位置扰动。
++- yaw阶跃时pitch保持；pitch阶跃时yaw保持。遥控CH7和串口STEP使用相同的轴协同逻辑。
++- 如果切换到另一轴时原轴尚在运动，则将原轴停在当前实测位置继续保持；被打断的测试记录为中止，不会计作通过。需要完整考核结果时，先等当前5秒测量窗口结束再测另一轴。
++
++限位端点附近允许沿用原0.2°反馈量化容差，目标仍裁在合法范围内。更远的越限、失联、故障和STOP仍按原规则停机，不强行保持或重新使能。
++
++### 原遥控步骤继续使用
++
++1. 完成原安全OFF准备与解锁，CH5进入测试档，两轴先保持当前位置。
++2. 左摇杆仅选一轴：CH4选择yaw方向，CH3选择pitch方向；斜向不发起测试。
++3. CH7先中档、再高档，确认所选轴的阶跃；另一轴保持。
++4. CH7低档归位所选轴；选择杆居中时归位最后真正接受测试的轴，另一轴仍保持。
++
++原阶跃入口仍要求被测轴接近软件零点且静止，STEP仍是软件坐标的±30°绝对目标；本轮锁位置不会重设零点。若从非零位置进入测试档，需要先归位被测轴。pitch继续遵守−18°～+33°的目标限位。
++
++串口仍可使用 `YAW STEP`、`PITCH STEP`、`YAW HOME`、`PITCH HOME`。测试档下串口新STEP也会在下一个2ms控制周期锁住另一轴。VIEW只切换显示，不发起运动。退出测试档后的停机、重新OFF解锁流程沿用原有规则。
++
++## 验证范围
++
++本轮编译实际原工程并运行ARM离线逻辑回归；没有连接电机、执行烧录或采集新的实机成绩。单发模型用例是不同惯性/阻尼/延迟下的软件回归，不能作为实机超调或稳定时间的证明。重新烧录后请用真实I0/I1曲线检查单发超调、回摆和最终稳定时间。

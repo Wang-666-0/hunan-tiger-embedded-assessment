@@ -9,7 +9,6 @@ void YawStep_Init(YawStep *step)
     if (!step) { return; }
     memset(step, 0, sizeof(*step));
     step->t10_ms = step->t90_ms = step->response_ms = step->settle_ms = YAW_STEP_UNREACHED;
-    step->response05_ms = step->settle05_ms = YAW_STEP_UNREACHED;
 }
 uint8_t YawStep_Start(YawStep *step, uint32_t now_ms, float start_deg, float target_deg)
 {
@@ -40,7 +39,15 @@ void YawStep_Abort(YawStep *step, uint32_t now_ms, YawStepReason reason, uint32_
     if (!step || step->phase != YAW_STEP_RUNNING) { return; }
     step->phase = YAW_STEP_ABORTED; step->reason = (uint8_t)reason;
     step->faults = faults; step->elapsed_ms = now_ms - step->start_ms;
-    step->pending = 1U; step->sse_valid = step->pass = step->pass05 = 0U;
+    step->pending = 1U; step->sse_valid = step->pass = 0U;
+}
+uint8_t YawStep_Passed(const YawStep *step, uint32_t limit_ms)
+{
+    return (uint8_t)(step && step->phase == YAW_STEP_DONE && !step->faults &&
+        absolute(step->span_deg - 30.0f) <= YAW_STEP_BAND_DEG + YAW_STEP_COMPARE_EPS_DEG &&
+        step->settle_ms != YAW_STEP_UNREACHED && step->settle_ms <= limit_ms &&
+        step->overshoot_deg <= YAW_STEP_OVERSHOOT_LIMIT_DEG + YAW_STEP_COMPARE_EPS_DEG &&
+        step->sse_valid && absolute(step->steady_error_deg) <= YAW_STEP_SSE_LIMIT_DEG + YAW_STEP_COMPARE_EPS_DEG);
 }
 void YawStep_Sample(YawStep *step, uint32_t received_ms, float angle_deg,
                     float velocity_dps, float torque_nm, uint8_t limited)
@@ -72,16 +79,12 @@ void YawStep_Sample(YawStep *step, uint32_t received_ms, float angle_deg,
     overshoot = progress - step->span_deg;
     if (overshoot > step->overshoot_deg) { step->overshoot_deg = overshoot; }
     step->overshoot_pct = step->overshoot_deg * 100.0f / step->span_deg;
-    if (absolute(step->target_deg - angle) <= YAW_STEP_BAND_DEG) {
+    if (absolute(step->target_deg - angle) <= YAW_STEP_BAND_DEG + YAW_STEP_COMPARE_EPS_DEG) {
         if (!step->band_active) { step->band_active = 1U; step->band_since_ms = end; }
         if (step->response_ms == YAW_STEP_UNREACHED) {
             step->response_ms = end;
         }
     } else { step->band_active = 0U; }
-    if (absolute(step->target_deg - angle) <= YAW_STEP_ASSESSMENT_BAND_DEG) {
-        if (!step->band05_active) { step->band05_active = 1U; step->band05_since_ms = end; }
-        if (step->response05_ms == YAW_STEP_UNREACHED) { step->response05_ms = end; }
-    } else { step->band05_active = 0U; }
     low = previous > YAW_STEP_WINDOW_MS - YAW_STEP_STEADY_MS ?
         previous : YAW_STEP_WINDOW_MS - YAW_STEP_STEADY_MS;
     if (end > low) {
@@ -102,14 +105,7 @@ void YawStep_Sample(YawStep *step, uint32_t received_ms, float angle_deg,
             step->settle_ms = step->band_since_ms;
         }
         step->sse_valid = (uint8_t)(step->ss_duration_ms == YAW_STEP_STEADY_MS &&
-            step->ss_samples >= 10U && step->ss_max_error <= YAW_STEP_BAND_DEG);
-        step->pass = (uint8_t)(absolute(step->span_deg - 30.0f) <= 0.2f &&
-            step->response_ms != YAW_STEP_UNREACHED && step->response_ms <= 250U &&
-            step->overshoot_deg <= 0.2f && step->sse_valid && absolute(step->steady_error_deg) <= 0.2f);
-        if (step->band05_active && end - step->band05_since_ms >= YAW_STEP_SETTLE_HOLD_MS) {
-            step->settle05_ms = step->band05_since_ms;
-        }
-        step->pass05 = (uint8_t)(!step->faults && absolute(step->span_deg - 30.0f) <= 0.2f &&
-            step->settle05_ms != YAW_STEP_UNREACHED && step->settle05_ms <= YAW_STEP_ASSESSMENT_LIMIT_MS);
+            step->ss_samples >= 10U && step->ss_max_error <= YAW_STEP_BAND_DEG + YAW_STEP_COMPARE_EPS_DEG);
+        step->pass = YawStep_Passed(step, YAW_STEP_RESPONSE_LIMIT_MS);
     }
 }

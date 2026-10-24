@@ -1,0 +1,17 @@
+{
+  "groups": 5,
+  "checks": 67409,
+  "failures": 0,
+  "matching_source_hashes": 109,
+  "build": "AC5/O0 69 sources",
+  "rom_bytes": 131944,
+  "ram_bytes": 36904,
+  "display_version": 2,
+  "hold_bound_deg": 0.15,
+  "directions": [
+    "0->30",
+    "30->0"
+  ],
+  "flashed": false,
+  "hardware_verified": false
+}

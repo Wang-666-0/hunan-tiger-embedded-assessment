@@ -1,0 +1,12 @@
+/bin/sessions/
+/bin/test-sessions/
+/bin/*Tests.exe
+/bin/*Tests.exe.config
+/test-output/
+/release/
+*.pdb
+/bin/AI/sessions/
+/bin/AI/private/
+/bin/AI/test-sessions/
+/bin/AI/*Tests.exe
+/bin/AI/*Tests.exe.config

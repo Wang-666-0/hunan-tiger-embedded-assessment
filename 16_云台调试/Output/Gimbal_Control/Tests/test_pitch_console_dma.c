@@ -73,7 +73,7 @@ void test_run(void)
 #endif
     test_stage = 4U;
     clear_output(); Burst("TELEM OFF\r\nPITCH VIEW\r\n"); AppConsole_Poll();
-    CHECK(strstr(output, "C|OK|TELEM|OFF") && strstr(output, "GROUP|pitch|COLS|58"));
+    CHECK(strstr(output, "C|OK|TELEM|OFF") && strstr(output, "GROUP|pitch|COLS|65"));
     now += 100U; clear_output(); AppConsole_Poll(); CHECK(!output_length);
     before = pitch_commands;
     Burst("PITCH PID\r\n"); AppConsole_Poll(); CHECK(pitch_commands == before + 1U && strstr(output, "P|MOCK"));

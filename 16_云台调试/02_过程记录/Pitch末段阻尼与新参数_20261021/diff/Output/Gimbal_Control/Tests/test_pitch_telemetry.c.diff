@@ -1,0 +1,38 @@
+--- before/Output/Gimbal_Control/Tests/test_pitch_telemetry.c
++++ after/Output/Gimbal_Control/Tests/test_pitch_telemetry.c
+@@ -85,6 +85,8 @@
+     pitch_sample.controller.pid_torque_nm = 7.38f;
+     pitch_sample.controller.cascade.speed_i = -0.03f;
+     pitch_sample.controller.gravity_calibrated = 1U;
++    pitch_sample.controller.brake.torque_nm = -0.08f;
++    pitch_sample.controller.brake.active = 1U;
+     pitch_sample.controller.shape.position_deg = 14.75f;
+     pitch_sample.controller.shape.velocity_dps = 281.25f;
+     pitch_sample.controller.shape.active = 1U;
+@@ -114,7 +116,7 @@
+     CHECK(columns[48] == 1471 && columns[49] == 1482 && columns[50] == 1513 && columns[51] == 1524);
+     CHECK(columns[52] == -0.21f && columns[53] == 12.0f && columns[54] == -0.18f);
+     CHECK(columns[55] == 7.38f && columns[56] == -0.03f && columns[57] == 1.0f);
+-    CHECK(columns[58] == 0.0f && columns[59] == 0.0f);
++    CHECK(columns[58] == -0.08f && columns[59] == 1.0f);
+     CHECK(columns[60] == 14.75f && columns[61] == 281.25f && columns[62] == 1.0f);
+     CHECK(columns[63] == 200.0f && columns[64] == 0.2f);
+     test_stage = 2U;
+@@ -163,7 +165,7 @@
+     CHECK(columns[0] < -49.999f && columns[2] < -1.234e9f && columns[5] == -10);
+     CHECK(columns[35] < -3.14f && columns[36] == -200 && columns[46] == 255);
+     CHECK(columns[48] == 65535 && columns[49] == 65535 && columns[50] == 65535 && columns[51] == 65535);
+-    CHECK(columns[58] == 0.0f && columns[59] == 0.0f);
++    CHECK(columns[58] == -0.08f && columns[59] == 1.0f);
+     CHECK(columns[60] < -49.999f && columns[61] < -1300.0f && columns[62] == 1.0f);
+     CHECK(columns[63] == 500.0f && columns[64] == 1.0f);
+     test_stage = 4U;
+@@ -180,7 +182,7 @@
+     CHECK(strstr(output, "G|AUTO|PHASE|READY|REASON|NONE|READY|1|REFERENCE|1") && !strstr(output, "pitch:"));
+     clear_output(); command_line("PITCH PID"); CHECK(strstr(output, "P|MOCK") && !strstr(output, "pitch:"));
+     clear_output(); command_line("PITCH VIEW"); CHECK(strstr(output, "P|VIEW|PITCH|GROUP|pitch|COLS|65"));
+-    CHECK(strstr(output, "RESERVED_I|58_59|SHAPE_I|60_64|") && !strstr(output, "BRAKE_I"));
++    CHECK(strstr(output, "TERMINAL_BRAKE_NM_I|58|TERMINAL_BRAKE_ACTIVE_I|59|SHAPE_I|60_64|") && !strstr(output, "BRAKE_I"));
+     now += 100U; clear_output(); AppConsole_Poll(); CHECK(!output_length);
+     CHECK(!stops && !pitch_cancel_count);
+     clear_output(); command_line("TELEM ON"); CHECK(strstr(output, "C|OK|TELEM|ON"));

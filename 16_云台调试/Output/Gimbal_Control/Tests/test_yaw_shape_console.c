@@ -10,6 +10,12 @@ void test_run(void)
     test_stage = 1;
     ConsoleReset(1000);
     Command(1000, "YAW SHAPE", "Y|SHAPE|ENABLED|0|MS|0|ACTIVE|0");
+    Command(1000, "YAW SHAPEV", "Y|SHAPEV|0");
+    Command(1000, "YAW SHAPEV -0.1", "Y|ERROR|SHAPEV");
+    Command(1000, "YAW SHAPEV 1.1", "Y|ERROR|SHAPEV");
+    Command(1000, "YAW SHAPEV nan", "Y|ERROR|SHAPEV");
+    Command(1000, "YAW SHAPEV 0.25 junk", "Y|ERROR|SHAPEV");
+    Command(1000, "YAW SHAPEV 0.250000", "Y|OK|SHAPEV|0.25");
     Command(1000, "YAW SHAPE 79", "Y|ERROR|SHAPE");
     Command(1000, "YAW SHAPE 501", "Y|ERROR|SHAPE");
     Command(1000, "YAW SHAPE -1", "Y|ERROR|SHAPE");
@@ -22,14 +28,18 @@ void test_run(void)
     test_stage = 2;
     ConsoleZeroActivate(2000);
     Command(2066, "YAW SHAPE 160", "Y|OK|SHAPE|MS|160");
+    Command(2066, "YAW SHAPEV 1", "Y|OK|SHAPEV|1");
     CHECK(YawBackend_StartStep(30)); Read(); YawBackend_GetStep(&snapshot); start = snapshot.start_ms;
     CHECK(snapshot.shape_ms == 160 && snapshot.target_deg == 30 && state.controller.target_deg == 30);
     CHECK(state.controller.shape.active && state.controller.shape.start_ms == start);
+    CHECK(snapshot.shape_velocity_gain == 1);
+    Command(start, "YAW SHAPEV 1", "Y|OK|SHAPEV|1");
+    Command(start, "YAW SHAPEV 0.25", "Y|ERROR|SHAPEV");
     Command(start, "YAW SHAPE 160", "Y|OK|SHAPE|MS|160");
     Command(start, "YAW SHAPE 180", "Y|ERROR|SHAPE");
     Command(start, "YAW SHAPE 0", "Y|ERROR|SHAPE");
     Command(start, "YAW POS 9 0.2 0.05", "Y|ERROR|PARAMETER_OR_STATE");
-    Command(start, "YAW FC 0.01", "Y|ERROR|FF_PARAMETER");
+    Command(start, "YAW FKA 0.000002", "Y|ERROR|FF_PARAMETER");
     CHECK(!state.controller.ff.enabled);
     for (t = 2; t <= 5010; t += 2) {
         if (t % 10 == 0) { FeedDegrees(start + t, t < 200 ? 30.0f * t / 200.0f : 30, 0); }
@@ -43,11 +53,13 @@ void test_run(void)
     }
     YawBackend_GetStep(&snapshot);
     CHECK(snapshot.phase == YAW_STEP_DONE && snapshot.shape_ms == 160 && snapshot.start_ms == start);
-    CHECK(snapshot.response05_ms == 200 && snapshot.settle05_ms == 200 && snapshot.pass05);
+    CHECK(snapshot.response_ms == 200 && snapshot.settle_ms == 200 && snapshot.pass);
     CHECK(YawConsole_Poll(report, sizeof(report)));
-    CHECK(strstr(report, "|SHAPE_MS|160\r\n") && strstr(report, "|RESP05_MS|200|SETTLE05_MS|200|PASS05|1|"));
+    CHECK(strstr(report, "|SHAPE_MS|160|SHAPE_V|1\r\n") && strstr(report, "|RESP02_MS|200|SETTLE02_MS|200|PASS02|1|"));
+    Command(start + 5010, "YAW SHAPEV 0.25", "Y|OK|SHAPEV|0.25");
     Command(start + 5010, "YAW SHAPE 0", "Y|OK|SHAPE|MS|0");
     Command(start + 5010, "YAW RESULT", "SHAPE_MS|160"); /* Frozen trial condition. */
+    CHECK(strstr(response, "SHAPE_V|1"));
 
     test_stage = 3;
     ConsoleZeroActivate(9000);
@@ -58,6 +70,7 @@ void test_run(void)
     YawBackend_GetStep(&snapshot); CHECK(snapshot.phase == YAW_STEP_ABORTED && snapshot.reason == YAW_STEP_TARGET_CHANGE);
     diagnostic_mode = 1;
     Command(9066, "YAW SHAPE 180", "Y|ERROR|SHAPE");
+    Command(9066, "YAW SHAPEV 0.25", "Y|ERROR|SHAPEV");
     diagnostic_mode = 0;
     ConsoleZeroActivate(10000);
     Command(10066, "YAW SHAPE 160", "Y|OK|SHAPE|MS|160");

@@ -1,0 +1,28 @@
+{
+  "success": true,
+  "version": "C610_POSITION_TUNE_V1D",
+  "app_changes": [
+    "App/app_config.h",
+    "App/feeder_backend.c",
+    "App/feeder_backend.h",
+    "App/feeder_console.c",
+    "App/feeder_controller.c",
+    "App/feeder_controller.h"
+  ],
+  "other_app_files_unchanged": 60,
+  "non_app_sources_unchanged": 37,
+  "regression_groups": 11,
+  "regression_checks": 53756,
+  "failures": 0,
+  "build_sources": 69,
+  "vofa_channels": 39,
+  "hardware_used": false,
+  "flashed": false,
+  "hex_generated": false,
+  "static_stack_bytes_plus_unknown": {
+    "ConsoleTask": 2032,
+    "ControlTask": 1760,
+    "CanTask": 344,
+    "RemoteTask": 188
+  }
+}

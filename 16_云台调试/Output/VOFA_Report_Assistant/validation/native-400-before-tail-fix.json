@@ -1,0 +1,195 @@
+{
+  "error": "",
+  "head": 400,
+  "values": [
+    400,
+    2,
+    3
+  ],
+  "status": "已接入 VOFA 显示文本（非原始串口流）· VOFA 尚未连接 · 清空/隐藏原接收区会影响完整性",
+  "engine": {
+    "version": 1,
+    "reports": [
+      {
+        "id": 1,
+        "command": "PITCH CHECK",
+        "sentAt": 1792645487885,
+        "updatedAt": 1792645488838,
+        "status": "complete",
+        "lines": [
+          {
+            "text": "P|BUSY|CHECK|QUERY|CC|123",
+            "at": 1792645488035,
+            "seq": 2,
+            "uncertain": false,
+            "level": "info",
+            "truncated": false
+          },
+          {
+            "text": "P|CHECK|QUERY|NEW_FEEDBACK|ANGLE|30.12",
+            "at": 1792645488838,
+            "seq": 5,
+            "uncertain": false,
+            "level": "info",
+            "truncated": false
+          }
+        ],
+        "warnings": [],
+        "charCount": 63,
+        "lineDrops": 0,
+        "candidateCount": 0,
+        "uncertain": false,
+        "ambiguousFromEarlier": false,
+        "deviceError": false,
+        "_match": {
+          "key": "PITCH CHECK",
+          "kind": "check",
+          "axis": "P",
+          "action": "CHECK",
+          "timeout": 4000
+        },
+        "timeoutAt": 1792645491885
+      }
+    ],
+    "events": [
+      {
+        "text": "",
+        "at": 1792645487926,
+        "seq": 1,
+        "uncertain": false,
+        "level": "info",
+        "truncated": false
+      },
+      {
+        "text": "R|RX|EPOCH|30",
+        "at": 1792645488370,
+        "seq": 3,
+        "uncertain": false,
+        "level": "info",
+        "truncated": false
+      },
+      {
+        "text": "R|RX|EPOCH|60",
+        "at": 1792645488823,
+        "seq": 4,
+        "uncertain": false,
+        "level": "info",
+        "truncated": false
+      },
+      {
+        "text": "R|RX|EPOCH|90",
+        "at": 1792645489327,
+        "seq": 6,
+        "uncertain": false,
+        "level": "info",
+        "truncated": false
+      },
+      {
+        "text": "P|STATUS|QUERY|SNAPSHOT_ONLY|ANGLE|31",
+        "at": 1792645489462,
+        "seq": 7,
+        "uncertain": false,
+        "level": "info",
+        "truncated": false
+      },
+      {
+        "text": "R|RX|EPOCH|120",
+        "at": 1792645489772,
+        "seq": 8,
+        "uncertain": false,
+        "level": "info",
+        "truncated": false
+      },
+      {
+        "text": "R|RX|EPOCH|150",
+        "at": 1792645490235,
+        "seq": 9,
+        "uncertain": false,
+        "level": "info",
+        "truncated": false
+      },
+      {
+        "text": "R|RX|EPOCH|180",
+        "at": 1792645490696,
+        "seq": 10,
+        "uncertain": false,
+        "level": "info",
+        "truncated": false
+      },
+      {
+        "text": "R|RX|EPOCH|210",
+        "at": 1792645491181,
+        "seq": 11,
+        "uncertain": false,
+        "level": "info",
+        "truncated": false
+      },
+      {
+        "text": "R|RX|EPOCH|240",
+        "at": 1792645491647,
+        "seq": 12,
+        "uncertain": false,
+        "level": "info",
+        "truncated": false
+      },
+      {
+        "text": "R|RX|EPOCH|270",
+        "at": 1792645492100,
+        "seq": 13,
+        "uncertain": false,
+        "level": "info",
+        "truncated": false
+      },
+      {
+        "text": "R|RX|EPOCH|300",
+        "at": 1792645492571,
+        "seq": 14,
+        "uncertain": false,
+        "level": "info",
+        "truncated": false
+      },
+      {
+        "text": "R|RX|EPOCH|330",
+        "at": 1792645493050,
+        "seq": 15,
+        "uncertain": false,
+        "level": "info",
+        "truncated": false
+      },
+      {
+        "text": "R|RX|EPOCH|360",
+        "at": 1792645493507,
+        "seq": 16,
+        "uncertain": false,
+        "level": "info",
+        "truncated": false
+      },
+      {
+        "text": "R|RX|EPOCH|390",
+        "at": 1792645493973,
+        "seq": 17,
+        "uncertain": false,
+        "level": "info",
+        "truncated": false
+      }
+    ],
+    "warnings": [],
+    "stats": {
+      "receivedLines": 417,
+      "telemetryLines": 400,
+      "otherLines": 17,
+      "droppedEvents": 0,
+      "droppedReports": 0,
+      "droppedReportLines": 0,
+      "truncatedLines": 0,
+      "gaps": 0
+    },
+    "nextId": 2,
+    "sequence": 17,
+    "groups": [
+      "gimbal",
+      "pitch",
+      "feeder"
+    ]
+  }
+}

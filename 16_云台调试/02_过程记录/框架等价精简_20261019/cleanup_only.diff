@@ -1,0 +1,889 @@
+--- before/Output/Gimbal_Control/App/app_console.c
++++ after/Output/Gimbal_Control/App/app_console.c
+@@ -715,9 +715,6 @@
+         ",%ld,%ld,%.1f,%u,%u,%ld,%ld,%ld,%.1f,%u,%u,%u"
+ #endif
+ #endif
+-#if APP_YAW_ENABLED
+-        ",%.3f,%.3f,%.2f,%.5f,%.5f,%.4f,%.4f,%.4f,%u,%u,%u,%lu,%lu,%u,%u,%d,%d,%.6f,%lu"
+-#endif
+         "\r\n",
+         (unsigned)remote.channels[0], (unsigned)remote.channels[1],
+         (unsigned)remote.channels[2], (unsigned)remote.channels[3],
+@@ -750,17 +747,6 @@
+         (unsigned)jog.stop_reason
+ #endif
+ #endif
+-#if APP_YAW_ENABLED
+-        , (double)yaw.controller.angle_deg, (double)yaw.controller.target_deg,
+-        (double)yaw.controller.velocity_dps, (double)yaw.controller.torque_nm,
+-        (double)yaw.feedback.torque_nm, (double)yaw.controller.pid.kp,
+-        (double)yaw.controller.pid.ki, (double)yaw.controller.pid.kd,
+-        (unsigned)yaw.online, (unsigned)yaw.active, (unsigned)yaw.feedback.status,
+-        (unsigned long)yaw.controller.faults, (unsigned long)yaw.feedback_age_ms,
+-        (unsigned)yaw.requested, (unsigned)yaw.stop_pending,
+-        (int)yaw.feedback.driver_temp_c, (int)yaw.feedback.motor_temp_c,
+-        (double)yaw.feedback.position_rad, (unsigned long)yaw.rx_count
+-#endif
+         );
+ #endif
+     if (length > 0 && (size_t)length < sizeof(telemetry)) {
+--- before/Output/Gimbal_Control/App/app_tasks.c
++++ after/Output/Gimbal_Control/App/app_tasks.c
+@@ -20,14 +20,6 @@
+ 
+ static AppState published;
+ static volatile uint32_t stop_sequence;
+-#if APP_YAW_ENABLED && APP_PITCH_ENABLED
+-static uint32_t YawStepId(void)
+-{ YawStep step; YawBackend_GetStep(&step); return step.id; }
+-#endif
+-#if APP_PITCH_ENABLED
+-static uint32_t PitchStepId(void)
+-{ PitchStep step; PitchBackend_GetStep(&step); return step.id; }
+-#endif
+ 
+ void AppTasks_RequireRearm(void)
+ {
+@@ -185,14 +177,14 @@
+         input.stop_sequence = stop_sequence;
+ #if APP_YAW_ENABLED && APP_PITCH_ENABLED
+         /* 串口和遥控真正接受的新阶跃均记住轴，先同步再消费CH7回参考。 */
+-        yaw_step_current = YawStepId();
++        yaw_step_current = YawBackend_GetStepId();
+         if (yaw_step_current != yaw_step_observed) {
+             TargetManager_RecordAcceptedTestAxis(&current.logic.targets, GIMBAL_STEP_YAW);
+             yaw_step_observed = yaw_step_current;
+         }
+ #endif
+ #if APP_PITCH_ENABLED
+-        pitch_step_current = PitchStepId();
++        pitch_step_current = PitchBackend_GetStepId();
+         if (pitch_step_current != pitch_step_observed) {
+             TargetManager_RecordAcceptedTestAxis(&current.logic.targets, GIMBAL_STEP_PITCH);
+             pitch_step_observed = pitch_step_current;
+@@ -222,7 +214,7 @@
+ #if APP_YAW_ENABLED
+         YawBackend_Apply(&jog_request, current.logic.safety.output_allowed, AppConsole_IsDiagnosticMode());
+ #if APP_PITCH_ENABLED
+-        yaw_step_current = YawStepId();
++        yaw_step_current = YawBackend_GetStepId();
+         if (yaw_step_current != yaw_step_observed) {
+             TargetManager_RecordAcceptedTestAxis(&current.logic.targets, GIMBAL_STEP_YAW);
+             yaw_step_observed = yaw_step_current;
+@@ -236,7 +228,7 @@
+ #endif
+ #if APP_PITCH_ENABLED
+         PitchBackend_Apply(&jog_request, current.logic.safety.output_allowed, AppConsole_IsDiagnosticMode());
+-        pitch_step_current = PitchStepId();
++        pitch_step_current = PitchBackend_GetStepId();
+         if (pitch_step_current != pitch_step_observed) {
+             TargetManager_RecordAcceptedTestAxis(&current.logic.targets, GIMBAL_STEP_PITCH);
+             pitch_step_observed = pitch_step_current;
+--- before/Output/Gimbal_Control/App/pitch_backend.c
++++ after/Output/Gimbal_Control/App/pitch_backend.c
+@@ -271,6 +271,12 @@
+     taskEXIT_CRITICAL(); return accepted;
+ }
+ 
++uint32_t PitchBackend_GetStepId(void)
++{
++    uint32_t id;
++    taskENTER_CRITICAL(); id = step.id; taskEXIT_CRITICAL();
++    return id;
++}
+ void PitchBackend_GetStep(PitchStep *out)
+ { if (out) { taskENTER_CRITICAL(); *out = step; taskEXIT_CRITICAL(); } }
+ uint8_t PitchBackend_TakeStepReport(PitchStep *out)
+--- before/Output/Gimbal_Control/App/pitch_backend.h
++++ after/Output/Gimbal_Control/App/pitch_backend.h
+@@ -44,6 +44,8 @@
+ uint8_t PitchBackend_SetGravityOffset(float offset_deg, uint8_t capture_horizontal);
+ /* +/-30 is an absolute software-zero target, measured for five seconds and then held. */
+ uint8_t PitchBackend_StartStep(float degrees);
++/* 控制任务只需编号时避免复制完整测量快照；不消费报告。 */
++uint32_t PitchBackend_GetStepId(void);
+ void PitchBackend_GetStep(PitchStep *out);
+ uint8_t PitchBackend_TakeStepReport(PitchStep *out);
+ uint8_t PitchBackend_TakeRemoteStepEvent(PitchRemoteStepEvent *out);
+--- before/Output/Gimbal_Control/App/pitch_console.c
++++ after/Output/Gimbal_Control/App/pitch_console.c
+@@ -3,13 +3,12 @@
+ #include "app_config.h"
+ #include "app_tasks.h"
+ #include "app_console.h"
++#include "console_parse.h"
+ #include "remote_input.h"
+ #include "can_bus.h"
+ #include "task.h"
+ #include <string.h>
+ #include <stdio.h>
+-#include <stdlib.h>
+-#include <float.h>
+ 
+ /* Low-priority formatting only. CHECK sends CC; READY never sends FC or FD. */
+ static uint8_t pending_operation; /* 1=CHECK, 2=READY */
+@@ -264,28 +263,6 @@
+     return GuardReport(response, capacity, 1U);
+ }
+ 
+-static uint8_t Number(const char *text, float *value)
+-{
+-    char *end;
+-    float parsed = strtof(text, &end);
+-    if (end == text || *end || !(parsed >= -FLT_MAX && parsed <= FLT_MAX)) { return 0U; }
+-    *value = parsed; return 1U;
+-}
+-static uint8_t PidNumbers(const char *text, float *kp, float *ki, float *kd)
+-{
+-    float *values[3] = { kp, ki, kd };
+-    char *end;
+-    uint32_t i;
+-    for (i = 0U; i < 3U; ++i) {
+-        *values[i] = strtof(text, &end);
+-        if (end == text || !(*values[i] >= -FLT_MAX && *values[i] <= FLT_MAX)) { return 0U; }
+-        if (i == 2U) { return (uint8_t)(*end == '\0'); }
+-        if (*end != ' ') { return 0U; }
+-        text = end + 1;
+-    }
+-    return 0U;
+-}
+-
+ static void BriefStatus(char *response, size_t capacity)
+ {
+     PitchBackendState state;
+@@ -372,7 +349,7 @@
+         return 1U;
+     }
+     if (strncmp(line, "PITCH KG ", 9U) == 0 || strcmp(line, "PITCH FF OFF") == 0) {
+-        uint8_t parsed = (uint8_t)(strcmp(line, "PITCH FF OFF") == 0 || Number(line + 9U, &value));
++        uint8_t parsed = (uint8_t)(strcmp(line, "PITCH FF OFF") == 0 || ConsoleParse_Number(line + 9U, &value));
+         taskENTER_CRITICAL();
+         if (parsed && !AppConsole_IsDiagnosticMode()) { accepted = PitchBackend_SetGravityGain(value); }
+         taskEXIT_CRITICAL();
+@@ -382,7 +359,7 @@
+     }
+     if (strncmp(line, "PITCH GOFF ", 11U) == 0 || strcmp(line, "PITCH GHORIZ") == 0) {
+         uint8_t horizontal = (uint8_t)(strcmp(line, "PITCH GHORIZ") == 0);
+-        uint8_t parsed = (uint8_t)(horizontal || Number(line + 11U, &value));
++        uint8_t parsed = (uint8_t)(horizontal || ConsoleParse_Number(line + 11U, &value));
+         taskENTER_CRITICAL();
+         if (parsed && strcmp(RemoteReason(1U), "OK") == 0) {
+             accepted = PitchBackend_SetGravityOffset(value, horizontal);
+@@ -393,7 +370,7 @@
+         return 1U;
+     }
+     if (strncmp(line, "PITCH COORD ", 12U) == 0) {
+-        uint8_t parsed = (uint8_t)(Number(line + 12U, &value) && (value == 1.0f || value == 7.0f));
++        uint8_t parsed = (uint8_t)(ConsoleParse_Number(line + 12U, &value) && (value == 1.0f || value == 7.0f));
+         taskENTER_CRITICAL();
+         if (parsed &&
+             strcmp(RemoteReason(1U), "OK") == 0) { accepted = PitchBackend_SetCoordinate((uint8_t)value); }
+@@ -411,7 +388,7 @@
+     if (strncmp(line, "PITCH STEP ", 11U) == 0 || strcmp(line, "PITCH STEP") == 0) {
+         uint8_t parsed;
+         value = 30.0f;
+-        parsed = (uint8_t)(strcmp(line, "PITCH STEP") == 0 || Number(line + 11U, &value));
++        parsed = (uint8_t)(strcmp(line, "PITCH STEP") == 0 || ConsoleParse_Number(line + 11U, &value));
+         if (parsed && (value < PITCH_CONTROLLER_TARGET_MIN_DEG || value > PITCH_CONTROLLER_TARGET_MAX_DEG)) {
+             (void)snprintf(response, capacity, "P|ERROR|STEP_OUTSIDE_MECHANICAL_RANGE|MIN_DEG|%.0f|MAX_DEG|%.0f\r\n",
+                 (double)PITCH_CONTROLLER_TARGET_MIN_DEG, (double)PITCH_CONTROLLER_TARGET_MAX_DEG);
+@@ -432,7 +409,7 @@
+             "P|ERROR|HOME_REQUIRES_ARMED_ACTIVE\r\n"); return 1U;
+     }
+     if (strncmp(line, "PITCH TARGET ", 13U) == 0) {
+-        uint8_t parsed = Number(line + 13U, &value);
++        uint8_t parsed = ConsoleParse_Number(line + 13U, &value);
+         taskENTER_CRITICAL();
+         if (parsed && strcmp(RemoteReason(0U), "OK") == 0) {
+             accepted = PitchBackend_SetTarget(value);
+@@ -444,7 +421,7 @@
+     if (strncmp(line, "PITCH POS ", 10U) == 0 || strncmp(line, "PITCH VEL ", 10U) == 0) {
+         float kp, ki, kd;
+         char loop = line[6] == 'P' ? 'P' : 'V';
+-        if (PidNumbers(line + 10U, &kp, &ki, &kd) && !AppConsole_IsDiagnosticMode()) {
++        if (ConsoleParse_PidNumbers(line + 10U, &kp, &ki, &kd) && !AppConsole_IsDiagnosticMode()) {
+             accepted = PitchBackend_SetLoopPid(loop, kp, ki, kd);
+         }
+         (void)snprintf(response, capacity, accepted ? "P|OK|%s\r\n" : "P|ERROR|PID_RANGE_OR_FORMAT\r\n",
+@@ -452,7 +429,7 @@
+     }
+     if (strlen(line) >= 10U && (line[6] == 'P' || line[6] == 'V') && line[7] == 'K' &&
+         (line[8] == 'P' || line[8] == 'I' || line[8] == 'D') && line[9] == ' ') {
+-        if (Number(line + 10U, &value) && !AppConsole_IsDiagnosticMode()) {
++        if (ConsoleParse_Number(line + 10U, &value) && !AppConsole_IsDiagnosticMode()) {
+             accepted = PitchBackend_SetLoopParameter(line[6], line[8], value);
+         }
+         (void)snprintf(response, capacity, accepted ? "P|OK|PARAMETER\r\n" : "P|ERROR|PID_RANGE_OR_FORMAT\r\n"); return 1U;
+--- before/Output/Gimbal_Control/App/pitch_controller.c
++++ after/Output/Gimbal_Control/App/pitch_controller.c
+@@ -213,7 +213,7 @@
+         fault(pitch, PITCH_CONTROLLER_FAULT_DATA); return 0.0f;
+     }
+     age = now_ms - pitch->last_feedback_ms;
+-    if (!pitch->have_feedback || age >= PITCH_CONTROLLER_FEEDBACK_TIMEOUT_MS || age >= HALF_TICK_RANGE) {
++    if (!pitch->have_feedback || age >= PITCH_CONTROLLER_FEEDBACK_TIMEOUT_MS) {
+         if (allowed || pitch->active) { fault(pitch, PITCH_CONTROLLER_FAULT_FEEDBACK); }
+         else { PitchController_Stop(pitch); }
+         return 0.0f;
+--- before/Output/Gimbal_Control/App/README.md
++++ after/Output/Gimbal_Control/App/README.md
+@@ -1,103 +1,44 @@
+-> 当前版本为 **Yaw V2P / Pitch V1G**。用户已确认时间带、超调、稳态误差全部收紧为±0.2°；总通过按最终稳定时间Yaw250ms/Pitch300ms判定。Yaw默认六参更新为16.63/0.12/0.269与0.0081/0.003/0.000209。I61现在为±0.2°最终稳定时间，I62为综合通过；旧±0.5°达标结果不能作新标准证明。以[新参数与通道说明](../../../01_学习笔记/Yaw新参数与02度考核通道_20261018.md)为准，以下为历史内容。
++# App 框架说明
+ 
+-> 当前生产版本为 **Yaw V2N 达标双环PID**：默认位置14/0.15/0.15、速度0.0075/0.005/0.00018；实验规划/前馈关闭，新面板删除相关控件，增加遥控重复阶跃诊断。用户本轮实测SETTLE05=218ms、PASS05=1。操作以[达标参数与重复阶跃说明](../../../01_学习笔记/Yaw达标参数与重复阶跃操作_20261018.md)为准；以下V2M及更早内容为历史。
++当前生产配置与使用入口见 [工程说明](../README.md)。本目录继续保持平铺模块，已有 32 个 C 文件全部参与工程构建。新增 `console_parse.h` 只共享纯解析函数，无新增任务或 C 编译单元。
+ 
+-> 当前Yaw已更新至 **V2M**：删除FBIAS/FANG/FKV/FC/FVS，改用规划加速度系数FKA及FMAX限幅；SHAPEV默认0，遥测新增I71（共72列）。操作以[加速度前馈精简说明](../../../01_学习笔记/Yaw加速度前馈精简与VOFA_20261018.md)为准。下文旧前馈或V2K/V2L内容保留作历史记录。
++## 调用链与模块边界
+ 
+-2026-10-18 **Yaw V2L**：规划速度前馈权重独立配置`YAW SHAPEV`，默认0；原固定1倍V2K在用户实机产生约9.43°超调，不再推荐该配置。原目标/计时/判定不变，Yaw新增I70共71列。当前只修正Yaw，保留工作区已有Pitch/拨盘等改动。[说明](../../../01_学习笔记/Yaw规划速度前馈权重修正_20261018.md)。
++`main → freertos → AppTasks_Create` 创建遥控、CAN 接收、控制、控制台四个任务。控制任务在原临界区内取得快照、执行保护、更新目标并提交各执行器命令；串口格式化由控制台任务处理。
+ 
+-2026-10-17最新 **Yaw V2K**：新增仅STEP入口生效、默认关闭的平滑轨迹与参考速度前馈，规划段冻结外环积分；`YAW SHAPE 0/160`控制，原30°目标/计时/判定保留。原I0~I63保持，新增I64~I69共70列。Pitch及原业务保护保持。64组483163项、AC5/O0完整构建通过，实机效果待验证。[操作](../../../01_学习笔记/Yaw平滑阶跃与速度前馈_20261017.md) / [验证](../../../02_过程记录/Yaw平滑阶跃_20261017/实现与验证.md)。
++| 层次 | 模块 | 职责 |
++| --- | --- | --- |
++| 任务与故障 | app_tasks、app_fault | 任务创建、状态发布、统一停机与人工重解锁屏障 |
++| 遥控输入 | ibus、remote_input、remote_mapper | 帧校验、DMA接收/时间戳、通道映射、模式与回中条件 |
++| 业务与许可 | app_logic、safety_manager、target_manager | 保护优先、许可组合、轮子/拨盘请求、阶跃事件与轴记忆 |
++| 双轴准备 | gimbal_startup | 安全 OFF 自动准备及显式重新建立基准 |
++| CAN | can_frame、can_bus | 双总线收发、白名单、故障代次、邮箱撤销与停机接口 |
++| 只读采集 | dm_diag、vesc_diag、app_diagnostics | 参数查询、协议拼接、超时与结果交付 |
++| 双摩擦轮 | motor_backend、flywheel_jog、flywheel_speed | 双轮会话、反馈健康、6000 rpm 速度环和停机确认 |
++| 拨盘 | feeder_backend、feeder_controller、feeder_console | C610 反馈、位置/速度控制、发射互锁及串口接口 |
++| Yaw | gl60_ii、yaw_backend、yaw_controller、yaw_console | GL60 II 协议、许可/准备/停机、角度参考和双环入口 |
++| Pitch | dm3507、pitch_backend、pitch_controller、pitch_console | DM3507 协议、坐标/水平标定、机械边界和重力补偿 |
++| 共用控制数学 | yaw_cascade | 两轴的速度观测、位置/速度 PID 与抗积分饱和 |
++| 阶跃测量 | yaw_step、pitch_step | 共用统计核心、独立实例与 250/300 ms 判定 |
++| 控制台 | app_console、console_parse.h | 命令分发、DMA 回调、遥测/报告、双轴共用数值解析 |
+ 
+-# App 分文件说明
++## 本次等价精简
+ 
+-2026-10-17 Yaw V2J：在原yaw_controller/cascade/backend/console内加入力矩前馈，默认OFF、系数0；原外部双环/真实目标阶跃/保护链保持。新增FBIAS/FANG/FKV/FC/FVS/FMAX在线参数和FF ON/OFF，参数改变中止当前统计并做可行的速度积分转移；普通OFF重开保留坐标/参数，重新设零关闭前馈。Yaw遥测64列，追加积分诊断和独立±0.5°稳定判定；原48列及Pitch58列保持原含义，无新增生产C源文件。默认Yaw PID为用户最后截图7.5/.15/0与.0025/.003/0。详见[VOFA指南](../../../01_学习笔记/Yaw前馈与VOFA控件调参_20261017.md)。
++- 删除 `app_console` 中嵌在 Yaw 关闭分支内、却又要求 Yaw 开启的恒假旧遥测块。
++- Yaw/Pitch 数字与三参数 PID 解析共用 `console_parse.h`，保持空格、尾字符、有限值和错误输入处理。
++- 控制任务的四处阶跃编号同步改用 `YawBackend_GetStepId` / `PitchBackend_GetStepId`。原测量结构为 192 字节，原每周期为读编号复制四份完整结构；新接口只读取编号，原 `GetStep` 和报告接口继续保留。
++- Yaw 阶跃参数冻结按单环/双环二选一，去掉双环模式下必被覆盖的单环赋值。
++- Pitch 删除被 100 ms 超时判断完全覆盖的半周期判断；反馈接收时的时间方向判断保持。
++- 遥控回中复用已计算的左摇杆中心标志，条件不变。
+ 
+-新增gimbal_startup配对模块，ControlTask在原安全判断前处理上电/安全OFF的双轴自动准备，完成后建立新OFF屏障；只在首次启动或人工GIMBAL READY捕获基准，正常OFF重启保留参考。Console任务独立格式化事件，生产源清单EIDE/Keil共66项。Yaw V2I/Pitch V1F，操作见[自动启动与快速阶跃](../../../01_学习笔记/云台自动启动与快速阶跃_20261017.md)。
++控制任务在 AppLogic 更新前和两轴 Apply 后的编号同步位置全部保留，分别覆盖串口接受与本周期遥控接受的新阶跃；不能把它们误当重复逻辑删除。
+ 
+-2026-10-17现行Yaw V2H/Pitch V1E：app_config固化Pitch七参数并将CH2手动标尺关联Yaw90°/s；Pitch重力相位失效保留系数、未标定阻止使能。yaw_console/pitch_console增加同字段简洁状态和帮助，app_console增加VIEW与波形暂停；旧控制/保护/列序保持。完整58组464316项及AC5构建通过，详见[统一指令与启动](../../../01_学习笔记/云台串口统一指令与启动_20261017.md)。
++## 保留的功能与接口
+ 
+-现行Pitch V1D（2026-10-17）：在原文件内加入重力前馈，无新增生产源文件。PitchController保存Kg/水平相位并处理坐标失效与积分转移；YawCascade新入口在抗饱和前接入前馈，原Yaw入口固定0；后端冻结阶跃前馈参数；串口增加FF/KG/GOFF/GHORIZ，Pitch遥测追加I52～I57共58列。原遥控、机械边界、Yaw增益和轮子保持。[现行操作](../../../01_学习笔记/Pitch重力前馈与VOFA调参_20261017.md)。下列是历史进度。
++旧单环、限幅双环、Yaw 实验规划/前馈和历史遥控/摩擦轮档按用户确认保留。生产配置默认关闭实验路径，测试显式启用；不应为缩短源码删掉这些可选能力。
+ 
+-2026-10-15总体进度：新增 `DM3507_CASCADE_V1` Pitch编解码、双环控制、后端、控制台和独立300ms阶跃测量，平铺配对文件已同步EIDE/Keil清单。CHECK显式只读，READY软件水平设零与准备，人工遥控解锁后才使能；失能下垂须支撑。原Yaw六参/±50/90°每秒与6000rpm摩擦轮保持，泛用动力宏仍0，拨盘仍未驱动。原Yaw48列保留，TELEM PITCH明确切到独立48列。53组449737项通过、65源项AC5/O0构建无错警；实机反馈和性能待验证。操作见[Pitch指南](../../../01_学习笔记/Pitch双环PID与VOFA操作_20261014.md)，验证见[过程记录](../../../02_过程记录/Pitch双环接入_20261014/实现与验证.md)。以下早期“Pitch未接”条目为历史。
++Pitch 使用 `YawCascade_UpdateWithFeedforward` 实现重力补偿，使用 `YawStep` 统计基础；不能因为模块名含 Yaw 就删除共用字段或接口。两轴准备/停机握手和重力坐标失效规则也不等价，继续分开处理。
+ 
+-现行GL60II_CASCADE_MANUAL50_V2G：用户最终保持上电KP10及其余ID29五参。右摇杆CH1普通模式请求按原映射控制目标±50°、满杆90°/s、回中保持；位置反馈门限±60/观察±65，微小端点静差重启目标裁到±50。CH5普通/测试/关闭、CH8锁定人工重解锁、CH6原6000rpm及左杆±30阶跃保持。实际改动仅config版本、yaw_controller.h范围/手动速度及yaw_backend.c启动参考边界；其他App控制/遥控/统计/串口哈希保持。本轮仅config速度60→90与版本变，未加入前馈，阶跃/六PID正文保持。验证见Yaw右摇杆90度每秒_20261014。以下V2E/V2D/V2C/V2B/V2A为演进记录，当前操作见双环指南。
++本次没有调整 PID、滤波、2 ms 控制周期、Yaw 10 ms / Pitch 2 ms 力矩提交、机械限位、遥控解锁、故障撤权、CAN 重发设置、遥测列序或成绩判据。软件回归用于验证这些路径仍有效，实际阶跃性能需要实机曲线验证。
+ 
+-沿用上一考核：业务文件平铺在 App，模块使用配对 .c/.h，统一配置放在 `app_config.h`。main.c保留外设初始化；freertos.c调用 `AppTasks_Create`，业务逻辑通过模块接口运行。
+-
+-当前GL60Ⅱ Yaw源码为`GL60II_CASCADE_STEP30_V2B`：用户已确认取消速度与力矩两处业务限幅。外环直接输出速度，内环请求仅受MIT协议±10编码端点约束；CAN移除0.10校验及raw2028～2067截断。六PID控件/48列不变，I13/I23为关闭标记0、I22为协议端点饱和，VMAX命令拒绝。原6000rpm、遥控和共同CAN其余路径保持。操作见[双环PID与VOFA指南](../../../01_学习笔记/Yaw双环PID与VOFA操作_20261014.md)。
+-
+-参数命令为YAW POS/VEL及六单项，YAW PID无参数只读。默认8/0/0及0.001/0.004/0，速度参考无180限制，力矩无0.10业务限制；位置差分10ms滤波、反馈dt积分、D对测量仍使用。只对协议端点实施抗积分饱和，完成报告保留六增益及OUTPUT_LIMITS0，变参中止测量但保持目标。App23C/工程60项，完整构建无错警，43组381109项通过，实机V2B待反馈。
+-
+-以下V1G/V1H/V1F条目为历史演进；当前速度门禁仍0、目标±30°/运行±40°、±0.10协议请求，操作以V2A指南为准。
+-
+-V1G补充：yaw_console用一次人工YAW READY异步完成既有安全停机/必要单次FB/静止软件设零/ON准备，成功后遥控CH5上→下解锁；YAW PID整组原子校验；can_bus新增首次错误证据和只读快照，YAW BUS直接读取无需DIAG。STOP与诊断模式切换取消未完成准备；不自动FC、不过滤CAN错误、不改变原协议/保护范围。
+-
+-V1H按用户新要求取消生产档60速度停机与40软抑制；STATUS显式SPEED_GUARD0，跳变连续性独立于旧60判据。PID/力矩请求/遥控及READY保持。yaw_step增加HAL_OK指令提交计数CMD_N、FIRST_NM和首反馈故障前的请求峰值，不把提交等同于CAN完成或实物力矩。
+-
+-## 已实现模块
+-
+-| 模块 | 职责与边界 |
+-| --- | --- |
+-| ibus | 复用上一任务的32字节帧解析、校验、14路通道与帧间超时 |
+-| remote_input | UART4 ISR搬运字节、实际接收时刻和故障代次；任务解析，旧队列字节不能恢复许可 |
+-| remote_mapper | 默认ASSESSMENT_CH5_CH8_V1：CH5模式、CH6摩擦轮/单连发、CH7测试、CH8扳机兼失联锁；不依赖HAL |
+-| safety_manager | 新帧OFF→ON解锁、回中检查、100 ms超时、Failsafe、STOP、UART/CAN故障与控制迟到 |
+-| target_manager | CH6 OFF确认与6000rpm请求、单发沿/50ms连发接口、CH7确认左摇杆±30°及回参考角事件；V1F由Yaw后端执行Yaw事件并测量，Pitch / 拨盘实际驱动尚未加入 |
+-| app_logic | 按映射→保护→目标的顺序组合纯C逻辑，便于离线测试 |
+-| can_frame | 双CAN帧统一结构与11/29位ID、DLC0..8校验 |
+-| can_bus | 双CAN队列与故障代次；泛用动力门禁保持关闭；GL60Ⅱ ID1固定FC/FD和受限MIT给定；保留原摩擦轮发送限制、独立DM/VESC只读接口及取消 |
+-| dm_diag | DM3507的14项参数读取组帧与回复匹配；不写参数或使能 |
+-| vesc_diag | VESC固定读命令、单请求分片拼接与CRC16校验；不写配置或控制 |
+-| app_diagnostics | 1200ms超时、取消、故障隔离、DM MasterID核对、32字节结果交付及最近16种CAN帧 |
+-| flywheel_jog | CAN2节点70/71 STATUS1/4验证、单/双轮2A受限会话、独立速度环接入、停止原因和硬故障锁存 |
+-| flywheel_speed | 42000ERPM目标PI、目标斜坡、反馈滤波、抗积分饱和、44100/42000软滑行及本轮运行/启动响应统计；不调用HAL或发送CAN |
+-| gl60_ii | CAN1 ID1 MIT组帧、Master ID0反馈解包、状态高4位 / ID低4位、位置/速度/力矩量程及有符号温度；仅提供FC/FD固定命令 |
+-| yaw_controller | 连续角度/软件参考、采样/保护、手动角度目标；生产调用双环输出±0.10协议请求，历史单环仅作对照回归；无HAL / RTOS |
+-| yaw_cascade | 位置外环与速度内环PID、连续位置差分速度/滤波、无速度业务限幅、仅协议±10端点抗积分饱和；参数范围校验，纯C |
+-| yaw_step | 纯C接收时间戳指标、5秒观察/末1秒加权误差、响应与双向超调、完成/中止及采样质量记录；不发命令 |
+-| yaw_backend | 独立Yaw许可、失能准备/人工重解锁、人工零点保留、原遥控CH7测量事件与保持/回零、掉线及意外失能撤权、关闭移动恢复；上电监测关闭 |
+-| yaw_console | USART1 YAW STATUS/INFO、ON/OFF、KP/KI/KD、TARGET及软件ZERO；ON只准备且要求安全CH5 OFF |
+-| motor_backend | 聚合点动反馈、受限给定和双零停止；失败保持撤权，完整摩擦轮稳速/拨盘就绪仍为0 |
+-| app_tasks | 四个FreeRTOS业务任务、快照发布和STOP序号；分发Yaw反馈、聚合独立健康与许可、故障触发人工重解锁 |
+-| app_console | 唯一UART回调分发、REMOTE INFO、STOP、WHEEL及YAW命令、70通道FireWater与参数采集协议；新配置禁止串口选择摩擦轮启动 |
+-| app_fault | 队列/任务/外设启动失败、栈溢出和内存不足交给Error_Handler |
+-
+-Keil/EIDE当前磁盘清单均包含22个App源文件，两者完整清单均59个且一致；新增`yaw_step.c`、`gl60_ii.c`、`yaw_controller.c`、`yaw_backend.c`、`yaw_console.c`及各自头文件。之前EIDE写回旧分组的问题已由用户处理，重新构建时核对新增四个源文件已经纳入App分组。本轮AC5完整构建57C+1汇编、0错误、0警告，实物结果待用户反馈。控制任务独占AppLogic，遥控/故障快照、逻辑保护和CAN提交在同一短临界区完成；不在临界区阻塞发串口。受限会话、速度环及Yaw多字段快照也由临界区串行访问。
+-
+-诊断由电脑显式请求触发，上电只监听CAN，不自动发查询；Yaw上电请求与监测也关闭，第一次安全`YAW ON`后才开始周期发送固定FD失能帧，不宣称上电 / MCU复位已令电机失能。CAN任务独占协议拼接；Console只提交一笔请求并读取结果块。取消、总线错误或1200ms超时会结束查询并撤销挂起发送。两条总线都关闭自动重传，缺ACK时不会持续重发；仲裁丢失也可能造成超时，由用户查明原因后重新采集。读查询不需要遥控解锁，因为不能构造动力命令。
+-
+-## 关键设计
+-
+-V1D的放宽仅限无输出观察阶段。`motion_guard_active`默认严格，后端初始化或健康失能静止捕获参考后才放宽；发FC前恢复严格，实际状态1也置位，STOP/OFF保留。恢复所需静止判据仍为速度≤6°/s、位置相邻变化≤0.05°+0.5°/s×间隔；CLEAR不清软件故障、不自动使能。CHECK新增OFF_MOTION、ACTUATION_STARTED及REQUIRED_HOLD_MS，描述来源标签、使能历史和静止门槛。CAN/温度/坏帧/反馈/时序等保护未放宽。
+-
+-`operator_armed`表示遥控保护通过；统一`output_allowed`还要求参与运行的执行器反馈健康、停止流程完成且无故障，最终Yaw / 摩擦轮各自决定发送许可。Yaw已请求且CH6关闭时，Yaw独立就绪不要求摩擦轮上电；共同运行则两者均须健康。摩擦轮CAN许可仍要求双轮已准备且CH6开启。当前70/71均非负、各<=2000mA，极性按用户最新确认保留。原速度算法、参数与保护保持不变：目标42000ERPM（按原7对极配置估算6000rpm），20ms且有新STATUS1才更新PI；双轮积分和滤波独立，目标42000ERPM/s爬升，44100/42000软区间。任一轮>46200ERPM、反馈电流绝对值>3A、FET≥60℃或反馈失效均双轮锁停。
+-
+-Yaw必须先安全CH5 OFF下`YAW ON`准备，取得停止后的失能、静止反馈，再人工新的CH5 OFF→中档才发FC使能。使能需100 ms内新的状态1反馈确认；反馈年龄≥100 ms、状态故障、位置超界、速度/温度/时序异常及意外失能均撤权。MCU控制2 ms、CAN10 ms，PID初值1.0/0/0.015，MIT内部KP/KD为0；当前输出请求±0.10 N·m，发送层编码2028～2067，按协议反映射≤约±0.095238 N·m；STATUS报告LIMIT_NM=0.100。正常模式手动目标变化限±10°/s，串口TARGET只在活动且有许可时接受。STOP保留请求但重新设置人工OFF→ON屏障，YAW OFF取消请求；ZERO只捕获软件参考，不发FE。驱动端CAN Timeout=20000单位及MCU复位 / 失效时的实物停止尚未验证，KT_OUT=0不用于计算电流。V1B已获短时使能/关闭状态回传，本次提高输出后仍逐轮验证带载小角度响应。
+-
+-GetNodeCurrent为每个CAN节点生成独立请求；旧GetRequestedCurrent在双轮时表示左轮，单轮时仍表示所选轮，兼容I34及原STATUS。INFO和SPEED只读，SPEED双轮输出两行节点统计；停止清积分、保留本次统计，重新启动才清统计。停止原因记录和COAST_MS/ZERO_MS/LOW_MS用于判断软件为何给零或低速，不能当作实物保护时间。T90_MS记录有效反馈首次达到90%目标的接收时间差；BAND_FIRST_MS记录首次连续500ms入带的确认时刻，未达到为−1，停止保留。软件区间标志不会使flywheels_ready变1，泛用发送关闭，不发SET_RPM或写电调配置。
+-
+-关闭APP_FLYWHEEL_SPEED_ENABLED回归V2的0.5A、1000/600观察和2000ERPM硬保护；时长非0回归点动；200rpm及1000rpm测试分组显式覆盖旧配置，生产默认是本次6000rpm档。
+-
+-故障优先于解锁。重复读取同一个遥控快照不算新OFF/ON；故障前排队的帧、故障同毫秒的帧都不能解锁。解除故障不会补发旧单发/连发事件。事件位只在当前控制周期有效，累计序号用于观察，不是待执行队列。
+-
+-发射必须具有动力许可及真实的双摩擦轮稳速反馈。基础版不制造假反馈，所以上板不会出现单发事件。离线测试注入就绪条件，检查单发不重复、连发最小50 ms间隔、迟到不追赶和互锁撤销。
+-
+-新配置中CH5下档测试关闭摩擦轮/拨盘；CH4单轴选择Yaw±30°，CH7中→下确认、上档回参考，Yaw后端执行并保存5秒统计，松手不取消目标。Pitch未接动力输出。
+-
+-正常摩擦轮启停由CH6而非CH1决定。安全CH5 OFF帧自动准备双轮，再新的CH5上→中解锁；CH6中/下开启原速度环，上档正常停机不取消总解锁，未停稳时ON不允许延迟自启。失联CH8上档、STOP及发送故障仍要求人工重解锁。MotorBackend继续适配既有FlywheelJog接口，不修改摩擦轮速度环、会话文件或原限流参数；共享CAN层新增Yaw门禁并保留摩擦轮限制与停止路径。历史点动/映射回归同时设置APP_REMOTE_PROFILE_ASSESSMENT=0，并按原用例关闭Yaw模块。
+-
+-## 后续补全顺序
+-
+-1. 上机验证V2A双环的速度跟随、两组参数控件、原遥控撤权和重新解锁。
+-2. 用CH7正负30°阶跃的实际曲线及统计调参，核对考核响应/超调/稳态口径和驱动端超时行为。
+-3. 按实机读取值补`dm3507`、`vesc_can`、`c610`配对模块，保持现有摩擦轮6000rpm实现，最终合并Pitch / 拨盘。
+-4. 接真实摩擦轮稳速条件、拨盘位置步进与堵转保护，各执行器分别验收停机及故障恢复。
+-5. 依据实际采样和机械负载再优化滤波或前馈；已有指标及软件自检不替代实机性能结果。
+-
+-入口及遥控/VOFA使用方法见[工程说明](../README.md)。
+-
+-## V1F遥控30度与测量
+-
+-配对yaw_step.c/.h负责纯C测量，yaw_backend消费原TargetManager的CH7事件，yaw_console格式化并由原app_console唯一发送。CH5下测试、CH4左右选Yaw±30、CH7中→下确认/上回参考，松回中保持目标；完成5秒测量仍保持，退出测试或CH5上停机。Pitch只提示。上电/失能/反馈/故障/人工重解锁门禁保持，事件不排队重放。
+-
+-软件ZERO只在安全OFF静止时设置；ON/FC保留人工参考，先保持当前位置。STEP需ZERO_SET1且近零静止。PID实时生效，测量中改参标PID_CHANGE并保持目标。40°/s以上抑制/制动并冻结积分，60°/s硬保护保持，当前不满足30°/250ms。统计按CAN接收戳、5秒窗口/最后1秒时间加权误差，响应暂定±0.2°保持50ms；中止不能判通过。字段及上板步骤见新遥控30度指南；原70列50ms遥测保持。
++原文档及历次开发描述保存在 [精简前 App 说明](../../../02_过程记录/框架等价精简_20261019/before/Output/Gimbal_Control/App/README.md)；本次逐项改动与验证证据见 [实现与验证](../../../02_过程记录/框架等价精简_20261019/实现与验证.md)。
+--- before/Output/Gimbal_Control/App/remote_mapper.c
++++ after/Output/Gimbal_Control/App/remote_mapper.c
+@@ -80,11 +80,7 @@
+         }
+         command->neutral = command->yaw_rate_dps == 0.0f && command->pitch_rate_dps == 0.0f &&
+             command->wheel_switch == RC_LOW && command->trigger == RC_LOW &&
+-            command->step == RC_MIDDLE &&
+-            frame->channels[RC_STEP_YAW_CHANNEL] >= RC_CENTER - RC_DEADBAND &&
+-            frame->channels[RC_STEP_YAW_CHANNEL] <= RC_CENTER + RC_DEADBAND &&
+-            frame->channels[RC_STEP_PITCH_CHANNEL] >= RC_CENTER - RC_DEADBAND &&
+-            frame->channels[RC_STEP_PITCH_CHANNEL] <= RC_CENTER + RC_DEADBAND;
++            command->step == RC_MIDDLE && command->step_selection_centered;
+     }
+ #else
+     command->failsafe_ok = SwitchPosition(frame->channels[RC_FAILSAFE_CHANNEL]) == RC_HIGH;
+--- before/Output/Gimbal_Control/App/yaw_backend.c
++++ after/Output/Gimbal_Control/App/yaw_backend.c
+@@ -433,7 +433,6 @@
+             YawController_StartShape(&state.controller, step.start_ms);
+             step.shape_ms = state.controller.shape.active ? state.controller.shape.duration_ms : 0U;
+             step.shape_velocity_gain = state.controller.shape.active ? state.controller.shape.velocity_gain : 0.0f;
+-            step.kp = state.controller.pid.kp; step.ki = state.controller.pid.ki; step.kd = state.controller.pid.kd;
+ #if YAW_CONTROLLER_CASCADE_ENABLED
+             step.kp = state.controller.cascade.position.kp;
+             step.ki = state.controller.cascade.position.ki;
+@@ -447,6 +446,8 @@
+             step.ff_enabled = state.controller.ff.enabled;
+             step.ff_acceleration_gain = state.controller.ff.acceleration_gain;
+             step.ff_limit_nm = state.controller.ff.limit_nm;
++#else
++            step.kp = state.controller.pid.kp; step.ki = state.controller.pid.ki; step.kd = state.controller.pid.kd;
+ #endif
+             step.last_velocity_dps = state.controller.velocity_dps;
+             step.last_torque_nm = last_submitted_torque_nm;
+@@ -455,6 +456,12 @@
+         }
+     }
+     taskEXIT_CRITICAL(); return accepted;
++}
++uint32_t YawBackend_GetStepId(void)
++{
++    uint32_t id;
++    taskENTER_CRITICAL(); id = step.id; taskEXIT_CRITICAL();
++    return id;
+ }
+ void YawBackend_GetStep(YawStep *out)
+ {
+--- before/Output/Gimbal_Control/App/yaw_backend.h
++++ after/Output/Gimbal_Control/App/yaw_backend.h
+@@ -73,6 +73,8 @@
+ /* 先安全OFF/ZERO、ON和人工CH5重解锁。STEP只在健康静止近零活动状态接受；
+  * ±30是相对软件零点的绝对目标，完成5秒测量后继续保持，不自动失能。 */
+ uint8_t YawBackend_StartStep(float degrees);
++/* 控制任务只需编号时避免复制完整测量快照；不消费报告。 */
++uint32_t YawBackend_GetStepId(void);
+ void YawBackend_GetStep(YawStep *out);
+ uint8_t YawBackend_TakeStepReport(YawStep *out);
+ typedef struct { uint32_t sequence; float target_deg; uint8_t result; uint32_t blocks; } YawRemoteStepEvent;
+--- before/Output/Gimbal_Control/App/yaw_console.c
++++ after/Output/Gimbal_Control/App/yaw_console.c
+@@ -3,14 +3,13 @@
+ #include "app_config.h"
+ #include "app_tasks.h"
+ #include "app_console.h"
++#include "console_parse.h"
+ #include "remote_input.h"
+ #include "can_bus.h"
+ #include "FreeRTOS.h"
+ #include "task.h"
+ #include <string.h>
+ #include <stdio.h>
+-#include <stdlib.h>
+-#include <float.h>
+ 
+ /* READY是一次有时限的人工会话；每个阶段重新验证安全OFF，绝不自动使能。 */
+ static uint8_t ready_phase, ready_clear_sent;
+@@ -272,29 +271,6 @@
+     }
+ }
+ 
+-static uint8_t Number(const char *text, float *value)
+-{
+-    char *end;
+-    float parsed = strtof(text, &end);
+-    if (end == text || *end || !(parsed >= -FLT_MAX && parsed <= FLT_MAX)) { return 0U; }
+-    *value = parsed; return 1U;
+-}
+-
+-static uint8_t PidNumbers(const char *text, float *kp, float *ki, float *kd)
+-{
+-    char *end;
+-    float *values[3] = { kp, ki, kd };
+-    uint32_t i;
+-    for (i = 0U; i < 3U; ++i) {
+-        *values[i] = strtof(text, &end);
+-        if (end == text || !(*values[i] >= -FLT_MAX && *values[i] <= FLT_MAX)) { return 0U; }
+-        if (i == 2U) { return *end == '\0'; }
+-        if (*end != ' ') { return 0U; }
+-        text = end + 1;
+-    }
+-    return 0U;
+-}
+-
+ static void BriefStatus(char *response, size_t capacity)
+ {
+     YawBackendState state;
+@@ -363,7 +339,7 @@
+         uint8_t target_ok, remote_ok;
+         value = 30.0f;
+         taskENTER_CRITICAL();
+-        target_ok = (uint8_t)((strcmp(line, "YAW STEP") == 0 || Number(line + 9U, &value)) &&
++        target_ok = (uint8_t)((strcmp(line, "YAW STEP") == 0 || ConsoleParse_Number(line + 9U, &value)) &&
+             (value == 30.0f || value == -30.0f));
+         remote_ok = SafeStep();
+         if (target_ok && remote_ok) {
+@@ -476,10 +452,10 @@
+         return 1U;
+     }
+     if (strncmp(line, "YAW SHAPEV ", 11U) == 0) {
+-        if (!APP_YAW_EXPERIMENTAL_TRACKING && Number(line + 11U, &value) && value != 0.0f) {
++        if (!APP_YAW_EXPERIMENTAL_TRACKING && ConsoleParse_Number(line + 11U, &value) && value != 0.0f) {
+             (void)snprintf(response, capacity, "Y|ERROR|REMOVED|SHAPEV|FIXED_PID\r\n"); return 1U;
+         }
+-        if (Number(line + 11U, &value) && !AppConsole_IsDiagnosticMode()) {
++        if (ConsoleParse_Number(line + 11U, &value) && !AppConsole_IsDiagnosticMode()) {
+             accepted = YawBackend_SetShapeVelocityGain(value);
+         }
+         (void)snprintf(response, capacity, accepted ? "Y|OK|SHAPEV|%.6g\r\n" :
+@@ -487,10 +463,10 @@
+         return 1U;
+     }
+     if (strncmp(line, "YAW SHAPE ", 10U) == 0) {
+-        if (!APP_YAW_EXPERIMENTAL_TRACKING && Number(line + 10U, &value) && value != 0.0f) {
++        if (!APP_YAW_EXPERIMENTAL_TRACKING && ConsoleParse_Number(line + 10U, &value) && value != 0.0f) {
+             (void)snprintf(response, capacity, "Y|ERROR|REMOVED|SHAPE|FIXED_PID\r\n"); return 1U;
+         }
+-        if (Number(line + 10U, &value) && value >= 0.0f && value <= 500.0f &&
++        if (ConsoleParse_Number(line + 10U, &value) && value >= 0.0f && value <= 500.0f &&
+             value == (float)(uint32_t)value && !AppConsole_IsDiagnosticMode()) {
+             accepted = YawBackend_SetShape((uint32_t)value);
+         }
+@@ -542,7 +518,7 @@
+ #if !APP_YAW_EXPERIMENTAL_TRACKING
+                 (void)snprintf(response, capacity, "Y|ERROR|REMOVED|%s|FIXED_PID\r\n", names[i]); return 1U;
+ #else
+-                if (Number(line + 5U + length, &value) && !AppConsole_IsDiagnosticMode()) {
++                if (ConsoleParse_Number(line + 5U + length, &value) && !AppConsole_IsDiagnosticMode()) {
+                     accepted = YawBackend_SetFeedforward(parameters[i], value);
+                 }
+                 (void)snprintf(response, capacity, accepted ? "Y|OK|%s\r\n" :
+@@ -564,7 +540,7 @@
+     if (strncmp(line, "YAW POS ", 8U) == 0 || strncmp(line, "YAW VEL ", 8U) == 0) {
+         float kp, ki, kd;
+         char which = line[4] == 'P' ? 'P' : 'V';
+-        if (PidNumbers(line + 8U, &kp, &ki, &kd) && !AppConsole_IsDiagnosticMode()) {
++        if (ConsoleParse_PidNumbers(line + 8U, &kp, &ki, &kd) && !AppConsole_IsDiagnosticMode()) {
+             accepted = YawBackend_SetLoopPid(which, kp, ki, kd);
+         }
+         (void)snprintf(response, capacity, accepted ? "Y|OK|%s\r\n" : "Y|ERROR|PARAMETER_OR_STATE\r\n",
+@@ -576,7 +552,7 @@
+     }
+     if (strncmp(line, "YAW VMAX ", 9U) == 0) {
+ #if YAW_CASCADE_OUTPUT_LIMITS_ENABLED
+-        if (Number(line + 9U, &value) && !AppConsole_IsDiagnosticMode()) { accepted = YawBackend_SetVelocityLimit(value); }
++        if (ConsoleParse_Number(line + 9U, &value) && !AppConsole_IsDiagnosticMode()) { accepted = YawBackend_SetVelocityLimit(value); }
+         (void)snprintf(response, capacity, accepted ? "Y|OK|VMAX\r\n" : "Y|ERROR|PARAMETER_OR_STATE\r\n"); return 1U;
+ #else
+         (void)snprintf(response, capacity, "Y|ERROR|OUTPUT_LIMITS_DISABLED\r\n"); return 1U;
+@@ -584,7 +560,7 @@
+     }
+     if (strlen(line) >= 8U && (line[4] == 'P' || line[4] == 'V') && line[5] == 'K' &&
+         (line[6] == 'P' || line[6] == 'I' || line[6] == 'D') && line[7] == ' ') {
+-        if (Number(line + 8U, &value) && !AppConsole_IsDiagnosticMode()) {
++        if (ConsoleParse_Number(line + 8U, &value) && !AppConsole_IsDiagnosticMode()) {
+             accepted = YawBackend_SetLoopParameter(line[4], line[6], value);
+         }
+         (void)snprintf(response, capacity, accepted ? "Y|OK|PARAMETER\r\n" : "Y|ERROR|PARAMETER_OR_STATE\r\n"); return 1U;
+@@ -592,7 +568,7 @@
+ #else
+     if (strncmp(line, "YAW PID ", 8U) == 0) {
+         float kp, ki, kd;
+-        if (PidNumbers(line + 8U, &kp, &ki, &kd) && !AppConsole_IsDiagnosticMode()) {
++        if (ConsoleParse_PidNumbers(line + 8U, &kp, &ki, &kd) && !AppConsole_IsDiagnosticMode()) {
+             accepted = YawBackend_SetPid(kp, ki, kd);
+         }
+         (void)snprintf(response, capacity, accepted ? "Y|OK|PID\r\n" : "Y|ERROR|PARAMETER_OR_STATE\r\n");
+@@ -627,7 +603,7 @@
+         } else { (void)snprintf(response, capacity, "Y|ERROR|UNKNOWN_COMMAND|USE|YAW HELP\r\n"); }
+         return 1U;
+     }
+-    if (Number(number, &value) && !AppConsole_IsDiagnosticMode()) {
++    if (ConsoleParse_Number(number, &value) && !AppConsole_IsDiagnosticMode()) {
+         accepted = YawBackend_SetParameter(parameter, value);
+     }
+     (void)snprintf(response, capacity, accepted ? "Y|OK|PARAMETER\r\n" : "Y|ERROR|PARAMETER_OR_STATE\r\n");
+--- before/Output/Gimbal_Control/README.md
++++ after/Output/Gimbal_Control/README.md
+@@ -1,125 +1,59 @@
+-> 当前版本为 **Yaw V2P / Pitch V1G**。用户已确认时间带、超调、稳态误差全部收紧为±0.2°；总通过按最终稳定时间Yaw250ms/Pitch300ms判定。Yaw默认六参更新为16.63/0.12/0.269与0.0081/0.003/0.000209。I61现在为±0.2°最终稳定时间，I62为综合通过；旧±0.5°达标结果不能作新标准证明。以[新参数与通道说明](../../01_学习笔记/Yaw新参数与02度考核通道_20261018.md)为准，以下为历史内容。
++# Gimbal_Control
+ 
+-> 当前生产版本为 **Yaw V2N 达标双环PID**：默认位置14/0.15/0.15、速度0.0075/0.005/0.00018；实验规划/前馈关闭，新面板删除相关控件，增加遥控重复阶跃诊断。用户本轮实测SETTLE05=218ms、PASS05=1。操作以[达标参数与重复阶跃说明](../../01_学习笔记/Yaw达标参数与重复阶跃操作_20261018.md)为准；以下V2M及更早内容为历史。
++当前控制配置：Yaw `GL60II_FIXED_PID_V2P`、Pitch `DM3507_CASCADE_V1G`、拨盘 `C610_FEEDBACK_TIME_V1F`。2026-10-19 只做等价框架精简，保留已有考核功能与可选回归档；本次没有调 PID、改变控制周期或烧录硬件。
+ 
+-> 当前Yaw已更新至 **V2M**：删除FBIAS/FANG/FKV/FC/FVS，改用规划加速度系数FKA及FMAX限幅；SHAPEV默认0，遥测新增I71（共72列）。操作以[加速度前馈精简说明](../../01_学习笔记/Yaw加速度前馈精简与VOFA_20261018.md)为准。下文旧前馈或V2K/V2L内容保留作历史记录。
++## 工程与框架
+ 
+-2026-10-18当前 **Yaw V2L**：针对SHAPE=160实机出现约9.43°超调，取消固定1倍规划速度前馈，新增`YAW SHAPEV 0~1`，默认0；SHAPE默认仍关闭。原I0~I69保持，新增I70权重，共71列。先恢复SHAPE=0，再在相同PID下验证SHAPE=160、SHAPEV=0的纯平滑参考，尚未证明实机消振或250ms达标。[修正说明与操作](../../01_学习笔记/Yaw规划速度前馈权重修正_20261018.md)。以下为历史版本。
++- VS Code/EIDE 入口：`MDK-ARM/Gimbal_Control.code-workspace`，目标 `Gimbal_Control`，ARM Compiler 5，当前 EIDE 配置为 O0。
++- Keil 入口：`MDK-ARM/Gimbal_Control.uvprojx`；CubeMX 入口：`Gimbal_Control.ioc`。
++- App 保持平铺模块；32 个 App C 文件均加入工程，工程共 69 个源项。模块依赖见 [App 说明](App/README.md)。
++- 已有遥控、安全保护、双摩擦轮 6000 rpm、拨盘、双轴手动控制、自动准备、串口调参和阶跃统计均保留。
+ 
+-# Gimbal_Control：Yaw双环PID与摩擦轮双轮6000rpm
++## 双轴控制与阶跃
+ 
+-2026-10-17最新 **Yaw V2K**：新增默认关闭的五次平滑阶跃、参考速度前馈及规划段外环积分冻结，配置命令 `YAW SHAPE 0/160`。原目标/计时/±0.5°判定保留；Yaw原I0~I63保持，追加I64~I69共70列。原PID默认值未改，Pitch及遥控/CAN流程保持。64组483163项全部完成返回、0失败，AC5/O0原66源项构建成功；尚未烧录或验证实机抑振/250ms。见[新模式与VOFA操作](../../01_学习笔记/Yaw平滑阶跃与速度前馈_20261017.md)和[验证记录](../../02_过程记录/Yaw平滑阶跃_20261017/实现与验证.md)。以下版本为历史。
+-2026-10-17最新 **Yaw V2J**：加入默认关闭的偏置/角度负载/平滑摩擦/速度相关力矩补偿，支持VOFA滑条在线调节与积分转移；Yaw原I0～I47保持，追加I48～I63共64列。上电Yaw六参采用用户最后截图 **位置7.5/.15/0、速度.0025/.003/0**。新考核看I61/SETTLE05和I62/PASS05（±0.5°、250ms内进入并保持到5秒），原±0.2°指标保留。Pitch V1F及自动准备/遥控保护保持。使用[前馈与VOFA详细指南](../../01_学习笔记/Yaw前馈与VOFA控件调参_20261017.md)和[独立面板目录](../VOFA_Yaw_FF_20261017/README.md)；尚待烧录与实机辨识。以下“最新”条目是历史版本。
++| 项目 | Yaw | Pitch |
++| --- | --- | --- |
++| 驱动 | CAN1 ID1，GL60 II | CAN1 ID2，DM3507 |
++| 位置 PID | 16.63 / 0.12 / 0.269 | 18.2 / 0.44 / 0.04 |
++| 速度 PID | 0.0081 / 0.003 / 0.000209 | 0.0065 / 0.014 / 0.000004 |
++| 前馈 | 生产关闭实验规划/前馈 | 重力系数 −0.13，需有效水平标定 |
++| 手动目标范围 | ±50° | −18°～+33° |
++| 越界保护 | ±60° | −19°～+34° |
++| 力矩提交周期 | 10 ms | 2 ms |
++| 正式阶跃稳定时间上限 | 250 ms | 300 ms |
+ 
+-最新 **Yaw V2I / Pitch V1F**：上电在原水平机械基准、安全OFF自动准备双轴；新CH5上→中即可右杆操控，不用逐条串口准备。GIMBAL READY统一手动重设双轴参考，YAW/PITCH STEP及HOME快速测量/回零。反复关停重开保留原零点，失联/硬故障保护保持。59组467812项及原AC5/O0完整66源项构建通过，尚待用户烧录实机核验。[现行快速操作](../../01_学习笔记/云台自动启动与快速阶跃_20261017.md) / [实现与验证](../../02_过程记录/云台上电遥控自动准备_20261017/实现与验证.md)。以下旧启动方式保留历史。
++控制任务周期仍为 2 ms。双轴使用同一双环数学实现 `yaw_cascade`、同一测量核心 `yaw_step`，实例独立；Pitch 的包装层保留独立 300 ms 判定与重力参数快照。
+ 
+-现行版本 **Yaw V2H / Pitch V1E**：统一裸轴状态/HELP/VIEW、波形暂停TELEM OFF/ON；Pitch右杆CH2满杆90°/s，七参按用户截图固化为位置18.2/.44/.04、速度.0065/.014/.000004、Kg−.13。重启仍须恢复实物零点并标水平，不自动使能。58组464316项全部通过，原AC5/O0完整65源项构建成功，尚未实机烧录。[现行统一指令与启动](../../01_学习笔记/云台串口统一指令与启动_20261017.md) / [实现与验证](../../02_过程记录/Pitch参数固化与右杆90_20261017/实现与验证.md)。以下旧“现行”条目是版本历史。
++阶跃按 CAN 实际接收时间统计：观察 5 s、末 1 s 时间加权稳态误差，误差带、超调和稳态误差上限均为 0.2°。PASS 要求最终进入误差带并保持到窗口结束，使用 Yaw 250 ms / Pitch 300 ms 时限；首次入带快不代表总成绩通过。
+ 
+-现行Pitch **DM3507_CASCADE_V1D**：加入带符号Kg×cos(实际角度+水平偏置)的协议力矩前馈、总力矩抗饱和、在线Kg积分转移、水平标定与前馈诊断；默认Kg0，PID默认仍原探索值，烧录后先按指南恢复已试调六参数再使能。Pitch58列、Yaw48列，遥控/DMA/CAN/机械限位保持。57组457565项软件自检通过，原AC5/O0完整65源项构建成功；尚未实机烧录标定。[操作指南](../../01_学习笔记/Pitch重力前馈与VOFA调参_20261017.md) / [实现与验证](../../02_过程记录/Pitch重力前馈_20261017/实现与验证.md)。以下“最新V1C/V1A”等条目保留历史。
++`STEP` 是相对软件零点的绝对 ±30°目标，需满足已准备、人工解锁、许可、近零静止和测量窗口门禁。Pitch −30°超出现有限位，会按原设计拒绝；不能通过改限位实现反向考核。
+ 
+-最新Pitch源码 **DM3507_CASCADE_V1C**：本次实机撤权已定位UART4输入故障；UART4改独立DMA1 Stream2/channel4、64字节IDLE接收，新增自动R|RX和只读REMOTE RX。保护规则、六PID和机械边界保持。56组软件自检及完整AC5/O0构建通过，实物稳定性待原EIDE重烧录核验。[实现与验证](../../02_过程记录/UART4遥控DMA接收_20261017/实现与验证.md)。
++## 常用操作
+ 
+-2026-10-17当前Pitch源码 **DM3507_CASCADE_V1A**：按用户新机械行程，在实测基准姿态READY设零后目标[-18,+33]、越界保护[-19,+34]；负30拒绝，正30保留。新增首次撤权P|GUARD，重复已准备READY保留零点。53组449852项及AC5/O0完整构建0错误0警告，待用户重烧录；短暂保持后失能根因尚待记录定位。见[实现与验证](../../02_过程记录/Pitch机械限位与撤权记录_20261017/实现与验证.md)。以下旧版本和±50范围为历史。
++继续使用原工程，在正确机械基准、安全 OFF 下完成双轴准备，再按原遥控流程用新的 CH5 OFF→ON 边沿解锁。正常关停重开保留参考；`GIMBAL READY` 是显式重建双轴基准的操作。完整启动条件可查询 `GIMBAL HELP`、`YAW HELP`、`PITCH HELP`。
+ 
+-2026-10-17：CAN1实机两次ALST1故障后，已将CAN1自动重发设为ENABLE，CubeMX配置同步；原错误锁存、撤权取消和CAN2设置保持。AC5/O0完整构建0错误0警告，53组449737项及真实HAL寄存器专项33项通过，实机效果待重新烧录核验。见[修复与验证](../../02_过程记录/CAN1自动重发修复_20261017/修复与验证.md)及[Pitch实机记录](../../02_过程记录/Pitch实机反馈_20261017.md)。
++| 目的 | 命令 |
++| --- | --- |
++| 状态 / 参数 / 成绩 | `YAW`、`YAW PID`、`YAW RESULT`；Pitch 同名命令 |
++| 正向阶跃 / 回参考 | `YAW STEP`、`YAW HOME`；`PITCH STEP`、`PITCH HOME` |
++| 两环调参 | `YAW POS kp ki kd`、`YAW VEL kp ki kd`；Pitch 同名命令 |
++| 切换波形 | `YAW VIEW`、`PITCH VIEW`、`FEEDER VIEW` |
++| 暂停 / 恢复波形 | `TELEM OFF`、`TELEM ON` |
++| 统一停机 | `STOP` |
++| 只读诊断 | `REMOTE INFO`、`REMOTE RX`、`WHEEL STATUS`、`WHEEL SPEED`、`YAW BUS` |
+ 
+-当前遥控配置ASSESSMENT_CH5_CH8_V1，原6000rpm/CH6启停/CH8锁定与人工重解锁保持。生产48列遥测5ms/USART1 921600，App23个.c/工程60项。摩擦轮只打印活动/左右rpm/故障，详细STATUS/SPEED保留。摩擦轮操作见[新遥控逻辑与摩擦轮步骤](../../01_学习笔记/新遥控逻辑迁移与摩擦轮操作_20261013.md)。
++遥控仍为 CH1/CH2 双轴手动，CH5 总模式，CH6 摩擦轮/射击模式，CH7 阶跃确认/回参考，CH8 扳机与失联锁，CH3/CH4 选择 Pitch/Yaw 阶跃。CH5 测试模式禁止摩擦轮和拨盘。
+ 
+-当前源码 **GL60II_CASCADE_MANUAL50_V2G**：上电KP保持10，六默认值仍位置10/.15/.01、速度.0037/.003/.000001。CH5中位正常模式，右摇杆CH1按原比例/死区控制Yaw，目标相对软件零点±50°、满杆90°/s，回中保持目标。反馈角度保护±60、观察±65，端点微小静差可按原人工流程重启。CH5下位仍左杆CH4选±30°/CH7确认，CH8锁定及CH6原6000rpm沿用；遥控映射/安全源码未改。48列/5ms/921600、I26首次到位及其他指标/六PID控件保持。此前ID29正向实物成绩是固化前同组参数，用户已确认V2F右杆能操作，V2G提速未实测。用户原EIDE重建/ST-Link烧录后核STATUS版本和50度范围。操作见[双环PID与VOFA指南](../../01_学习笔记/Yaw双环PID与VOFA操作_20261014.md)。
++USART1 保持 921600、5 ms 遥测周期：Yaw 72 列、Pitch 58 列、拨盘 39 列，原列序及串口回复保持。Yaw 考核看 I60 首次入带、I61 最终稳定时间、I62 综合通过；Pitch 看 I26、I27、I32。
+ 
+-V2B此前完整构建43组381109项通过；18:34已取得无业务限制双环完整实物成绩但未达考核。V2C遥测5ms改变不提高约10ms的CAN反馈频率，也不改变板端响应统计；现场USB串口周期仍待反馈。
++## 构建与验证
+ 
+-本工程沿用上一份考核的平铺App、配对.c/.h、Core、Drivers、Middlewares、MDK-ARM和Tests格式。当前支持遥控保护、USART1电机参数采集、CAN2受限单/双轮控制和CAN1 Yaw双环位置控制。Pitch、拨盘实际驱动尚未加入，`flywheels_ready`仍0。读取DM/VESC仍见[参数采集步骤](../../01_学习笔记/USART1电机参数采集步骤.md)。1000rpm双轮档、200rpm首档、0.5A观察及500ms点动保留为独立编译回归，完整考核性能尚未实机验收。
++在原工作区执行“eide: 重新构建”，成功后按原 ST-Link 流程烧录。当前配置和构建路径不变，未另行交付 HEX。
+ 
+-`APP_MOTOR_DRIVERS_IMPLEMENTED=0`继续关闭泛用动力发送，`APP_YAW_ENABLED=1`只开放CAN1 ID1固定命令及受限MIT给定。CAN2受限控制仍仅70/71，上电未选轮；只发SET_CURRENT，不发SET_RPM或写电调配置。每轮软滑行独立，硬超速、反馈电流绝对值>3A、FET≥60℃、坏帧或反馈过期停止两轮。原遥控和双零失败重试保护保留，拨盘就绪始终0。2A为主控给定上限，3A为反馈判据，均不能等同于电调保存的±20A硬限幅。时长默认0表示按住运行；关闭速度环或启用非0时长时回归历史0.5A、2000ERPM保护档。INFO和SPEED均只读。
++`Tests/run_selftests.py` 使用 ARM GCC 与 Unicorn 执行真实 C 代码、模拟 HAL/RTOS，无硬件输出；省略 `--groups` 执行完整回归。本次验证结果和与改前基线的对比见 [框架精简记录](../../02_过程记录/框架等价精简_20261019/实现与验证.md)。
+ 
+-## 工程入口
++注意：`Scripts/build.ps1` 自行指定 O3，不能把它的结果当作当前 EIDE O0 构建。本次验证直接使用 EIDE 的 O0 builder 参数。
+ 
+-用户指定烧录流程为VS Code + EIDE + ST-Link。后续直接修改原工程源码，指导在同一工作区“eide: 重新构建”成功后“eide: 烧录”（Ctrl+Alt+D）；不向用户发送独立.hex文件。现有ST-Link/SWD配置使用本工程构建输出。
++## 历史资料
+ 
+-- Keil：`MDK-ARM/Gimbal_Control.uvprojx`。
+-- EIDE：`MDK-ARM/Gimbal_Control.code-workspace`，目标 Gimbal_Control，ARM Compiler 5。
+-- CubeMX：`Gimbal_Control.ioc`；重新生成时保留 USER CODE，并检查 App 源文件分组。
+-- 模块说明：[App/README.md](App/README.md)。上板步骤：[基础版上板与VOFA观察](../../01_学习笔记/基础版上板与VOFA观察.md)。
+-
+-在考核仓库根目录只编译、不下载：
+-
+-```powershell
+-& '.\16_云台调试\Output\Gimbal_Control\Scripts\build.ps1'
+-```
+-
+-构建脚本从 Keil 工程读取完整源文件列表，调用本机 EIDE 构建器和 ARM Compiler 5。工具路径不同可通过 `-ToolchainRoot`、`-BuilderPath` 指定。默认产物：`MDK-ARM/build/Gimbal_Control/Gimbal_Control.hex`。Keil 自身构建的目录为 `MDK-ARM/Gimbal_Control/`。
+-
+-当前磁盘EIDE/Keil清单一致，App包含23个.c，完整工程清单60项。最终核对发现EIDE曾缺新模块，已补回；构建前重载VS Code窗口，确认App分组含yaw_cascade.c及yaw_step.c，继续使用原工程。
+-
+-本机EIDE 3.27.2的“选项字节配置 / Option Bytes Config”是打开INI文件的按钮，没有None下拉选项；None是“外部加载算法”的值。本次无需操作选项字节配置。当前引用的 `.eide/gimbal_control.st.option.bytes.ini` 不存在，下载器不会附加选项字节写入命令；若之后点击该按钮创建了文件，应检查是否含有效键值，避免无意改变芯片配置。
+-
+-## 当前外设和任务
+-
+-| 项目 | 配置 |
+-| --- | --- |
+-| 主控 | Cherrycoast4.8.1，STM32F405RGT6，HSE 25 MHz、SYSCLK 168 MHz |
+-| UART4 | PA1 RX，新板P2上层pin4，115200 / 8N1，富斯i-BUS，单字节中断与带时间戳队列 |
+-| USART1 | PA9 TX、PA10 RX，921600 / 8N1，FireWater、STOP、WHEEL/YAW命令、参数采集 |
+-| CAN1 | PA11 RX、PA12 TX，正常模式，1 Mbps；GL60Ⅱ ID1、DM3507 ID2，已留存读取结果 |
+-| CAN2 | PB12 RX、PB13 TX，正常模式，1 Mbps；VESC 节点70/71、C610 ID5 |
+-| 输入任务 | 2 ms，优先级4；只解析遥控 |
+-| CAN接收任务 | 优先级4；最大2ms等待接收队列，处理只读查询、回复和超时 |
+-| 控制任务 | 2 ms，优先级3；连续间隔超过10 ms锁定故障 |
+-| 控制台任务 | 5 ms，优先级2；5 ms发送一次48列紧凑遥测 |
+-
+-当前未接入IMU。4.8.1原理图是MPU6050加外置IMU FPC；须核对实际装配后选驱动，不能再默认板载BMI088。后续依据实际反馈频率确定控制周期、滤波和前馈，不沿用旧GM6020 PID参数。
+-
+-## 遥控映射
+-
+-默认APP_REMOTE_PROFILE_ASSESSMENT=1、APP_REMOTE_PROFILE_LEGACY=0。用户已验证四个小开关上1000、中1500、下2000，CH7/8下档松手回中；Failsafe为CH1～4及CH7=1500、CH5/6/8=1000。CH8低档先锁存故障，故障期间的预设CH5 OFF不能用于恢复解锁。
+-
+-| 通道 | 建议控件 | 行为 |
+-| --- | --- | --- |
+-| CH1 / CH2 | 自回中摇杆轴 | Yaw / Pitch角速度请求，最大±60 / ±45 °/s，中心死区±30通道值；Yaw后端实际手动目标变化限±10°/s、目标±30° |
+-| CH3 / CH4 | 左大摇杆纵/横轴 | 测试选择Pitch/Yaw的±30°，由CH7确认；斜向拒绝 |
+-| CH5 | 左侧总模式开关 | 上关闭、中正常、下测试；上→中/下且安全中位才解锁 |
+-| CH6 | 左侧摩擦轮开关 | 上关闭、中两轮开启+单发接口、下两轮开启+连发接口 |
+-| CH7 | 右侧测试回弹开关 | 上回参考角接口、中待命、下确认一次所选阶跃 |
+-| CH8 | 右侧扳机回弹开关 | 上总撤权/失联锁、中释放、下扳机；拨盘驱动仍关闭 |
+-| CH9 / CH10 | 备用 | 不参与新遥控动作 |
+-
+-阈值：≤1300为低档，>1700为高档，其余中档。新Mapper检查CH1～8范围800～2200；既有iBUS帧校验保持原样。历史映射通过APP_REMOTE_PROFILE_ASSESSMENT=0显式回归。
+-
+-解锁前两个大摇杆全部回中、CH6上档关闭、CH7/8中档；CH5先上档保持至少0.5秒，再中档正常或下档测试。上电已处于ON不自动解锁；故障后新OFF帧必须晚于故障/自动双轮准备屏障。正常CH6 OFF保留总解锁，重新ON仍需双轮停稳；失联、安全锁、STOP、发送故障要求CH5重新解锁。
+-
+-CH5测试模式禁止摩擦轮和拨盘，CH4选择Yaw方向、CH7确认±30°/上档回软件零点，5秒报告后继续保持。Pitch仅提示未实现。测量中退出TEST停Yaw并要求新的OFF解锁，旧摩擦轮请求不自动恢复。
+-
+-## VOFA 和 STOP
+-
+-USART1以921600输出gimbal前缀48列紧凑FireWater，配置周期5ms；V2A/B的48列绑定继续使用，VOFA波特率921600/Δt5ms。旧70列须重绑，完整表及范围见双环指南。原始反馈仍约10ms更新，不插值；查询/成绩文本可能使一帧晚到，随后不追发过期快照。
+-
+-| 下标 | 含义 |
+-| --- | --- |
+-| 0 / 1 | 实际角 / 目标角，° |
+-| 2 / 3 / 4 | 目标速度 / 内环估算速度 / 原始电机速度，°/s |
+-| 5 / 6 | MCU力矩请求 / MIT反馈力矩映射 |
+-| 7 / 8 / 9 | 位置环KP / KI / KD |
+-| 10 / 11 / 12 / 13 | 速度环KP / KI / KD / 速度限幅关闭标记0 |
+-| 14..21 | 在线、活动、请求、电机状态、故障、反馈年龄、停机待确认、已设零 |
+-| 22 / 23 | 协议±10端点饱和 / 速度限幅关闭标记0 |
+-| 24 / 25 | 阶跃ID / 阶段0空闲1测量2完成3中止 |
+-| 26 / 27 / 28 / 29 | 响应ms / 调节ms / 超调° / 超调% |
+-| 30 / 31 / 32 / 33 / 34 | 末秒均值误差° / 稳态有效 / PASS / T90ms / 上升ms |
+-| 35 / 36 / 37 / 38 | 摩擦轮活动 / 左rpm / 右rpm / 故障 |
+-| 39 / 40 / 41..44 | 遥控新鲜 / 总解锁 / CH5..8 |
+-| 45 / 46 / 47 | CAN故障代次 / Yaw驱动温度 / 电机温度 |
+-
+-原因码：0无、1上电、2帧失效/超时、3Failsafe、4UART、5CAN、6控制迟到、7STOP、8未回中、9开关中位、10关键反馈失效、11执行器故障。摩擦轮故障位另见点动步骤。
+-
+-文本命令带回车或换行：REMOTE INFO、WHEEL INFO/STATUS/SPEED保留；YAW STATUS/PID/RESULT/BUS只读。YAW POS/VEL各接受三个增益；PKP/PKI/PKD及VKP/VKI/VKD单项热调，TARGET设角度。V2B的VMAX明确拒绝，不开启限幅；旧YAW KP/KI/KD/PID三数命令拒绝。READY安全OFF下设零并准备，成功仍需人工CH5新边沿，OFF取消请求并总撤权。ZERO不发FE；DIAG切换取消准备并停机。
+-
+-SPEED双轮输出会话摘要及两行SPEED_NODE，统计停止后保留。停止原因0无、1输入请求消失、2许可撤销、3硬故障、4外部Stop接口、5定时结束、6启动时未停稳。BAND_MAX_MS/IN_BAND仅表示原始及滤波速度在42000±700ERPM的软件区间，不授权拨盘。FILTER_ERPM/RPM_EST停止后是最后控制样本，实时速度看STATUS；统计详细含义见双轮操作指南。
+-
+-## 下一阶段补全位置
+-
+-参数采集启动器为 `Scripts/capture.ps1`，电脑解码及保存放在 `Tools`。采集会暂停FireWater输出，结束后恢复；关闭VOFA串口后再运行。固件标识为`GIMBAL_DIAG_1`，每笔查询1200ms超时，电脑逐项等待并保存原始报文，完整VESC配置只在已知签名和长度匹配时解码。GL60Ⅱ驱动配置、机械方向/零点/限位、拨盘每发步距不能由本工具完整获取。
+-
+-当前Yaw已取得V1H单环多轮实物阶跃，指标尚未达标；用户最新要求双环试调，V2A需上机取得新曲线及统计。后续依据实物结果调两环，再补Pitch/C610实际驱动与拨盘步距。泛用CanBus_Send继续关闭，摩擦轮停机走固定双零接口。VESC现有1000ms超时及GL CAN Timeout=20000的真实停机行为仍须分别核验。
+-
+-软件检查见 [Tests说明](Tests/README.md) 和 [软件验证记录](../../02_过程记录/软件验证记录.md)。软件通过后仍需按[实机验收记录](../../02_过程记录/实机验收记录.md)完成遥控保护专项，再开始动力调试。
++原说明包含历次参数、通道和实现过程，其中“尚未接入 Pitch/拨盘”等是历史状态。精简前全文保存在 [原工程说明](../../02_过程记录/框架等价精简_20261019/before/Output/Gimbal_Control/README.md)，已有学习笔记、过程记录和测试均保留。实际当前配置以 `App/app_config.h` 和控制器头文件为准。
+--- before/Output/Gimbal_Control/Tests/test_pitch_backend.c
++++ after/Output/Gimbal_Control/Tests/test_pitch_backend.c
+@@ -71,11 +71,14 @@
+ { now_ms = timestamp; PitchBackend_Apply(&request, allowed, 0U); Read(); }
+ static void Reset(uint32_t timestamp)
+ {
++    PitchStep snapshot;
+     memset(&bus, 0, sizeof(bus)); memset(&request, 0, sizeof(request)); bus.started = 1U;
+     now_ms = timestamp; enable_calls = torque_calls = disable_calls = query_calls = cancel_calls = 0U;
+     permission = deny_permission = pending = 0U;
+     enable_result = torque_result = disable_result = query_result = HAL_OK;
+     last_torque = 0.0f; PitchBackend_Init(); Read();
++    PitchBackend_GetStep(&snapshot);
++    CHECK(snapshot.id == 0U && PitchBackend_GetStepId() == snapshot.id);
+ }
+ static void Prepare(uint32_t timestamp)
+ {
+@@ -130,17 +133,25 @@
+     test_stage = 3U;
+     Activate(2000U); CHECK(!PitchBackend_StartStep(1.0f)); CHECK(!PitchBackend_StartStep(50.0f));
+     CHECK(!PitchBackend_StartStep(-30.0f)); Read(); CHECK(state.controller.target_deg == 0.0f);
++    PitchBackend_GetStep(&measurement);
++    CHECK(measurement.id == 0U && PitchBackend_GetStepId() == measurement.id);
+     CHECK(PitchBackend_StartStep(30.0f)); PitchBackend_GetStep(&measurement);
+     CHECK(measurement.phase == PITCH_STEP_RUNNING && measurement.target_deg == 30.0f);
++    CHECK(measurement.id == 1U && PitchBackend_GetStepId() == measurement.id);
+     CHECK(measurement.kp == APP_PITCH_POSITION_KP && measurement.vkp == APP_PITCH_SPEED_KP);
+     before = torque_calls; Apply(2046U, 1U); CHECK(torque_calls == before + 1U);
+     CHECK(PitchBackend_SetLoopPid('P', APP_PITCH_POSITION_KP, APP_PITCH_POSITION_KI, APP_PITCH_POSITION_KD));
+     PitchBackend_GetStep(&measurement); CHECK(measurement.phase == PITCH_STEP_RUNNING);
+     CHECK(PitchBackend_SetLoopParameter('P', 'I', 0.3f)); PitchBackend_GetStep(&measurement); Read();
+     CHECK(measurement.phase == PITCH_STEP_ABORTED && measurement.reason == PITCH_STEP_PID_CHANGE);
++    CHECK(measurement.id == 1U && PitchBackend_GetStepId() == measurement.id);
+     CHECK(measurement.ki == APP_PITCH_POSITION_KI && state.controller.target_deg == 30.0f);
+     CHECK(!PitchBackend_SetLoopParameter('V', 'P', -0.1f));
+-    CHECK(PitchBackend_TakeStepReport(&measurement)); CHECK(!PitchBackend_TakeStepReport(&measurement));
++    CHECK(PitchBackend_TakeStepReport(&measurement));
++    CHECK(measurement.id == 1U && PitchBackend_GetStepId() == measurement.id);
++    CHECK(!PitchBackend_TakeStepReport(&measurement));
++    PitchBackend_GetStep(&measurement);
++    CHECK(!measurement.pending && measurement.id == 1U && PitchBackend_GetStepId() == measurement.id);
+     CHECK(PitchBackend_SetTarget(0.0f)); PitchBackend_GetStep(&measurement);
+     CHECK(measurement.phase != PITCH_STEP_RUNNING && measurement.pass == 0U);
+ 
+--- before/Output/Gimbal_Control/Tests/test_yaw_backend.c
++++ after/Output/Gimbal_Control/Tests/test_yaw_backend.c
+@@ -68,6 +68,7 @@
+ { now_ms = timestamp; YawBackend_Apply(&request, allowed, 0U); Read(); }
+ static void Reset(uint32_t timestamp)
+ {
++    YawStep snapshot;
+     memset(&bus, 0, sizeof(bus)); memset(&request, 0, sizeof(request));
+     bus.started = 1U; now_ms = timestamp;
+     enable_calls = torque_calls = disable_calls = cancel_calls = 0U;
+@@ -75,6 +76,8 @@
+     permission = deny_permission = pending = keep_pending = 0U;
+     enable_result = torque_result = disable_result = HAL_OK; last_torque = 0.0f;
+     YawBackend_Init(); Read();
++    YawBackend_GetStep(&snapshot);
++    CHECK(snapshot.id == 0U && YawBackend_GetStepId() == snapshot.id);
+ }
+ static void Prepare(uint32_t timestamp)
+ {
+--- before/Output/Gimbal_Control/Tests/test_yaw_console_backend.c
++++ after/Output/Gimbal_Control/Tests/test_yaw_console_backend.c
+@@ -267,13 +267,17 @@
+     ConsoleZeroActivate(8000U);
+     Command(8068U, "YAW STEP 30", "Y|OK|STEP_STARTED");
+     YawBackend_GetStep(&measurement); CHECK(measurement.phase == YAW_STEP_RUNNING && state.step_hold);
++    CHECK(measurement.id == 1U && YawBackend_GetStepId() == measurement.id);
+     Command(8070U, "YAW KP 0.8", "Y|OK|PARAMETER");
+     YawBackend_GetStep(&measurement);
+     CHECK(measurement.phase == YAW_STEP_ABORTED && measurement.reason == YAW_STEP_PID_CHANGE);
++    CHECK(measurement.id == 1U && YawBackend_GetStepId() == measurement.id);
+     CHECK(state.active && state.step_hold && state.controller.target_deg == 30.0f && state.controller.pid.kp == 0.8f);
+     CHECK(YawConsole_Poll(step_response, sizeof(step_response)));
+     CHECK(strstr(step_response, "|STATE|ABORTED|REASON|PID_CHANGE|VALID|0|") != 0);
+     CHECK(!YawConsole_Poll(step_response, sizeof(step_response)));
++    YawBackend_GetStep(&measurement);
++    CHECK(!measurement.pending && measurement.id == 1U && YawBackend_GetStepId() == measurement.id);
+     Command(8072U, "YAW TARGET 0", "Y|OK|PARAMETER"); CHECK(!state.step_hold && state.controller.target_deg == 0.0f);
+ 
+     test_stage = 9U;
+@@ -290,12 +294,15 @@
+     }
+     YawBackend_GetStep(&measurement);
+     CHECK(measurement.phase == YAW_STEP_DONE && measurement.sse_valid && !measurement.pass);
++    CHECK(measurement.id == 1U && YawBackend_GetStepId() == measurement.id);
+     CHECK(measurement.response_ms >= 1480U && measurement.response_ms <= 1510U && measurement.max_gap_ms == 10U);
+     CHECK(state.active && state.step_hold && state.controller.target_deg == 30.0f && state.controller.faults == 0U);
+     CHECK(YawConsole_Poll(step_response, sizeof(step_response)));
+     CHECK(strstr(step_response, "|STATE|DONE|REASON|NONE|VALID|1|") != 0);
+     CHECK(strstr(step_response, "|SSE_VALID|1|PASS|0|FAULT|0|") != 0);
+     CHECK(strlen(step_response) < 600U && !YawConsole_Poll(step_response, sizeof(step_response)));
++    YawBackend_GetStep(&measurement);
++    CHECK(!measurement.pending && measurement.id == 1U && YawBackend_GetStepId() == measurement.id);
+     Command(14072U, "YAW RESULT", "|STATE|DONE|");
+     receiver.channels[RC_STEP_CHANNEL] = 1000U; Control(14074U, 2U);
+     CHECK(state.controller.target_deg == 0.0f && !state.step_hold && state.active);
+--- before/Output/Gimbal_Control/Tests/test_yaw_repeat_step.c
++++ after/Output/Gimbal_Control/Tests/test_yaw_repeat_step.c
+@@ -55,6 +55,7 @@
+             }
+         }
+         YawBackend_GetStep(&snap); CHECK(snap.phase == YAW_STEP_DONE && snap.id == id && snap.pass);
++        CHECK(YawBackend_GetStepId() == snap.id);
+         /* Holding CH7 high after DONE must not replay the rejected request. */
+         Drive(start + 5000, 100, 30, 30);
+         YawBackend_GetStep(&snap); CHECK(snap.id == id && state.controller.target_deg == 30);
+@@ -70,6 +71,7 @@
+             receiver.channels[RC_STEP_CHANNEL] = 2000; Control(start + 5906, 2);
+             YawBackend_GetStep(&snap);
+             CHECK(snap.phase == YAW_STEP_RUNNING && snap.id == id + 1);
++            CHECK(YawBackend_GetStepId() == snap.id);
+             start = snap.start_ms;
+         }
+     }
+@@ -82,6 +84,8 @@
+     FeedDegrees(now_ms + 10, 0.15f, 0); Control(now_ms + 10, 2);
+     CHECK(state.step_blocks & (YAW_STEP_BLOCK_MOVING | YAW_STEP_BLOCK_STILL));
+     CHECK(!YawBackend_StartStep(30));
++    YawBackend_GetStep(&snap);
++    CHECK(snap.id == id && YawBackend_GetStepId() == snap.id);
+     Control(now_ms + 12, 0);
+     CHECK(!state.active && !permission && (state.step_blocks & YAW_STEP_BLOCK_INACTIVE));
+     test_done = 1;
+--- /dev/null
++++ after/Output/Gimbal_Control/App/console_parse.h
+@@ -0,0 +1,31 @@
++#ifndef CONSOLE_PARSE_H
++#define CONSOLE_PARSE_H
++
++#include <stdint.h>
++#include <stdlib.h>
++#include <float.h>
++
++static inline uint8_t ConsoleParse_Number(const char *text, float *value)
++{
++    char *end;
++    float parsed = strtof(text, &end);
++    if (end == text || *end || !(parsed >= -FLT_MAX && parsed <= FLT_MAX)) { return 0U; }
++    *value = parsed; return 1U;
++}
++
++static inline uint8_t ConsoleParse_PidNumbers(const char *text, float *kp, float *ki, float *kd)
++{
++    char *end;
++    float *values[3] = { kp, ki, kd };
++    uint32_t i;
++    for (i = 0U; i < 3U; ++i) {
++        *values[i] = strtof(text, &end);
++        if (end == text || !(*values[i] >= -FLT_MAX && *values[i] <= FLT_MAX)) { return 0U; }
++        if (i == 2U) { return (uint8_t)(*end == '\0'); }
++        if (*end != ' ') { return 0U; }
++        text = end + 1;
++    }
++    return 0U;
++}
++
++#endif

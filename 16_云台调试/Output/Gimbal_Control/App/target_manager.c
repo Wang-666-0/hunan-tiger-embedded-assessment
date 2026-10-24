@@ -32,12 +32,24 @@ static void Cancel(TargetManager *manager)
     manager->last_step_switch = RC_MIDDLE;
 }
 
+static void RepeatShot(TargetManager *manager, uint32_t now_ms)
+{
+    uint32_t late_ms = now_ms - manager->next_shot_ms;
+    manager->request.shot_event = 1U;
+    manager->request.shot_sequence++;
+    /* Keep the 50ms phase through normal one-control-tick jitter. A genuinely
+     * late control call emits only one event and starts a new interval; it
+     * must never squeeze missed requests into a catch-up burst. */
+    manager->next_shot_ms = late_ms <= APP_CONTROL_PERIOD_MS ?
+        manager->next_shot_ms + APP_FIRE_INTERVAL_MS : now_ms + APP_FIRE_INTERVAL_MS;
+}
+
 #if APP_REMOTE_PROFILE_ASSESSMENT
 static void AssessmentStep(TargetManager *manager, const RemoteCommand *command,
     uint8_t new_frame, uint8_t operator_armed, uint8_t flywheels_ready, uint32_t now_ms)
 {
     TargetRequest *request = &manager->request;
-    request->shot_event = request->step_event = request->step_return_event = 0U;
+    request->shot_event = request->step_event = request->step_return_event = request->continuous_fire = 0U;
     if (!operator_armed || !command->valid || !command->failsafe_ok) { Cancel(manager); return; }
     if (command->gimbal_mode != manager->last_gimbal_mode) {
         request->step_delta_deg = 0.0f;
@@ -75,12 +87,17 @@ static void AssessmentStep(TargetManager *manager, const RemoteCommand *command,
                 }
                 manager->step_center_seen = 0U;
             } else if (manager->step_center_seen) {
-                manager->step_center_seen = 0U;
                 if (command->step_valid) {
+                    /* 未选轴时不消耗确认；保持CH7高位后选好单轴即可。
+                     * 一旦发布即消耗，长按不会重复发起，下一次仍需新中位。 */
+                    manager->step_center_seen = 0U;
                     request->step_axis = command->step_axis;
                     request->step_delta_deg = command->step_delta_deg;
                     request->step_event = 1U;
                     request->step_sequence++;
+                } else if (!command->step_selection_centered) {
+                    /* 斜向仍拒绝并消耗确认，改为单轴后须重新经过中位。 */
+                    manager->step_center_seen = 0U;
                 }
             }
             manager->last_step_switch = command->step;
@@ -109,9 +126,10 @@ static void AssessmentStep(TargetManager *manager, const RemoteCommand *command,
         manager->next_shot_ms = now_ms + APP_FIRE_INTERVAL_MS;
     } else if (manager->firing && command->trigger == RC_HIGH &&
                (int32_t)(now_ms - manager->next_shot_ms) >= 0) {
-        request->shot_event = 1U; request->shot_sequence++;
-        manager->next_shot_ms = now_ms + APP_FIRE_INTERVAL_MS;
+        RepeatShot(manager, now_ms);
     }
+    /* Observation of the existing release/trigger latch; no new shot source. */
+    request->continuous_fire = manager->firing && command->trigger == RC_HIGH;
 }
 #endif
 
@@ -187,10 +205,7 @@ void TargetManager_Step(TargetManager *manager, const RemoteCommand *command,
     }
     else if (manager->firing && command->trigger == RC_HIGH &&
              (int32_t)(now_ms - manager->next_shot_ms) >= 0) {
-        request->shot_event = 1U;
-        request->shot_sequence++;
-        /* 最小间隔50ms；迟到只产生一次事件，不追赶积压的发射请求。 */
-        manager->next_shot_ms = now_ms + APP_FIRE_INTERVAL_MS;
+        RepeatShot(manager, now_ms);
     }
 #endif
 }

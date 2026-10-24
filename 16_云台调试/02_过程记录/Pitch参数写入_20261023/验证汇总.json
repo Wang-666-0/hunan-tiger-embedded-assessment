@@ -1,0 +1,12 @@
+{
+  "firmware_groups": 10,
+  "firmware_checks": 52195,
+  "firmware_failures": 0,
+  "source_hashes_match": 121,
+  "sim_tests": 11,
+  "sim_failures": 0,
+  "profile_tabs": 5,
+  "original_tabs_unchanged": true,
+  "gui_verified": false,
+  "flashed": false
+}

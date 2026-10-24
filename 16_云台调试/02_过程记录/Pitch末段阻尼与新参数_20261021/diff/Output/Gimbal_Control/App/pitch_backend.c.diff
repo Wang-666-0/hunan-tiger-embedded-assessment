@@ -1,0 +1,26 @@
+--- before/Output/Gimbal_Control/App/pitch_backend.c
++++ after/Output/Gimbal_Control/App/pitch_backend.c
+@@ -269,6 +269,7 @@
+                 step.gravity_calibrated = state.controller.gravity_calibrated;
+                 step.shape_ms = state.controller.shape.duration_ms;
+                 step.shape_velocity_gain = state.controller.shape.velocity_gain;
++                step.pitch_brake_enabled = state.controller.brake.enabled;
+                 step.cascade = 1U; step.output_limits = 0U; step.vmax_dps = 0.0f;
+                 step.last_velocity_dps = state.controller.velocity_dps;
+                 step.last_torque_nm = submitted_torque;
+@@ -287,6 +288,15 @@
+         (duration_ms == state.controller.shape.duration_ms &&
+          velocity_gain == state.controller.shape.velocity_gain)) {
+         accepted = PitchController_SetShape(&state.controller, duration_ms, velocity_gain);
++    }
++    taskEXIT_CRITICAL(); return accepted;
++}
++uint8_t PitchBackend_SetBrakeEnabled(uint8_t enabled)
++{
++    uint8_t accepted = 0U;
++    taskENTER_CRITICAL();
++    if (step.phase != PITCH_STEP_RUNNING || enabled == state.controller.brake.enabled) {
++        accepted = PitchController_SetBrakeEnabled(&state.controller, enabled);
+     }
+     taskEXIT_CRITICAL(); return accepted;
+ }

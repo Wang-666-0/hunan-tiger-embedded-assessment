@@ -1,0 +1,27 @@
+--- before/Output/Gimbal_Control/Tests/test_pitch_console.c
++++ after/Output/Gimbal_Control/Tests/test_pitch_console.c
+@@ -94,12 +94,12 @@
+     ConsoleReset(100U);
+     CHECK(!PitchConsole_Handle("YAW STATUS", response, sizeof(response)));
+     Command("PITCH STATUS", "COORD_CONFIRMED|0"); CHECK(!query_calls && !disable_calls && !enable_calls);
+-    CHECK(strstr(response, "DM3507_CAPTURE_BRAKE_V2C") && strstr(response, "MIN_DEG|-18|MAX_DEG|33"));
++    CHECK(strstr(response, "DM3507_CAPTURE_BRAKE_V2D") && strstr(response, "MIN_DEG|-18|MAX_DEG|33"));
+     CHECK(strstr(response, "HARD_MIN_DEG|-19|HARD_MAX_DEG|34") && strstr(response, "SUPPORT_REQUIRED|1\r\n"));
+-    Command("PITCH", "P|STATE|DM3507_CAPTURE_BRAKE_V2C"); CHECK(strlen(response) < 300U);
++    Command("PITCH", "P|STATE|DM3507_CAPTURE_BRAKE_V2D"); CHECK(strlen(response) < 300U);
+     Command("PITCH HELP", "P|HELP|READ|PITCH;PID;RESULT;STATUS");
+     Command("PITCH ?", "PITCH_ONLY|COORD 1;GHORIZ");
+-    Command("PITCH PID", "POS|14.4,0.672,0.009|VEL|0.0063,0.0874,8e-06|KG|-0.47");
++    Command("PITCH PID", "POS|14.4,0.687,0.009|VEL|0.0063,0.0874,8e-06|KG|-0.47");
+     Command("PITCH BAD", "UNKNOWN_COMMAND|USE|PITCH HELP");
+     CHECK(!query_calls && !enable_calls && !disable_calls && !torque_calls && !stop_calls && !rearm_calls);
+     Command("PITCH READY", "COORD_UNCONFIRMED"); CHECK(!query_calls);
+@@ -244,7 +244,7 @@
+     CHECK(PitchBackend_SetShape(0U, 0.0f));
+     Command("PITCH BRAKE", "MODE|TERMINAL_AND_RETURN|ENABLED|1");
+     CHECK(strstr(response, "WINDOW_DEG|4|GAIN|0.002|MAX_NM|0.12"));
+-    CHECK(strstr(response, "RETURN_MS|250|RETURN_GAIN|0.006|RETURN_MAX_NM|0.2"));
++    CHECK(strstr(response, "RETURN_MS|250|RETURN_GAIN|0.01|RETURN_MAX_NM|0.2"));
+     CHECK(strstr(response, "PEAK_NM|0|RETURN_PEAK_NM|0|N|0|RETURN_N|0"));
+     Command("PITCH BRAKE bad", "P|ERROR|"); Command("PITCH BRAKE ON extra", "P|ERROR|");
+     diagnostic_mode = 1U; Command("PITCH BRAKE OFF", "P|ERROR|"); diagnostic_mode = 0U;

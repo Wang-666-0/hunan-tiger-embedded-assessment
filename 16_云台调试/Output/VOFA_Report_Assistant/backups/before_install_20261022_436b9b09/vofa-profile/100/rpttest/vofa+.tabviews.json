@@ -1,0 +1,40 @@
+{
+  "type": "tabviews",
+  "vnumber": 100,
+  "ctx": [
+    {
+      "tabs": [
+        {
+          "name": "报告接收验证",
+          "widgets": [
+            {
+              "path": "rx_probe",
+              "ctx": {
+                ".": {
+                  "ctx": {
+                    ".": {
+                      "x": 0,
+                      "width": 740,
+                      "height": 480,
+                      "y": 0
+                    }
+                  }
+                }
+              }
+            }
+          ],
+          "file_url": "",
+          "bg": {}
+        }
+      ],
+      "is_top": true,
+      "x": 180,
+      "y": 120,
+      "width": 1100,
+      "height": 740,
+      "currentIndex": 0,
+      "lastIndex": 0,
+      "file_url": ""
+    }
+  ]
+}

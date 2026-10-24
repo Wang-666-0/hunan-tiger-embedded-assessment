@@ -66,6 +66,8 @@ static void StopWithReason(PitchStopReason reason)
     CanBus_SetPitchPermission(0U);
     PitchController_Stop(&state.controller);
     state.requested = state.active = state.enabling = state.step_hold = 0U;
+    state.view_hold_pending = state.view_locked;
+    last_mode = GIMBAL_MANUAL;
     if (had_session && !state.stop_pending) {
         ++state.stop_id; state.stopped_ms = HAL_GetTick(); state.stop_reason = reason;
         state.stop_pending = 1U; cancel_pending = 1U; disable_submitted = 0U;
@@ -194,12 +196,16 @@ uint8_t PitchBackend_SetLoopParameter(char loop, char parameter, float value)
 uint8_t PitchBackend_SetTarget(float degrees)
 {
     uint8_t accepted = 0U;
+    uint32_t now;
+    float previous;
     taskENTER_CRITICAL();
-    if (state.active && state.requested && state.zero_set && Online(HAL_GetTick()) &&
+    now = HAL_GetTick();
+    if (!state.view_locked && state.active && state.requested && state.zero_set && Online(now) &&
         state.feedback.status == 1U && !state.controller.faults && CanBus_PitchAllowed()) {
-        accepted = PitchController_SetTarget(&state.controller, degrees);
+        previous = state.controller.target_deg;
+        accepted = PitchController_StartMove(&state.controller, degrees, now);
         if (accepted) {
-            PitchStep_Abort(&step, HAL_GetTick(), PITCH_STEP_TARGET_CHANGE, 0U);
+            if (previous != degrees) { PitchStep_Abort(&step, now, PITCH_STEP_TARGET_CHANGE, 0U); }
             state.step_hold = 1U;
         }
     }
@@ -238,10 +244,12 @@ uint8_t PitchBackend_SetGravityOffset(float offset_deg, uint8_t capture_horizont
 uint8_t PitchBackend_StartStep(float degrees)
 {
     uint8_t accepted = 0U;
+    uint32_t now;
     taskENTER_CRITICAL();
-    if ((degrees == 30.0f || degrees == -30.0f) && state.coord_confirmed && state.zero_set &&
+    now = HAL_GetTick();
+    if (!state.view_locked && (degrees == 30.0f || degrees == -30.0f) && state.coord_confirmed && state.zero_set &&
         state.requested && state.active && state.controller.active && !state.enabling &&
-        !state.stop_pending && Online(HAL_GetTick()) && state.feedback.status == 1U &&
+        !state.stop_pending && Online(now) && state.feedback.status == 1U &&
         !state.controller.faults && CanBus_PitchAllowed() &&
         fabsf(state.controller.angle_deg) <= PITCH_STEP_BAND_DEG &&
         fabsf(state.controller.target_deg) <= PITCH_STEP_BAND_DEG &&
@@ -249,8 +257,8 @@ uint8_t PitchBackend_StartStep(float degrees)
         state.controller.stationary_samples >= 2U &&
         state.controller.last_feedback_ms - state.controller.stationary_started_ms >=
             PITCH_CONTROLLER_STATIONARY_HOLD_MS && step.phase != PITCH_STEP_RUNNING) {
-        if (PitchController_SetTarget(&state.controller, degrees)) {
-            accepted = PitchStep_Start(&step, HAL_GetTick(), state.controller.angle_deg, degrees);
+        if (PitchController_StartMove(&state.controller, degrees, now)) {
+            accepted = PitchStep_Start(&step, now, state.controller.angle_deg, degrees);
             if (accepted) {
                 step.kp = state.controller.cascade.position.kp;
                 step.ki = state.controller.cascade.position.ki;
@@ -261,6 +269,9 @@ uint8_t PitchBackend_StartStep(float degrees)
                 step.gravity_kg_nm = state.controller.gravity_kg_nm;
                 step.gravity_offset_deg = state.controller.gravity_offset_deg;
                 step.gravity_calibrated = state.controller.gravity_calibrated;
+                step.shape_ms = state.controller.shape.duration_ms;
+                step.shape_velocity_gain = state.controller.shape.velocity_gain;
+                step.pitch_brake_enabled = state.controller.brake.enabled;
                 step.cascade = 1U; step.output_limits = 0U; step.vmax_dps = 0.0f;
                 step.last_velocity_dps = state.controller.velocity_dps;
                 step.last_torque_nm = submitted_torque;
@@ -271,6 +282,33 @@ uint8_t PitchBackend_StartStep(float degrees)
     taskEXIT_CRITICAL(); return accepted;
 }
 
+uint8_t PitchBackend_SetShape(uint32_t duration_ms, float velocity_gain)
+{
+    uint8_t accepted = 0U;
+    taskENTER_CRITICAL();
+    if (step.phase != PITCH_STEP_RUNNING ||
+        (duration_ms == state.controller.shape.duration_ms &&
+         velocity_gain == state.controller.shape.velocity_gain)) {
+        accepted = PitchController_SetShape(&state.controller, duration_ms, velocity_gain);
+    }
+    taskEXIT_CRITICAL(); return accepted;
+}
+uint8_t PitchBackend_SetBrakeEnabled(uint8_t enabled)
+{
+    uint8_t accepted = 0U;
+    taskENTER_CRITICAL();
+    if (step.phase != PITCH_STEP_RUNNING || enabled == state.controller.brake.enabled) {
+        accepted = PitchController_SetBrakeEnabled(&state.controller, enabled);
+    }
+    taskEXIT_CRITICAL(); return accepted;
+}
+
+uint32_t PitchBackend_GetStepId(void)
+{
+    uint32_t id;
+    taskENTER_CRITICAL(); id = step.id; taskEXIT_CRITICAL();
+    return id;
+}
 void PitchBackend_GetStep(PitchStep *out)
 { if (out) { taskENTER_CRITICAL(); *out = step; taskEXIT_CRITICAL(); } }
 uint8_t PitchBackend_TakeStepReport(PitchStep *out)
@@ -301,14 +339,52 @@ static void Notice(const TargetRequest *request, uint8_t result)
     remote_event.result = result; remote_pending = 1U;
 }
 
+uint8_t PitchBackend_HoldCurrent(void)
+{
+    uint8_t accepted = 0U;
+    float target;
+    taskENTER_CRITICAL();
+    target = state.controller.angle_deg;
+    if (target > PITCH_CONTROLLER_TARGET_MAX_DEG &&
+        target <= PITCH_CONTROLLER_TARGET_MAX_DEG + PITCH_STEP_BAND_DEG) {
+        target = PITCH_CONTROLLER_TARGET_MAX_DEG;
+    } else if (target < PITCH_CONTROLLER_TARGET_MIN_DEG &&
+        target >= PITCH_CONTROLLER_TARGET_MIN_DEG - PITCH_STEP_BAND_DEG) {
+        target = PITCH_CONTROLLER_TARGET_MIN_DEG;
+    }
+    if (state.active && state.requested && !state.enabling && !state.stop_pending &&
+        Online(HAL_GetTick()) && state.feedback.status == 1U && CanBus_PitchAllowed() &&
+        !state.controller.faults) {
+        if (state.view_locked && !state.view_hold_pending) { accepted = 1U; }
+        else if (PitchController_SetTarget(&state.controller, target)) {
+            PitchStep_Abort(&step, HAL_GetTick(), PITCH_STEP_MANUAL, 0U);
+            state.controller.cascade.position_i = 0.0f;
+            /* speed_i and gravity calibration continue supporting the load. */
+            state.step_hold = 1U; state.view_hold_pending = 0U; accepted = 1U;
+        }
+    }
+    taskEXIT_CRITICAL(); return accepted;
+}
+
+void PitchBackend_SetViewLock(uint8_t locked)
+{
+    taskENTER_CRITICAL(); locked = (uint8_t)(locked != 0U);
+    if (state.view_locked != locked) {
+        state.view_locked = state.view_hold_pending = locked;
+        if (!locked) { state.step_hold = 0U; }
+    }
+    taskEXIT_CRITICAL();
+}
+
 void PitchBackend_Apply(const TargetRequest *request, uint8_t allowed, uint8_t diagnostic)
 {
     uint32_t now = HAL_GetTick();
     HAL_StatusTypeDef result;
-    uint8_t wanted, event = 0U;
+    uint8_t wanted, event = 0U, new_step = 0U;
     taskENTER_CRITICAL();
     if (request && request->step_event && request->step_sequence != last_step_sequence) {
         last_step_sequence = request->step_sequence;
+        new_step = 1U;
         event = (uint8_t)(request->step_axis == GIMBAL_STEP_PITCH);
     }
     if ((state.active || state.enabling) && !Online(now)) {
@@ -355,7 +431,6 @@ void PitchBackend_Apply(const TargetRequest *request, uint8_t allowed, uint8_t d
         result = CanBus_PitchEnable(); last_tx_ms = now;
         if (result == HAL_OK) {
             state.enabling = 1U; actuation_started = 1U; enable_ms = now;
-            last_mode = (uint8_t)request->gimbal_mode;
         } else {
             state.controller.faults |= PITCH_BACKEND_FAULT_TX;
             StopWithReason(PITCH_STOP_ENABLE_TX); rearm_request = 1U;
@@ -382,6 +457,19 @@ void PitchBackend_Apply(const TargetRequest *request, uint8_t allowed, uint8_t d
         PitchStep_Abort(&step, now, PITCH_STEP_MANUAL, 0U);
         StopWithReason(PITCH_STOP_MODE_EXIT); rearm_request = 1U; taskEXIT_CRITICAL(); return;
     }
+    if (state.view_locked && state.view_hold_pending && !PitchBackend_HoldCurrent()) {
+        StopWithReason(PITCH_STOP_START_LIMIT); rearm_request = 1U; taskEXIT_CRITICAL(); return;
+    }
+    if (event && state.view_locked) { Notice(request, 3U); event = 0U; }
+#if APP_REMOTE_PROFILE_ASSESSMENT
+    if (request->gimbal_mode == GIMBAL_TEST &&
+        (last_mode != GIMBAL_TEST || (new_step && request->step_axis == GIMBAL_STEP_YAW))) {
+        if (!PitchBackend_HoldCurrent()) {
+            if (event) { Notice(request, 3U); }
+            StopWithReason(PITCH_STOP_START_LIMIT); rearm_request = 1U; taskEXIT_CRITICAL(); return;
+        }
+    }
+#endif
     last_mode = (uint8_t)request->gimbal_mode;
     if (event) {
         if (request->gimbal_mode != GIMBAL_TEST) { Notice(request, 3U); }
@@ -391,12 +479,12 @@ void PitchBackend_Apply(const TargetRequest *request, uint8_t allowed, uint8_t d
             Notice(request, 1U);
         } else { Notice(request, 3U); }
     }
-    if (state.step_hold && request->gimbal_mode == GIMBAL_MANUAL && request->pitch_rate_dps != 0.0f) {
+    if (!state.view_locked && state.step_hold && request->gimbal_mode == GIMBAL_MANUAL && request->pitch_rate_dps != 0.0f) {
         PitchStep_Abort(&step, now, PITCH_STEP_MANUAL, 0U);
         StopWithReason(PITCH_STOP_MANUAL_OVERRIDE); rearm_request = 1U; taskEXIT_CRITICAL(); return;
     }
     (void)PitchController_Update(&state.controller,
-        request->gimbal_mode == GIMBAL_MANUAL && !state.step_hold ? request->pitch_rate_dps : 0.0f, now, 1U);
+        request->gimbal_mode == GIMBAL_MANUAL && !state.step_hold && !state.view_locked ? request->pitch_rate_dps : 0.0f, now, 1U);
     if (state.controller.faults) {
         StopWithReason(PITCH_STOP_CONTROL_FAULT); rearm_request = 1U; taskEXIT_CRITICAL(); return;
     }

@@ -1,0 +1,753 @@
+--- before/App/app_config.h
++++ after/App/app_config.h
+@@ -59,6 +59,7 @@
+ #endif
+ #define APP_GIMBAL_STARTUP_OFF_HOLD_MS 100U
+ #define APP_GIMBAL_STARTUP_TIMEOUT_MS 5000U
++#define APP_GIMBAL_VIEW_HOLD_VERSION "VIEW_AXIS_HOLD_V1"
+ /* 2026-10-20按用户达标截图固化六参数；保持直接双环PID。
+  * 截图本轮稳定168ms、超调0.130461度、稳态误差-0.0965366度、PASS02=1。
+  * 在线调参仍只作用于本次RAM会话；下面允许离线历史用例明确覆盖。 */
+--- before/App/app_console.c
++++ after/App/app_console.c
+@@ -42,6 +42,7 @@
+ static uint8_t telemetry_enabled = 1U;
+ /* 0=legacy axis view, 1=feeder speed, 2=left/right flywheel speed. */
+ static uint8_t speed_view;
++static volatile uint8_t view_hold_mask;
+ #if APP_FEEDER_ENABLED
+ static uint8_t feeder_view;
+ #endif
+@@ -80,6 +81,15 @@
+     if (HAL_UART_Transmit(&huart1, (uint8_t *)message, (uint16_t)strlen(message), APP_YAW_ENABLED ? 120U : 60U) != HAL_OK) {
+         TransmitFailed();
+     }
++}
++
++static void PublishViewHold(void)
++{
++    (void)snprintf(telemetry, sizeof(telemetry),
++        "G|VIEW_LOCK|%s|YAW|%u|PITCH|%u|MODE|HOLD_CURRENT|APPLY_MS|%u\r\n",
++        APP_GIMBAL_VIEW_HOLD_VERSION, (unsigned)((view_hold_mask & APP_VIEW_HOLD_YAW) != 0U),
++        (unsigned)((view_hold_mask & APP_VIEW_HOLD_PITCH) != 0U), (unsigned)APP_CONTROL_PERIOD_MS);
++    SendText(telemetry);
+ }
+ 
+ static void PublishRemoteRx(uint8_t only_fault)//
+@@ -284,7 +294,7 @@
+             "G|ERROR|READY_REQUIRES_FRESH_SAFE_OFF_AND_CAN\r\n"); return;
+     }
+     if (strcmp(line, "GIMBAL HELP") == 0) {
+-        SendText("G|HELP|BOOT|SAFE_OFF_HORIZONTAL_THEN_CH5_MIDDLE|REZERO|GIMBAL READY|STEP|YAW STEP;PITCH STEP|RETURN|YAW HOME;PITCH HOME|RESULT|YAW RESULT;PITCH RESULT\r\n"); return;
++        SendText("G|HELP|BOOT|SAFE_OFF_HORIZONTAL_THEN_CH5_MIDDLE|REZERO|GIMBAL READY|STEP|YAW STEP;PITCH STEP|RETURN|YAW HOME;PITCH HOME|RESULT|YAW RESULT;PITCH RESULT|VIEW_LOCK|YAW VIEW;PITCH VIEW;GIMBAL VIEW LOCK;GIMBAL VIEW FREE\r\n"); return;
+     }
+     /* Explicit legacy preparation/stop takes ownership; auto startup must not overwrite it. */
+     if (strcmp(line, "STOP") == 0 || strcmp(line, "DIAG ON") == 0 ||
+@@ -297,6 +307,22 @@
+     if (strcmp(line, "HELP") == 0) {
+         SendText("C|HELP|AXIS|YAW;PITCH|AUTO|GIMBAL;GIMBAL READY|READ|axis;axis PID;axis RESULT|ACTION|axis READY;axis OFF|VIEW|axis VIEW|TELEM|TELEM OFF;TELEM ON|DETAIL|axis HELP\r\n"); return;
+     }
++    if (strcmp(line, "GIMBAL VIEW FREE") == 0 || strcmp(line, "GIMBAL VIEW LOCK") == 0) {
++        if (strcmp(line, "GIMBAL VIEW FREE") == 0) { view_hold_mask = 0U; }
++        PublishViewHold(); return;
++    }
++    /* Reject a locked axis immediately, including commands received in the
++     * same UART burst as VIEW, before the next 2ms control task observes it. */
++    if ((view_hold_mask & APP_VIEW_HOLD_YAW) && (strcmp(line, "YAW HOME") == 0 ||
++        strcmp(line, "YAW STEP") == 0 || (strncmp(line, "YAW STEP ", 9U) == 0 &&
++        strcmp(line, "YAW STEP CHECK") != 0) || strncmp(line, "YAW TARGET ", 11U) == 0)) {
++        SendText("Y|ERROR|VIEW_LOCKED_USE_YAW_VIEW\r\n"); return;
++    }
++    if ((view_hold_mask & APP_VIEW_HOLD_PITCH) && (strcmp(line, "PITCH HOME") == 0 ||
++        strcmp(line, "PITCH STEP") == 0 || strncmp(line, "PITCH STEP ", 11U) == 0 ||
++        strncmp(line, "PITCH TARGET ", 13U) == 0)) {
++        SendText("P|ERROR|VIEW_LOCKED_USE_PITCH_VIEW\r\n"); return;
++    }
+     if (strcmp(line, "TELEM OFF") == 0 || strcmp(line, "TELEM ON") == 0) {
+         telemetry_enabled = (uint8_t)(strcmp(line, "TELEM ON") == 0);
+ #if APP_PITCH_ENABLED
+@@ -307,6 +333,7 @@
+ #if APP_FEEDER_ENABLED
+     if (strcmp(line, "FEEDER SPEED VIEW") == 0 || strcmp(line, "TELEM FEEDER SPEED") == 0) {
+         speed_view = 1U;
++        view_hold_mask = 0U;
+ #if APP_PITCH_ENABLED
+         PitchDisplaySim_Reset(&pitch_display, pitch_display.enabled);
+ #endif
+@@ -316,6 +343,7 @@
+ #if APP_FLYWHEEL_JOG_ENABLED
+     if (strcmp(line, "WHEEL VIEW") == 0 || strcmp(line, "TELEM WHEEL") == 0) {
+         speed_view = 2U;
++        view_hold_mask = 0U;
+ #if APP_FEEDER_ENABLED
+         feeder_view = 0U;
+ #endif
+@@ -349,6 +377,7 @@
+     if (strcmp(line, "FEEDER VIEW") == 0 || strcmp(line, "TELEM FEEDER") == 0 ||
+         strcmp(line, "FEEDER ANGLE VIEW") == 0 || strcmp(line, "TELEM FEEDER ANGLE") == 0) {
+         feeder_view = 1U;
++        view_hold_mask = 0U;
+         SendText("F|VIEW|ANGLE|GROUP|feeder|COLS|39|ACTUAL_SHAFT_DEG_I|0|TARGET_SHAFT_DEG_I|1|ANGLE_SIGN|-1|TARGET_MODE|STAIRCASE|ACTUAL_ROTOR_RPM_I|2|TARGET_ROTOR_RPM_I|3|UNWRAPPED|1|REQUEST_MS|50|CONTROL_MS|2|BAUD|921600|PERIOD_MS|5\r\n"); return;
+     }
+     if (strcmp(line, "YAW VIEW") == 0 || strcmp(line, "TELEM YAW") == 0 ||
+@@ -358,14 +387,19 @@
+ #if APP_PITCH_ENABLED
+     if (strcmp(line, "TELEM PITCH") == 0 || strcmp(line, "PITCH VIEW") == 0) {
+         pitch_view = 1U;
++#if APP_YAW_ENABLED
++        view_hold_mask = APP_VIEW_HOLD_YAW;
++#endif
+         if (pitch_display.enabled) { FormatPitchDisplayStatus(); SendText(telemetry); }
+         else { SendText("P|VIEW|PITCH|GROUP|pitch|COLS|65|PID_I|7_12|GFF_I|52_57|TERMINAL_BRAKE_NM_I|58|TERMINAL_BRAKE_ACTIVE_I|59|SHAPE_I|60_64|RESP02_I|26|SETTLE02_I|27|OS_DEG_I|28|SSE_DEG_I|30|PASS02_I|32|BAND_DEG|0.2|TIME_LIMIT_MS|300|OS_LIMIT_DEG|0.2|SSE_LIMIT_DEG|0.2\r\n"); }
+-        return;
++        PublishViewHold(); return;
+     }
+     if (strcmp(line, "TELEM YAW") == 0 || strcmp(line, "YAW VIEW") == 0) {
+         pitch_view = 0U;
++        view_hold_mask = APP_VIEW_HOLD_PITCH;
+         SendText(strcmp(line, "YAW VIEW") == 0 ? "Y|VIEW|YAW|GROUP|gimbal|COLS|72|PID_I|7_12|RESP02_I|60|SETTLE02_I|61|OS_DEG_I|28|SSE_DEG_I|30|PASS02_I|62|BAND_DEG|0.2|TIME_LIMIT_MS|250|OS_LIMIT_DEG|0.2|SSE_LIMIT_DEG|0.2\r\n" :
+-            "P|VIEW|YAW|GROUP|gimbal|COLS|72|PID_I|7_12|RESP02_I|60|SETTLE02_I|61|OS_DEG_I|28|SSE_DEG_I|30|PASS02_I|62|BAND_DEG|0.2|TIME_LIMIT_MS|250|OS_LIMIT_DEG|0.2|SSE_LIMIT_DEG|0.2\r\n"); return;
++            "P|VIEW|YAW|GROUP|gimbal|COLS|72|PID_I|7_12|RESP02_I|60|SETTLE02_I|61|OS_DEG_I|28|SSE_DEG_I|30|PASS02_I|62|BAND_DEG|0.2|TIME_LIMIT_MS|250|OS_LIMIT_DEG|0.2|SSE_LIMIT_DEG|0.2\r\n");
++        PublishViewHold(); return;
+     }
+     if (PitchConsole_Handle(line, telemetry, sizeof(telemetry))) { SendText(telemetry); return; }
+ #endif
+@@ -554,6 +588,7 @@
+ void AppConsole_CreateQueue(void)
+ {
+     telemetry_enabled = 1U;
++    view_hold_mask = 0U;
+     speed_view = 0U;
+ #if APP_FEEDER_ENABLED
+     feeder_view = 0U;
+@@ -579,6 +614,7 @@
+ { if (StartConsoleRx() != HAL_OK) { AppFault_Fatal(APP_FAULT_UART_START); } }
+ uint32_t AppConsole_GetFaultEpoch(void) { return fault_epoch; }
+ uint8_t AppConsole_IsDiagnosticMode(void) { return diagnostic_mode; }
++uint8_t AppConsole_GetViewHoldMask(void) { return view_hold_mask; }
+ 
+ /* 全工程只有这一份UART回调；UART4交给遥控模块，USART1交给控制台。 */
+ void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
+--- before/App/app_console.h
++++ after/App/app_console.h
+@@ -1,9 +1,13 @@
+ ﻿#ifndef APP_CONSOLE_H
+ #define APP_CONSOLE_H
+ #include <stdint.h>
++#define APP_VIEW_HOLD_YAW 1U
++#define APP_VIEW_HOLD_PITCH 2U
+ void AppConsole_CreateQueue(void);
+ void AppConsole_Start(void);
+ void AppConsole_Poll(void);
+ uint32_t AppConsole_GetFaultEpoch(void);
+ uint8_t AppConsole_IsDiagnosticMode(void);
++/* Requested view lock; only the safety-gated control task applies it. */
++uint8_t AppConsole_GetViewHoldMask(void);
+ #endif
+--- before/App/app_tasks.c
++++ after/App/app_tasks.c
+@@ -156,6 +156,9 @@
+         input.stop_sequence = stop_sequence;
+         GimbalStartup_Update(&input, AppConsole_IsDiagnosticMode());
+ #endif
++#if APP_YAW_ENABLED && APP_PITCH_ENABLED
++        GimbalStepSync_ApplyViewHold(AppConsole_GetViewHoldMask());
++#endif
+         MotorBackend_GetHealth(&current.motors);
+         input.backend_ready = current.motors.ready;
+         input.feedback_ready = current.motors.feedback_ready;
+@@ -193,6 +196,9 @@
+ #endif
+         AppLogic_Step(&current.logic, &input, current.motors.flywheels_ready);
+         jog_request = current.logic.targets.request;
++#if APP_YAW_ENABLED && APP_PITCH_ENABLED
++        GimbalStepSync_FilterViewRequest(&jog_request, AppConsole_GetViewHoldMask());
++#endif
+ #if APP_REMOTE_PROFILE_ASSESSMENT
+         jog_request.wheel_reset_allowed = current.logic.command.valid &&
+             current.logic.command.failsafe_ok && current.logic.command.wheel_switch == RC_LOW;
+--- before/App/gimbal_step_sync.h
++++ after/App/gimbal_step_sync.h
+@@ -2,8 +2,27 @@
+ #define GIMBAL_STEP_SYNC_H
+ #include "yaw_backend.h"
+ #include "pitch_backend.h"
++#include "app_console.h"
+ 
+ typedef struct { uint32_t yaw_id, pitch_id; } GimbalStepSync;
++
++static void GimbalStepSync_ApplyViewHold(uint8_t mask)
++{
++    YawBackend_SetViewLock((uint8_t)(mask & APP_VIEW_HOLD_YAW));
++    PitchBackend_SetViewLock((uint8_t)(mask & APP_VIEW_HOLD_PITCH));
++}
++
++static void GimbalStepSync_FilterViewRequest(TargetRequest *request, uint8_t mask)
++{
++    if (mask & APP_VIEW_HOLD_YAW) { request->yaw_rate_dps = 0.0f; }
++    if (mask & APP_VIEW_HOLD_PITCH) { request->pitch_rate_dps = 0.0f; }
++    if (((mask & APP_VIEW_HOLD_YAW) && request->step_axis == GIMBAL_STEP_YAW) ||
++        ((mask & APP_VIEW_HOLD_PITCH) && request->step_axis == GIMBAL_STEP_PITCH)) {
++        /* Consume in TargetManager, but neither backend sees a wrong-axis
++         * event. It must not interrupt the visible axis through companion hold. */
++        request->step_event = request->step_return_event = 0U;
++    }
++}
+ 
+ /* Shared by the real control task and its integration fixture. Console STEP
+  * and remote STEP use the same accepted IDs; rejected requests do not count.
+--- before/App/pitch_backend.c
++++ after/App/pitch_backend.c
+@@ -66,6 +66,7 @@
+     CanBus_SetPitchPermission(0U);
+     PitchController_Stop(&state.controller);
+     state.requested = state.active = state.enabling = state.step_hold = 0U;
++    state.view_hold_pending = state.view_locked;
+     last_mode = GIMBAL_MANUAL;
+     if (had_session && !state.stop_pending) {
+         ++state.stop_id; state.stopped_ms = HAL_GetTick(); state.stop_reason = reason;
+@@ -199,7 +200,7 @@
+     float previous;
+     taskENTER_CRITICAL();
+     now = HAL_GetTick();
+-    if (state.active && state.requested && state.zero_set && Online(now) &&
++    if (!state.view_locked && state.active && state.requested && state.zero_set && Online(now) &&
+         state.feedback.status == 1U && !state.controller.faults && CanBus_PitchAllowed()) {
+         previous = state.controller.target_deg;
+         accepted = PitchController_StartMove(&state.controller, degrees, now);
+@@ -246,7 +247,7 @@
+     uint32_t now;
+     taskENTER_CRITICAL();
+     now = HAL_GetTick();
+-    if ((degrees == 30.0f || degrees == -30.0f) && state.coord_confirmed && state.zero_set &&
++    if (!state.view_locked && (degrees == 30.0f || degrees == -30.0f) && state.coord_confirmed && state.zero_set &&
+         state.requested && state.active && state.controller.active && !state.enabling &&
+         !state.stop_pending && Online(now) && state.feedback.status == 1U &&
+         !state.controller.faults && CanBus_PitchAllowed() &&
+@@ -353,13 +354,26 @@
+     }
+     if (state.active && state.requested && !state.enabling && !state.stop_pending &&
+         Online(HAL_GetTick()) && state.feedback.status == 1U && CanBus_PitchAllowed() &&
+-        !state.controller.faults && PitchController_SetTarget(&state.controller, target)) {
+-        PitchStep_Abort(&step, HAL_GetTick(), PITCH_STEP_MANUAL, 0U);
+-        state.controller.cascade.position_i = 0.0f;
+-        /* speed_i and gravity calibration continue supporting the load. */
+-        state.step_hold = 1U; accepted = 1U;
+-    }
+-    taskEXIT_CRITICAL(); return accepted;
++        !state.controller.faults) {
++        if (state.view_locked && !state.view_hold_pending) { accepted = 1U; }
++        else if (PitchController_SetTarget(&state.controller, target)) {
++            PitchStep_Abort(&step, HAL_GetTick(), PITCH_STEP_MANUAL, 0U);
++            state.controller.cascade.position_i = 0.0f;
++            /* speed_i and gravity calibration continue supporting the load. */
++            state.step_hold = 1U; state.view_hold_pending = 0U; accepted = 1U;
++        }
++    }
++    taskEXIT_CRITICAL(); return accepted;
++}
++
++void PitchBackend_SetViewLock(uint8_t locked)
++{
++    taskENTER_CRITICAL(); locked = (uint8_t)(locked != 0U);
++    if (state.view_locked != locked) {
++        state.view_locked = state.view_hold_pending = locked;
++        if (!locked) { state.step_hold = 0U; }
++    }
++    taskEXIT_CRITICAL();
+ }
+ 
+ void PitchBackend_Apply(const TargetRequest *request, uint8_t allowed, uint8_t diagnostic)
+@@ -443,6 +457,10 @@
+         PitchStep_Abort(&step, now, PITCH_STEP_MANUAL, 0U);
+         StopWithReason(PITCH_STOP_MODE_EXIT); rearm_request = 1U; taskEXIT_CRITICAL(); return;
+     }
++    if (state.view_locked && state.view_hold_pending && !PitchBackend_HoldCurrent()) {
++        StopWithReason(PITCH_STOP_START_LIMIT); rearm_request = 1U; taskEXIT_CRITICAL(); return;
++    }
++    if (event && state.view_locked) { Notice(request, 3U); event = 0U; }
+ #if APP_REMOTE_PROFILE_ASSESSMENT
+     if (request->gimbal_mode == GIMBAL_TEST &&
+         (last_mode != GIMBAL_TEST || (new_step && request->step_axis == GIMBAL_STEP_YAW))) {
+@@ -461,12 +479,12 @@
+             Notice(request, 1U);
+         } else { Notice(request, 3U); }
+     }
+-    if (state.step_hold && request->gimbal_mode == GIMBAL_MANUAL && request->pitch_rate_dps != 0.0f) {
++    if (!state.view_locked && state.step_hold && request->gimbal_mode == GIMBAL_MANUAL && request->pitch_rate_dps != 0.0f) {
+         PitchStep_Abort(&step, now, PITCH_STEP_MANUAL, 0U);
+         StopWithReason(PITCH_STOP_MANUAL_OVERRIDE); rearm_request = 1U; taskEXIT_CRITICAL(); return;
+     }
+     (void)PitchController_Update(&state.controller,
+-        request->gimbal_mode == GIMBAL_MANUAL && !state.step_hold ? request->pitch_rate_dps : 0.0f, now, 1U);
++        request->gimbal_mode == GIMBAL_MANUAL && !state.step_hold && !state.view_locked ? request->pitch_rate_dps : 0.0f, now, 1U);
+     if (state.controller.faults) {
+         StopWithReason(PITCH_STOP_CONTROL_FAULT); rearm_request = 1U; taskEXIT_CRITICAL(); return;
+     }
+--- before/App/pitch_backend.h
++++ after/App/pitch_backend.h
+@@ -22,6 +22,7 @@
+     PitchStopReason stop_reason;
+     uint8_t online, requested, active, enabling, stop_pending;
+     uint8_t zero_set, step_hold, coord_confirmed, monitoring;
++    uint8_t view_locked, view_hold_pending;
+ } PitchBackendState;
+ typedef struct { uint32_t sequence; float target_deg; uint8_t result; } PitchRemoteStepEvent;
+ void PitchBackend_Init(void);
+@@ -37,6 +38,7 @@
+ void PitchBackend_Stop(void);
+ /* Active hold at the measured pose; preserve gravity calibration and speed I. */
+ uint8_t PitchBackend_HoldCurrent(void);
++void PitchBackend_SetViewLock(uint8_t locked);
+ void PitchBackend_Apply(const TargetRequest *request, uint8_t allowed, uint8_t diagnostic);
+ uint8_t PitchBackend_TakeRearmRequest(void);
+ uint8_t PitchBackend_SetTarget(float degrees);
+--- before/App/yaw_backend.c
++++ after/App/yaw_backend.c
+@@ -59,6 +59,7 @@
+         YAW_CONTROLLER_STATIONARY_HOLD_MS) { blocks |= YAW_STEP_BLOCK_STILL; }
+ #endif
+     if (step.phase == YAW_STEP_RUNNING) { blocks |= YAW_STEP_BLOCK_WINDOW; }
++    if (state.view_locked) { blocks |= YAW_STEP_BLOCK_VIEW; }
+     return blocks;
+ }
+ 
+@@ -139,6 +140,7 @@
+     YawStep_Abort(&step, HAL_GetTick(), state.controller.faults ? YAW_STEP_FAULT : YAW_STEP_STOP,
+                   state.controller.faults);
+     state.step_hold = 0U;
++    state.view_hold_pending = state.view_locked;
+     last_mode = GIMBAL_MANUAL;
+     state.step_still_samples = 0U;
+     step_from_remote = 0U;
+@@ -292,7 +294,7 @@
+         accepted = YawController_SetPid(&state.controller, state.controller.pid.kp, value, state.controller.pid.kd);
+     } else if (parameter == 'D') {
+         accepted = YawController_SetPid(&state.controller, state.controller.pid.kp, state.controller.pid.ki, value);
+-    } else if (parameter == 'T' && state.active && Online(HAL_GetTick()) && CanBus_YawAllowed()) {
++    } else if (parameter == 'T' && !state.view_locked && state.active && Online(HAL_GetTick()) && CanBus_YawAllowed()) {
+         accepted = YawController_SetTarget(&state.controller, value);
+     }
+     if (accepted) {
+@@ -586,16 +588,28 @@
+     }
+     if (state.active && state.requested && !state.enabling && !state.stop_pending &&
+         Online(HAL_GetTick()) && state.feedback.status == 1U && CanBus_YawAllowed() &&
+-        !state.controller.faults && YawController_SetTarget(&state.controller, target)) {
+-        YawStep_Abort(&step, HAL_GetTick(), YAW_STEP_MANUAL, 0U);
+-        /* Remove the old position command bias, keeping observer and inner
+-         * load compensation alive so holding does not drop actuator torque. */
+-        state.controller.cascade.position_i = 0.0f;
+-        state.controller.integral = 0.0f;
+-        state.step_hold = step_from_remote = 1U;
+-        accepted = 1U;
+-    }
+-    taskEXIT_CRITICAL(); return accepted;
++        !state.controller.faults) {
++        if (state.view_locked && !state.view_hold_pending) { accepted = 1U; }
++        else if (YawController_SetTarget(&state.controller, target)) {
++            YawStep_Abort(&step, HAL_GetTick(), YAW_STEP_MANUAL, 0U);
++            /* Preserve observer and inner load compensation. */
++            state.controller.cascade.position_i = 0.0f;
++            state.controller.integral = 0.0f;
++            state.step_hold = 1U; step_from_remote = (uint8_t)!state.view_locked;
++            state.view_hold_pending = 0U; accepted = 1U;
++        }
++    }
++    taskEXIT_CRITICAL(); return accepted;
++}
++
++void YawBackend_SetViewLock(uint8_t locked)
++{
++    taskENTER_CRITICAL(); locked = (uint8_t)(locked != 0U);
++    if (state.view_locked != locked) {
++        state.view_locked = state.view_hold_pending = locked;
++        if (!locked) { state.step_hold = step_from_remote = 0U; }
++    }
++    taskEXIT_CRITICAL();
+ }
+ 
+ void YawBackend_Apply(const TargetRequest *request, uint8_t allowed, uint8_t diagnostic)
+@@ -663,9 +677,16 @@
+         }
+         taskEXIT_CRITICAL(); return;
+     }
+-    if (state.step_hold && step_from_remote && request->gimbal_mode != GIMBAL_TEST) {
++    if ((last_mode == GIMBAL_TEST || (state.step_hold && step_from_remote)) &&
++        request->gimbal_mode != GIMBAL_TEST) {
+         YawStep_Abort(&step, now, YAW_STEP_MANUAL, 0U);
+         YawBackend_Stop(); rearm_request = 1U; taskEXIT_CRITICAL(); return;
++    }
++    if (state.view_locked && state.view_hold_pending && !YawBackend_HoldCurrent()) {
++        YawBackend_Stop(); rearm_request = 1U; taskEXIT_CRITICAL(); return;
++    }
++    if (new_step && state.view_locked && request->step_axis == GIMBAL_STEP_YAW) {
++        RemoteNotice(request, 3U); new_step = 0U;
+     }
+ #if APP_REMOTE_PROFILE_ASSESSMENT
+     if (request->gimbal_mode == GIMBAL_TEST &&
+@@ -692,12 +713,12 @@
+         } else { RemoteNotice(request, 3U); }
+     }
+     /* 测试模式保留TargetManager的CH4选方向、CH7确认/回参考；回中不清目标。 */
+-    if (state.step_hold && request->gimbal_mode == GIMBAL_MANUAL && request->yaw_rate_dps != 0.0f) {
++    if (!state.view_locked && state.step_hold && request->gimbal_mode == GIMBAL_MANUAL && request->yaw_rate_dps != 0.0f) {
+         YawStep_Abort(&step, now, YAW_STEP_MANUAL, 0U);
+         YawBackend_Stop(); rearm_request = 1U; taskEXIT_CRITICAL(); return;
+     }
+     (void)YawController_Update(&state.controller,
+-        request->gimbal_mode == GIMBAL_MANUAL ? request->yaw_rate_dps : 0.0f, now, 1U);
++        request->gimbal_mode == GIMBAL_MANUAL && !state.view_locked ? request->yaw_rate_dps : 0.0f, now, 1U);
+     if (state.controller.faults) {
+         YawBackend_Stop(); rearm_request = 1U; taskEXIT_CRITICAL(); return;
+     }
+--- before/App/yaw_backend.h
++++ after/App/yaw_backend.h
+@@ -17,7 +17,8 @@
+     YAW_STEP_BLOCK_POSITION = 1UL << 7,
+     YAW_STEP_BLOCK_MOVING = 1UL << 8,
+     YAW_STEP_BLOCK_STILL = 1UL << 9,
+-    YAW_STEP_BLOCK_WINDOW = 1UL << 10
++    YAW_STEP_BLOCK_WINDOW = 1UL << 10,
++    YAW_STEP_BLOCK_VIEW = 1UL << 11
+ } YawStepBlock;
+ typedef struct {
+     YawController controller;
+@@ -25,6 +26,7 @@
+     uint32_t rx_count, feedback_age_ms;
+     uint8_t online, requested, active, stop_pending, enabling;
+     uint8_t zero_set, step_hold;
++    uint8_t view_locked, view_hold_pending;
+     uint32_t step_blocks, step_still_since_ms, step_still_ms, step_window_left_ms;
+     uint8_t step_still_samples;
+ } YawBackendState;
+@@ -63,6 +65,8 @@
+ /* Latch the measured pose once, retain software zero/observer/load integral,
+  * cancel an old move and keep the already enabled position loop running. */
+ uint8_t YawBackend_HoldCurrent(void);
++/* Request a persistent pose lock, applied only while healthy and armed. */
++void YawBackend_SetViewLock(uint8_t locked);
+ void YawBackend_Apply(const TargetRequest *request, uint8_t allowed, uint8_t diagnostic);
+ uint8_t YawBackend_SetParameter(char parameter, float value);
+ uint8_t YawBackend_SetPid(float kp, float ki, float kd);
+--- before/App/yaw_console.c
++++ after/App/yaw_console.c
+@@ -110,6 +110,7 @@
+ 
+ static const char *StepBlockReason(uint32_t blocks)
+ {
++    if (blocks & YAW_STEP_BLOCK_VIEW) { return "VIEW_LOCKED_USE_YAW_VIEW"; }
+     if (blocks & YAW_STEP_BLOCK_FAULT) { return "FAULT"; }
+     if (blocks & YAW_STEP_BLOCK_REFERENCE) { return "NEED_ZERO"; }
+     if (blocks & YAW_STEP_BLOCK_FEEDBACK) { return "FEEDBACK"; }
+--- before/MDK-ARM/单发优化与阶跃锁轴操作说明.md
++++ after/MDK-ARM/单发优化与阶跃锁轴操作说明.md
+@@ -1,4 +1,6 @@
+ # 拨盘单发优化与云台阶跃锁轴
++
++最新窗口锁轴行为见 [VIEW窗口锁轴说明](VIEW窗口锁轴说明.md)：PITCH VIEW锁yaw，YAW VIEW锁pitch。
+ 
+ 本轮修改直接位于当前 VS Code 原工程，拨盘版本 `C610_SINGLE_BRAKE_V1J`。使用 MDK-ARM 中现有 EIDE 构建、ST-Link 烧录配置，产物为 `build/Gimbal_Control/Gimbal_Control.hex`。
+ 
+@@ -68,7 +70,7 @@
+ 
+ 原阶跃入口仍要求被测轴接近软件零点且静止，STEP仍是软件坐标的±30°绝对目标；本轮锁位置不会重设零点。若从非零位置进入测试档，需要先归位被测轴。pitch继续遵守−18°～+33°的目标限位。
+ 
+-串口仍可使用 `YAW STEP`、`PITCH STEP`、`YAW HOME`、`PITCH HOME`。测试档下串口新STEP也会在下一个2ms控制周期锁住另一轴。VIEW只切换显示，不发起运动。退出测试档后的停机、重新OFF解锁流程沿用原有规则。
++串口仍可使用 `YAW STEP`、`PITCH STEP`、`YAW HOME`、`PITCH HOME`。测试档下串口新STEP也会在下一个2ms控制周期锁住另一轴。VIEW现在同时请求锁定另一轴；原使能和安全门禁仍须满足。退出测试档后的停机、重新OFF解锁流程沿用原有规则。
+ 
+ ## 验证范围
+ 
+--- before/MDK-ARM/拨盘50ms连发操作说明.md
++++ after/MDK-ARM/拨盘50ms连发操作说明.md
+@@ -66,7 +66,7 @@
+ YAW VIEW
+ ```
+ 
+-每次选择所需标签页后，再发送对应的 VIEW 命令；切换 VOFA 标签页本身不会切换下位机数据。VIEW 只切换显示。
++每次选择所需标签页后，再发送对应的 VIEW 命令；切换 VOFA 标签页本身不会切换下位机数据。拨盘/摩擦轮VIEW切换显示；最新PITCH VIEW/YAW VIEW同时锁定另一轴，见[VIEW窗口锁轴说明](VIEW窗口锁轴说明.md)。
+ 
+ ## 运行与核对
+ 
+--- before/README.md
++++ after/README.md
+@@ -1,4 +1,9 @@
+ # Gimbal_Control
++
++## 2026-10-24：按VIEW窗口持续锁轴
++
++`PITCH VIEW`锁yaw实测位置，`YAW VIEW`锁pitch实测位置，覆盖原摇杆和STEP/HOME/TARGET入口。重复VIEW不会重取锁点；切换视图释放所选轴，`GIMBAL VIEW FREE`解除互锁。VOFA标签页点击本身不发送命令，需要原VIEW按钮。操作见[VIEW窗口锁轴说明](MDK-ARM/VIEW窗口锁轴说明.md)。原PID、重力补偿及拨盘V1J算法保留；新HEX由原MDK-ARM工程生成。
++
+ 
+ ## 2026-10-24：拨盘单发减速与阶跃锁轴（V1J）
+ 
+--- before/Tests/README.md
++++ after/Tests/README.md
+@@ -1,4 +1,11 @@
+ > 2026-10-24 拨盘V1I：本轮8组102330项通过，包含双向同反馈回放对比旧/新跟踪输出、10ms参考滞后移除、速度/电流限幅、释放收尾和原50ms正向阶梯显示。回放不等于实机响应时间验证。原AC5/O0完整69源项重编成功，未烧录。当前选测报告对应本轮，以下为历史。[操作说明](../MDK-ARM/拨盘50ms连发操作说明.md)。
++
++## 2026-10-24：VIEW窗口锁轴
++
++本轮所选14组共214785项检查通过。新增`pitch_view_hold`验证普通模式/测试模式互锁、固定锁点抗扰、换窗释放、被锁轴目标/STEP拒绝、错误遥控事件不打断当前轴、STOP与冷启动不自启。`feeder_speed_view`验证实际USART命令解析到请求掩码、TELEM别名、同一批命令立即拒绝锁定轴动作、FREE/轮子视图释放和TELEM OFF保留锁定。生产与集成测试共享`gimbal_step_sync.h`的掩码应用及请求过滤。
++
++串口、DMA、原CH5锁轴、Yaw手动、拨盘单发/连发等所选组均通过；主MDK-ARM工程AC5编译成功。`test_pitch_console.c`两处旧常数改为按当前编译参数验证，保留同参数写入不打断测量的原检查；本轮没有修改两轴PID参数。未执行实机运行或烧录。
++
+ 
+ ## 2026-10-24 V1J：单发减速与测试锁轴
+ 
+--- before/Tests/run_selftests.py
++++ after/Tests/run_selftests.py
+@@ -154,6 +154,8 @@
+         "remote_mapper", "safety_manager", "target_manager")]
+     groups["pitch_test_hold"] = groups["pitch_gimbal_startup"].copy()
+     groups["pitch_test_hold"][0] = root / "test_gimbal_test_hold.c"
++    groups["pitch_view_hold"] = groups["pitch_gimbal_startup"].copy()
++    groups["pitch_view_hold"][0] = root / "test_gimbal_view_hold.c"
+     groups["pitch_manual90"] = [root / "test_pitch_manual90.c"] + [app / (n + ".c") for n in (
+         "pitch_backend", "pitch_controller", "pitch_step", "dm3507", "yaw_cascade", "yaw_step", "can_frame",
+         "app_logic", "remote_mapper", "safety_manager", "target_manager")]
+--- before/Tests/test_feeder_speed_view.c
++++ after/Tests/test_feeder_speed_view.c
+@@ -35,6 +35,7 @@
+     PitchStep result_before;
+     test_stage = 1U;
+     AppConsole_CreateQueue(); AppConsole_Start(); now = 100U;
++    CHECK(AppConsole_GetViewHoldMask() == 0U);
+     clear_output(); AppConsole_Poll();
+     clear_output(); command_line("FEEDER SPEED VIEW"); CHECK(strstr(output, "GROUP|feeder_speed|COLS|9"));
+     frame("feeder_speed:", 9U); CHECK(columns[0] == -3568 && columns[1] == -1784 && feeder_speed_frames == 1U);
+@@ -57,8 +58,25 @@
+     CHECK(feeder_detail_frames == 3U);
+     clear_output(); command_line("WHEEL VIEW"); frame("wheel_speed:", 12U);
+     clear_output(); command_line("YAW VIEW"); frame("gimbal:", 72U);
++    CHECK(AppConsole_GetViewHoldMask() == APP_VIEW_HOLD_PITCH);
++    clear_output(); command_line("PITCH STEP"); CHECK(strstr(output, "P|ERROR|VIEW_LOCKED_USE_PITCH_VIEW"));
++    clear_output(); command_line("PITCH HOME"); CHECK(strstr(output, "P|ERROR|VIEW_LOCKED_USE_PITCH_VIEW"));
++    clear_output(); command_line("PITCH TARGET 5"); CHECK(strstr(output, "P|ERROR|VIEW_LOCKED_USE_PITCH_VIEW"));
+     clear_output(); command_line("FEEDER SPEED VIEW"); frame("feeder_speed:", 9U);
++    CHECK(AppConsole_GetViewHoldMask() == 0U);
+     clear_output(); command_line("PITCH VIEW"); frame("pitch:", 65U);
++    CHECK(AppConsole_GetViewHoldMask() == APP_VIEW_HOLD_YAW);
++    clear_output(); command_line("YAW STEP"); CHECK(strstr(output, "Y|ERROR|VIEW_LOCKED_USE_YAW_VIEW"));
++    clear_output(); command_line("YAW HOME"); CHECK(strstr(output, "Y|ERROR|VIEW_LOCKED_USE_YAW_VIEW"));
++    clear_output(); command_line("YAW TARGET 5"); CHECK(strstr(output, "Y|ERROR|VIEW_LOCKED_USE_YAW_VIEW"));
++    clear_output(); command_line("GIMBAL VIEW LOCK"); CHECK(strstr(output, "VIEW_AXIS_HOLD_V1|YAW|1|PITCH|0|"));
++    clear_output(); command_line("TELEM OFF"); CHECK(AppConsole_GetViewHoldMask() == APP_VIEW_HOLD_YAW);
++    clear_output(); command_line("TELEM ON");
++    clear_output(); command_line("GIMBAL VIEW FREE"); CHECK(AppConsole_GetViewHoldMask() == 0U);
++    clear_output(); command_line("TELEM PITCH"); CHECK(AppConsole_GetViewHoldMask() == APP_VIEW_HOLD_YAW);
++    clear_output(); command_line("TELEM YAW"); CHECK(AppConsole_GetViewHoldMask() == APP_VIEW_HOLD_PITCH);
++    clear_output(); command_line("WHEEL VIEW"); CHECK(AppConsole_GetViewHoldMask() == 0U);
++    clear_output(); command_line("PITCH VIEW"); CHECK(AppConsole_GetViewHoldMask() == APP_VIEW_HOLD_YAW);
+     CHECK(!stops && !selections && !pitch_cancel_count && !pitch_commands && !yaw_commands);
+     test_stage = 2U;
+     pitch_sample.online = 1U; pitch_sample.controller.feedback_divisor = 1U;
+@@ -97,6 +115,7 @@
+     frame("pitch:", 65U); CHECK(columns[0] == 2.25f);
+     clear_output(); command_line("PITCH SIM OFF"); frame("pitch:", 65U); CHECK(columns[0] == 2.25f);
+     clear_output(); command_line("PITCH SIM ON"); frame("pitch_demo:", 68U); CHECK(columns[66] == 0);
++    CHECK(AppConsole_GetViewHoldMask() == APP_VIEW_HOLD_YAW);
+     pitch_step_sample.phase = PITCH_STEP_DONE; frame("pitch_demo:", 68U); CHECK(columns[67] == 1);
+     pitch_step_sample.phase = PITCH_STEP_RUNNING; pitch_step_sample.id++;
+     pitch_step_sample.start_ms = now + 5U; frame("pitch_demo:", 68U); CHECK(columns[66] == 1);
+--- before/Tests/test_gimbal_startup.c
++++ after/Tests/test_gimbal_startup.c
+@@ -21,6 +21,7 @@
+ static PitchBackendState pitch;
+ static GimbalStartupState startup;
+ static GimbalStepSync step_sync;
++static uint8_t view_hold_request;
+ static uint32_t now, stops, rearm_barriers, yc, pc, yfd, pfd, cc, fb;
+ static uint8_t yp, pp, wheel_permission, device_yaw, device_pitch;
+ static uint8_t diagnostic, follow_target;
+@@ -104,6 +105,7 @@
+     }
+     input.now_ms = now; input.can_epoch = bus.fault_epoch; input.stop_sequence = stops;
+     GimbalStartup_Update(&input, diagnostic); Read();
++    GimbalStepSync_ApplyViewHold(view_hold_request);
+     memset(&yh, 0, sizeof(yh)); memset(&ph, 0, sizeof(ph));
+     yh.requested = yaw.requested; yh.online = yaw.online; yh.stop_pending = yaw.stop_pending;
+     yh.faulted = (uint8_t)(yaw.controller.faults != 0U);
+@@ -116,6 +118,7 @@
+     GimbalStepSync_Update(&step_sync, &logic.targets,
+         ch5 == 2000U && logic.safety.output_allowed && !diagnostic);
+     AppLogic_Step(&logic, &input, 0U); request = logic.targets.request;
++    GimbalStepSync_FilterViewRequest(&request, view_hold_request);
+     YawBackend_Apply(&request, logic.safety.output_allowed, diagnostic);
+     GimbalStepSync_Update(&step_sync, &logic.targets,
+         request.gimbal_mode == GIMBAL_TEST && logic.safety.output_allowed && !diagnostic);
+@@ -141,6 +144,7 @@
+     now = ms; memset(&bus, 0, sizeof(bus)); bus.started = 1U;
+     memset(&input, 0, sizeof(input)); AppLogic_Init(&logic);
+     memset(&step_sync, 0, sizeof(step_sync));
++    view_hold_request = 0U;
+     for (i = 0U; i < 14U; ++i) { input.remote.channels[i] = 1500U; }
+     input.remote.channels[4] = input.remote.channels[5] = 1000U;
+     yp = pp = wheel_permission = device_yaw = device_pitch = diagnostic = follow_target = 0U;
+--- before/Tests/test_pitch_console.c
++++ after/Tests/test_pitch_console.c
+@@ -6,6 +6,7 @@
+ #include "app_tasks.h"
+ #include "app_console.h"
+ #include "remote_input.h"
++#include <stdio.h>
+ 
+ static RemoteInput_State receiver;
+ static AppState application;
+@@ -87,6 +88,7 @@
+ 
+ void test_run(void)
+ {
++    char expected_pid[256], same_pid_command[64];
+     uint32_t before, tick;
+     float reference;
+     PitchStep measurement;
+@@ -99,7 +101,11 @@
+     Command("PITCH", "P|STATE|DM3507_FAST_OBSERVER_V2F"); CHECK(strlen(response) < 300U);
+     Command("PITCH HELP", "P|HELP|READ|PITCH;PID;RESULT;STATUS");
+     Command("PITCH ?", "PITCH_ONLY|COORD 1;GHORIZ");
+-    Command("PITCH PID", "POS|10.678,24.153,0.002|VEL|0.00406,0.0005,1e-06|KG|-0.13");
++    (void)snprintf(expected_pid, sizeof(expected_pid), "POS|%.6g,%.6g,%.6g|VEL|%.6g,%.6g,%.6g|KG|%.6g",
++        (double)APP_PITCH_POSITION_KP, (double)APP_PITCH_POSITION_KI, (double)APP_PITCH_POSITION_KD,
++        (double)APP_PITCH_SPEED_KP, (double)APP_PITCH_SPEED_KI, (double)APP_PITCH_SPEED_KD,
++        (double)APP_PITCH_GRAVITY_KG_NM);
++    Command("PITCH PID", expected_pid);
+     Command("PITCH BAD", "UNKNOWN_COMMAND|USE|PITCH HELP");
+     CHECK(!query_calls && !enable_calls && !disable_calls && !torque_calls && !stop_calls && !rearm_calls);
+     Command("PITCH READY", "COORD_UNCONFIRMED"); CHECK(!query_calls);
+@@ -135,7 +141,8 @@
+     Command("PITCH RESULT", "STATE|RUNNING"); CHECK(strstr(response, "RESP_LIMIT_MS|300"));
+     CHECK(strstr(response, "|BAND02|0.2|") && strstr(response, "|TIME_LIMIT_MS|300|OS_LIMIT_DEG|0.2|SSE_LIMIT_DEG|0.2|"));
+     CHECK(strstr(response, "|ASSESSMENT|FINAL_SETTLE|") && !strstr(response, "PASS05"));
+-    Command("PITCH PKP 10.678", "P|OK|PARAMETER"); PitchBackend_GetStep(&measurement);
++    (void)snprintf(same_pid_command, sizeof(same_pid_command), "PITCH PKP %.9g", (double)APP_PITCH_POSITION_KP);
++    Command(same_pid_command, "P|OK|PARAMETER"); PitchBackend_GetStep(&measurement);
+     CHECK(measurement.phase == PITCH_STEP_RUNNING);
+     Command("PITCH PKP 13", "P|OK|PARAMETER"); PitchBackend_GetStep(&measurement); Read();
+     CHECK(measurement.phase == PITCH_STEP_ABORTED && state.controller.target_deg == 30.0f);
+--- /dev/null
++++ after/Tests/test_gimbal_view_hold.c
+@@ -0,0 +1,86 @@
++/* Real remote/target/backends plus the production view filter. The USART
++ * command-to-mask mapping is independently checked in feeder_speed_view. */
++#define test_run startup_baseline_test_run
++#include "test_gimbal_startup.c"
++#undef test_run
++
++void test_run(void)
++{
++    float yheld, pheld, previous, speed_i;
++    uint32_t enabled_y, enabled_p;
++    PitchStep pstep;
++    YawStep ystep;
++    char reply[1024];
++    test_stage = 1U;
++    Reset(140000U); Run(400U, 1000U); Run(100U, 1500U);
++    follow_target = 1U; input.remote.channels[0] = input.remote.channels[1] = 1765U;
++    Run(80U, 1500U);
++    input.remote.channels[0] = input.remote.channels[1] = 1500U; Run(40U, 1500U);
++    follow_target = 0U;
++    CHECK(YawBackend_SetParameter('T', yaw.controller.angle_deg + 5.0f)); Run(10U, 1500U);
++    view_hold_request = APP_VIEW_HOLD_YAW; Run(2U, 1500U);
++    yheld = yaw.controller.target_deg; previous = pitch.controller.target_deg;
++    CHECK(yaw.active && pitch.active && yaw.view_locked && !yaw.view_hold_pending && !pitch.view_locked);
++    CHECK(fabsf(yheld - yaw.controller.angle_deg) < 0.001f);
++    input.remote.channels[0] = input.remote.channels[1] = 1765U;
++    follow_target = 1U; Run(80U, 1500U);
++    CHECK(yaw.controller.target_deg == yheld && pitch.controller.target_deg > previous + 3.5f);
++    CHECK(!YawBackend_SetParameter('T', 0.0f) && !YawBackend_StartStep(30.0f));
++    CHECK(yaw.step_blocks & YAW_STEP_BLOCK_VIEW);
++    /* Repeated view requests and companion holds must not track a disturbance. */
++    physical_yaw += 0.3f; follow_target = 0U; Run(20U, 1500U);
++    CHECK(fabsf(yaw.controller.angle_deg - yheld) > 0.2f && yaw.controller.target_deg == yheld);
++    CHECK(YawBackend_HoldCurrent()); Read(); CHECK(yaw.controller.target_deg == yheld);
++    Run(20U, 1500U); CHECK(yaw.controller.target_deg == yheld && yaw.active && pitch.active);
++
++    view_hold_request = APP_VIEW_HOLD_PITCH; Run(2U, 1500U);
++    pheld = pitch.controller.target_deg; previous = yaw.controller.target_deg;
++    CHECK(!yaw.view_locked && pitch.view_locked && !pitch.view_hold_pending);
++    CHECK(fabsf(pheld - pitch.controller.angle_deg) < 0.001f);
++    follow_target = 1U; Run(80U, 1500U);
++    CHECK(pitch.controller.target_deg == pheld && yaw.controller.target_deg > previous + 3.5f);
++    CHECK(!PitchBackend_SetTarget(0.0f) && !PitchBackend_StartStep(30.0f));
++    physical_pitch -= 0.3f; follow_target = 0U; Run(20U, 1500U);
++    speed_i = pitch.controller.cascade.speed_i;
++    CHECK(PitchBackend_HoldCurrent()); Read();
++    CHECK(pitch.controller.target_deg == pheld && pitch.controller.cascade.speed_i == speed_i);
++    CHECK(pitch.controller.gravity_calibrated && pitch.controller.gravity_kg_nm == APP_PITCH_GRAVITY_KG_NM);
++    view_hold_request = 0U; previous = pitch.controller.target_deg; Run(80U, 1500U);
++    CHECK(!yaw.view_locked && !pitch.view_locked && pitch.controller.target_deg > previous + 3.5f);
++
++    test_stage = 2U;
++    Reset(150000U); view_hold_request = APP_VIEW_HOLD_YAW;
++    Run(400U, 1000U); CHECK(!yc && !pc && !yaw.active && !pitch.active);
++    CHECK(yaw.view_locked && yaw.view_hold_pending && !YawBackend_HoldCurrent());
++    Run(100U, 1500U); Run(30U, 2000U);
++    CHECK(yaw.active && pitch.active && !yaw.view_hold_pending);
++    yheld = yaw.controller.target_deg;
++    CHECK(PitchConsole_Handle("PITCH STEP", reply, sizeof(reply)) && strstr(reply, "P|OK|STEP_STARTED"));
++    follow_target = 1U; Run(40U, 2000U);
++    CHECK(pitch.controller.target_deg == 30.0f && yaw.controller.target_deg == yheld);
++    input.remote.channels[3] = 2000U; input.remote.channels[6] = 2000U; Run(2U, 2000U);
++    YawBackend_GetStep(&ystep); PitchBackend_GetStep(&pstep);
++    CHECK(ystep.id == 0U && pstep.phase == PITCH_STEP_RUNNING && pitch.controller.target_deg == 30.0f);
++    input.remote.channels[6] = 1000U; Run(2U, 2000U);
++    CHECK(pitch.controller.target_deg == 30.0f && yaw.controller.target_deg == yheld);
++    Run(120U, 2000U);
++    input.remote.channels[3] = 1500U; input.remote.channels[6] = 1500U;
++    view_hold_request = APP_VIEW_HOLD_PITCH; Run(2U, 2000U);
++    pheld = pitch.controller.target_deg;
++    PitchBackend_GetStep(&pstep); CHECK(pstep.phase == PITCH_STEP_ABORTED && !pstep.pass);
++    CHECK(YawConsole_Handle("YAW STEP", reply, sizeof(reply)) && strstr(reply, "Y|OK|STEP_STARTED"));
++    Run(40U, 2000U); CHECK(yaw.controller.target_deg == 30.0f && pitch.controller.target_deg == pheld);
++    CHECK(!PitchBackend_SetTarget(0.0f) && !PitchBackend_StartStep(30.0f));
++
++    test_stage = 3U;
++    enabled_y = yc; enabled_p = pc; AppTasks_RequestStop(); Read();
++    CHECK(pitch.view_locked && pitch.view_hold_pending && !PitchBackend_HoldCurrent());
++    Run(40U, 2000U);
++    CHECK(!yaw.active && !pitch.active && yc == enabled_y && pc == enabled_p);
++    CHECK(pitch.view_locked && !YawBackend_HoldCurrent() && !PitchBackend_HoldCurrent());
++    /* A view selected while stopped is a request only, never a rearm source. */
++    view_hold_request = APP_VIEW_HOLD_YAW; Run(40U, 2000U);
++    CHECK(yaw.view_locked && !pitch.view_locked && !yaw.active && !pitch.active);
++    CHECK(yc == enabled_y && pc == enabled_p);
++    test_done = 1U;
++}
+--- /dev/null
++++ after/MDK-ARM/VIEW窗口锁轴说明.md
+@@ -0,0 +1,34 @@
++# VIEW窗口锁轴操作
++
++本轮直接修改原 VS Code/EIDE 工程。功能标识为 `VIEW_AXIS_HOLD_V1`；拨盘仍保留 `C610_SINGLE_BRAKE_V1J` 的单发优化。烧录文件仍为当前 MDK-ARM 下的 `build/Gimbal_Control/Gimbal_Control.hex`。
++
++## 使用
++
++| 发送命令/点击原按钮 | 效果 |
++| --- | --- |
++| `PITCH VIEW` / `TELEM PITCH` | 显示pitch，锁住yaw当时实测位置，pitch沿用原控制和测试流程 |
++| `YAW VIEW` / `TELEM YAW` | 显示yaw，锁住pitch当时实测位置，yaw沿用原控制和测试流程 |
++| `GIMBAL VIEW LOCK` | 查询当前VIEW锁定请求 |
++| `GIMBAL VIEW FREE` | 解除VIEW互锁，保留当前显示，返回原遥控/测试控制规则 |
++| `FEEDER VIEW`、`FEEDER ANGLE VIEW`、`FEEDER SPEED VIEW`、`WHEEL VIEW`及其TELEM别名 | 切换对应曲线并解除VIEW互锁 |
++
++**VOFA单独点击标签页不会向下位机发送命令。** 选择pitch/yaw标签页后，再点击该页原来的 `PITCH VIEW` / `YAW VIEW` 按钮，或在串口发送框发送相同命令并带换行；无需重做页面和通道绑定。
++
++在原准备、解锁和反馈健康条件已满足时，锁定请求由原2ms控制任务执行。串口会在视图回执后再输出一行，例如：
++
++```text
++G|VIEW_LOCK|VIEW_AXIS_HOLD_V1|YAW|1|PITCH|0|MODE|HOLD_CURRENT|APPLY_MS|2
++```
++
++这里 `YAW|1` 表示请求锁yaw；`PITCH|1` 表示请求锁pitch。该行不是新的通道数据，原角度曲线绑定保持不变。未使能或已停止时只保存请求，不会因为发送VIEW自行使能电机。
++
++## 锁定规则
++
++- 锁定轴捕获一次当时实测角度作为固定目标，继续运行原位置/速度闭环。重复发送同一VIEW或之后发起另一轴STEP时，不会跟随扰动重新取锁点。
++- 锁定期间，该轴的摇杆速度、遥控STEP/归位及串口STEP/HOME/TARGET不会改变目标。误选锁定轴也不会打断正在显示和测试的另一轴；拒绝的动作不排队。
++- 切换到另一VIEW后，释放新选中的轴、捕获并锁定另一轴。旧轴尚未完成的动作会取消，相应五秒测量如实报告中止。
++- pitch保持期间继续保留原速度积分和重力前馈；软件零点、两轴PID参数与拨盘单发/50ms连发逻辑不变。
++- CH5进入测试时两轴先保持的上一版行为保留。要测pitch先发送 `PITCH VIEW`，要测yaw先发送 `YAW VIEW`；CH7确认/归位规则和近零静止门禁仍沿用原设置。
++- `TELEM OFF`只暂停发送，不解除锁轴。STOP、失联、故障和原模式退出停机规则仍优先；解除锁定或恢复通信不代替重新解锁。
++
++重新烧录后即可使用。本轮完成原工程编译和离线回归，未操作VOFA界面、连接电机或执行烧录；实际保持误差需实机检查。

@@ -278,8 +278,8 @@
                 "axis_y_wave": {
                   "ctx": {
                     ".": {
-                      "top_value": 350,
-                      "bottom_value": -350,
+                      "top_value": 6200,
+                      "bottom_value": -6200,
                       "bar_index": 5,
                       "decimal": 3
                     }
@@ -288,8 +288,8 @@
                 "axis_y_bar": {
                   "ctx": {
                     ".": {
-                      "top_value": 350,
-                      "bottom_value": -350,
+                      "top_value": 6200,
+                      "bottom_value": -6200,
                       "bar_index": 5,
                       "decimal": 3
                     }
@@ -402,7 +402,7 @@
                   "step_size": 1
                 },
                 "slider_inside": {
-                  "target_value": 0.0
+                  "target_value": -1.0
                 },
                 "argument_menu": {
                   "ctx": {
@@ -410,18 +410,18 @@
                       "hex_on": false,
                       "model_ctx": [
                         {
-                          "float_value": 0.0,
-                          "hex_value": "00 00 00 00",
+                          "float_value": -1.0,
+                          "hex_value": "00 00 80 bf",
                           "enabled": false
                         },
                         {
-                          "float_value": 0.0,
-                          "hex_value": "00 00 00 00",
+                          "float_value": -1.0,
+                          "hex_value": "00 00 80 bf",
                           "enabled": true
                         },
                         {
-                          "float_value": 0.0,
-                          "hex_value": "00 00 00 00",
+                          "float_value": -1.0,
+                          "hex_value": "00 00 80 bf",
                           "enabled": true
                         }
                       ]
@@ -500,7 +500,7 @@
                   "step_size": 0.01
                 },
                 "slider_inside": {
-                  "target_value": 1.0
+                  "target_value": 35.68
                 },
                 "argument_menu": {
                   "ctx": {
@@ -508,18 +508,18 @@
                       "hex_on": false,
                       "model_ctx": [
                         {
-                          "float_value": 1.0,
-                          "hex_value": "00 00 80 3f",
+                          "float_value": 35.68,
+                          "hex_value": "52 b8 0e 42",
                           "enabled": false
                         },
                         {
-                          "float_value": 1.0,
-                          "hex_value": "00 00 80 3f",
+                          "float_value": 35.68,
+                          "hex_value": "52 b8 0e 42",
                           "enabled": true
                         },
                         {
-                          "float_value": 1.0,
-                          "hex_value": "00 00 80 3f",
+                          "float_value": 35.68,
+                          "hex_value": "52 b8 0e 42",
                           "enabled": true
                         }
                       ]
@@ -598,7 +598,7 @@
                   "step_size": 1
                 },
                 "slider_inside": {
-                  "target_value": 0.0
+                  "target_value": 1.0
                 },
                 "argument_menu": {
                   "ctx": {
@@ -606,18 +606,18 @@
                       "hex_on": false,
                       "model_ctx": [
                         {
-                          "float_value": 0.0,
-                          "hex_value": "00 00 00 00",
+                          "float_value": 1.0,
+                          "hex_value": "00 00 80 3f",
                           "enabled": false
                         },
                         {
-                          "float_value": 0.0,
-                          "hex_value": "00 00 00 00",
+                          "float_value": 1.0,
+                          "hex_value": "00 00 80 3f",
                           "enabled": true
                         },
                         {
-                          "float_value": 0.0,
-                          "hex_value": "00 00 00 00",
+                          "float_value": 1.0,
+                          "hex_value": "00 00 80 3f",
                           "enabled": true
                         }
                       ]
@@ -1279,6 +1279,82 @@
                       "color_link_ch": false,
                       "color_link_theme": true,
                       "name_": "静止置零 ZERO",
+                      "name_link_ch": false,
+                      "name_link_cmd": false
+                    }
+                  }
+                },
+                "theme": {
+                  "ctx": {
+                    ".": {
+                      "color1": "#ffffff",
+                      "color2": "#005bb6",
+                      "colorBorder": "#d0d0d0",
+                      "color1Follow": true,
+                      "color2Follow": true,
+                      "colorBorderFollow": true,
+                      "borderWidth": 1.33,
+                      "opacity": 1
+                    }
+                  }
+                }
+              }
+            },
+            {
+              "path": "bound_bt",
+              "ctx": {
+                ".": {
+                  "ctx": {
+                    ".": {
+                      "x": 1050,
+                      "y": 415,
+                      "width": 190,
+                      "height": 64
+                    },
+                    "resize_border": {
+                      "ctx": {
+                        ".": {
+                          "full_screen": false,
+                          "full_height": false,
+                          "full_width": false
+                        }
+                      }
+                    }
+                  }
+                },
+                "argument_menu": {
+                  "ctx": {
+                    ".": {
+                      "hex_on": false,
+                      "model_ctx": [
+                        {
+                          "float_value": 1,
+                          "hex_value": "00 00 80 3f",
+                          "enabled": true
+                        },
+                        {
+                          "float_value": 0,
+                          "hex_value": "00 00 00 00",
+                          "enabled": false
+                        }
+                      ]
+                    }
+                  }
+                },
+                "cmd_menu": {
+                  "ctx": [
+                    11
+                  ]
+                },
+                "name_menu": {
+                  "ctx": {
+                    "attr": {
+                      "visible": true,
+                      "font_scale": 1,
+                      "color_": "black",
+                      "color_link_ch": false,
+                      "color_link_theme": true,
+                      "name_": "人工恢复 READY",
                       "name_link_ch": false,
                       "name_link_cmd": false
                     }
@@ -2347,8 +2423,8 @@
                 "axis_y_wave": {
                   "ctx": {
                     ".": {
-                      "top_value": 85,
-                      "bottom_value": -5,
+                      "top_value": 5,
+                      "bottom_value": -405,
                       "bar_index": 5,
                       "decimal": 3
                     }
@@ -2357,8 +2433,8 @@
                 "axis_y_bar": {
                   "ctx": {
                     ".": {
-                      "top_value": 85,
-                      "bottom_value": -5,
+                      "top_value": 5,
+                      "bottom_value": -405,
                       "bar_index": 5,
                       "decimal": 3
                     }
@@ -2532,8 +2608,8 @@
                 "axis_y_wave": {
                   "ctx": {
                     ".": {
-                      "top_value": 350,
-                      "bottom_value": -350,
+                      "top_value": 6200,
+                      "bottom_value": -6200,
                       "bar_index": 5,
                       "decimal": 3
                     }
@@ -2542,8 +2618,8 @@
                 "axis_y_bar": {
                   "ctx": {
                     ".": {
-                      "top_value": 350,
-                      "bottom_value": -350,
+                      "top_value": 6200,
+                      "bottom_value": -6200,
                       "bar_index": 5,
                       "decimal": 3
                     }
@@ -2841,7 +2917,7 @@
                   "step_size": 0.05
                 },
                 "slider_inside": {
-                  "target_value": 5.0
+                  "target_value": 8.0
                 },
                 "argument_menu": {
                   "ctx": {
@@ -2849,18 +2925,18 @@
                       "hex_on": false,
                       "model_ctx": [
                         {
-                          "float_value": 5.0,
-                          "hex_value": "00 00 a0 40",
+                          "float_value": 8.0,
+                          "hex_value": "00 00 00 41",
                           "enabled": false
                         },
                         {
-                          "float_value": 5.0,
-                          "hex_value": "00 00 a0 40",
+                          "float_value": 8.0,
+                          "hex_value": "00 00 00 41",
                           "enabled": true
                         },
                         {
-                          "float_value": 5.0,
-                          "hex_value": "00 00 a0 40",
+                          "float_value": 8.0,
+                          "hex_value": "00 00 00 41",
                           "enabled": true
                         }
                       ]
@@ -2869,7 +2945,7 @@
                 },
                 "cmd_menu": {
                   "ctx": [
-                    11
+                    12
                   ]
                 },
                 "ch_menu": {
@@ -2967,7 +3043,7 @@
                 },
                 "cmd_menu": {
                   "ctx": [
-                    12
+                    13
                   ]
                 },
                 "ch_menu": {
@@ -3065,7 +3141,7 @@
                 },
                 "cmd_menu": {
                   "ctx": [
-                    13
+                    14
                   ]
                 },
                 "ch_menu": {
@@ -3135,7 +3211,7 @@
                   "step_size": 10
                 },
                 "slider_inside": {
-                  "target_value": 300.0
+                  "target_value": 3600.0
                 },
                 "argument_menu": {
                   "ctx": {
@@ -3143,18 +3219,18 @@
                       "hex_on": false,
                       "model_ctx": [
                         {
-                          "float_value": 300.0,
-                          "hex_value": "00 00 96 43",
+                          "float_value": 3600.0,
+                          "hex_value": "00 00 61 45",
                           "enabled": false
                         },
                         {
-                          "float_value": 300.0,
-                          "hex_value": "00 00 96 43",
+                          "float_value": 3600.0,
+                          "hex_value": "00 00 61 45",
                           "enabled": true
                         },
                         {
-                          "float_value": 300.0,
-                          "hex_value": "00 00 96 43",
+                          "float_value": 3600.0,
+                          "hex_value": "00 00 61 45",
                           "enabled": true
                         }
                       ]
@@ -3163,7 +3239,7 @@
                 },
                 "cmd_menu": {
                   "ctx": [
-                    14
+                    15
                   ]
                 },
                 "ch_menu": {
@@ -3233,7 +3309,7 @@
                   "step_size": 50
                 },
                 "slider_inside": {
-                  "target_value": 1000.0
+                  "target_value": 3000.0
                 },
                 "argument_menu": {
                   "ctx": {
@@ -3241,18 +3317,18 @@
                       "hex_on": false,
                       "model_ctx": [
                         {
-                          "float_value": 1000.0,
-                          "hex_value": "00 00 7a 44",
+                          "float_value": 3000.0,
+                          "hex_value": "00 80 3b 45",
                           "enabled": false
                         },
                         {
-                          "float_value": 1000.0,
-                          "hex_value": "00 00 7a 44",
+                          "float_value": 3000.0,
+                          "hex_value": "00 80 3b 45",
                           "enabled": true
                         },
                         {
-                          "float_value": 1000.0,
-                          "hex_value": "00 00 7a 44",
+                          "float_value": 3000.0,
+                          "hex_value": "00 80 3b 45",
                           "enabled": true
                         }
                       ]
@@ -3261,7 +3337,7 @@
                 },
                 "cmd_menu": {
                   "ctx": [
-                    15
+                    16
                   ]
                 },
                 "ch_menu": {
@@ -3331,7 +3407,7 @@
                   "step_size": 0.05
                 },
                 "slider_inside": {
-                  "target_value": 1.0
+                  "target_value": 1.5
                 },
                 "argument_menu": {
                   "ctx": {
@@ -3339,18 +3415,18 @@
                       "hex_on": false,
                       "model_ctx": [
                         {
-                          "float_value": 1.0,
-                          "hex_value": "00 00 80 3f",
+                          "float_value": 1.5,
+                          "hex_value": "00 00 c0 3f",
                           "enabled": false
                         },
                         {
-                          "float_value": 1.0,
-                          "hex_value": "00 00 80 3f",
+                          "float_value": 1.5,
+                          "hex_value": "00 00 c0 3f",
                           "enabled": true
                         },
                         {
-                          "float_value": 1.0,
-                          "hex_value": "00 00 80 3f",
+                          "float_value": 1.5,
+                          "hex_value": "00 00 c0 3f",
                           "enabled": true
                         }
                       ]
@@ -3359,7 +3435,7 @@
                 },
                 "cmd_menu": {
                   "ctx": [
-                    16
+                    17
                   ]
                 },
                 "ch_menu": {
@@ -3429,7 +3505,7 @@
                   "step_size": 1
                 },
                 "slider_inside": {
-                  "target_value": 20.0
+                  "target_value": 10.0
                 },
                 "argument_menu": {
                   "ctx": {
@@ -3437,18 +3513,18 @@
                       "hex_on": false,
                       "model_ctx": [
                         {
-                          "float_value": 20.0,
-                          "hex_value": "00 00 a0 41",
+                          "float_value": 10.0,
+                          "hex_value": "00 00 20 41",
                           "enabled": false
                         },
                         {
-                          "float_value": 20.0,
-                          "hex_value": "00 00 a0 41",
+                          "float_value": 10.0,
+                          "hex_value": "00 00 20 41",
                           "enabled": true
                         },
                         {
-                          "float_value": 20.0,
-                          "hex_value": "00 00 a0 41",
+                          "float_value": 10.0,
+                          "hex_value": "00 00 20 41",
                           "enabled": true
                         }
                       ]
@@ -3457,7 +3533,7 @@
                 },
                 "cmd_menu": {
                   "ctx": [
-                    17
+                    18
                   ]
                 },
                 "ch_menu": {
@@ -3527,7 +3603,7 @@
                   "step_size": 50
                 },
                 "slider_inside": {
-                  "target_value": 1000.0
+                  "target_value": 3000.0
                 },
                 "argument_menu": {
                   "ctx": {
@@ -3535,18 +3611,18 @@
                       "hex_on": false,
                       "model_ctx": [
                         {
-                          "float_value": 1000.0,
-                          "hex_value": "00 00 7a 44",
+                          "float_value": 3000.0,
+                          "hex_value": "00 80 3b 45",
                           "enabled": false
                         },
                         {
-                          "float_value": 1000.0,
-                          "hex_value": "00 00 7a 44",
+                          "float_value": 3000.0,
+                          "hex_value": "00 80 3b 45",
                           "enabled": true
                         },
                         {
-                          "float_value": 1000.0,
-                          "hex_value": "00 00 7a 44",
+                          "float_value": 3000.0,
+                          "hex_value": "00 80 3b 45",
                           "enabled": true
                         }
                       ]
@@ -3555,7 +3631,7 @@
                 },
                 "cmd_menu": {
                   "ctx": [
-                    18
+                    19
                   ]
                 },
                 "ch_menu": {
@@ -3642,7 +3718,7 @@
                 },
                 "cmd_menu": {
                   "ctx": [
-                    19
+                    20
                   ]
                 },
                 "name_menu": {
@@ -3718,7 +3794,7 @@
                 },
                 "cmd_menu": {
                   "ctx": [
-                    20
+                    21
                   ]
                 },
                 "name_menu": {
@@ -3794,7 +3870,7 @@
                 },
                 "cmd_menu": {
                   "ctx": [
-                    21
+                    22
                   ]
                 },
                 "name_menu": {
@@ -3870,7 +3946,7 @@
                 },
                 "cmd_menu": {
                   "ctx": [
-                    22
+                    23
                   ]
                 },
                 "name_menu": {
@@ -3946,7 +4022,7 @@
                 },
                 "cmd_menu": {
                   "ctx": [
-                    23
+                    24
                   ]
                 },
                 "name_menu": {
@@ -4022,7 +4098,7 @@
                 },
                 "cmd_menu": {
                   "ctx": [
-                    24
+                    25
                   ]
                 },
                 "name_menu": {
@@ -4056,13 +4132,165 @@
               }
             },
             {
+              "path": "bound_bt",
+              "ctx": {
+                ".": {
+                  "ctx": {
+                    ".": {
+                      "x": 850,
+                      "y": 635,
+                      "width": 190,
+                      "height": 64
+                    },
+                    "resize_border": {
+                      "ctx": {
+                        ".": {
+                          "full_screen": false,
+                          "full_height": false,
+                          "full_width": false
+                        }
+                      }
+                    }
+                  }
+                },
+                "argument_menu": {
+                  "ctx": {
+                    ".": {
+                      "hex_on": false,
+                      "model_ctx": [
+                        {
+                          "float_value": 1,
+                          "hex_value": "00 00 80 3f",
+                          "enabled": true
+                        },
+                        {
+                          "float_value": 0,
+                          "hex_value": "00 00 00 00",
+                          "enabled": false
+                        }
+                      ]
+                    }
+                  }
+                },
+                "cmd_menu": {
+                  "ctx": [
+                    26
+                  ]
+                },
+                "name_menu": {
+                  "ctx": {
+                    "attr": {
+                      "visible": true,
+                      "font_scale": 1,
+                      "color_": "black",
+                      "color_link_ch": false,
+                      "color_link_theme": true,
+                      "name_": "实际射频 RESULT",
+                      "name_link_ch": false,
+                      "name_link_cmd": false
+                    }
+                  }
+                },
+                "theme": {
+                  "ctx": {
+                    ".": {
+                      "color1": "#ffffff",
+                      "color2": "#005bb6",
+                      "colorBorder": "#d0d0d0",
+                      "color1Follow": true,
+                      "color2Follow": true,
+                      "colorBorderFollow": true,
+                      "borderWidth": 1.33,
+                      "opacity": 1
+                    }
+                  }
+                }
+              }
+            },
+            {
+              "path": "bound_bt",
+              "ctx": {
+                ".": {
+                  "ctx": {
+                    ".": {
+                      "x": 1050,
+                      "y": 635,
+                      "width": 190,
+                      "height": 64
+                    },
+                    "resize_border": {
+                      "ctx": {
+                        ".": {
+                          "full_screen": false,
+                          "full_height": false,
+                          "full_width": false
+                        }
+                      }
+                    }
+                  }
+                },
+                "argument_menu": {
+                  "ctx": {
+                    ".": {
+                      "hex_on": false,
+                      "model_ctx": [
+                        {
+                          "float_value": 1,
+                          "hex_value": "00 00 80 3f",
+                          "enabled": true
+                        },
+                        {
+                          "float_value": 0,
+                          "hex_value": "00 00 00 00",
+                          "enabled": false
+                        }
+                      ]
+                    }
+                  }
+                },
+                "cmd_menu": {
+                  "ctx": [
+                    27
+                  ]
+                },
+                "name_menu": {
+                  "ctx": {
+                    "attr": {
+                      "visible": true,
+                      "font_scale": 1,
+                      "color_": "black",
+                      "color_link_ch": false,
+                      "color_link_theme": true,
+                      "name_": "人工恢复 READY",
+                      "name_link_ch": false,
+                      "name_link_cmd": false
+                    }
+                  }
+                },
+                "theme": {
+                  "ctx": {
+                    ".": {
+                      "color1": "#ffffff",
+                      "color2": "#005bb6",
+                      "colorBorder": "#d0d0d0",
+                      "color1Follow": true,
+                      "color2Follow": true,
+                      "colorBorderFollow": true,
+                      "borderWidth": 1.33,
+                      "opacity": 1
+                    }
+                  }
+                }
+              }
+            },
+            {
               "path": "gauge",
               "ctx": {
                 ".": {
                   "ctx": {
                     ".": {
                       "x": 850,
-                      "y": 655,
+                      "y": 735,
                       "width": 145,
                       "height": 180
                     },
@@ -4134,7 +4362,7 @@
                   "ctx": {
                     ".": {
                       "x": 1000,
-                      "y": 655,
+                      "y": 735,
                       "width": 145,
                       "height": 180
                     },
@@ -4206,7 +4434,7 @@
                   "ctx": {
                     ".": {
                       "x": 1150,
-                      "y": 655,
+                      "y": 735,
                       "width": 145,
                       "height": 180
                     },
@@ -4278,7 +4506,7 @@
                   "ctx": {
                     ".": {
                       "x": 1300,
-                      "y": 655,
+                      "y": 735,
                       "width": 145,
                       "height": 180
                     },
@@ -5633,7 +5861,7 @@
                     }
                   },
                   "from": 0,
-                  "to": 1,
+                  "to": 3000,
                   "decimal": 0,
                   "base_ratio": 0.5,
                   "label_scale": 1,
@@ -5653,7 +5881,7 @@
                       "color_": "black",
                       "color_link_ch": true,
                       "color_link_theme": true,
-                      "name_": "预留 I36 恒0 I36",
+                      "name_": "最近单步耗时 ms I36",
                       "name_link_ch": false,
                       "name_link_cmd": false
                     }
@@ -6014,7 +6242,7 @@
                 },
                 "cmd_menu": {
                   "ctx": [
-                    25
+                    28
                   ]
                 },
                 "name_menu": {
@@ -6090,7 +6318,7 @@
                 },
                 "cmd_menu": {
                   "ctx": [
-                    26
+                    29
                   ]
                 },
                 "name_menu": {
@@ -6166,7 +6394,7 @@
                 },
                 "cmd_menu": {
                   "ctx": [
-                    27
+                    30
                   ]
                 },
                 "name_menu": {

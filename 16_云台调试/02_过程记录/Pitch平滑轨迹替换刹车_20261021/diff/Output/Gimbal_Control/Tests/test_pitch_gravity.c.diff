@@ -1,0 +1,11 @@
+--- before/Output/Gimbal_Control/Tests/test_pitch_gravity.c
++++ after/Output/Gimbal_Control/Tests/test_pitch_gravity.c
+@@ -22,7 +22,7 @@
+     union { uint32_t bits; float value; } bad;
+     test_stage = 1U;
+     PitchController_Init(&pitch);
+-    CHECK(pitch.gravity_kg_nm == -0.48f && !pitch.gravity_calibrated);
++    CHECK(pitch.gravity_kg_nm == -0.47f && !pitch.gravity_calibrated);
+     CHECK(!PitchController_SetGravityGain(&pitch, -0.2f));
+     CHECK(!PitchController_SetGravityOffset(&pitch, 0.0f));
+     CHECK(PitchController_SetGravityGain(&pitch, 0.0f));

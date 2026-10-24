@@ -309,10 +309,10 @@ void test_run(void)
     CHECK(YawConsole_Handle("YAW CHECK", small, 6U));
     CHECK(small[5] == '\0' && small[6] == 0x5A && small[7] == 0x5A);
     test_stage = 7U;
-    baseline(); command("YAW STEP 30", "Y|ERROR|STEP_REQUIRES_ARMED_ZERO_STATIONARY_HEALTHY\r\n");
+    baseline(); command("YAW STEP 30", "Y|ERROR|STEP_REQUIRES_ARMED_ZERO_STATIONARY_HEALTHY|WHY|REMOTE_OR_OUTPUT_GUARD|BLOCKS|0\r\n");
     yaw.active = yaw.zero_set = 1U; app_armed = 1U; remote.channels[RC_ARM_CHANNEL] = 1500U;
-    command("YAW STEP 30.1", "Y|ERROR|STEP_REQUIRES_ARMED_ZERO_STATIONARY_HEALTHY\r\n");
-    command("YAW STEP nan", "Y|ERROR|STEP_REQUIRES_ARMED_ZERO_STATIONARY_HEALTHY\r\n");
+    command("YAW STEP 30.1", "Y|ERROR|STEP_REQUIRES_ARMED_ZERO_STATIONARY_HEALTHY|WHY|TARGET_OR_FORMAT|BLOCKS|0\r\n");
+    command("YAW STEP nan", "Y|ERROR|STEP_REQUIRES_ARMED_ZERO_STATIONARY_HEALTHY|WHY|TARGET_OR_FORMAT|BLOCKS|0\r\n");
     command("YAW STEP 30", "Y|OK|STEP_STARTED|TARGET|30.0|WINDOW_MS|5000|HOLD|1\r\n");
     CHECK(step_mock.phase == YAW_STEP_RUNNING);
     YawStep_Abort(&step_mock, now + 10U, YAW_STEP_FAULT, 16U);

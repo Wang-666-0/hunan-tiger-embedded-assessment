@@ -1,0 +1,20 @@
+--- before/Output/Gimbal_Control/Tests/test_pitch_terminal_brake.c
++++ after/Output/Gimbal_Control/Tests/test_pitch_terminal_brake.c
+@@ -119,7 +119,7 @@
+         CHECK(pitch.brake.torque_nm * pitch.velocity_dps <= 0.0f);
+         CHECK(pitch.brake.torque_nm * pitch.cascade.velocity_dps <= 0.0f);
+         CHECK(absolute(pitch.brake.torque_nm) <= 0.200001f);
+-        CHECK(absolute(pitch.brake.torque_nm) <= previous + 0.016001f);
++        CHECK(absolute(pitch.brake.torque_nm) <= previous + 0.024001f);
+         previous = absolute(pitch.brake.torque_nm);
+     }
+     CHECK(pitch.brake.return_frames > 0U && pitch.brake.return_peak_nm > 0.12f);
+@@ -164,7 +164,7 @@
+     PitchController_Init(&pitch);
+     CHECK(pitch.shape.duration_ms == 0U && pitch.shape.velocity_gain == 0.0f);
+     CHECK(pitch.brake.enabled && !pitch.brake.active && !pitch.brake.tracking);
+-    CHECK(pitch.cascade.position.kp == 14.4f && pitch.cascade.position.ki == 0.672f);
++    CHECK(pitch.cascade.position.kp == 14.4f && pitch.cascade.position.ki == 0.687f);
+     CHECK(pitch.cascade.speed.kp == 0.0063f && pitch.gravity_kg_nm == -0.47f);
+     CHECK(!PitchController_SetBrakeEnabled(0, 1U));
+     CHECK(!PitchController_SetBrakeEnabled(&pitch, 2U));

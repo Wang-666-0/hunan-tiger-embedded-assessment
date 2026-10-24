@@ -1,0 +1,31 @@
+{
+  "groups": 5,
+  "checks": 80186,
+  "failures": 0,
+  "matching_source_hashes": 109,
+  "build": "AC5/O0 69 sources",
+  "rom_bytes": 132656,
+  "ram_bytes": 36912,
+  "display_version": 3,
+  "profile_ms": [
+    205,
+    225,
+    245,
+    265
+  ],
+  "profile_hold_deg": [
+    0.08,
+    0.11,
+    0.13,
+    0.15
+  ],
+  "demo_completions_before_auto_off": 2,
+  "completion_hold_ms": 50,
+  "recovery_ms": 500,
+  "directions": [
+    "0->30",
+    "30->0"
+  ],
+  "flashed": false,
+  "hardware_verified": false
+}

@@ -1,0 +1,11 @@
+--- before/Output/Gimbal_Control/Tests/run_selftests.py
++++ after/Output/Gimbal_Control/Tests/run_selftests.py
+@@ -140,7 +140,7 @@
+     groups["pitch_protocol"] = [root / "test_pitch_protocol.c", app / "dm3507.c", app / "can_frame.c"]
+     groups["pitch_controller"] = [root / "test_pitch_controller.c", app / "pitch_controller.c", app / "yaw_cascade.c"]
+     groups["pitch_gravity"] = [root / "test_pitch_gravity.c", app / "pitch_controller.c", app / "yaw_cascade.c"]
+-    groups["pitch_return_brake"] = [root / "test_pitch_return_brake.c", app / "pitch_controller.c", app / "yaw_cascade.c"]
++    groups["pitch_shape"] = [root / "test_pitch_shape.c", app / "pitch_controller.c", app / "yaw_cascade.c"]
+     groups["pitch_step"] = [root / "test_pitch_step.c", app / "pitch_step.c", app / "yaw_step.c"]
+     groups["pitch_backend"] = [root / "test_pitch_backend.c"] + [app / (n + ".c") for n in (
+         "pitch_backend", "pitch_controller", "pitch_step", "dm3507", "yaw_cascade", "yaw_step", "can_frame")]

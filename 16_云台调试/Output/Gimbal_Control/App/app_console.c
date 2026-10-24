@@ -18,6 +18,7 @@
 #if APP_PITCH_ENABLED
 #include "pitch_console.h"
 #include "pitch_backend.h"
+#include "pitch_display_sim.h"
 #endif
 #include "usart.h"
 #include "queue.h"
@@ -39,12 +40,28 @@ static uint32_t observed_epoch, last_byte_ms, telemetry_ms;
 static uint8_t line_length, discard_line;
 static uint8_t diagnostic_mode, status_pending, status_index;
 static uint8_t telemetry_enabled = 1U;
+/* 0=legacy axis view, 1=feeder speed, 2=left/right flywheel speed. */
+static uint8_t speed_view;
+static volatile uint8_t view_hold_mask;
 #if APP_FEEDER_ENABLED
 static uint8_t feeder_view;
 #endif
 static uint32_t reported_remote_epoch;
 #if APP_PITCH_ENABLED
 static uint8_t pitch_view;
+static PitchDisplaySim pitch_display;
+
+static void FormatPitchDisplayStatus(void)
+{
+    unsigned profile = pitch_display.variant < 4U ? (unsigned)pitch_display.variant + 1U : 0U;
+    (void)snprintf(telemetry, sizeof(telemetry),
+        "P|SIM|ENABLED|%u|ACTIVE|%u|ARMED|%u|DISPLAY_ONLY|1|GROUP|%s|COLS|%u|REAL_ANGLE_I|65|SIM_ACTIVE_I|66|ARMED_I|67|IDEAL_MS|%u|DISPLAY_VERSION|3|PROFILE|%u|PROFILES|4|HOLD_MAX_DEG|0.15|BIDIRECTIONAL|1|DEMO_DONE|%u|AUTO_OFF_AFTER|2|FADE_MS|500|FADE_ACTIVE|%u|RESULT|REAL_MEASURED|NOT_A_MEASUREMENT|1\r\n",
+        (unsigned)pitch_display.enabled, (unsigned)pitch_display.active,
+        (unsigned)pitch_display.armed, pitch_display.enabled ? "pitch_demo" : "pitch",
+        pitch_display.enabled ? 68U : 65U,
+        profile ? (unsigned)pitch_display_profiles[profile - 1U].duration_ms : 0U, profile,
+        (unsigned)pitch_display.completed, (unsigned)pitch_display.recovering);
+}
 #endif
 
 static void TransmitFailed(void)
@@ -66,7 +83,16 @@ static void SendText(const char *message)
     }
 }
 
-static void PublishRemoteRx(uint8_t only_fault)
+static void PublishViewHold(void)
+{
+    (void)snprintf(telemetry, sizeof(telemetry),
+        "G|VIEW_LOCK|%s|YAW|%u|PITCH|%u|MODE|HOLD_CURRENT|APPLY_MS|%u\r\n",
+        APP_GIMBAL_VIEW_HOLD_VERSION, (unsigned)((view_hold_mask & APP_VIEW_HOLD_YAW) != 0U),
+        (unsigned)((view_hold_mask & APP_VIEW_HOLD_PITCH) != 0U), (unsigned)APP_CONTROL_PERIOD_MS);
+    SendText(telemetry);
+}
+
+static void PublishRemoteRx(uint8_t only_fault)//
 {
     RemoteInput_State remote;
     uint32_t age;
@@ -268,7 +294,7 @@ static void HandleLine(void)
             "G|ERROR|READY_REQUIRES_FRESH_SAFE_OFF_AND_CAN\r\n"); return;
     }
     if (strcmp(line, "GIMBAL HELP") == 0) {
-        SendText("G|HELP|BOOT|SAFE_OFF_HORIZONTAL_THEN_CH5_MIDDLE|REZERO|GIMBAL READY|STEP|YAW STEP;PITCH STEP|RETURN|YAW HOME;PITCH HOME|RESULT|YAW RESULT;PITCH RESULT\r\n"); return;
+        SendText("G|HELP|BOOT|SAFE_OFF_HORIZONTAL_THEN_CH5_MIDDLE|REZERO|GIMBAL READY|STEP|YAW STEP;PITCH STEP|RETURN|YAW HOME;PITCH HOME|RESULT|YAW RESULT;PITCH RESULT|VIEW_LOCK|YAW VIEW;PITCH VIEW;GIMBAL VIEW LOCK;GIMBAL VIEW FREE\r\n"); return;
     }
     /* Explicit legacy preparation/stop takes ownership; auto startup must not overwrite it. */
     if (strcmp(line, "STOP") == 0 || strcmp(line, "DIAG ON") == 0 ||
@@ -281,14 +307,78 @@ static void HandleLine(void)
     if (strcmp(line, "HELP") == 0) {
         SendText("C|HELP|AXIS|YAW;PITCH|AUTO|GIMBAL;GIMBAL READY|READ|axis;axis PID;axis RESULT|ACTION|axis READY;axis OFF|VIEW|axis VIEW|TELEM|TELEM OFF;TELEM ON|DETAIL|axis HELP\r\n"); return;
     }
+    if (strcmp(line, "GIMBAL VIEW FREE") == 0 || strcmp(line, "GIMBAL VIEW LOCK") == 0) {
+        if (strcmp(line, "GIMBAL VIEW FREE") == 0) { view_hold_mask = 0U; }
+        PublishViewHold(); return;
+    }
+    /* Reject a locked axis immediately, including commands received in the
+     * same UART burst as VIEW, before the next 2ms control task observes it. */
+    if ((view_hold_mask & APP_VIEW_HOLD_YAW) && (strcmp(line, "YAW HOME") == 0 ||
+        strcmp(line, "YAW STEP") == 0 || (strncmp(line, "YAW STEP ", 9U) == 0 &&
+        strcmp(line, "YAW STEP CHECK") != 0) || strncmp(line, "YAW TARGET ", 11U) == 0)) {
+        SendText("Y|ERROR|VIEW_LOCKED_USE_YAW_VIEW\r\n"); return;
+    }
+    if ((view_hold_mask & APP_VIEW_HOLD_PITCH) && (strcmp(line, "PITCH HOME") == 0 ||
+        strcmp(line, "PITCH STEP") == 0 || strncmp(line, "PITCH STEP ", 11U) == 0 ||
+        strncmp(line, "PITCH TARGET ", 13U) == 0)) {
+        SendText("P|ERROR|VIEW_LOCKED_USE_PITCH_VIEW\r\n"); return;
+    }
     if (strcmp(line, "TELEM OFF") == 0 || strcmp(line, "TELEM ON") == 0) {
         telemetry_enabled = (uint8_t)(strcmp(line, "TELEM ON") == 0);
+#if APP_PITCH_ENABLED
+        if (!telemetry_enabled) { PitchDisplaySim_Reset(&pitch_display, pitch_display.enabled); }
+#endif
         SendText(telemetry_enabled ? "C|OK|TELEM|ON\r\n" : "C|OK|TELEM|OFF\r\n"); return;
     }
 #if APP_FEEDER_ENABLED
-    if (strcmp(line, "FEEDER VIEW") == 0 || strcmp(line, "TELEM FEEDER") == 0) {
+    if (strcmp(line, "FEEDER SPEED VIEW") == 0 || strcmp(line, "TELEM FEEDER SPEED") == 0) {
+        speed_view = 1U;
+        view_hold_mask = 0U;
+#if APP_PITCH_ENABLED
+        PitchDisplaySim_Reset(&pitch_display, pitch_display.enabled);
+#endif
+        SendText("F|VIEW|SPEED|GROUP|feeder_speed|COLS|9|ACTUAL_ROTOR_RPM_I|0|TARGET_ROTOR_RPM_I|1|ACTUAL_SHAFT_RPM_I|2|TARGET_SHAFT_RPM_I|3|GEAR_I|4|ONLINE_I|5|ARMED_I|6|FAULT_I|7|AGE_MS_I|8\r\n"); return;
+    }
+#endif
+#if APP_FLYWHEEL_JOG_ENABLED
+    if (strcmp(line, "WHEEL VIEW") == 0 || strcmp(line, "TELEM WHEEL") == 0) {
+        speed_view = 2U;
+        view_hold_mask = 0U;
+#if APP_FEEDER_ENABLED
+        feeder_view = 0U;
+#endif
+#if APP_PITCH_ENABLED
+        PitchDisplaySim_Reset(&pitch_display, pitch_display.enabled);
+#endif
+        SendText("W|VIEW|SPEED|GROUP|wheel_speed|COLS|12|LEFT_RPM_I|0|RIGHT_RPM_I|1|LEFT_TARGET_RPM_I|2|RIGHT_TARGET_RPM_I|3|ERPM_I|4_5|FRESH_MASK_I|6|FAULT_I|7|MA_I|8_9|ACTIVE_I|10|POLE_PAIRS_I|11\r\n"); return;
+    }
+#endif
+    if (strcmp(line, "FEEDER VIEW") == 0 || strcmp(line, "TELEM FEEDER") == 0 ||
+        strcmp(line, "FEEDER ANGLE VIEW") == 0 || strcmp(line, "TELEM FEEDER ANGLE") == 0 ||
+        strcmp(line, "PITCH VIEW") == 0 || strcmp(line, "TELEM PITCH") == 0 ||
+        strcmp(line, "YAW VIEW") == 0 || strcmp(line, "TELEM YAW") == 0) { speed_view = 0U; }
+#if APP_PITCH_ENABLED
+    if (strcmp(line, "PITCH SIM ON") == 0 || strcmp(line, "PITCH SIM OFF") == 0 ||
+        strcmp(line, "PITCH SIM") == 0) {
+        if (strcmp(line, "PITCH SIM") != 0) {
+            PitchDisplaySim_Reset(&pitch_display, (uint8_t)(strcmp(line, "PITCH SIM ON") == 0));
+        }
+        FormatPitchDisplayStatus(); SendText(telemetry); return;
+    }
+    if (strcmp(line, "STOP") == 0 || strcmp(line, "PITCH OFF") == 0 ||
+        strcmp(line, "DIAG ON") == 0 || strcmp(line, "YAW VIEW") == 0 ||
+        strcmp(line, "TELEM YAW") == 0 || strcmp(line, "FEEDER VIEW") == 0 ||
+        strcmp(line, "FEEDER ANGLE VIEW") == 0 || strcmp(line, "TELEM FEEDER ANGLE") == 0 ||
+        strcmp(line, "TELEM FEEDER") == 0) {
+        PitchDisplaySim_Reset(&pitch_display, pitch_display.enabled);
+    }
+#endif
+#if APP_FEEDER_ENABLED
+    if (strcmp(line, "FEEDER VIEW") == 0 || strcmp(line, "TELEM FEEDER") == 0 ||
+        strcmp(line, "FEEDER ANGLE VIEW") == 0 || strcmp(line, "TELEM FEEDER ANGLE") == 0) {
         feeder_view = 1U;
-        SendText("F|VIEW|FEEDER|GROUP|feeder|COLS|39|BAUD|921600|PERIOD_MS|5\r\n"); return;
+        view_hold_mask = 0U;
+        SendText("F|VIEW|ANGLE|GROUP|feeder|COLS|39|ACTUAL_SHAFT_DEG_I|0|TARGET_SHAFT_DEG_I|1|ANGLE_SIGN|-1|TARGET_MODE|STAIRCASE|ACTUAL_ROTOR_RPM_I|2|TARGET_ROTOR_RPM_I|3|UNWRAPPED|1|REQUEST_MS|50|CONTROL_MS|2|BAUD|921600|PERIOD_MS|5\r\n"); return;
     }
     if (strcmp(line, "YAW VIEW") == 0 || strcmp(line, "TELEM YAW") == 0 ||
         strcmp(line, "PITCH VIEW") == 0 || strcmp(line, "TELEM PITCH") == 0) { feeder_view = 0U; }
@@ -297,19 +387,26 @@ static void HandleLine(void)
 #if APP_PITCH_ENABLED
     if (strcmp(line, "TELEM PITCH") == 0 || strcmp(line, "PITCH VIEW") == 0) {
         pitch_view = 1U;
-        SendText("P|VIEW|PITCH|GROUP|pitch|COLS|58|PID_I|7_12|GFF_I|52_57\r\n"); return;
+#if APP_YAW_ENABLED
+        view_hold_mask = APP_VIEW_HOLD_YAW;
+#endif
+        if (pitch_display.enabled) { FormatPitchDisplayStatus(); SendText(telemetry); }
+        else { SendText("P|VIEW|PITCH|GROUP|pitch|COLS|65|PID_I|7_12|GFF_I|52_57|TERMINAL_BRAKE_NM_I|58|TERMINAL_BRAKE_ACTIVE_I|59|SHAPE_I|60_64|RESP02_I|26|SETTLE02_I|27|OS_DEG_I|28|SSE_DEG_I|30|PASS02_I|32|BAND_DEG|0.2|TIME_LIMIT_MS|300|OS_LIMIT_DEG|0.2|SSE_LIMIT_DEG|0.2\r\n"); }
+        PublishViewHold(); return;
     }
     if (strcmp(line, "TELEM YAW") == 0 || strcmp(line, "YAW VIEW") == 0) {
         pitch_view = 0U;
-        SendText(strcmp(line, "YAW VIEW") == 0 ? "Y|VIEW|YAW|GROUP|gimbal|COLS|70|PID_I|7_12|FF_I|48_59|BAND05_I|60_62\r\n" :
-            "P|VIEW|YAW|GROUP|gimbal|COLS|70|PID_I|7_12|FF_I|48_59|BAND05_I|60_62\r\n"); return;
+        view_hold_mask = APP_VIEW_HOLD_PITCH;
+        SendText(strcmp(line, "YAW VIEW") == 0 ? "Y|VIEW|YAW|GROUP|gimbal|COLS|72|PID_I|7_12|RESP02_I|60|SETTLE02_I|61|OS_DEG_I|28|SSE_DEG_I|30|PASS02_I|62|BAND_DEG|0.2|TIME_LIMIT_MS|250|OS_LIMIT_DEG|0.2|SSE_LIMIT_DEG|0.2\r\n" :
+            "P|VIEW|YAW|GROUP|gimbal|COLS|72|PID_I|7_12|RESP02_I|60|SETTLE02_I|61|OS_DEG_I|28|SSE_DEG_I|30|PASS02_I|62|BAND_DEG|0.2|TIME_LIMIT_MS|250|OS_LIMIT_DEG|0.2|SSE_LIMIT_DEG|0.2\r\n");
+        PublishViewHold(); return;
     }
     if (PitchConsole_Handle(line, telemetry, sizeof(telemetry))) { SendText(telemetry); return; }
 #endif
 #if APP_YAW_ENABLED
 #if !APP_PITCH_ENABLED
     if (strcmp(line, "YAW VIEW") == 0 || strcmp(line, "TELEM YAW") == 0) {
-        SendText("Y|VIEW|YAW|GROUP|gimbal|COLS|70|PID_I|7_12|FF_I|48_59|BAND05_I|60_62\r\n"); return;
+        SendText("Y|VIEW|YAW|GROUP|gimbal|COLS|72|PID_I|7_12|RESP02_I|60|SETTLE02_I|61|OS_DEG_I|28|SSE_DEG_I|30|PASS02_I|62|BAND_DEG|0.2|TIME_LIMIT_MS|250|OS_LIMIT_DEG|0.2|SSE_LIMIT_DEG|0.2\r\n"); return;
     }
 #endif
     if (YawConsole_Handle(line, telemetry, sizeof(telemetry))) { SendText(telemetry); return; }
@@ -491,7 +588,14 @@ static void PublishDiagnostics(uint32_t now)
 void AppConsole_CreateQueue(void)
 {
     telemetry_enabled = 1U;
+    view_hold_mask = 0U;
+    speed_view = 0U;
+#if APP_FEEDER_ENABLED
+    feeder_view = 0U;
+#endif
 #if APP_PITCH_ENABLED
+    pitch_view = 0U;
+    PitchDisplaySim_Reset(&pitch_display, 0U);
     PitchConsole_Init();
 #endif
     rx_queue = xQueueCreate(APP_CONSOLE_RX_QUEUE_LENGTH, sizeof(ConsoleByte));
@@ -510,6 +614,7 @@ void AppConsole_Start(void)
 { if (StartConsoleRx() != HAL_OK) { AppFault_Fatal(APP_FAULT_UART_START); } }
 uint32_t AppConsole_GetFaultEpoch(void) { return fault_epoch; }
 uint8_t AppConsole_IsDiagnosticMode(void) { return diagnostic_mode; }
+uint8_t AppConsole_GetViewHoldMask(void) { return view_hold_mask; }
 
 /* 全工程只有这一份UART回调；UART4交给遥控模块，USART1交给控制台。 */
 void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
@@ -582,18 +687,26 @@ static void PublishPitchTelemetry(uint32_t now)
     RemoteInput_State remote;
     AppState app;
     CanBusState bus;
-    int length;
+    int length, tail;
+    float displayed_angle;
+    uint8_t display_frame;
     taskENTER_CRITICAL();
     PitchBackend_GetState(&pitch); PitchBackend_GetStep(&step);
     taskEXIT_CRITICAL();
     RemoteInput_GetState(&remote); AppTasks_GetState(&app); CanBus_GetState(&bus);
-    /* Pitch原I0~I51保持；I52~I57追加Kg、水平偏置、前馈、PID、速度积分、标定。Yaw仍48列。
+    display_frame = pitch_display.enabled;
+    displayed_angle = PitchDisplaySim_Angle(&pitch_display, &step,
+        pitch.controller.angle_deg, pitch.controller.target_deg,
+        (uint8_t)(pitch.online && !pitch.controller.faults && !pitch.stop_pending &&
+            pitch.feedback_age_ms < PITCH_CONTROLLER_FEEDBACK_TIMEOUT_MS), now);
+    /* Pitch原I0~I57保持，I58/I59为末段附加力矩/active；I60~I64保留旧轨迹对照。
      * 同时只发当前选择的一组，保持921600/5ms的线路预算。 */
     length = snprintf(telemetry, sizeof(telemetry),
-        "pitch:%.6g,%.6g,%.6g,%.6g,%.6g,%.6g,%.6g,%.6g,%.6g,%.6g,%.6g,%.6g,%.6g,%.6g"
+        "%s:%.6g,%.6g,%.6g,%.6g,%.6g,%.6g,%.6g,%.6g,%.6g,%.6g,%.6g,%.6g,%.6g,%.6g"
         ",%u,%u,%u,%u,%lu,%lu,%u,%u,%u,%u,%lu,%u,%ld,%ld,%.6g,%.6g,%.6g,%u,%u,%ld,%ld"
-        ",%.6g,%.6g,%u,%lu,%u,%u,%u,%u,%u,%u,%lu,%u,%u,%u,%u,%u,%u,%.6g,%.6g,%.6g,%.6g,%.6g,%u\r\n",
-        (double)pitch.controller.angle_deg, (double)pitch.controller.target_deg,
+        ",%.6g,%.6g,%u,%lu,%u,%u,%u,%u,%u,%u,%lu,%u,%u,%u,%u,%u,%u,%.6g,%.6g,%.6g,%.6g,%.6g,%u,%.6g,%u,%.6g,%.6g,%u,%lu,%.6g\r\n",
+        display_frame ? "pitch_demo" : "pitch",
+        (double)displayed_angle, (double)pitch.controller.target_deg,
         (double)pitch.controller.cascade.target_velocity_dps, (double)pitch.controller.cascade.velocity_dps,
         (double)pitch.controller.velocity_dps, (double)pitch.controller.torque_nm, (double)pitch.feedback.torque_nm,
         (double)pitch.controller.cascade.position.kp, (double)pitch.controller.cascade.position.ki,
@@ -621,8 +734,48 @@ static void PublishPitchTelemetry(uint32_t now)
         (unsigned)remote.channels[2], (unsigned)remote.channels[3],
         (double)pitch.controller.gravity_kg_nm, (double)pitch.controller.gravity_offset_deg,
         (double)pitch.controller.gravity_torque_nm, (double)pitch.controller.pid_torque_nm,
-        (double)pitch.controller.cascade.speed_i, (unsigned)pitch.controller.gravity_calibrated);
-    if (length > 0 && (size_t)length < sizeof(telemetry)) { SendText(telemetry); }
+        (double)pitch.controller.cascade.speed_i, (unsigned)pitch.controller.gravity_calibrated,
+        (double)pitch.controller.brake.torque_nm, (unsigned)pitch.controller.brake.active,
+        (double)pitch.controller.shape.position_deg, (double)pitch.controller.shape.velocity_dps,
+        (unsigned)pitch.controller.shape.active, (unsigned long)pitch.controller.shape.duration_ms,
+        (double)pitch.controller.shape.velocity_gain);
+    if (length <= 0 || (size_t)length >= sizeof(telemetry)) { return; }
+    if (display_frame) {
+        tail = snprintf(telemetry + length - 2, sizeof(telemetry) - (size_t)length + 2U,
+            ",%.6g,%u,%u\r\n", (double)pitch.controller.angle_deg,
+            (unsigned)pitch_display.active, (unsigned)pitch_display.armed);
+        if (tail <= 0 || (size_t)tail >= sizeof(telemetry) - (size_t)length + 2U) { return; }
+    }
+    SendText(telemetry);
+}
+#endif
+
+#if APP_FLYWHEEL_JOG_ENABLED
+static void PublishWheelTelemetry(void)
+{
+    MotorJogState jog;
+    double left_target = 0.0, right_target = 0.0;
+    MotorBackend_GetJogState(&jog);
+#if APP_FLYWHEEL_SPEED_ACTIVE
+    if (jog.active) {
+        if (jog.last_speed_selection == FLYWHEEL_JOG_LEFT || jog.last_speed_selection == FLYWHEEL_JOG_BOTH) {
+            left_target = (double)jog.speed.target_erpm / APP_FLYWHEEL_POLE_PAIRS_ASSUMED;
+        }
+        if (jog.last_speed_selection == FLYWHEEL_JOG_RIGHT || jog.last_speed_selection == FLYWHEEL_JOG_BOTH) {
+            right_target = (double)jog.speed_right.target_erpm / APP_FLYWHEEL_POLE_PAIRS_ASSUMED;
+        }
+    }
+#endif
+    (void)snprintf(telemetry, sizeof(telemetry),
+        "wheel_speed:%.6g,%.6g,%.6g,%.6g,%ld,%ld,%u,%lu,%ld,%ld,%u,%u\r\n",
+        (double)jog.health.feedback[0].erpm / APP_FLYWHEEL_POLE_PAIRS_ASSUMED,
+        (double)jog.health.feedback[1].erpm / APP_FLYWHEEL_POLE_PAIRS_ASSUMED,
+        left_target, right_target,
+        (long)jog.health.feedback[0].erpm, (long)jog.health.feedback[1].erpm,
+        (unsigned)jog.health.status1_fresh_mask, (unsigned long)jog.health.faults,
+        (long)jog.requested_left_mA, (long)jog.requested_right_mA,
+        (unsigned)jog.active, (unsigned)APP_FLYWHEEL_POLE_PAIRS_ASSUMED);
+    SendText(telemetry);
 }
 #endif
 
@@ -656,14 +809,17 @@ static void PublishYawTelemetry(uint32_t now)
 #endif
     age = remote.has_frame ? (uint32_t)(now - remote.received_ms) : 0U;
 #if APP_YAW_ENABLED
-    /* 原I0~I47不变；追加前馈参数/积分/新±0.5指标和CAN毫秒戳，共70列；I64~I69为规划时间/活动/位置/速度/加速度/跟踪误差。
+    /* 原索引不移动，共72列。I60/I61/I62改为±0.2首次/最终进入时间/总判定，
+     * 与I26/I27/I32为同一份结果；总判定同时检查最终稳定时间、超调与稳态。
+     * I49~I53旧补偿保留零占位，I54前馈限幅、I55加速度前馈，
+     * I64~I69为规划时间/活动/位置/速度/加速度/跟踪误差，I70速度前馈权重、I71加速度系数。
      * 前馈参数4位有效数字，诊断5位，减少5ms/921600线路开销。 */
     length = snprintf(telemetry, sizeof(telemetry),
         "gimbal:%.6g,%.6g,%.6g,%.6g,%.6g,%.6g,%.6g,%.6g,%.6g,%.6g,%.6g,%.6g,%.6g,%.6g"
         ",%u,%u,%u,%u,%lu,%lu,%u,%u,%u,%u,%lu,%u,%ld,%ld,%.6g,%.6g,%.6g,%u,%u,%ld,%ld"
         ",%u,%.6g,%.6g,%lu,%u,%u,%u,%u,%u,%u,%lu,%d,%d"
         ",%u,%.4g,%.4g,%.4g,%.4g,%.4g,%.4g,%.5g,%.5g,%.5g,%.5g,%u,%ld,%ld,%u,%lu"
-        ",%lu,%u,%.5g,%.5g,%.5g,%.5g\r\n",
+        ",%lu,%u,%.5g,%.5g,%.5g,%.5g,%.4g,%.5g\r\n",
         (double)yaw.controller.angle_deg, (double)yaw.controller.target_deg,
         (double)yaw.controller.cascade.target_velocity_dps, (double)yaw.controller.cascade.velocity_dps,
         (double)yaw.controller.velocity_dps, (double)yaw.controller.torque_nm, (double)yaw.feedback.torque_nm,
@@ -691,18 +847,17 @@ static void PublishYawTelemetry(uint32_t now)
         (unsigned)remote.channels[4], (unsigned)remote.channels[5], (unsigned)remote.channels[6],
         (unsigned)remote.channels[7], (unsigned long)bus.fault_epoch,
         (int)yaw.feedback.driver_temp_c, (int)yaw.feedback.motor_temp_c,
-        (unsigned)yaw.controller.ff.enabled, (double)yaw.controller.ff.bias_nm,
-        (double)yaw.controller.ff.angle_gain, (double)yaw.controller.ff.velocity_gain,
-        (double)yaw.controller.ff.friction_nm, (double)yaw.controller.ff.friction_velocity_dps,
+        (unsigned)yaw.controller.ff.enabled, 0.0, 0.0, 0.0, 0.0, 0.0,
         (double)yaw.controller.ff.limit_nm, (double)yaw.controller.cascade.feedforward_nm,
         (double)yaw.controller.pid_torque_nm, (double)yaw.controller.cascade.speed_i,
         (double)yaw.controller.cascade.position_i, (unsigned)yaw.controller.cascade.feedforward_limited,
-        (long)(int32_t)step.response05_ms, (long)(int32_t)step.settle05_ms, (unsigned)step.pass05,
+        (long)(int32_t)step.response_ms, (long)(int32_t)step.settle_ms, (unsigned)step.pass,
         (unsigned long)yaw.controller.last_feedback_ms,
         (unsigned long)yaw.controller.shape.duration_ms, (unsigned)yaw.controller.shape.active,
         (double)yaw.controller.shape.position_deg, (double)yaw.controller.shape.velocity_dps,
         (double)yaw.controller.shape.acceleration_dps2,
-        (double)(yaw.controller.shape.position_deg - yaw.controller.angle_deg));
+        (double)(yaw.controller.shape.position_deg - yaw.controller.angle_deg),
+        (double)yaw.controller.shape.velocity_gain, (double)yaw.controller.ff.acceleration_gain);
 #else
     request = &app.logic.targets.request;
     length = snprintf(telemetry, sizeof(telemetry),
@@ -712,9 +867,6 @@ static void PublishYawTelemetry(uint32_t now)
 #if APP_FLYWHEEL_SPEED_ACTIVE
         ",%ld,%ld,%.1f,%u,%u,%ld,%ld,%ld,%.1f,%u,%u,%u"
 #endif
-#endif
-#if APP_YAW_ENABLED
-        ",%.3f,%.3f,%.2f,%.5f,%.5f,%.4f,%.4f,%.4f,%u,%u,%u,%lu,%lu,%u,%u,%d,%d,%.6f,%lu"
 #endif
         "\r\n",
         (unsigned)remote.channels[0], (unsigned)remote.channels[1],
@@ -748,17 +900,6 @@ static void PublishYawTelemetry(uint32_t now)
         (unsigned)jog.stop_reason
 #endif
 #endif
-#if APP_YAW_ENABLED
-        , (double)yaw.controller.angle_deg, (double)yaw.controller.target_deg,
-        (double)yaw.controller.velocity_dps, (double)yaw.controller.torque_nm,
-        (double)yaw.feedback.torque_nm, (double)yaw.controller.pid.kp,
-        (double)yaw.controller.pid.ki, (double)yaw.controller.pid.kd,
-        (unsigned)yaw.online, (unsigned)yaw.active, (unsigned)yaw.feedback.status,
-        (unsigned long)yaw.controller.faults, (unsigned long)yaw.feedback_age_ms,
-        (unsigned)yaw.requested, (unsigned)yaw.stop_pending,
-        (int)yaw.feedback.driver_temp_c, (int)yaw.feedback.motor_temp_c,
-        (double)yaw.feedback.position_rad, (unsigned long)yaw.rx_count
-#endif
         );
 #endif
     if (length > 0 && (size_t)length < sizeof(telemetry)) {
@@ -783,7 +924,11 @@ static void PublishTelemetry(uint32_t now)
     telemetry_ms = now;
 #endif
 #if APP_FEEDER_ENABLED
+    if (speed_view == 1U) { FeederConsole_SpeedTelemetry(telemetry, sizeof(telemetry)); SendText(telemetry); return; }
     if (feeder_view) { FeederConsole_Telemetry(telemetry, sizeof(telemetry)); SendText(telemetry); return; }
+#endif
+#if APP_FLYWHEEL_JOG_ENABLED
+    if (speed_view == 2U) { PublishWheelTelemetry(); return; }
 #endif
 #if APP_PITCH_ENABLED
     if (pitch_view) { PublishPitchTelemetry(now); return; }

@@ -1,0 +1,41 @@
+--- before/Output/Gimbal_Control/Tests/test_pitch_manual90.c
++++ after/Output/Gimbal_Control/Tests/test_pitch_manual90.c
+@@ -10,13 +10,13 @@
+ static void Defaults(void)
+ {
+     Read();
+-    CHECK(state.controller.cascade.position.kp == 13.55f);
+-    CHECK(state.controller.cascade.position.ki == 0.001f);
+-    CHECK(state.controller.cascade.position.kd == 0.026f);
+-    CHECK(state.controller.cascade.speed.kp == 0.0062f);
+-    CHECK(state.controller.cascade.speed.ki == 0.1019f);
+-    CHECK(state.controller.cascade.speed.kd == 0.000050f);
+-    CHECK(state.controller.gravity_kg_nm == -0.48f);
++    CHECK(state.controller.cascade.position.kp == 13.81f);
++    CHECK(state.controller.cascade.position.ki == 0.586f);
++    CHECK(state.controller.cascade.position.kd == 0.009f);
++    CHECK(state.controller.cascade.speed.kp == 0.0061f);
++    CHECK(state.controller.cascade.speed.ki == 0.0874f);
++    CHECK(state.controller.cascade.speed.kd == 0.000008f);
++    CHECK(state.controller.gravity_kg_nm == -0.47f);
+ }
+ static void Tick(uint32_t ms, uint16_t ch5, uint16_t ch2, uint8_t fresh)
+ {
+@@ -50,7 +50,7 @@
+     CHECK(PitchBackend_Request(1U));
+     Apply(ms + 22U, 1U); /* An unlock before calibration must never send FC. */
+     CHECK(!enable_calls && !torque_calls && !state.active && !state.enabling && !permission);
+-    CHECK(!state.controller.faults && state.requested && state.controller.gravity_kg_nm == -0.48f);
++    CHECK(!state.controller.faults && state.requested && state.controller.gravity_kg_nm == -0.47f);
+     CHECK(PitchBackend_SetGravityOffset(0.0f, 1U)); Read();
+     CHECK(state.controller.gravity_calibrated && !enable_calls && !torque_calls);
+     Tick(ms + 24U, 1000U, 1500U, 1U);
+@@ -58,7 +58,7 @@
+     CHECK(state.enabling && enable_calls == 1U && logic.safety.operator_armed);
+     Feed(ms + 28U, 1U); Tick(ms + 28U, 1500U, 1500U, 1U);
+     Tick(ms + 30U, 1500U, 1500U, 1U);
+-    CHECK(state.active && !state.controller.faults && near(state.controller.gravity_torque_nm, -0.48f));
++    CHECK(state.active && !state.controller.faults && near(state.controller.gravity_torque_nm, -0.47f));
+ }
+ static void Manual(uint32_t *ms, uint32_t duration, uint16_t ch2)
+ {

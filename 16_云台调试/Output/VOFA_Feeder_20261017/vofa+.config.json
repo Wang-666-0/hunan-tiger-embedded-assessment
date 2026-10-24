@@ -379,7 +379,7 @@
                   "xoffset": 0,
                   "decimal": -7,
                   "value": 0,
-                  "name": "I5 C610反馈电流 raw"
+                  "name": "I5 C610反馈转矩 raw"
                 },
                 {
                   "is_draw": true,
@@ -689,7 +689,7 @@
                   "xoffset": 0,
                   "decimal": -7,
                   "value": 0,
-                  "name": "I36 预留 I36 恒0"
+                  "name": "I36 最近单步耗时 ms"
                 },
                 {
                   "is_draw": true,

@@ -1,0 +1,10 @@
+--- before/Output/Gimbal_Control/App/pitch_backend.h
++++ after/Output/Gimbal_Control/App/pitch_backend.h
+@@ -44,6 +44,7 @@
+ uint8_t PitchBackend_SetGravityOffset(float offset_deg, uint8_t capture_horizontal);
+ /* 五秒测量窗口中拒绝改变轨迹配置；相同配置幂等，不清积分。 */
+ uint8_t PitchBackend_SetShape(uint32_t duration_ms, float velocity_gain);
++uint8_t PitchBackend_SetBrakeEnabled(uint8_t enabled);
+ /* +/-30 is an absolute software-zero target, measured for five seconds and then held. */
+ uint8_t PitchBackend_StartStep(float degrees);
+ /* 控制任务只需编号时避免复制完整测量快照；不消费报告。 */

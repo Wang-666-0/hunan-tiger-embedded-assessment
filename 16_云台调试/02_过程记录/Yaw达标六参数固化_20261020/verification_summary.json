@@ -1,0 +1,12 @@
+{
+  "groups": 8,
+  "checks": 65888,
+  "failures": 0,
+  "test_sources_still_match": true,
+  "configuration_changes_only_seven_defines_and_comments": true,
+  "original_eide_o0_parameters_preserved": true,
+  "compiler_errors": 0,
+  "compiler_warnings": 0,
+  "hardware_flashed": false,
+  "configuration_sha256": "b9e87454df4dcf491d09e19dde4a202ce049700f85f497f865fb4f764309bd0b"
+}

@@ -1,0 +1,42 @@
+{
+  "source": "C:\\Users\\Administrator\\AppData\\Local\\vofa+\\100\\context",
+  "source_hashes": {
+    "vofa+.tabviews.json": "69027c6aadeff9fdc8fa2bb52c2e200d5202c8471fcfb13d721813a8780a7afc",
+    "vofa+.cmds.json": "47b4fe42ce8888b28d495c65b4776dc4cb7be5ded4eb5cf5de52a2c711dbb1e8",
+    "vofa+.config.json": "7fc7bed2c45e4dff4290c93bfa4e7d03ecc341b1b8e81bdf99fb4b17f8ea7001"
+  },
+  "tabs": [
+    "yaw",
+    "pitch",
+    "拨盘转速",
+    "摩擦轮转速",
+    "Pitch SIM 模拟"
+  ],
+  "old_tabs_unchanged": true,
+  "old_commands_unchanged": true,
+  "old_settings_unchanged": true,
+  "commands_added": [
+    "FEEDER VIEW\n",
+    "FEEDER STATUS\n",
+    "YAW VIEW\n",
+    "WHEEL SPEED\n"
+  ],
+  "feeder": {
+    "group": "feeder",
+    "actual_rotor_rpm": 2,
+    "target_rotor_rpm": 3,
+    "online": 16,
+    "faults": 19,
+    "gear_ratio": 13
+  },
+  "flywheels": {
+    "group": "gimbal",
+    "left_filtered_rpm": 36,
+    "right_filtered_rpm": 37,
+    "active": 35,
+    "faults": 38,
+    "assumed_pole_pairs": 7
+  },
+  "hardware_used": false,
+  "native_gui_import_verified": false
+}

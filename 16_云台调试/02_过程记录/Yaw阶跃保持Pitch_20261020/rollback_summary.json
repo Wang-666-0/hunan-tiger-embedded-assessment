@@ -1,0 +1,40 @@
+{
+  "action": "withdraw Yaw-step Pitch hold only",
+  "restored_files": [
+    "Output/Gimbal_Control/App/app_config.h",
+    "Output/Gimbal_Control/App/pitch_backend.c",
+    "Output/Gimbal_Control/App/pitch_backend.h",
+    "Output/Gimbal_Control/App/yaw_backend.c",
+    "Output/Gimbal_Control/App/yaw_backend.h",
+    "Output/Gimbal_Control/App/yaw_console.c",
+    "Output/Gimbal_Control/README.md",
+    "Output/Gimbal_Control/Tests/README.md",
+    "Output/Gimbal_Control/Tests/run_selftests.py",
+    "Output/Gimbal_Control/Tests/test_yaw_cascade_unlimited_console.c",
+    "Output/Gimbal_Control/Tests/test_yaw_manual50.c",
+    "README.md"
+  ],
+  "archived_added_files": [
+    "Output/Gimbal_Control/Tests/test_yaw_step_pitch_hold.c",
+    "01_学习笔记/Yaw阶跃时Pitch保持_20261020.md"
+  ],
+  "restored_files_byte_identical": true,
+  "baseline_70_group_report_source_hashes_match": true,
+  "previous_8_group_pid_report_source_hashes_match": true,
+  "yaw_version": "GL60II_FIXED_PID_V2Q",
+  "pitch_version": "DM3507_CASCADE_V1G",
+  "yaw_pid_preserved": [
+    15.549,
+    0.734,
+    0.139,
+    0.00517,
+    0.0035,
+    7.4e-05
+  ],
+  "hardware_flashed": false,
+  "firmware_rebuilt": true,
+  "compiler_errors": 0,
+  "compiler_warnings": 0,
+  "full_tests_rerun": false,
+  "verification": "Exact restore plus source hash match to previous 70-group and 8-group passing reports"
+}

@@ -1,0 +1,22 @@
+{
+  "recorded_at": "2026-10-21T10:20:36+08:00",
+  "success": true,
+  "groups": 73,
+  "checks": 562264,
+  "failures": 0,
+  "all_finished_returned": true,
+  "source_files_verified": 131,
+  "source_mismatch": [],
+  "method": "ARM GCC -Wall -Wextra -Werror + Unicorn; actual C, HAL/RTOS mocked; no hardware",
+  "firmware_version": "DM3507_FAST_OBSERVER_V2F",
+  "flashed": false,
+  "build": {
+    "toolchain": "AC5.06",
+    "optimization": "level-0",
+    "source_items": 69,
+    "errors": 0,
+    "warnings": 0,
+    "ROM_bytes": 128440,
+    "RW_bytes": 36872
+  }
+}

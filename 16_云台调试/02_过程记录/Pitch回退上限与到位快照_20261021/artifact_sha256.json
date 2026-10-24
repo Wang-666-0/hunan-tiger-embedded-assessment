@@ -1,0 +1,10 @@
+{
+  "Gimbal_Control.hex": "759e018574621691f1230c21ae01cf3b303cc05bf15fc3e1d609adbe0d51f823",
+  "Gimbal_Control.axf": "e1454165d6ed3830a4ee29d3c752032524e4f95ae0033ee31c03180caa91bc43",
+  "compiler.log": "2ef482d6df84504ff90908580a8bf0b11a7737fa944a066799cc6fe52d1a830f",
+  "builder.params": "48a0192ecc4705e07c12f04876aa689963c3a463a27a3304fe2d6a4e59252715",
+  "selftest_results.json": "331dc7f64ce9ce23274e2c740e93bae5eefe9c0511c36c6f11fbf832a08a3d63",
+  "selected_tests.json": "da5c0b3c9eb9b6147b0c37afc98afdcf9ba5d7597473a5bdd0f46d4e1571b616",
+  "build.log": "8352920b95c9ca39b51f9760f8cebd29cbbd9c3c97f508a44ec756eef4048109",
+  "full_tests.log": "c533fa5d164796c02b807ee3ce78aaad589f132ee852e6f64945aca85d834ebe"
+}

@@ -1,0 +1,26 @@
+--- before/Output/Gimbal_Control/App/pitch_controller.h
++++ after/Output/Gimbal_Control/App/pitch_controller.h
+@@ -44,6 +44,15 @@
+     uint8_t enabled, tracking, arrived, active, approach_done;
+ } PitchTerminalBrake;
+ 
++/* 首次到位与回退快照，只读诊断；不参与控制，不自动改写积分。 */
++typedef struct {
++    float target_deg, direction, start_i_nm, land_i_nm, min_i_nm, max_i_nm;
++    float land_raw_dps, land_filtered_dps, land_target_dps;
++    float land_gravity_nm, land_brake_nm, land_torque_nm, dip_deg;
++    uint32_t start_ms, sequence, arrival_ms, land_ms, dip_ms;
++    uint8_t active, arrived, landed;
++} PitchLandingTrace;
++
+ typedef struct {
+     /* 复用已验证双环数学；参数与状态完全独立于Yaw实例。 */
+     YawCascade cascade;
+@@ -57,6 +66,7 @@
+     PitchShape shape;
+     /* 独立的末段超速阻尼；只在SHAPE=0的离散目标运动中启用。 */
+     PitchTerminalBrake brake;
++    PitchLandingTrace landing;
+     uint32_t last_feedback_ms, last_sequence, faults, last_control_ms;
+     uint32_t stationary_started_ms;
+     uint8_t have_feedback, have_reference, active, have_control_tick;

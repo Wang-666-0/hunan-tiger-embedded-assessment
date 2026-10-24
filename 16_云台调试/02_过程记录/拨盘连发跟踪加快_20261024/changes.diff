@@ -1,0 +1,136 @@
+--- before/App/app_config.h
++++ after/App/app_config.h
+@@ -168,7 +168,7 @@
+ #ifndef APP_FEEDER_ENABLED
+ #define APP_FEEDER_ENABLED (APP_REMOTE_PROFILE_ASSESSMENT && APP_YAW_ENABLED && APP_PITCH_ENABLED)
+ #endif
+-#define APP_FEEDER_VERSION "C610_PHASE_50MS_V1H"
++#define APP_FEEDER_VERSION "C610_FAST_TRACK_V1I"
+ #define APP_FEEDER_CURRENT_HARD_LIMIT 3000
+ #define APP_FEEDER_COMMAND_PERIOD_MS 2U
+ 
+--- before/App/feeder_controller.c
++++ after/App/feeder_controller.c
+@@ -76,10 +76,12 @@
+     memset(c, 0, sizeof(*c));
+     c->config.step_deg = 40.0f; c->config.gear_ratio = 35.68f;
+     c->config.direction = -1; c->config.calibrated = 1U;
+-    c->config.pos_kp = 8.0f; c->config.speed_kp = 2.0f; c->config.speed_ki = 5.0f;
++    c->config.pos_kp = 10.0f; c->config.speed_kp = 2.0f; c->config.speed_ki = 8.0f;
+     c->config.max_rpm = 3600.0f; c->config.max_feedback_rpm = 6000.0f;
+     c->config.continuous_max_rpm = 5800.0f;
+-    c->config.continuous_brake_kp = 30.0f; c->config.continuous_phase_ms = 10.0f;
++    /* Track from the trigger time; the previous 10ms lag intentionally lost
++     * 8 shaft degrees at 40deg/50ms. Keep the existing boundary brake. */
++    c->config.continuous_brake_kp = 30.0f; c->config.continuous_phase_ms = 0.0f;
+     c->config.current_limit = 3000.0f; c->config.tolerance_deg = 1.5f;
+     c->config.settle_rpm = 30.0f; c->config.settle_ms = 10U;
+     c->config.motion_timeout_ms = 3000U;
+--- before/MDK-ARM/拨盘50ms连发操作说明.md
++++ after/MDK-ARM/拨盘50ms连发操作说明.md
+@@ -1,6 +1,6 @@
+ # 拨盘 50ms 连发与 VOFA 角度显示
+ 
+-本次直接修改当前 VS Code 工程，拨盘版本为 `C610_PHASE_50MS_V1H`。
++本次直接修改当前 VS Code 工程，拨盘版本为 `C610_FAST_TRACK_V1I`。
+ 
+ ## 连发行为
+ 
+@@ -10,6 +10,23 @@
+ - 迟到超过 2ms 时只提出一次请求，下一次从当前时刻再等待 50ms，避免补发积压请求。
+ - 沿用原来的连发速度前馈、位置误差修正和松手收尾。并未要求每个 40° 边界都停转、稳定后再发下一发。
+ - 实际轮速未就绪或已有两发尚未越过边界时，新请求仍会拒绝，不会积压无限目标。松手取消多余的前瞻目标，完成当前边界；故障按原逻辑停止。
++
++## 本轮加快跟踪
++
++截图是每50ms推进目标时的连发跟踪：启动阶段弯曲、随后接近直线，不能仅凭这张连发曲线测出独立40°阶跃的稳定时间。本轮针对软件参考滞后和追赶能力做适度加快：
++
++| 配置 | 原值 | 本轮默认值 |
++| --- | --- | --- |
++| 位置比例 PKP | 8 | 10 |
++| 速度比例 VKP | 2 | 2 |
++| 速度积分 VKI | 5 | 8 |
++| 连发参考滞后 PHASE_MS | 10ms | 0ms |
++
++取消10ms滞后，按40°/50ms的匀速参考计算，相当于去掉主动落后的8°。位置追赶增益增加25%，速度积分用于更快消除负载导致的持续速度差。
++
++50ms请求节拍、每发40°、2ms控制周期、5800rpm连发转子速度上限、3000原始电流命令上限、松手收尾与故障处理保留。I0/I1仍显示实测角度和接受的阶梯目标的相反数。`FEEDER INFO`应显示`PKP|10`、`VKP|2`、`VKI|8`；`FEEDER RESULT`应显示`PHASE_MS|0`。
++
++起步大误差时旧版本也可能已经输出到电流上限，本轮不增加这个上限，所以不能承诺机械加速或40°响应一定在50ms内完成。重新烧录后，用I0/I1观察位置间距；需要判断输出是否已用满时，I4是原始电流命令，长期接近±3000说明正在限幅。I2/I3分别是实际/目标转子rpm。
+ 
+ ## 在 VOFA 看目标角度和实际角度
+ 
+@@ -58,7 +75,7 @@
+ FEEDER RESULT
+ ```
+ 
+-版本应显示 `C610_PHASE_50MS_V1H`，结果中的 `REQUEST_MS|50` 是请求周期，`RATE_HZ` 和 `CONT_DONE` 来自编码器实际跨过角度边界的统计。请求 20Hz 不代表实机已经达到 20Hz。
++版本应显示 `C610_FAST_TRACK_V1I`，结果中的 `REQUEST_MS|50` 是请求周期，`RATE_HZ` 和 `CONT_DONE` 来自编码器实际跨过角度边界的统计。请求 20Hz 不代表实机已经达到 20Hz。
+ 
+ VS Code 继续打开当前 `Gimbal_Control.code-workspace`，使用现有构建和烧录操作。产物为：
+ 
+--- before/Tests/test_feeder_controller.c
++++ after/Tests/test_feeder_controller.c
+@@ -4,6 +4,7 @@
+ volatile uint32_t test_checks, test_failures, test_failed_line, test_done, test_stage;
+ #define CHECK(x) do { ++test_checks; if (!(x)) { ++test_failures; if (!test_failed_line) { test_failed_line = __LINE__; } } } while (0)
+ static FeederController c;
++static FeederController previous;
+ static CanFrame frame;
+ static double absolute(double value) { return value < 0.0 ? -value : value; }
+ static uint8_t near(double a, double b) { return (uint8_t)(absolute(a - b) < 0.00001); }
+@@ -39,7 +40,7 @@
+ void test_run(void)
+ {
+     FeederConfig config;
+-    uint32_t ms, accepted, sequence;
++    uint32_t ms, accepted, sequence, pass, base, elapsed;
+     int64_t counts, target_counts;
+     double first_target;
+     int16_t output;
+@@ -296,5 +297,45 @@
+     Feeder_Init(&c); sample(0xFFFFFFFEU, 6444U, -2048, 0);
+     sample(0xFFFFFFFFU, 5840U, -2234, 0); sample(0U, 5236U, -2234, 0);
+     CHECK(!c.faults && c.accumulated_counts == -1208 && c.timestamp_allowances == 2U);
++
++    test_stage = 11U;
++    /* Replay identical encoder inputs into the old and new tuning. This
++     * verifies removal of the software phase lag and stronger catch-up,
++     * not an identified plant or an actual motor settling-time claim. */
++    for (pass = 0U; pass < 2U; ++pass) {
++        base = 14000U + pass * 200U;
++        Feeder_Init(&c); config = c.config; config.direction = pass ? 1 : -1;
++        CHECK(Feeder_SetConfig(&c, &config));
++        sample(base, 0U, 0, 0); sample(base + 1U, 0U, 0, 0); sample(base + 2U, 0U, 0, 0);
++        CHECK(Feeder_Zero(&c, base + 2U));
++        previous = c;
++        previous.config.pos_kp = 8.0f; previous.config.speed_ki = 5.0f;
++        previous.config.continuous_phase_ms = 10.0f;
++        CHECK(Feeder_Run(&c, base + 2U, 1U, 1U, 1U, 1U, 1U) == config.direction * 3000);
++        (void)Feeder_Run(&previous, base + 2U, 1U, 1U, 1U, 1U, 1U);
++        CHECK(c.stream_reference_deg == 0.0 && absolute(previous.stream_reference_deg) > 285.0);
++        CHECK(absolute(c.target_rpm) > 4757.0 && absolute(previous.target_rpm) < 2500.0);
++        for (elapsed = 2U; elapsed <= 52U; elapsed += 2U) {
++            counts = config.direction * (int64_t)((double)elapsed * 0.64 *
++                (double)config.gear_ratio * 8192.0 / 360.0);
++            make_frame(base + 2U + elapsed, (uint16_t)((counts % 8192 + 8192) % 8192),
++                       (int16_t)(config.direction * 3806), 0, 0U);
++            CHECK(Feeder_OnFrame(&c, &frame, frame.received_ms, 0U));
++            CHECK(Feeder_OnFrame(&previous, &frame, frame.received_ms, 0U));
++            (void)Feeder_Run(&c, frame.received_ms, 1U, 1U, elapsed == 50U, 2U, elapsed <= 50U);
++            (void)Feeder_Run(&previous, frame.received_ms, 1U, 1U, elapsed == 50U, 2U, elapsed <= 50U);
++            CHECK(!c.faults && !previous.faults && c.accepted == previous.accepted);
++            CHECK(c.command_raw >= -3000 && c.command_raw <= 3000);
++            CHECK(absolute(c.target_rpm) <= c.config.continuous_max_rpm);
++            if (elapsed == 20U) {
++                CHECK(absolute(c.target_rpm) > absolute(previous.target_rpm) + 2000.0);
++                CHECK(c.command_raw * config.direction > previous.command_raw * config.direction);
++            }
++        }
++        CHECK(c.motion_kind == FEEDER_MOTION_TAIL && c.outstanding == 1U && c.cancelled == 1U);
++        CHECK(absolute(c.axis_target_deg - config.direction * 40.0) < 0.001);
++        CHECK(c.command_raw * config.direction < 0); /* Release still brakes. */
++        CHECK(Feeder_Run(&c, base + 56U, 0U, 1U, 0U, 0U, 0U) == 0 && !c.busy);
++    }
+     test_done = 1U;
+ }

@@ -1,0 +1,80 @@
+--- before/Output/Gimbal_Control/App/pitch_backend.c
++++ after/Output/Gimbal_Control/App/pitch_backend.c
+@@ -194,12 +194,16 @@
+ uint8_t PitchBackend_SetTarget(float degrees)
+ {
+     uint8_t accepted = 0U;
+-    taskENTER_CRITICAL();
+-    if (state.active && state.requested && state.zero_set && Online(HAL_GetTick()) &&
++    uint32_t now;
++    float previous;
++    taskENTER_CRITICAL();
++    now = HAL_GetTick();
++    if (state.active && state.requested && state.zero_set && Online(now) &&
+         state.feedback.status == 1U && !state.controller.faults && CanBus_PitchAllowed()) {
+-        accepted = PitchController_SetTarget(&state.controller, degrees);
++        previous = state.controller.target_deg;
++        accepted = PitchController_StartMove(&state.controller, degrees, now);
+         if (accepted) {
+-            PitchStep_Abort(&step, HAL_GetTick(), PITCH_STEP_TARGET_CHANGE, 0U);
++            if (previous != degrees) { PitchStep_Abort(&step, now, PITCH_STEP_TARGET_CHANGE, 0U); }
+             state.step_hold = 1U;
+         }
+     }
+@@ -238,10 +242,12 @@
+ uint8_t PitchBackend_StartStep(float degrees)
+ {
+     uint8_t accepted = 0U;
+-    taskENTER_CRITICAL();
++    uint32_t now;
++    taskENTER_CRITICAL();
++    now = HAL_GetTick();
+     if ((degrees == 30.0f || degrees == -30.0f) && state.coord_confirmed && state.zero_set &&
+         state.requested && state.active && state.controller.active && !state.enabling &&
+-        !state.stop_pending && Online(HAL_GetTick()) && state.feedback.status == 1U &&
++        !state.stop_pending && Online(now) && state.feedback.status == 1U &&
+         !state.controller.faults && CanBus_PitchAllowed() &&
+         fabsf(state.controller.angle_deg) <= PITCH_STEP_BAND_DEG &&
+         fabsf(state.controller.target_deg) <= PITCH_STEP_BAND_DEG &&
+@@ -249,8 +255,8 @@
+         state.controller.stationary_samples >= 2U &&
+         state.controller.last_feedback_ms - state.controller.stationary_started_ms >=
+             PITCH_CONTROLLER_STATIONARY_HOLD_MS && step.phase != PITCH_STEP_RUNNING) {
+-        if (PitchController_SetTarget(&state.controller, degrees)) {
+-            accepted = PitchStep_Start(&step, HAL_GetTick(), state.controller.angle_deg, degrees);
++        if (PitchController_StartMove(&state.controller, degrees, now)) {
++            accepted = PitchStep_Start(&step, now, state.controller.angle_deg, degrees);
+             if (accepted) {
+                 step.kp = state.controller.cascade.position.kp;
+                 step.ki = state.controller.cascade.position.ki;
+@@ -261,7 +267,8 @@
+                 step.gravity_kg_nm = state.controller.gravity_kg_nm;
+                 step.gravity_offset_deg = state.controller.gravity_offset_deg;
+                 step.gravity_calibrated = state.controller.gravity_calibrated;
+-                step.pitch_brake_enabled = state.controller.brake_enabled;
++                step.shape_ms = state.controller.shape.duration_ms;
++                step.shape_velocity_gain = state.controller.shape.velocity_gain;
+                 step.cascade = 1U; step.output_limits = 0U; step.vmax_dps = 0.0f;
+                 step.last_velocity_dps = state.controller.velocity_dps;
+                 step.last_torque_nm = submitted_torque;
+@@ -272,12 +279,14 @@
+     taskEXIT_CRITICAL(); return accepted;
+ }
+ 
+-uint8_t PitchBackend_SetBrakeEnabled(uint8_t enabled)
+-{
+-    uint8_t accepted = 0U;
+-    taskENTER_CRITICAL();
+-    if (enabled <= 1U && (step.phase != PITCH_STEP_RUNNING || enabled == state.controller.brake_enabled)) {
+-        accepted = PitchController_SetBrakeEnabled(&state.controller, enabled);
++uint8_t PitchBackend_SetShape(uint32_t duration_ms, float velocity_gain)
++{
++    uint8_t accepted = 0U;
++    taskENTER_CRITICAL();
++    if (step.phase != PITCH_STEP_RUNNING ||
++        (duration_ms == state.controller.shape.duration_ms &&
++         velocity_gain == state.controller.shape.velocity_gain)) {
++        accepted = PitchController_SetShape(&state.controller, duration_ms, velocity_gain);
+     }
+     taskEXIT_CRITICAL(); return accepted;
+ }

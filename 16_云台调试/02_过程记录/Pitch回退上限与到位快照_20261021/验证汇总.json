@@ -1,0 +1,22 @@
+{
+  "recorded_at": "2026-10-21T10:05:26+08:00",
+  "success": true,
+  "groups": 72,
+  "checks": 560647,
+  "failures": 0,
+  "all_finished_returned": true,
+  "source_files_verified": 130,
+  "source_mismatch": [],
+  "method": "ARM GCC -Wall -Wextra -Werror + Unicorn; actual C, HAL/RTOS mocked; no hardware",
+  "firmware_version": "DM3507_CAPTURE_BRAKE_V2E",
+  "flashed": false,
+  "build": {
+    "toolchain": "AC5.06",
+    "optimization": "level-0",
+    "source_items": 69,
+    "errors": 0,
+    "warnings": 0,
+    "ROM_bytes": 128212,
+    "RW_bytes": 36872
+  }
+}

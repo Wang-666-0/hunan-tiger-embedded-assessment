@@ -3,14 +3,13 @@
 #include "app_config.h"
 #include "app_tasks.h"
 #include "app_console.h"
+#include "console_parse.h"
 #include "remote_input.h"
 #include "can_bus.h"
 #include "FreeRTOS.h"
 #include "task.h"
 #include <string.h>
 #include <stdio.h>
-#include <stdlib.h>
-#include <float.h>
 
 /* READY是一次有时限的人工会话；每个阶段重新验证安全OFF，绝不自动使能。 */
 static uint8_t ready_phase, ready_clear_sent;
@@ -109,6 +108,23 @@ static uint8_t SafeStep(void)
         app.logic.safety.operator_armed && !AppConsole_IsDiagnosticMode());
 }
 
+static const char *StepBlockReason(uint32_t blocks)
+{
+    if (blocks & YAW_STEP_BLOCK_VIEW) { return "VIEW_LOCKED_USE_YAW_VIEW"; }
+    if (blocks & YAW_STEP_BLOCK_FAULT) { return "FAULT"; }
+    if (blocks & YAW_STEP_BLOCK_REFERENCE) { return "NEED_ZERO"; }
+    if (blocks & YAW_STEP_BLOCK_FEEDBACK) { return "FEEDBACK"; }
+    if (blocks & YAW_STEP_BLOCK_TRANSITION) { return "WAIT_ENABLE_OR_STOP"; }
+    if (blocks & YAW_STEP_BLOCK_INACTIVE) { return "NOT_ACTIVE"; }
+    if (blocks & YAW_STEP_BLOCK_PERMISSION) { return "REMOTE_OR_OUTPUT_GUARD"; }
+    if (blocks & YAW_STEP_BLOCK_WINDOW) { return "WAIT_5S_WINDOW"; }
+    if (blocks & YAW_STEP_BLOCK_HOME) { return "SEND_HOME_FIRST"; }
+    if (blocks & YAW_STEP_BLOCK_POSITION) { return "WAIT_ZERO_BAND"; }
+    if (blocks & YAW_STEP_BLOCK_MOVING) { return "WAIT_STILL"; }
+    if (blocks & YAW_STEP_BLOCK_STILL) { return "WAIT_STILL_HOLD"; }
+    return "READY";
+}
+
 static uint8_t StepReport(const YawStep *step, char *response, size_t capacity)
 {
     static const char *phases[] = { "IDLE", "RUNNING", "DONE", "ABORTED" };
@@ -116,7 +132,7 @@ static uint8_t StepReport(const YawStep *step, char *response, size_t capacity)
     uint32_t rise = step->t10_ms != YAW_STEP_UNREACHED && step->t90_ms != YAW_STEP_UNREACHED ?
         step->t90_ms - step->t10_ms : YAW_STEP_UNREACHED;
     int length = snprintf(response, capacity,
-        "Y|STEP|ID|%lu|STATE|%s|REASON|%s|VALID|%u|START|%.3f|TARGET|%.3f|WINDOW_MS|%lu|RESP_MS|%ld|T90_MS|%ld|RISE_MS|%ld|SETTLE_MS|%ld|OS_DEG|%.3f|OS_PCT|%.3f|SSE_DEG|%.3f|SSE_VALID|%u|PASS|%u|FAULT|%lu|VMAX_DPS|%.2f|TMAX_NM|%.5f|N|%lu|GAP_MS|%lu|%s|%lu|%s|%.4f|%s|%.4f|%s|%.4f|CMD_N|%lu|FIRST_NM|%.5f",
+        "Y|STEP|ID|%lu|STATE|%s|REASON|%s|VALID|%u|START|%.3f|TARGET|%.3f|WINDOW_MS|%lu|RESP_MS|%ld|T90_MS|%ld|RISE_MS|%ld|SETTLE_MS|%ld|OS_DEG|%.6f|OS_PCT|%.3f|SSE_DEG|%.6f|SSE_VALID|%u|PASS|%u|FAULT|%lu|VMAX_DPS|%.2f|TMAX_NM|%.5f|N|%lu|GAP_MS|%lu|%s|%lu|%s|%.4f|%s|%.4f|%s|%.4f|CMD_N|%lu|FIRST_NM|%.5f",
         (unsigned long)step->id, step->phase <= YAW_STEP_ABORTED ? phases[step->phase] : "UNKNOWN",
         step->reason <= YAW_STEP_FF_CHANGE ? reasons[step->reason] : "UNKNOWN",
         (unsigned)(step->phase == YAW_STEP_DONE), (double)step->start_deg, (double)step->target_deg,
@@ -136,14 +152,16 @@ static uint8_t StepReport(const YawStep *step, char *response, size_t capacity)
         if (step->cascade) {
             length = snprintf(response + used, capacity - used,
                 "|CTRL|CASCADE|VKP|%.6f|VKI|%.6f|VKD|%.6f|VREF_MAX_DPS|%.1f|VFILTER_MS|%u|OUTPUT_LIMITS|%u"
-                "|BAND05|0.5|RESP05_MS|%ld|SETTLE05_MS|%ld|PASS05|%u"
-                "|FF_ON|%u|FBIAS|%.6g|FANG|%.6g|FKV|%.6g|FC|%.6g|FVS|%.6g|FMAX|%.6g|SHAPE_MS|%lu\r\n",
+                "|BAND02|0.2|RESP02_MS|%ld|SETTLE02_MS|%ld|PASS02|%u"
+                "|TIME_LIMIT_MS|250|OS_LIMIT_DEG|0.2|SSE_LIMIT_DEG|0.2|SSE_PEAK_DEG|%.6g|ASSESSMENT|FINAL_SETTLE"
+                "|FF_ON|%u|FF_TYPE|ACCEL|FKA|%.6g|FMAX|%.6g|SHAPE_MS|%lu|SHAPE_V|%.6g\r\n",
                 (double)step->vkp, (double)step->vki, (double)step->vkd,
                 (double)step->vmax_dps, (unsigned)YAW_CASCADE_VELOCITY_FILTER_MS, (unsigned)step->output_limits,
-                (long)(int32_t)step->response05_ms, (long)(int32_t)step->settle05_ms, (unsigned)step->pass05,
-                (unsigned)step->ff_enabled, (double)step->ff_bias_nm, (double)step->ff_angle_gain,
-                (double)step->ff_velocity_gain, (double)step->ff_friction_nm,
-                (double)step->ff_velocity_dps, (double)step->ff_limit_nm, (unsigned long)step->shape_ms);
+                (long)(int32_t)step->response_ms, (long)(int32_t)step->settle_ms, (unsigned)step->pass,
+                (double)step->ss_max_error,
+                (unsigned)step->ff_enabled, (double)step->ff_acceleration_gain,
+                (double)step->ff_limit_nm, (unsigned long)step->shape_ms,
+                (double)step->shape_velocity_gain);
         } else { length = snprintf(response + used, capacity - used, "\r\n"); }
         return (uint8_t)(length > 0 && (size_t)length < capacity - used);
     }
@@ -155,17 +173,17 @@ static void FeedforwardReport(char *response, size_t capacity)
     YawBackendState yaw;
     YawBackend_GetState(&yaw);
     (void)snprintf(response, capacity,
-        "Y|FF|ON|%u|FBIAS|%.6g|FANG|%.6g|FKV|%.6g|FC|%.6g|FVS|%.6g|FMAX|%.6g"
+        "Y|FF|ON|%u|TYPE|ACCEL|FKA|%.6g|FMAX|%.6g|SHAPE_MS|%lu|SHAPE_ACTIVE|%u|REF_DPS2|%.6g"
         "|FF_NM|%.6g|PID_NM|%.6g|SUM_NM|%.6g|OUT_NM|%.6g|VI_NM|%.6g|PI_DPS|%.6g"
-        "|FF_SAT|%u|TOTAL_SAT|%u|I_TRANSFER|%u|REV|%lu\r\n",
-        (unsigned)yaw.controller.ff.enabled, (double)yaw.controller.ff.bias_nm, (double)yaw.controller.ff.angle_gain,
-        (double)yaw.controller.ff.velocity_gain, (double)yaw.controller.ff.friction_nm,
-        (double)yaw.controller.ff.friction_velocity_dps, (double)yaw.controller.ff.limit_nm,
+        "|FF_SAT|%u|TOTAL_SAT|%u|REV|%lu\r\n",
+        (unsigned)yaw.controller.ff.enabled, (double)yaw.controller.ff.acceleration_gain,
+        (double)yaw.controller.ff.limit_nm, (unsigned long)yaw.controller.shape.duration_ms,
+        (unsigned)yaw.controller.shape.active, (double)yaw.controller.shape.acceleration_dps2,
         (double)yaw.controller.cascade.feedforward_nm, (double)yaw.controller.pid_torque_nm,
         (double)yaw.controller.cascade.unsaturated_torque_nm, (double)yaw.controller.torque_nm,
         (double)yaw.controller.cascade.speed_i, (double)yaw.controller.cascade.position_i,
         (unsigned)yaw.controller.cascade.feedforward_limited, (unsigned)yaw.controller.cascade.torque_limited,
-        (unsigned)yaw.controller.ff.i_transferred, (unsigned long)yaw.controller.ff.revision);
+        (unsigned long)yaw.controller.ff.revision);
 }
 #endif
 
@@ -192,9 +210,9 @@ uint8_t YawConsole_Poll(char *response, size_t capacity)
             "PITCH_NOT_IMPLEMENTED"
 #endif
         };
-        (void)snprintf(response, capacity, "Y|REMOTE_STEP|SEQ|%lu|RESULT|%s|TARGET|%.1f\r\n",
+        (void)snprintf(response, capacity, "Y|REMOTE_STEP|SEQ|%lu|RESULT|%s|TARGET|%.1f|WHY|%s|BLOCKS|%lu\r\n",
             (unsigned long)event.sequence, event.result <= 4U ? results[event.result] : "UNKNOWN",
-            (double)event.target_deg);
+            (double)event.target_deg, StepBlockReason(event.blocks), (unsigned long)event.blocks);
         return 1U;
     }
     YawBackend_GetStep(&snapshot);
@@ -254,29 +272,6 @@ static void BusReport(char *response, size_t capacity)
     }
 }
 
-static uint8_t Number(const char *text, float *value)
-{
-    char *end;
-    float parsed = strtof(text, &end);
-    if (end == text || *end || !(parsed >= -FLT_MAX && parsed <= FLT_MAX)) { return 0U; }
-    *value = parsed; return 1U;
-}
-
-static uint8_t PidNumbers(const char *text, float *kp, float *ki, float *kd)
-{
-    char *end;
-    float *values[3] = { kp, ki, kd };
-    uint32_t i;
-    for (i = 0U; i < 3U; ++i) {
-        *values[i] = strtof(text, &end);
-        if (end == text || !(*values[i] >= -FLT_MAX && *values[i] <= FLT_MAX)) { return 0U; }
-        if (i == 2U) { return *end == '\0'; }
-        if (*end != ' ') { return 0U; }
-        text = end + 1;
-    }
-    return 0U;
-}
-
 static void BriefStatus(char *response, size_t capacity)
 {
     YawBackendState state;
@@ -301,7 +296,11 @@ uint8_t YawConsole_Handle(const char *line, char *response, size_t capacity)
     if (strcmp(line, "YAW") == 0) { BriefStatus(response, capacity); return 1U; }
     if (strcmp(line, "YAW HELP") == 0 || strcmp(line, "YAW ?") == 0) {
         (void)snprintf(response, capacity,
-            "Y|HELP|READ|YAW;PID;RESULT;STATUS|PREPARE|READY|STOP|OFF|VIEW|YAW VIEW|TUNE|POS kp ki kd;VEL kp ki kd;PKP/PKI/PKD/VKP/VKI/VKD value|FF|FF;FF ON/OFF;FBIAS/FANG/FKV/FC/FVS/FMAX value|SHAPE|SHAPE [0_or_80_to_500_ms]|TELEM|TELEM OFF/ON|TEST|STEP [30];HOME;REMOTE_CH5_CH7|DETAIL|INFO;CHECK;BUS;ZERO;CLEAR\r\n");
+#if APP_YAW_EXPERIMENTAL_TRACKING
+            "Y|HELP|READ|YAW;PID;RESULT;STATUS|PREPARE|READY|STOP|OFF|VIEW|YAW VIEW|TUNE|POS kp ki kd;VEL kp ki kd;PKP/PKI/PKD/VKP/VKI/VKD value|FF|FF;FF ON/OFF;FKA [0_to_0.001];FMAX [0_to_1]|SHAPE|SHAPE [0_or_80_to_500_ms];SHAPEV [0_to_1]|TELEM|TELEM OFF/ON|TEST|STEP [30];HOME;REMOTE_CH5_CH7|DETAIL|INFO;CHECK;BUS;ZERO;CLEAR\r\n");
+#else
+            "Y|HELP|CTRL|FIXED_CASCADE_PID|READ|YAW;PID;RESULT;STATUS;STEP CHECK|PREPARE|READY|STOP|OFF|VIEW|YAW VIEW|TUNE|POS kp ki kd;VEL kp ki kd;PKP/PKI/PKD/VKP/VKI/VKD value|TELEM|TELEM OFF/ON|TEST|STEP [30];HOME;REMOTE_CH5_CH7|DETAIL|INFO;CHECK;BUS;ZERO;CLEAR\r\n");
+#endif
         return 1U;
     }
     if (strcmp(line, "YAW BUS") == 0) {
@@ -326,15 +325,36 @@ uint8_t YawConsole_Handle(const char *line, char *response, size_t capacity)
         (void)snprintf(response, capacity, accepted ? "Y|OK|HOME|TARGET|0\r\n" :
             "Y|ERROR|HOME_REQUIRES_ARMED_ACTIVE_NEUTRAL\r\n"); return 1U;
     }
+    if (strcmp(line, "YAW STEP CHECK") == 0) {
+        uint8_t remote_ok = SafeStep();
+        YawBackend_GetState(&yaw);
+        (void)snprintf(response, capacity,
+            "Y|STEP_CHECK|READY|%u|WHY|%s|BLOCKS|%lu|ANGLE|%.3f|TARGET|%.3f|ENC_DPS|%.2f|RAW_DPS|%.2f|STILL_MS|%lu|WINDOW_LEFT_MS|%lu|CONSOLE_READY|%u\r\n",
+            (unsigned)(!yaw.step_blocks), StepBlockReason(yaw.step_blocks),
+            (unsigned long)yaw.step_blocks, (double)yaw.controller.angle_deg, (double)yaw.controller.target_deg,
+            (double)yaw.controller.cascade.velocity_dps, (double)yaw.controller.velocity_dps,
+            (unsigned long)yaw.step_still_ms, (unsigned long)yaw.step_window_left_ms, (unsigned)(!yaw.step_blocks && remote_ok));
+        return 1U;
+    }
     if (strcmp(line, "YAW STEP") == 0 || strncmp(line, "YAW STEP ", 9U) == 0) {
+        uint8_t target_ok, remote_ok;
         value = 30.0f;
         taskENTER_CRITICAL();
-        if ((strcmp(line, "YAW STEP") == 0 || Number(line + 9U, &value)) && SafeStep()) {
+        target_ok = (uint8_t)((strcmp(line, "YAW STEP") == 0 || ConsoleParse_Number(line + 9U, &value)) &&
+            (value == 30.0f || value == -30.0f));
+        remote_ok = SafeStep();
+        if (target_ok && remote_ok) {
             accepted = YawBackend_StartStep(value);
         }
         taskEXIT_CRITICAL();
-        (void)snprintf(response, capacity, accepted ? "Y|OK|STEP_STARTED|TARGET|%.1f|WINDOW_MS|5000|HOLD|1\r\n" :
-            "Y|ERROR|STEP_REQUIRES_ARMED_ZERO_STATIONARY_HEALTHY\r\n", (double)value);
+        if (accepted) {
+            (void)snprintf(response, capacity, "Y|OK|STEP_STARTED|TARGET|%.1f|WINDOW_MS|5000|HOLD|1\r\n", (double)value);
+        } else {
+            YawBackend_GetState(&yaw);
+            (void)snprintf(response, capacity, "Y|ERROR|STEP_REQUIRES_ARMED_ZERO_STATIONARY_HEALTHY|WHY|%s|BLOCKS|%lu\r\n",
+                !target_ok ? "TARGET_OR_FORMAT" : (remote_ok ? StepBlockReason(yaw.step_blocks) : "REMOTE_OR_OUTPUT_GUARD"),
+                (unsigned long)yaw.step_blocks);
+        }
         return 1U;
     }
     if (strcmp(line, "YAW READY") == 0) {
@@ -420,15 +440,34 @@ uint8_t YawConsole_Handle(const char *line, char *response, size_t capacity)
     if (strcmp(line, "YAW SHAPE") == 0) {
         YawBackend_GetState(&yaw);
         (void)snprintf(response, capacity,
-            "Y|SHAPE|ENABLED|%u|MS|%lu|ACTIVE|%u|REF_DEG|%.6g|REF_DPS|%.6g|REF_DPS2|%.6g|GOAL_DEG|%.6g|VEL_FF|1|PI_FREEZE|%u\r\n",
+            "Y|SHAPE|ENABLED|%u|MS|%lu|ACTIVE|%u|REF_DEG|%.6g|REF_DPS|%.6g|REF_DPS2|%.6g|GOAL_DEG|%.6g|VEL_FF|%.6g|PI_FREEZE|%u\r\n",
             (unsigned)(yaw.controller.shape.duration_ms != 0U), (unsigned long)yaw.controller.shape.duration_ms,
             (unsigned)yaw.controller.shape.active, (double)yaw.controller.shape.position_deg,
             (double)yaw.controller.shape.velocity_dps, (double)yaw.controller.shape.acceleration_dps2,
-            (double)yaw.controller.target_deg, (unsigned)yaw.controller.shape.active);
+            (double)yaw.controller.target_deg, (double)yaw.controller.shape.velocity_gain, (unsigned)yaw.controller.shape.active);
+        return 1U;
+    }
+    if (strcmp(line, "YAW SHAPEV") == 0) {
+        YawBackend_GetState(&yaw);
+        (void)snprintf(response, capacity, "Y|SHAPEV|%.6g\r\n", (double)yaw.controller.shape.velocity_gain);
+        return 1U;
+    }
+    if (strncmp(line, "YAW SHAPEV ", 11U) == 0) {
+        if (!APP_YAW_EXPERIMENTAL_TRACKING && ConsoleParse_Number(line + 11U, &value) && value != 0.0f) {
+            (void)snprintf(response, capacity, "Y|ERROR|REMOVED|SHAPEV|FIXED_PID\r\n"); return 1U;
+        }
+        if (ConsoleParse_Number(line + 11U, &value) && !AppConsole_IsDiagnosticMode()) {
+            accepted = YawBackend_SetShapeVelocityGain(value);
+        }
+        (void)snprintf(response, capacity, accepted ? "Y|OK|SHAPEV|%.6g\r\n" :
+            "Y|ERROR|SHAPEV|USE_0_TO_1|FINISH_STEP_FIRST\r\n", (double)value);
         return 1U;
     }
     if (strncmp(line, "YAW SHAPE ", 10U) == 0) {
-        if (Number(line + 10U, &value) && value >= 0.0f && value <= 500.0f &&
+        if (!APP_YAW_EXPERIMENTAL_TRACKING && ConsoleParse_Number(line + 10U, &value) && value != 0.0f) {
+            (void)snprintf(response, capacity, "Y|ERROR|REMOVED|SHAPE|FIXED_PID\r\n"); return 1U;
+        }
+        if (ConsoleParse_Number(line + 10U, &value) && value >= 0.0f && value <= 500.0f &&
             value == (float)(uint32_t)value && !AppConsole_IsDiagnosticMode()) {
             accepted = YawBackend_SetShape((uint32_t)value);
         }
@@ -439,22 +478,53 @@ uint8_t YawConsole_Handle(const char *line, char *response, size_t capacity)
     if (strcmp(line, "YAW FF ON") == 0 || strcmp(line, "YAW FF OFF") == 0 ||
         strcmp(line, "YAW FF 1") == 0 || strcmp(line, "YAW FF 0") == 0) {
         value = (strcmp(line, "YAW FF ON") == 0 || strcmp(line, "YAW FF 1") == 0) ? 1.0f : 0.0f;
+        if (!APP_YAW_EXPERIMENTAL_TRACKING && value != 0.0f) {
+            (void)snprintf(response, capacity, "Y|ERROR|REMOVED|FF|FIXED_PID\r\n"); return 1U;
+        }
         if (value == 0.0f || !AppConsole_IsDiagnosticMode()) { accepted = YawBackend_SetFeedforward('E', value); }
         (void)snprintf(response, capacity, accepted ? "Y|OK|FF|ON|%u\r\n" :
             "Y|ERROR|FF_REQUIRES_PREPARED_HEALTHY_OR_VALID_VALUE\r\n", (unsigned)value); return 1U;
     }
     {
-        static const char *names[] = { "FBIAS", "FANG", "FKV", "FC", "FVS", "FMAX" };
-        static const char parameters[] = { 'B', 'A', 'V', 'C', 'S', 'L' };
+        static const char *removed[] = { "FBIAS", "FANG", "FKV", "FC", "FVS" };
+        unsigned i;
+        for (i = 0U; i < sizeof(removed) / sizeof(removed[0]); ++i) {
+            size_t length = strlen(removed[i]);
+            if (strncmp(line + 4U, removed[i], length) == 0 &&
+                (line[4U + length] == ' ' || line[4U + length] == '\0')) {
+                (void)snprintf(response, capacity,
+#if APP_YAW_EXPERIMENTAL_TRACKING
+                    "Y|ERROR|REMOVED|%s|USE|FKA|FMAX\r\n",
+#else
+                    "Y|ERROR|REMOVED|%s|FIXED_PID\r\n",
+#endif
+                    removed[i]);
+                return 1U;
+            }
+        }
+    }
+    {
+        static const char *names[] = { "FKA", "FMAX" };
+        static const char parameters[] = { 'A', 'L' };
         unsigned i;
         for (i = 0U; i < sizeof(parameters); ++i) {
             size_t length = strlen(names[i]);
+            if (strcmp(line + 4U, names[i]) == 0) {
+                YawBackend_GetState(&yaw);
+                (void)snprintf(response, capacity, "Y|%s|%.6g\r\n", names[i],
+                    (double)(parameters[i] == 'A' ? yaw.controller.ff.acceleration_gain : yaw.controller.ff.limit_nm));
+                return 1U;
+            }
             if (strncmp(line + 4U, names[i], length) == 0 && line[4U + length] == ' ') {
-                if (Number(line + 5U + length, &value) && !AppConsole_IsDiagnosticMode()) {
+#if !APP_YAW_EXPERIMENTAL_TRACKING
+                (void)snprintf(response, capacity, "Y|ERROR|REMOVED|%s|FIXED_PID\r\n", names[i]); return 1U;
+#else
+                if (ConsoleParse_Number(line + 5U + length, &value) && !AppConsole_IsDiagnosticMode()) {
                     accepted = YawBackend_SetFeedforward(parameters[i], value);
                 }
                 (void)snprintf(response, capacity, accepted ? "Y|OK|%s\r\n" :
                     "Y|ERROR|FF_PARAMETER_OR_STATE|%s\r\n", names[i]); return 1U;
+#endif
             }
         }
     }
@@ -471,7 +541,7 @@ uint8_t YawConsole_Handle(const char *line, char *response, size_t capacity)
     if (strncmp(line, "YAW POS ", 8U) == 0 || strncmp(line, "YAW VEL ", 8U) == 0) {
         float kp, ki, kd;
         char which = line[4] == 'P' ? 'P' : 'V';
-        if (PidNumbers(line + 8U, &kp, &ki, &kd) && !AppConsole_IsDiagnosticMode()) {
+        if (ConsoleParse_PidNumbers(line + 8U, &kp, &ki, &kd) && !AppConsole_IsDiagnosticMode()) {
             accepted = YawBackend_SetLoopPid(which, kp, ki, kd);
         }
         (void)snprintf(response, capacity, accepted ? "Y|OK|%s\r\n" : "Y|ERROR|PARAMETER_OR_STATE\r\n",
@@ -483,7 +553,7 @@ uint8_t YawConsole_Handle(const char *line, char *response, size_t capacity)
     }
     if (strncmp(line, "YAW VMAX ", 9U) == 0) {
 #if YAW_CASCADE_OUTPUT_LIMITS_ENABLED
-        if (Number(line + 9U, &value) && !AppConsole_IsDiagnosticMode()) { accepted = YawBackend_SetVelocityLimit(value); }
+        if (ConsoleParse_Number(line + 9U, &value) && !AppConsole_IsDiagnosticMode()) { accepted = YawBackend_SetVelocityLimit(value); }
         (void)snprintf(response, capacity, accepted ? "Y|OK|VMAX\r\n" : "Y|ERROR|PARAMETER_OR_STATE\r\n"); return 1U;
 #else
         (void)snprintf(response, capacity, "Y|ERROR|OUTPUT_LIMITS_DISABLED\r\n"); return 1U;
@@ -491,7 +561,7 @@ uint8_t YawConsole_Handle(const char *line, char *response, size_t capacity)
     }
     if (strlen(line) >= 8U && (line[4] == 'P' || line[4] == 'V') && line[5] == 'K' &&
         (line[6] == 'P' || line[6] == 'I' || line[6] == 'D') && line[7] == ' ') {
-        if (Number(line + 8U, &value) && !AppConsole_IsDiagnosticMode()) {
+        if (ConsoleParse_Number(line + 8U, &value) && !AppConsole_IsDiagnosticMode()) {
             accepted = YawBackend_SetLoopParameter(line[4], line[6], value);
         }
         (void)snprintf(response, capacity, accepted ? "Y|OK|PARAMETER\r\n" : "Y|ERROR|PARAMETER_OR_STATE\r\n"); return 1U;
@@ -499,7 +569,7 @@ uint8_t YawConsole_Handle(const char *line, char *response, size_t capacity)
 #else
     if (strncmp(line, "YAW PID ", 8U) == 0) {
         float kp, ki, kd;
-        if (PidNumbers(line + 8U, &kp, &ki, &kd) && !AppConsole_IsDiagnosticMode()) {
+        if (ConsoleParse_PidNumbers(line + 8U, &kp, &ki, &kd) && !AppConsole_IsDiagnosticMode()) {
             accepted = YawBackend_SetPid(kp, ki, kd);
         }
         (void)snprintf(response, capacity, accepted ? "Y|OK|PID\r\n" : "Y|ERROR|PARAMETER_OR_STATE\r\n");
@@ -534,7 +604,7 @@ uint8_t YawConsole_Handle(const char *line, char *response, size_t capacity)
         } else { (void)snprintf(response, capacity, "Y|ERROR|UNKNOWN_COMMAND|USE|YAW HELP\r\n"); }
         return 1U;
     }
-    if (Number(number, &value) && !AppConsole_IsDiagnosticMode()) {
+    if (ConsoleParse_Number(number, &value) && !AppConsole_IsDiagnosticMode()) {
         accepted = YawBackend_SetParameter(parameter, value);
     }
     (void)snprintf(response, capacity, accepted ? "Y|OK|PARAMETER\r\n" : "Y|ERROR|PARAMETER_OR_STATE\r\n");

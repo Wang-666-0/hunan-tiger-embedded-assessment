@@ -1,0 +1,42 @@
+--- before/Output/Gimbal_Control/App/app_config.h
++++ after/Output/Gimbal_Control/App/app_config.h
+@@ -20,27 +20,20 @@
+ #ifndef APP_PITCH_ENABLED
+ #define APP_PITCH_ENABLED 1U
+ #endif
+-#define APP_PITCH_VERSION "DM3507_RETURN_BRAKE_V1K"
++#define APP_PITCH_VERSION "DM3507_SMOOTH_MOVE_V2A"
+ #define APP_PITCH_COMMAND_PERIOD_MS 2U
+ #define APP_PITCH_ENABLE_TIMEOUT_MS 100U
+-/* 2026-10-20按用户最新截图固化七参；该轮稳定402ms，尚未达到300ms。 */
+-#define APP_PITCH_POSITION_KP 13.55f
+-#define APP_PITCH_POSITION_KI 0.001f
+-#define APP_PITCH_POSITION_KD 0.026f
+-#define APP_PITCH_SPEED_KP 0.0062f
+-#define APP_PITCH_SPEED_KI 0.1019f
+-#define APP_PITCH_SPEED_KD 0.000050f
+-#define APP_PITCH_GRAVITY_KG_NM (-0.48f)
+-/* 首次到位后的单向回退阻尼；仅离散目标运动启用，不改变原双环增益。 */
+-#define APP_PITCH_RETURN_BRAKE_ENABLED 1U
+-/* V1K按2026-10-21用户要求再小降一档；实际改善仍需新一轮实测。 */
+-#define APP_PITCH_RETURN_BRAKE_GAIN 0.035f /* 协议Nm/(deg/s)。 */
+-#define APP_PITCH_RETURN_BRAKE_LIMIT_NM 0.45f
+-#define APP_PITCH_RETURN_BRAKE_SLEW_NM_S 35.0f
+-#define APP_PITCH_RETURN_BRAKE_ARRIVAL_DEG 0.2f
+-#define APP_PITCH_RETURN_BRAKE_ERROR_DEG 0.03f
+-#define APP_PITCH_RETURN_BRAKE_SPEED_DPS 2.0f
+-#define APP_PITCH_RETURN_BRAKE_MAX_AGE_MS 10U
++/* 2026-10-21按最新截图固化；截图稳定386ms，仍需新方案实测。 */
++#define APP_PITCH_POSITION_KP 13.81f
++#define APP_PITCH_POSITION_KI 0.586f
++#define APP_PITCH_POSITION_KD 0.009f
++#define APP_PITCH_SPEED_KP 0.0061f
++#define APP_PITCH_SPEED_KI 0.0874f
++#define APP_PITCH_SPEED_KD 0.000008f
++#define APP_PITCH_GRAVITY_KG_NM (-0.47f)
++/* 五次位置轨迹：起止速度/加速度为0。速度参考权重独立于位置D。 */
++#define APP_PITCH_SHAPE_MS 200U
++#define APP_PITCH_SHAPE_VELOCITY_GAIN 0.2f
+ /* 上电支撑于已测水平基准，安全OFF自动准备，随后新CH5边沿才可使能。 */
+ #ifndef APP_GIMBAL_REMOTE_STARTUP_ENABLED
+ #define APP_GIMBAL_REMOTE_STARTUP_ENABLED (APP_REMOTE_PROFILE_ASSESSMENT && APP_YAW_ENABLED && APP_PITCH_ENABLED)

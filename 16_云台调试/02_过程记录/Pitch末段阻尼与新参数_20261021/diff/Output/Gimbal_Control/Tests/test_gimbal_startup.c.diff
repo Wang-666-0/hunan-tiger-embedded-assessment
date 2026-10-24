@@ -1,0 +1,10 @@
+--- before/Output/Gimbal_Control/Tests/test_gimbal_startup.c
++++ after/Output/Gimbal_Control/Tests/test_gimbal_startup.c
+@@ -224,6 +224,7 @@
+     CHECK(startup.phase == GIMBAL_STARTUP_BLOCKED && !yc && !pc && !cc);
+     test_stage = 8U;
+     Reset(60000U); Run(400U, 1000U); Run(100U, 1500U); CHECK(yaw.active && pitch.active);
++    CHECK(PitchBackend_SetShape(200U, 0.2f)); /* Explicit optional legacy-profile path. */
+     CHECK(PitchConsole_Handle("PITCH STEP", reply, sizeof(reply)) && strstr(reply, "P|OK|STEP_STARTED|TARGET|30.0"));
+     Read(); CHECK(pitch.controller.target_deg == 30.0f && yaw.controller.target_deg == 0.0f);
+     follow_target = 1U; Run(50U, 1500U);

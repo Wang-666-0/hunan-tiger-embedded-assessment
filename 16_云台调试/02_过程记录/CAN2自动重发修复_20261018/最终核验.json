@@ -1,0 +1,26 @@
+{
+  "success": true,
+  "version": "C610_POSITION_CAN2_V1C",
+  "production_changes": [
+    "App/app_config.h",
+    "Core/Src/can.c",
+    "Gimbal_Control.ioc"
+  ],
+  "register_checks": 48,
+  "regression_groups": 11,
+  "regression_checks": 52309,
+  "failures": 0,
+  "build_sources": 69,
+  "can1_auto_retransmission": true,
+  "can2_auto_retransmission": true,
+  "other_tracked_production_files_unchanged": 81,
+  "static_stack_bytes_plus_unknown": {
+    "ConsoleTask": 2032,
+    "ControlTask": 1760,
+    "CanTask": 344,
+    "RemoteTask": 188
+  },
+  "hardware_verified": false,
+  "flashed": false,
+  "hex_generated": false
+}

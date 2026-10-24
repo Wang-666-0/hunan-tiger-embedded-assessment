@@ -1,0 +1,11 @@
+qml: screenWidth: 2560
+qml: screenHeight: 1600
+qml: dpi: 189.02325581395348
+"D:/Project/27电软正式批考核/16_云台调试/Output/VOFA_Report_Assistant/validation/host/plugins/widgets"
+"D:/Project/27电软正式批考核/16_云台调试/Output/VOFA_Report_Assistant/validation/host/plugins/widgets"
+"D:/Project/27电软正式批考核/16_云台调试/Output/VOFA_Report_Assistant/validation/host/plugins/widgets"
+"D:/Project/27电软正式批考核/16_云台调试/Output/VOFA_Report_Assistant/validation/host/plugins/widgets"
+DebugWayInterface::initialization
+this_ptr->io_looping_ true
+QThread::wait: Thread tried to wait on itself
+DebugWayInterface::deinitialization

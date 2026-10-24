@@ -1,0 +1,40 @@
+--- before/Output/Gimbal_Control/App/app_config.h
++++ after/Output/Gimbal_Control/App/app_config.h
+@@ -20,20 +20,29 @@
+ #ifndef APP_PITCH_ENABLED
+ #define APP_PITCH_ENABLED 1U
+ #endif
+-#define APP_PITCH_VERSION "DM3507_SMOOTH_MOVE_V2A"
++#define APP_PITCH_VERSION "DM3507_TERMINAL_BRAKE_V2B"
+ #define APP_PITCH_COMMAND_PERIOD_MS 2U
+ #define APP_PITCH_ENABLE_TIMEOUT_MS 100U
+-/* 2026-10-21按最新截图固化；截图稳定386ms，仍需新方案实测。 */
+-#define APP_PITCH_POSITION_KP 13.81f
+-#define APP_PITCH_POSITION_KI 0.586f
++/* 2026-10-21按最后截图固化；本轮SHAPE=0、稳定382ms，仍需实测改进。 */
++#define APP_PITCH_POSITION_KP 14.4f
++#define APP_PITCH_POSITION_KI 0.672f
+ #define APP_PITCH_POSITION_KD 0.009f
+-#define APP_PITCH_SPEED_KP 0.0061f
++#define APP_PITCH_SPEED_KP 0.0063f
+ #define APP_PITCH_SPEED_KI 0.0874f
+ #define APP_PITCH_SPEED_KD 0.000008f
+ #define APP_PITCH_GRAVITY_KG_NM (-0.47f)
+-/* 五次位置轨迹：起止速度/加速度为0。速度参考权重独立于位置D。 */
+-#define APP_PITCH_SHAPE_MS 200U
+-#define APP_PITCH_SHAPE_VELOCITY_GAIN 0.2f
++/* 原全程轨迹保留为显式对照，上电关闭以恢复直接阶跃的前段输出。 */
++#define APP_PITCH_SHAPE_MS 0U
++#define APP_PITCH_SHAPE_VELOCITY_GAIN 0.0f
++/* 末段超速阻尼：只对本次目标方向的实测运动做功，不能保证实机停车距离。 */
++#define APP_PITCH_TERMINAL_BRAKE_ENABLED 1U
++#define APP_PITCH_TERMINAL_BRAKE_WINDOW_DEG 4.0f
++#define APP_PITCH_TERMINAL_BRAKE_DECEL_DPS2 3000.0f
++#define APP_PITCH_TERMINAL_BRAKE_FLOOR_DPS 20.0f
++#define APP_PITCH_TERMINAL_BRAKE_GAIN 0.002f
++#define APP_PITCH_TERMINAL_BRAKE_LIMIT_NM 0.12f
++#define APP_PITCH_TERMINAL_BRAKE_RISE_NM_S 6.0f
++#define APP_PITCH_TERMINAL_BRAKE_MAX_AGE_MS 10U
+ /* 上电支撑于已测水平基准，安全OFF自动准备，随后新CH5边沿才可使能。 */
+ #ifndef APP_GIMBAL_REMOTE_STARTUP_ENABLED
+ #define APP_GIMBAL_REMOTE_STARTUP_ENABLED (APP_REMOTE_PROFILE_ASSESSMENT && APP_YAW_ENABLED && APP_PITCH_ENABLED)

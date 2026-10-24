@@ -1,0 +1,6 @@
+{
+  "packageId": "vofa.report-assistant.pitch",
+  "version": "0.1.0",
+  "displayName": "VOFA 报告助手 · Pitch",
+  "scope": "widgets/report_assistant only"
+}

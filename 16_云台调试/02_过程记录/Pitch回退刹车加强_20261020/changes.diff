@@ -1,0 +1,148 @@
+--- before/01_学习笔记/Pitch到位回退刹车_20261020.md
++++ after/01_学习笔记/Pitch到位回退刹车_20261020.md
+@@ -1,4 +1,6 @@
+-# Pitch V1H：首次到位后的回退刹车
++# Pitch V1I：首次到位后的回退刹车
++
++2026-10-20按用户反馈加大刹车：增益0.02→0.06，上限0.30→0.80协议Nm，建立斜率20→80协议Nm/s；七参数和刹车触发/退出条件保持。用户V1H截图I58已活动，但稳定434ms，回退仍明显；V1I效果待烧录实测。
+ 
+ 当前固件将用户2026-10-20最后一张截图的七个参数固化为上电默认，并加入独立的回退阻尼。该截图最终稳定402 ms、超调0.15244°、稳态误差约−0.00142°；402 ms仍超过Pitch的300 ms时限，不能作为达标记录。
+ 
+@@ -17,7 +19,7 @@
+ - 最新位置增量和控制用滤波速度都确认在回退，速度超过2°/s。
+ - 控制许可、反馈新鲜和原限位等条件仍满足。
+ 
+-附加力矩方向与回退运动相反，幅值为 `min(0.02 × (回退速度−2), 0.30)`，单位为协议Nm。增大时限制斜率20协议Nm/s；停止回退、实际位置开始朝目标返回时立即撤掉，避免速度滤波滞后导致持续推向目标。超过10 ms无新鲜反馈时撤掉附加力矩，原有100 ms反馈超时停机保护仍保留。
++附加力矩方向与回退运动相反，幅值为 `min(0.06 × (回退速度−2), 0.80)`，单位为协议Nm。增大时限制斜率80协议Nm/s，持续满足最大需求时约10ms可从0升至0.80；停止回退、实际位置开始朝目标返回时立即撤掉，避免速度滤波滞后导致持续推向目标。超过10 ms无新鲜反馈时撤掉附加力矩，原有100 ms反馈超时停机保护仍保留。
+ 
+ 0°→30°的回退刹车为正力矩；30°→0°的回退刹车为负力矩。首次接近目标时不加这项阻尼，保持到位后也不注入常量偏置。此功能是附加反馈阻尼，不是机械抱闸，也不替代电机失能后的负载支撑。
+ 
+@@ -29,7 +31,7 @@
+ 
+ ## 使用
+ 
+-原EIDE工程重新构建后，按原ST-Link Ctrl+Alt+D流程烧录。上电版本应为 `DM3507_RETURN_BRAKE_V1H`，刹车默认开启，不需要重新调整六个PID或Kg。
++原EIDE工程重新构建后，按原ST-Link Ctrl+Alt+D流程烧录。上电版本应为 `DM3507_RETURN_BRAKE_V1I`，刹车默认开启，不需要重新调整六个PID或Kg。查询`PITCH BRAKE`应含`GAIN|0.06|MAX_NM|0.8`。
+ 
+ ```text
+ PITCH PID         查询固化七参数
+--- before/Output/Gimbal_Control/App/app_config.h
++++ after/Output/Gimbal_Control/App/app_config.h
+@@ -20,7 +20,7 @@
+ #ifndef APP_PITCH_ENABLED
+ #define APP_PITCH_ENABLED 1U
+ #endif
+-#define APP_PITCH_VERSION "DM3507_RETURN_BRAKE_V1H"
++#define APP_PITCH_VERSION "DM3507_RETURN_BRAKE_V1I"
+ #define APP_PITCH_COMMAND_PERIOD_MS 2U
+ #define APP_PITCH_ENABLE_TIMEOUT_MS 100U
+ /* 2026-10-20按用户最新截图固化七参；该轮稳定402ms，尚未达到300ms。 */
+@@ -33,9 +33,10 @@
+ #define APP_PITCH_GRAVITY_KG_NM (-0.48f)
+ /* 首次到位后的单向回退阻尼；仅离散目标运动启用，不改变原双环增益。 */
+ #define APP_PITCH_RETURN_BRAKE_ENABLED 1U
+-#define APP_PITCH_RETURN_BRAKE_GAIN 0.02f /* 协议Nm/(deg/s)，待实机验证。 */
+-#define APP_PITCH_RETURN_BRAKE_LIMIT_NM 0.30f
+-#define APP_PITCH_RETURN_BRAKE_SLEW_NM_S 20.0f
++/* V1I按用户反馈增强回退阻尼及建立速度；实际改善仍需新一轮实测。 */
++#define APP_PITCH_RETURN_BRAKE_GAIN 0.06f /* 协议Nm/(deg/s)。 */
++#define APP_PITCH_RETURN_BRAKE_LIMIT_NM 0.80f
++#define APP_PITCH_RETURN_BRAKE_SLEW_NM_S 80.0f
+ #define APP_PITCH_RETURN_BRAKE_ARRIVAL_DEG 0.2f
+ #define APP_PITCH_RETURN_BRAKE_ERROR_DEG 0.03f
+ #define APP_PITCH_RETURN_BRAKE_SPEED_DPS 2.0f
+--- before/Output/Gimbal_Control/README.md
++++ after/Output/Gimbal_Control/README.md
+@@ -1,6 +1,6 @@
+ # Gimbal_Control
+ 
+-当前控制配置：Yaw `GL60II_FIXED_PID_V2Q`、Pitch `DM3507_RETURN_BRAKE_V1H`、拨盘 `C610_FEEDBACK_TIME_V1F`。Pitch按2026-10-20最后截图固化七参，并加入首次到位后抵抗回退的有界阻尼，默认开启；使用与通道见[Pitch回退刹车](../../01_学习笔记/Pitch到位回退刹车_20261020.md)。2026-10-19框架精简与下文Yaw截图说明保留。
++当前控制配置：Yaw `GL60II_FIXED_PID_V2Q`、Pitch `DM3507_RETURN_BRAKE_V1I`、拨盘 `C610_FEEDBACK_TIME_V1F`。Pitch保持用户最新七参，回退刹车增益0.06、上限0.80协议Nm、建立斜率80协议Nm/s，默认开启；使用与通道见[Pitch回退刹车](../../01_学习笔记/Pitch到位回退刹车_20261020.md)。2026-10-19框架精简与下文Yaw截图说明保留。
+ 
+ 2026-10-20 按用户截图及确认，仅固化已达标的 Yaw 六个 PID 为上电默认值：位置 15.549 / 0.734 / 0.139，速度 0.00517 / 0.0035 / 0.000074。截图这一轮为最终稳定 168 ms、超调 0.130461°、稳态误差 −0.0965366°、I62=1；用户确认符合预期。仍使用原双环 PID，实验规划/前馈关闭，沿用现有面板。来源、适用范围和重新构建/烧录后的回读方法见 [六参数固化记录](../../01_学习笔记/Yaw达标六参数固化_20261020.md)。
+ 
+--- before/Output/Gimbal_Control/Tests/README.md
++++ after/Output/Gimbal_Control/Tests/README.md
+@@ -1,3 +1,5 @@
++> 2026-10-20 最新Pitch为 **V1I加强刹车**：增益0.06、上限0.80、建立斜率80，七参保持。相关10组38,873项通过，AC5/O0完整构建0错误0警告，尚未烧录或验证实机效果。见[本次记录](../../../02_过程记录/Pitch回退刹车加强_20261020/实现与验证.md)。以下V1H全量检查为上一版记录。
++
+ > 2026-10-20 Pitch更新为 **V1H**：最新七参固化并加入到位后回退刹车，默认开启。71组548121项全部完成且正常返回，0失败；AC5/O0完整构建0错误0警告。见[实现与验证](../../../02_过程记录/Pitch回退刹车_20261020/实现与验证.md)。软件检查不代表实机300ms达标，以下Pitch旧版本及参数保留为历史。
+ 
+ > 2026-10-20 最新状态为 **Yaw V2Q / Pitch V1G**。仅固化用户截图并确认符合预期的 Yaw 六个 PID：位置 15.549/0.734/0.139，速度 0.00517/0.0035/0.000074；实验规划/前馈继续关闭。截图这一轮 I61=168 ms、I28=0.130461°、I30=−0.0965366°、I62=1，仅证明该轮记录。上电默认与回读方法见 [六参数固化记录](../../../01_学习笔记/Yaw达标六参数固化_20261020.md)。本次相关 8 组回归共 65,888 项全部通过，原 EIDE AC5/O0 全量 69 源项构建成功，0 错误、0 警告，尚未烧录；见[本次验证记录](../../../02_过程记录/Yaw达标六参数固化_20261020/实现与验证.md)。下文版本、参数及验证结果均为历史记录。
+--- before/Output/Gimbal_Control/Tests/test_pitch_backend.c
++++ after/Output/Gimbal_Control/Tests/test_pitch_backend.c
+@@ -213,7 +213,7 @@
+         frame = Feedback(tick, 1U, 29.9f - (float)(tick - 8104U) * 0.075f, -75.0f);
+         now_ms = tick; CHECK(PitchBackend_OnFrame(&frame)); Apply(tick, 1U);
+     }
+-    CHECK(state.controller.brake_torque_nm > 0.0f && state.controller.brake_torque_nm <= 0.30f);
++    CHECK(state.controller.brake_torque_nm > 0.0f && state.controller.brake_torque_nm <= 0.80f);
+     CHECK(PitchBackend_SetTarget(0.0f)); Read();
+     CHECK(state.controller.brake_tracking && !state.controller.brake_arrived && state.controller.brake_torque_nm == 0.0f);
+     CHECK(state.controller.brake_direction == -1.0f);
+--- before/Output/Gimbal_Control/Tests/test_pitch_console.c
++++ after/Output/Gimbal_Control/Tests/test_pitch_console.c
+@@ -94,9 +94,9 @@
+     ConsoleReset(100U);
+     CHECK(!PitchConsole_Handle("YAW STATUS", response, sizeof(response)));
+     Command("PITCH STATUS", "COORD_CONFIRMED|0"); CHECK(!query_calls && !disable_calls && !enable_calls);
+-    CHECK(strstr(response, "DM3507_RETURN_BRAKE_V1H") && strstr(response, "MIN_DEG|-18|MAX_DEG|33"));
++    CHECK(strstr(response, "DM3507_RETURN_BRAKE_V1I") && strstr(response, "MIN_DEG|-18|MAX_DEG|33"));
+     CHECK(strstr(response, "HARD_MIN_DEG|-19|HARD_MAX_DEG|34") && strstr(response, "SUPPORT_REQUIRED|1\r\n"));
+-    Command("PITCH", "P|STATE|DM3507_RETURN_BRAKE_V1H"); CHECK(strlen(response) < 300U);
++    Command("PITCH", "P|STATE|DM3507_RETURN_BRAKE_V1I"); CHECK(strlen(response) < 300U);
+     Command("PITCH HELP", "P|HELP|READ|PITCH;PID;RESULT;STATUS");
+     Command("PITCH ?", "PITCH_ONLY|COORD 1;GHORIZ");
+     Command("PITCH PID", "POS|13.55,0.001,0.026|VEL|0.0062,0.1019,5e-05|KG|-0.48");
+@@ -196,6 +196,7 @@
+     test_stage = 7U;
+     ConsoleReset(8000U);
+     Command("PITCH BRAKE", "ENABLED|1|TRACKING|0|ARRIVED|0|NM|0");
++    CHECK(strstr(response, "GAIN|0.06|MAX_NM|0.8|"));
+     CHECK(!query_calls && !enable_calls && !disable_calls && !torque_calls);
+     Command("PITCH BRAKE OFF", "P|OK|BRAKE|OFF|NEXT_MOVE"); Read(); CHECK(!state.controller.brake_enabled);
+     Command("PITCH BRAKE ON extra", "P|ERROR|");
+--- before/Output/Gimbal_Control/Tests/test_pitch_return_brake.c
++++ after/Output/Gimbal_Control/Tests/test_pitch_return_brake.c
+@@ -40,7 +40,7 @@
+     CHECK(near(move(138U, 29.9f, 20.0f), 0.0f) && pitch.brake_arrived);
+     CHECK(PitchController_SetTarget(&pitch, 30.0f) && pitch.brake_arrived); /* identical target */
+     torque = move(140U, 29.7f, -20.0f);
+-    CHECK(near(torque, 0.04f) && pitch.brake_torque_nm > 0.0f);
++    CHECK(near(torque, 0.16f) && pitch.brake_torque_nm > 0.0f);
+     CHECK(near(pitch.pid_torque_nm, 0.0f) && near(pitch.cascade.feedforward_nm, torque));
+     CHECK(near(PitchController_Update(&pitch, 0.0f, 141U, 1U), torque)); /* no duplicate ramp */
+     previous_angle = 29.7f;
+@@ -48,9 +48,13 @@
+         torque = move(ms, previous_angle - 0.05f, -100.0f);
+         CHECK(torque > 0.0f && torque <= APP_PITCH_RETURN_BRAKE_LIMIT_NM);
+         CHECK(torque * (pitch.angle_deg - previous_angle) <= 0.0f); /* removes energy from retreat */
++        if (ms == 148U) { CHECK(near(torque, 0.80f)); } /* capped full braking within 10ms */
+         previous_angle = pitch.angle_deg;
+     }
+-    CHECK(near(torque, 0.30f));
++    CHECK(near(torque, 0.80f));
++    torque = move(171U, previous_angle - 0.005f, -5.0f);
++    CHECK(near(torque, 0.18f)); /* release to lower damping demand; no lingering full brake */
++    previous_angle = pitch.angle_deg;
+     CHECK(near(move(172U, previous_angle + 0.01f, -20.0f), 0.0f)); /* stale filtered sign */
+     CHECK(near(move(174U, previous_angle + 0.01f, -20.0f), 0.0f)); /* stationary */
+     CHECK(near(move(176U, 30.2f, 20.0f), 0.0f));
+@@ -60,7 +64,7 @@
+     brake_ready(1000U, 30.0f, 0.0f);
+     CHECK(near(move(1034U, 0.1f, -20.0f), 0.0f) && pitch.brake_arrived);
+     torque = move(1036U, 0.3f, 20.0f);
+-    CHECK(near(torque, -0.04f) && torque * 0.2f < 0.0f);
++    CHECK(near(torque, -0.16f) && torque * 0.2f < 0.0f);
+     CHECK(near(move(1038U, 0.29f, 20.0f), 0.0f)); /* returns towards zero */
+     CHECK(PitchController_SetTarget(&pitch, -10.0f));
+     CHECK(!pitch.brake_arrived && pitch.brake_torque_nm == 0.0f);
+--- before/README.md
++++ after/README.md
+@@ -1,4 +1,6 @@
+ # 16 · 云台调试：当前入口
++
++> 2026-10-20 Pitch最新为 **V1I加强刹车**：七参数保持，回退阻尼增益0.06、上限0.80协议Nm、建立斜率80协议Nm/s，原触发与保护条件保持。烧录后用`PITCH BRAKE`核对`GAIN|0.06|MAX_NM|0.8`；实机效果待验。下文V1H是上一版记录。
+ 
+ > 2026-10-20 Pitch更新为 **V1H**：按用户最后截图固化位置13.55/0.001/0.026、速度0.0062/0.1019/0.000050、Kg−0.48，增加首次到位后的回退刹车，默认开启。操作见[Pitch到位回退刹车](01_学习笔记/Pitch到位回退刹车_20261020.md)。71组548121项软件检查通过，AC5/O0完整构建成功，尚未烧录或证明实机300ms达标。下文旧Pitch版本和七参保留为历史。
+ 

@@ -1,0 +1,843 @@
+--- before/Output/Gimbal_Control/App/app_config.h
++++ after/Output/Gimbal_Control/App/app_config.h
+@@ -7,7 +7,7 @@
+ #ifndef APP_YAW_ENABLED
+ #define APP_YAW_ENABLED 1U
+ #endif
+-#define APP_YAW_VERSION "GL60II_FIXED_PID_V2Q"
++#define APP_YAW_VERSION "GL60II_FIXED_PID_V2R"
+ /* 达标实测为SHAPE=0、SHAPEV=0，正式控制仅保留双环。
+  * 1仅供旧规划/前馈的离线回归，不在正式VOFA面板开放。 */
+ #ifndef APP_YAW_EXPERIMENTAL_TRACKING
+@@ -20,7 +20,7 @@
+ #ifndef APP_PITCH_ENABLED
+ #define APP_PITCH_ENABLED 1U
+ #endif
+-#define APP_PITCH_VERSION "DM3507_CASCADE_V1G"
++#define APP_PITCH_VERSION "DM3507_CASCADE_V1H"
+ #define APP_PITCH_COMMAND_PERIOD_MS 2U
+ #define APP_PITCH_ENABLE_TIMEOUT_MS 100U
+ #define APP_PITCH_POSITION_KP 18.2f
+--- before/Output/Gimbal_Control/App/pitch_backend.c
++++ after/Output/Gimbal_Control/App/pitch_backend.c
+@@ -1,5 +1,8 @@
+ #include "pitch_backend.h"
+ #include "app_config.h"
++#if APP_YAW_ENABLED
++#include "yaw_backend.h"
++#endif
+ #include "can_bus.h"
+ #include "task.h"
+ #include <math.h>
+@@ -13,6 +16,15 @@
+ static uint8_t disable_submitted, actuation_started, last_mode;
+ static float submitted_torque;
+ static uint8_t submitted_limited;
++static uint8_t step_holds_peer;
++
++static void ReleasePeerStep(void)
++{
++#if APP_YAW_ENABLED
++    if (step_holds_peer) { (void)YawBackend_SetStepLock(0U); }
++#endif
++    step_holds_peer = 0U;
++}
+ 
+ static uint8_t Online(uint32_t now)
+ {
+@@ -26,6 +38,7 @@
+ void PitchBackend_Init(void)
+ {
+     taskENTER_CRITICAL();
++    ReleasePeerStep();
+     memset(&state, 0, sizeof(state));
+     PitchController_Init(&state.controller); PitchStep_Init(&step);
+     memset(&remote_event, 0, sizeof(remote_event));
+@@ -63,6 +76,7 @@
+     had_session = (uint8_t)(state.active || state.enabling || actuation_started);
+     PitchStep_Abort(&step, HAL_GetTick(), state.controller.faults ? PITCH_STEP_FAULT : PITCH_STEP_STOP,
+         state.controller.faults);
++    ReleasePeerStep(); state.peer_step_locked = 0U;
+     CanBus_SetPitchPermission(0U);
+     PitchController_Stop(&state.controller);
+     state.requested = state.active = state.enabling = state.step_hold = 0U;
+@@ -147,6 +161,11 @@
+             state.stop_pending = 0U; actuation_started = 0U;
+         }
+         if (state.active && feedback.status == 0U) { state.controller.faults |= PITCH_BACKEND_FAULT_DISABLED; }
++#if APP_YAW_ENABLED
++        if (step_holds_peer && step.phase == PITCH_STEP_RUNNING && !YawBackend_CanLockForStep()) {
++            StopWithReason(PITCH_STOP_PERMISSION); rearm_request = 1U;
++        }
++#endif
+         if (step.phase == PITCH_STEP_RUNNING) {
+             if (state.controller.faults) {
+                 PitchStep_Abort(&step, feedback.received_ms, PITCH_STEP_FAULT, state.controller.faults);
+@@ -155,6 +174,7 @@
+                     state.controller.velocity_dps, submitted_torque, submitted_limited);
+             } else { PitchStep_Abort(&step, feedback.received_ms, PITCH_STEP_STOP, 0U); }
+         }
++        if (step.phase != PITCH_STEP_RUNNING) { ReleasePeerStep(); }
+         if (state.controller.faults && (state.active || state.enabling)) {
+             StopWithReason(PITCH_STOP_FEEDBACK_FAULT); rearm_request = 1U;
+         }
+@@ -166,10 +186,13 @@
+ {
+     uint8_t accepted;
+     uint32_t revision;
+-    taskENTER_CRITICAL(); revision = state.controller.cascade.revision;
++    taskENTER_CRITICAL();
++    if (state.peer_step_locked) { taskEXIT_CRITICAL(); return 0U; }
++    revision = state.controller.cascade.revision;
+     accepted = PitchController_SetPid(&state.controller, loop, kp, ki, kd);
+     if (accepted && revision != state.controller.cascade.revision) {
+         PitchStep_Abort(&step, HAL_GetTick(), PITCH_STEP_PID_CHANGE, 0U);
++        ReleasePeerStep();
+     }
+     taskEXIT_CRITICAL(); return accepted;
+ }
+@@ -195,11 +218,12 @@
+ {
+     uint8_t accepted = 0U;
+     taskENTER_CRITICAL();
+-    if (state.active && state.requested && state.zero_set && Online(HAL_GetTick()) &&
++    if (!state.peer_step_locked && state.active && state.requested && state.zero_set && Online(HAL_GetTick()) &&
+         state.feedback.status == 1U && !state.controller.faults && CanBus_PitchAllowed()) {
+         accepted = PitchController_SetTarget(&state.controller, degrees);
+         if (accepted) {
+             PitchStep_Abort(&step, HAL_GetTick(), PITCH_STEP_TARGET_CHANGE, 0U);
++            ReleasePeerStep();
+             state.step_hold = 1U;
+         }
+     }
+@@ -210,7 +234,9 @@
+ {
+     uint8_t accepted = 0U;
+     float previous;
+-    taskENTER_CRITICAL(); previous = state.controller.gravity_kg_nm;
++    taskENTER_CRITICAL();
++    if (state.peer_step_locked) { taskEXIT_CRITICAL(); return 0U; }
++    previous = state.controller.gravity_kg_nm;
+     if (kg_nm == 0.0f || (state.coord_confirmed && state.zero_set && Online(HAL_GetTick()) &&
+         !state.enabling && !state.stop_pending && !state.controller.faults &&
+         ((!state.active && state.feedback.status == 0U) ||
+@@ -218,6 +244,7 @@
+         accepted = PitchController_SetGravityGain(&state.controller, kg_nm);
+         if (accepted && previous != state.controller.gravity_kg_nm) {
+             PitchStep_Abort(&step, HAL_GetTick(), PITCH_STEP_FF_CHANGE, 0U);
++            ReleasePeerStep();
+         }
+     }
+     taskEXIT_CRITICAL(); return accepted;
+@@ -239,7 +266,9 @@
+ {
+     uint8_t accepted = 0U;
+     taskENTER_CRITICAL();
+-    if ((degrees == 30.0f || degrees == -30.0f) && state.coord_confirmed && state.zero_set &&
++    if ((degrees == 30.0f || degrees == -30.0f) &&
++        degrees >= PITCH_CONTROLLER_TARGET_MIN_DEG && degrees <= PITCH_CONTROLLER_TARGET_MAX_DEG &&
++        !state.peer_step_locked && state.coord_confirmed && state.zero_set &&
+         state.requested && state.active && state.controller.active && !state.enabling &&
+         !state.stop_pending && Online(HAL_GetTick()) && state.feedback.status == 1U &&
+         !state.controller.faults && CanBus_PitchAllowed() &&
+@@ -249,6 +278,10 @@
+         state.controller.stationary_samples >= 2U &&
+         state.controller.last_feedback_ms - state.controller.stationary_started_ms >=
+             PITCH_CONTROLLER_STATIONARY_HOLD_MS && step.phase != PITCH_STEP_RUNNING) {
++#if APP_YAW_ENABLED
++        if (!YawBackend_SetStepLock(1U)) { taskEXIT_CRITICAL(); return 0U; }
++        step_holds_peer = 1U;
++#endif
+         if (PitchController_SetTarget(&state.controller, degrees)) {
+             accepted = PitchStep_Start(&step, HAL_GetTick(), state.controller.angle_deg, degrees);
+             if (accepted) {
+@@ -267,6 +300,37 @@
+                 state.step_hold = 1U;
+             }
+         }
++        if (!accepted) { ReleasePeerStep(); }
++    }
++    taskEXIT_CRITICAL(); return accepted;
++}
++
++uint8_t PitchBackend_CanLockForStep(void)
++{
++    uint8_t ready;
++    taskENTER_CRITICAL();
++    ready = (uint8_t)(state.coord_confirmed && state.zero_set && state.controller.have_reference && state.requested && state.active &&
++        state.controller.active && !state.enabling && !state.stop_pending &&
++        Online(HAL_GetTick()) && state.feedback.status == 1U && !state.controller.faults &&
++        CanBus_PitchAllowed() && step.phase != PITCH_STEP_RUNNING &&
++        (state.controller.gravity_kg_nm == 0.0f || state.controller.gravity_calibrated) &&
++        state.controller.angle_deg >= PITCH_CONTROLLER_TARGET_MIN_DEG &&
++        state.controller.angle_deg <= PITCH_CONTROLLER_TARGET_MAX_DEG &&
++        (state.peer_step_locked || (fabsf(state.controller.velocity_dps) <= PITCH_CONTROLLER_STATIONARY_SPEED_DPS &&
++            state.controller.stationary_samples >= 2U &&
++            state.controller.last_feedback_ms - state.controller.stationary_started_ms >= PITCH_CONTROLLER_STATIONARY_HOLD_MS)));
++    taskEXIT_CRITICAL(); return ready;
++}
++uint8_t PitchBackend_SetStepLock(uint8_t locked)
++{
++    uint8_t accepted = 0U;
++    taskENTER_CRITICAL();
++    if (!locked) { state.peer_step_locked = 0U; accepted = 1U; }
++    else if (PitchBackend_CanLockForStep()) {
++        if (state.peer_step_locked) { accepted = 1U; }
++        else if (PitchController_SetTarget(&state.controller, state.controller.angle_deg)) {
++            state.peer_step_locked = 1U; state.step_hold = 0U; accepted = 1U;
++        }
+     }
+     taskEXIT_CRITICAL(); return accepted;
+ }
+@@ -313,6 +377,12 @@
+     HAL_StatusTypeDef result;
+     uint8_t wanted, event = 0U;
+     taskENTER_CRITICAL();
++#if APP_YAW_ENABLED
++    if (step_holds_peer && step.phase == PITCH_STEP_RUNNING && !YawBackend_SetStepLock(1U)) {
++        StopWithReason(PITCH_STOP_PERMISSION); rearm_request = 1U;
++    }
++#endif
++    if (step.phase != PITCH_STEP_RUNNING) { ReleasePeerStep(); }
+     if (request && request->step_event && request->step_sequence != last_step_sequence) {
+         last_step_sequence = request->step_sequence;
+         event = (uint8_t)(request->step_axis == GIMBAL_STEP_PITCH);
+@@ -397,12 +467,12 @@
+             Notice(request, 1U);
+         } else { Notice(request, 3U); }
+     }
+-    if (state.step_hold && request->gimbal_mode == GIMBAL_MANUAL && request->pitch_rate_dps != 0.0f) {
++    if (!state.peer_step_locked && state.step_hold && request->gimbal_mode == GIMBAL_MANUAL && request->pitch_rate_dps != 0.0f) {
+         PitchStep_Abort(&step, now, PITCH_STEP_MANUAL, 0U);
+         StopWithReason(PITCH_STOP_MANUAL_OVERRIDE); rearm_request = 1U; taskEXIT_CRITICAL(); return;
+     }
+     (void)PitchController_Update(&state.controller,
+-        request->gimbal_mode == GIMBAL_MANUAL && !state.step_hold ? request->pitch_rate_dps : 0.0f, now, 1U);
++        request->gimbal_mode == GIMBAL_MANUAL && !state.step_hold && !state.peer_step_locked ? request->pitch_rate_dps : 0.0f, now, 1U);
+     if (state.controller.faults) {
+         StopWithReason(PITCH_STOP_CONTROL_FAULT); rearm_request = 1U; taskEXIT_CRITICAL(); return;
+     }
+--- before/Output/Gimbal_Control/App/pitch_backend.h
++++ after/Output/Gimbal_Control/App/pitch_backend.h
+@@ -21,7 +21,7 @@
+     uint32_t stop_id, stopped_ms;
+     PitchStopReason stop_reason;
+     uint8_t online, requested, active, enabling, stop_pending;
+-    uint8_t zero_set, step_hold, coord_confirmed, monitoring;
++    uint8_t zero_set, step_hold, coord_confirmed, monitoring, peer_step_locked;
+ } PitchBackendState;
+ typedef struct { uint32_t sequence; float target_deg; uint8_t result; } PitchRemoteStepEvent;
+ void PitchBackend_Init(void);
+@@ -44,6 +44,9 @@
+ uint8_t PitchBackend_SetGravityOffset(float offset_deg, uint8_t capture_horizontal);
+ /* +/-30 is an absolute software-zero target, measured for five seconds and then held. */
+ uint8_t PitchBackend_StartStep(float degrees);
++/* 与Yaw对称：捕获实测角并保留PID/重力补偿，解锁不跳回旧目标。 */
++uint8_t PitchBackend_CanLockForStep(void);
++uint8_t PitchBackend_SetStepLock(uint8_t locked);
+ /* 控制任务只需编号时避免复制完整测量快照；不消费报告。 */
+ uint32_t PitchBackend_GetStepId(void);
+ void PitchBackend_GetStep(PitchStep *out);
+--- before/Output/Gimbal_Control/App/pitch_console.c
++++ after/Output/Gimbal_Control/App/pitch_console.c
+@@ -96,7 +96,7 @@
+     int length;
+     PitchBackend_GetState(&pitch); CanBus_GetState(&bus);
+     length = snprintf(response, capacity,
+-        "P|%s|%s|QUERY|%s|CTRL|CASCADE|ONLINE|%u|ACTIVE|%u|REQUESTED|%u|ENABLING|%u|STATUS|%u|FAULT|%lu|AGE_MS|%lu|RX|%lu|STOP_PENDING|%u|COORD_CONFIRMED|%u|FEEDBACK_DIVISOR|%u|RAW_RAD|%.6f|RAW_RAD_S|%.5f|ANGLE|%.3f|TARGET|%.3f|VREF_DPS|%.2f|VEL_DPS|%.2f|TORQUE_NM|%.5f|FB_NM|%.5f|PKP|%.6g|PKI|%.6g|PKD|%.6g|VKP|%.6g|VKI|%.6g|VKD|%.6g|OUTPUT_LIMITS|0|PROTOCOL_NM|10|MIN_DEG|%.0f|MAX_DEG|%.0f|HARD_MIN_DEG|%.0f|HARD_MAX_DEG|%.0f|ZERO_SET|%u|D_TEMP|%u|M_TEMP|%u|CAN_EPOCH|%lu|REMOTE|%s|TELEM_MS|%u|BAUD|%lu|READ_ONLY_MONITOR|%u|P_STOP_ID|%lu|P_STOP|%s|KG|%.6g|GOFF_DEG|%.6g|G_CAL|%u|G_REQUIRED|%u|MANUAL_DPS|%.0f|SUPPORT_REQUIRED|1\r\n",
++        "P|%s|%s|QUERY|%s|CTRL|CASCADE|ONLINE|%u|ACTIVE|%u|REQUESTED|%u|ENABLING|%u|STATUS|%u|FAULT|%lu|AGE_MS|%lu|RX|%lu|STOP_PENDING|%u|COORD_CONFIRMED|%u|FEEDBACK_DIVISOR|%u|RAW_RAD|%.6f|RAW_RAD_S|%.5f|ANGLE|%.3f|TARGET|%.3f|VREF_DPS|%.2f|VEL_DPS|%.2f|TORQUE_NM|%.5f|FB_NM|%.5f|PKP|%.6g|PKI|%.6g|PKD|%.6g|VKP|%.6g|VKI|%.6g|VKD|%.6g|OUTPUT_LIMITS|0|PROTOCOL_NM|10|MIN_DEG|%.0f|MAX_DEG|%.0f|HARD_MIN_DEG|%.0f|HARD_MAX_DEG|%.0f|ZERO_SET|%u|D_TEMP|%u|M_TEMP|%u|CAN_EPOCH|%lu|REMOTE|%s|TELEM_MS|%u|BAUD|%lu|READ_ONLY_MONITOR|%u|P_STOP_ID|%lu|P_STOP|%s|KG|%.6g|GOFF_DEG|%.6g|G_CAL|%u|G_REQUIRED|%u|MANUAL_DPS|%.0f|PEER_STEP_LOCK|%u|SUPPORT_REQUIRED|1\r\n",
+         kind, APP_PITCH_VERSION, query_result, (unsigned)pitch.online, (unsigned)pitch.active,
+         (unsigned)pitch.requested, (unsigned)pitch.enabling, (unsigned)pitch.feedback.status,
+         (unsigned long)pitch.controller.faults, (unsigned long)pitch.feedback_age_ms,
+@@ -118,7 +118,7 @@
+         (unsigned long)pitch.stop_id, StopName(pitch.stop_reason), (double)pitch.controller.gravity_kg_nm,
+         (double)pitch.controller.gravity_offset_deg, (unsigned)pitch.controller.gravity_calibrated,
+         (unsigned)(pitch.controller.gravity_kg_nm != 0.0f && !pitch.controller.gravity_calibrated),
+-        (double)APP_PITCH_RATE_LIMIT_DPS);
++        (double)APP_PITCH_RATE_LIMIT_DPS, (unsigned)pitch.peer_step_locked);
+     return (uint8_t)(length > 0 && (size_t)length < capacity);
+ }
+ 
+--- before/Output/Gimbal_Control/App/README.md
++++ after/Output/Gimbal_Control/App/README.md
+@@ -1,6 +1,8 @@
+ # App 框架说明
+ 
+ 当前生产配置与使用入口见 [工程说明](../README.md)。本目录继续保持平铺模块，已有 32 个 C 文件全部参与工程构建。新增 `console_parse.h` 只共享纯解析函数，无新增任务或 C 编译单元。
++
++2026-10-20 双轴阶跃互锁放在 `yaw_backend` / `pitch_backend` 的正式 STEP 接受点，串口和遥控共用；没有新增任务、控制环或 C 编译单元。`CanLockForStep` 只读检查对轴健康与静止，`SetStepLock` 首次捕获实测角，重复调用不重捕获。测试结束/中止释放对轴锁，保持捕获目标；停止与故障仍撤权。锁定期间目标/参数写入被拒绝，手动速度输入被屏蔽，Pitch 重力补偿保留。
+ 
+ ## 调用链与模块边界
+ 
+--- before/Output/Gimbal_Control/App/yaw_backend.c
++++ after/Output/Gimbal_Control/App/yaw_backend.c
+@@ -1,5 +1,8 @@
+ #include "yaw_backend.h"
+ #include "app_config.h"
++#if APP_PITCH_ENABLED
++#include "pitch_backend.h"
++#endif
+ #include "can_bus.h"
+ #include "task.h"
+ #include <string.h>
+@@ -22,10 +25,19 @@
+ static uint32_t off_motion_faults;
+ /* FC尝试或实际状态1即置位，STOP/OFF不清；健康失能静止参考捕获后开新会话。 */
+ static uint8_t actuation_started;
++static uint8_t step_holds_peer;
+ #define OFF_MOTION_FAULTS (YAW_CONTROLLER_FAULT_SPEED | YAW_CONTROLLER_FAULT_JUMP)
+ #define YAW_BACKEND_FAULT_ENABLE (1UL << 16)
+ #define YAW_BACKEND_FAULT_TX (1UL << 17)
+ #define YAW_BACKEND_FAULT_DISABLED (1UL << 18)
++
++static void ReleasePeerStep(void)
++{
++#if APP_PITCH_ENABLED
++    if (step_holds_peer) { (void)PitchBackend_SetStepLock(0U); }
++#endif
++    step_holds_peer = 0U;
++}
+ 
+ static uint8_t Online(uint32_t now)
+ {
+@@ -58,6 +70,10 @@
+         YAW_CONTROLLER_STATIONARY_HOLD_MS) { blocks |= YAW_STEP_BLOCK_STILL; }
+ #endif
+     if (step.phase == YAW_STEP_RUNNING) { blocks |= YAW_STEP_BLOCK_WINDOW; }
++    if (state.peer_step_locked) { blocks |= YAW_STEP_BLOCK_PEER; }
++#if APP_PITCH_ENABLED
++    if (!PitchBackend_CanLockForStep()) { blocks |= YAW_STEP_BLOCK_PEER; }
++#endif
+     return blocks;
+ }
+ 
+@@ -96,6 +112,7 @@
+ void YawBackend_Init(void)
+ {
+     taskENTER_CRITICAL();
++    ReleasePeerStep();
+     memset(&state, 0, sizeof(state));
+     YawController_Init(&state.controller);
+     YawStep_Init(&step);
+@@ -136,6 +153,8 @@
+     taskENTER_CRITICAL();
+     YawStep_Abort(&step, HAL_GetTick(), state.controller.faults ? YAW_STEP_FAULT : YAW_STEP_STOP,
+                   state.controller.faults);
++    ReleasePeerStep();
++    state.peer_step_locked = 0U;
+     state.step_hold = 0U;
+     state.step_still_samples = 0U;
+     step_from_remote = 0U;
+@@ -261,6 +280,11 @@
+         if (state.active && feedback.status == 0U) {
+             state.controller.faults |= YAW_BACKEND_FAULT_DISABLED;
+         }
++#if APP_PITCH_ENABLED
++        if (step_holds_peer && step.phase == YAW_STEP_RUNNING && !PitchBackend_CanLockForStep()) {
++            YawBackend_Stop(); rearm_request = 1U;
++        }
++#endif
+         if (step.phase == YAW_STEP_RUNNING) {
+             if (state.controller.faults) {
+                 float velocity = fabsf(feedback.velocity_rad_s * 57.2957795f);
+@@ -271,6 +295,7 @@
+                     state.controller.velocity_dps, previous_torque, previous_limited);
+             } else { YawStep_Abort(&step, now, YAW_STEP_STOP, 0U); }
+         }
++        if (step.phase != YAW_STEP_RUNNING) { ReleasePeerStep(); }
+         if (state.controller.faults && (state.active || state.enabling)) {
+             YawBackend_Stop(); rearm_request = 1U;
+         }
+@@ -283,6 +308,7 @@
+     uint8_t accepted = 0U;
+     if (YAW_CONTROLLER_CASCADE_ENABLED && parameter != 'T') { return 0U; }
+     taskENTER_CRITICAL();
++    if (state.peer_step_locked) { taskEXIT_CRITICAL(); return 0U; }
+     if (parameter == 'P') {
+         accepted = YawController_SetPid(&state.controller, value, state.controller.pid.ki, state.controller.pid.kd);
+     } else if (parameter == 'I') {
+@@ -294,6 +320,7 @@
+     }
+     if (accepted) {
+         YawStep_Abort(&step, HAL_GetTick(), parameter == 'T' ? YAW_STEP_TARGET_CHANGE : YAW_STEP_PID_CHANGE, 0U);
++        ReleasePeerStep();
+         if (parameter == 'T') { state.step_hold = 0U; step_from_remote = 0U; }
+     }
+     taskEXIT_CRITICAL(); return accepted;
+@@ -307,8 +334,9 @@
+ #else
+     uint8_t accepted;
+     taskENTER_CRITICAL();
++    if (state.peer_step_locked) { taskEXIT_CRITICAL(); return 0U; }
+     accepted = YawController_SetPid(&state.controller, kp, ki, kd);
+-    if (accepted) { YawStep_Abort(&step, HAL_GetTick(), YAW_STEP_PID_CHANGE, 0U); }
++    if (accepted) { YawStep_Abort(&step, HAL_GetTick(), YAW_STEP_PID_CHANGE, 0U); ReleasePeerStep(); }
+     taskEXIT_CRITICAL(); return accepted;
+ #endif
+ }
+@@ -318,12 +346,13 @@
+     uint8_t accepted;
+     uint32_t revision;
+     taskENTER_CRITICAL();
+-    if (state.controller.shape.active) { taskEXIT_CRITICAL(); return 0U; }
++    if (state.controller.shape.active || state.peer_step_locked) { taskEXIT_CRITICAL(); return 0U; }
+     revision = state.controller.cascade.revision;
+     accepted = YawCascade_SetPid(&state.controller.cascade, loop, kp, ki, kd);
+     if (accepted && revision != state.controller.cascade.revision) {
+         state.controller.torque_nm = 0.0f;
+         YawStep_Abort(&step, HAL_GetTick(), YAW_STEP_PID_CHANGE, 0U);
++        ReleasePeerStep();
+     }
+     taskEXIT_CRITICAL(); return accepted;
+ }
+@@ -348,11 +377,13 @@
+     uint8_t accepted;
+     uint32_t revision;
+     taskENTER_CRITICAL();
++    if (state.peer_step_locked) { taskEXIT_CRITICAL(); return 0U; }
+     revision = state.controller.cascade.revision;
+     accepted = YawCascade_SetVelocityLimit(&state.controller.cascade, dps);
+     if (accepted && revision != state.controller.cascade.revision) {
+         state.controller.torque_nm = 0.0f;
+         YawStep_Abort(&step, HAL_GetTick(), YAW_STEP_PID_CHANGE, 0U);
++        ReleasePeerStep();
+     }
+     taskEXIT_CRITICAL(); return accepted;
+ }
+@@ -362,6 +393,7 @@
+     uint8_t accepted = 0U, off_allowed, active_allowed;
+     uint32_t revision;
+     taskENTER_CRITICAL();
++    if (state.peer_step_locked) { taskEXIT_CRITICAL(); return 0U; }
+     /* 五秒窗口内保持试验条件；显式关闭仍接受，并使本轮结果无效。 */
+     if (step.phase == YAW_STEP_RUNNING && !(parameter == 'E' && value == 0.0f)) {
+         taskEXIT_CRITICAL(); return 0U;
+@@ -378,6 +410,7 @@
+             accepted = YawController_SetFeedforward(&state.controller, parameter, value);
+             if (accepted && revision != state.controller.ff.revision) {
+                 YawStep_Abort(&step, HAL_GetTick(), YAW_STEP_FF_CHANGE, 0U);
++                ReleasePeerStep();
+             }
+         }
+     }
+@@ -388,6 +421,7 @@
+ {
+     uint8_t accepted = 0U;
+     taskENTER_CRITICAL();
++    if (state.peer_step_locked) { taskEXIT_CRITICAL(); return 0U; }
+     if (duration_ms == state.controller.shape.duration_ms) { accepted = 1U; }
+     else if (step.phase != YAW_STEP_RUNNING) {
+         accepted = YawController_SetShape(&state.controller, duration_ms);
+@@ -415,6 +449,7 @@
+ {
+     uint8_t accepted = 0U;
+     taskENTER_CRITICAL();
++    if (state.peer_step_locked) { taskEXIT_CRITICAL(); return 0U; }
+     if (gain == state.controller.shape.velocity_gain) { accepted = 1U; }
+     else if (step.phase != YAW_STEP_RUNNING) {
+         accepted = YawController_SetShapeVelocityGain(&state.controller, gain);
+@@ -426,8 +461,14 @@
+ {
+     uint8_t accepted = 0U;
+     taskENTER_CRITICAL();
+-    if ((degrees == 30.0f || degrees == -30.0f) && !StepBlocks(HAL_GetTick()) &&
+-        YawController_SetTarget(&state.controller, degrees)) {
++    if ((degrees == 30.0f || degrees == -30.0f) && !StepBlocks(HAL_GetTick())) {
++#if APP_PITCH_ENABLED
++        if (!PitchBackend_SetStepLock(1U)) { taskEXIT_CRITICAL(); return 0U; }
++        step_holds_peer = 1U;
++#endif
++        if (!YawController_SetTarget(&state.controller, degrees)) {
++            ReleasePeerStep(); taskEXIT_CRITICAL(); return 0U;
++        }
+         accepted = YawStep_Start(&step, HAL_GetTick(), state.controller.angle_deg, degrees);
+         if (accepted) {
+             YawController_StartShape(&state.controller, step.start_ms);
+@@ -453,6 +494,35 @@
+             step.last_torque_nm = last_submitted_torque_nm;
+             state.step_hold = 1U;
+             step_from_remote = 0U;
++        }
++        if (!accepted) { ReleasePeerStep(); }
++    }
++    taskEXIT_CRITICAL(); return accepted;
++}
++uint8_t YawBackend_CanLockForStep(void)
++{
++    uint8_t ready;
++    taskENTER_CRITICAL();
++    ready = (uint8_t)(state.zero_set && state.controller.have_reference && state.requested && state.active && state.controller.active &&
++        !state.enabling && !state.stop_pending && !clear_waiting_disable &&
++        Online(HAL_GetTick()) && state.feedback.status == 1U && !state.controller.faults &&
++        CanBus_YawAllowed() && step.phase != YAW_STEP_RUNNING &&
++        state.controller.angle_deg >= -YAW_CONTROLLER_TARGET_LIMIT_DEG &&
++        state.controller.angle_deg <= YAW_CONTROLLER_TARGET_LIMIT_DEG &&
++        (state.peer_step_locked || (fabsf(state.controller.cascade.velocity_dps) <=
++            YAW_CONTROLLER_STATIONARY_SPEED_DPS && state.step_still_samples >= 2U &&
++            state.controller.last_feedback_ms - state.step_still_since_ms >= YAW_CONTROLLER_STATIONARY_HOLD_MS)));
++    taskEXIT_CRITICAL(); return ready;
++}
++uint8_t YawBackend_SetStepLock(uint8_t locked)
++{
++    uint8_t accepted = 0U;
++    taskENTER_CRITICAL();
++    if (!locked) { state.peer_step_locked = 0U; accepted = 1U; }
++    else if (YawBackend_CanLockForStep()) {
++        if (state.peer_step_locked) { accepted = 1U; }
++        else if (YawController_SetTarget(&state.controller, state.controller.angle_deg)) {
++            state.peer_step_locked = 1U; state.step_hold = 0U; step_from_remote = 0U; accepted = 1U;
+         }
+     }
+     taskEXIT_CRITICAL(); return accepted;
+@@ -573,6 +643,12 @@
+     HAL_StatusTypeDef result;
+     uint8_t wanted, new_step = 0U;
+     taskENTER_CRITICAL();
++#if APP_PITCH_ENABLED
++    if (step_holds_peer && step.phase == YAW_STEP_RUNNING && !PitchBackend_SetStepLock(1U)) {
++        YawBackend_Stop(); rearm_request = 1U;
++    }
++#endif
++    if (step.phase != YAW_STEP_RUNNING) { ReleasePeerStep(); }
+     /* 事件不排队：未就绪/握手时消费并拒绝，不能稍后自动补发。 */
+     if (request && request->step_event && request->step_sequence != last_step_sequence) {
+         last_step_sequence = request->step_sequence; new_step = 1U;
+@@ -651,12 +727,12 @@
+         } else { RemoteNotice(request, 3U); }
+     }
+     /* 测试模式保留TargetManager的CH4选方向、CH7确认/回参考；回中不清目标。 */
+-    if (state.step_hold && request->yaw_rate_dps != 0.0f) {
++    if (!state.peer_step_locked && state.step_hold && request->yaw_rate_dps != 0.0f) {
+         YawStep_Abort(&step, now, YAW_STEP_MANUAL, 0U);
+         YawBackend_Stop(); rearm_request = 1U; taskEXIT_CRITICAL(); return;
+     }
+     (void)YawController_Update(&state.controller,
+-        request->gimbal_mode == GIMBAL_MANUAL ? request->yaw_rate_dps : 0.0f, now, 1U);
++        request->gimbal_mode == GIMBAL_MANUAL && !state.peer_step_locked ? request->yaw_rate_dps : 0.0f, now, 1U);
+     if (state.controller.faults) {
+         YawBackend_Stop(); rearm_request = 1U; taskEXIT_CRITICAL(); return;
+     }
+--- before/Output/Gimbal_Control/App/yaw_backend.h
++++ after/Output/Gimbal_Control/App/yaw_backend.h
+@@ -17,14 +17,15 @@
+     YAW_STEP_BLOCK_POSITION = 1UL << 7,
+     YAW_STEP_BLOCK_MOVING = 1UL << 8,
+     YAW_STEP_BLOCK_STILL = 1UL << 9,
+-    YAW_STEP_BLOCK_WINDOW = 1UL << 10
++    YAW_STEP_BLOCK_WINDOW = 1UL << 10,
++    YAW_STEP_BLOCK_PEER = 1UL << 11
+ } YawStepBlock;
+ typedef struct {
+     YawController controller;
+     Gl60Feedback feedback;
+     uint32_t rx_count, feedback_age_ms;
+     uint8_t online, requested, active, stop_pending, enabling;
+-    uint8_t zero_set, step_hold;
++    uint8_t zero_set, step_hold, peer_step_locked;
+     uint32_t step_blocks, step_still_since_ms, step_still_ms, step_window_left_ms;
+     uint8_t step_still_samples;
+ } YawBackendState;
+@@ -73,6 +74,10 @@
+ /* 先安全OFF/ZERO、ON和人工CH5重解锁。STEP只在健康静止近零活动状态接受；
+  * ±30是相对软件零点的绝对目标，完成5秒测量后继续保持，不自动失能。 */
+ uint8_t YawBackend_StartStep(float degrees);
++/* 双轴阶跃互锁：首次锁定捕获当前实测角，保持闭环，不失能、不重设零。
++ * 已锁定时只检查健康，不重复捕获；解锁保持该角度，不恢复旧目标。 */
++uint8_t YawBackend_CanLockForStep(void);
++uint8_t YawBackend_SetStepLock(uint8_t locked);
+ /* 控制任务只需编号时避免复制完整测量快照；不消费报告。 */
+ uint32_t YawBackend_GetStepId(void);
+ void YawBackend_GetStep(YawStep *out);
+--- before/Output/Gimbal_Control/App/yaw_console.c
++++ after/Output/Gimbal_Control/App/yaw_console.c
+@@ -117,6 +117,7 @@
+     if (blocks & YAW_STEP_BLOCK_INACTIVE) { return "NOT_ACTIVE"; }
+     if (blocks & YAW_STEP_BLOCK_PERMISSION) { return "REMOTE_OR_OUTPUT_GUARD"; }
+     if (blocks & YAW_STEP_BLOCK_WINDOW) { return "WAIT_5S_WINDOW"; }
++    if (blocks & YAW_STEP_BLOCK_PEER) { return "OTHER_AXIS_NOT_READY_OR_STEP_LOCKED"; }
+     if (blocks & YAW_STEP_BLOCK_HOME) { return "SEND_HOME_FIRST"; }
+     if (blocks & YAW_STEP_BLOCK_POSITION) { return "WAIT_ZERO_BAND"; }
+     if (blocks & YAW_STEP_BLOCK_MOVING) { return "WAIT_STILL"; }
+@@ -382,7 +383,7 @@
+         YawBackend_GetState(&yaw);
+ #if YAW_CONTROLLER_CASCADE_ENABLED
+         (void)snprintf(response, capacity,
+-            "Y|STATUS|%s|CTRL|CASCADE|ONLINE|%u|ACTIVE|%u|REQUESTED|%u|STATUS|%u|FAULT|%lu|AGE_MS|%lu|STOP_PENDING|%u|ANGLE|%.3f|TARGET|%.3f|VREF_DPS|%.2f|VEL_DPS|%.2f|PKP|%.4f|PKI|%.4f|PKD|%.4f|VKP|%.6f|VKI|%.6f|VKD|%.6f|VREF_MAX_DPS|%.1f|TORQUE_SAT|%u|VEL_SAT|%u|%s|%.3f|OUTPUT_LIMITS|%u|TARGET_LIMIT_DEG|%.1f|HARD_LIMIT_DEG|%.1f|SPEED_GUARD|%u|ZERO_SET|%u|TELEM_MS|%u|BAUD|%lu|RX|%lu\r\n",
++            "Y|STATUS|%s|CTRL|CASCADE|ONLINE|%u|ACTIVE|%u|REQUESTED|%u|STATUS|%u|FAULT|%lu|AGE_MS|%lu|STOP_PENDING|%u|ANGLE|%.3f|TARGET|%.3f|VREF_DPS|%.2f|VEL_DPS|%.2f|PKP|%.4f|PKI|%.4f|PKD|%.4f|VKP|%.6f|VKI|%.6f|VKD|%.6f|VREF_MAX_DPS|%.1f|TORQUE_SAT|%u|VEL_SAT|%u|%s|%.3f|OUTPUT_LIMITS|%u|TARGET_LIMIT_DEG|%.1f|HARD_LIMIT_DEG|%.1f|SPEED_GUARD|%u|ZERO_SET|%u|TELEM_MS|%u|BAUD|%lu|RX|%lu|PEER_STEP_LOCK|%u\r\n",
+             APP_YAW_VERSION, (unsigned)yaw.online, (unsigned)yaw.active, (unsigned)yaw.requested,
+             (unsigned)yaw.feedback.status, (unsigned long)yaw.controller.faults,
+             (unsigned long)yaw.feedback_age_ms, (unsigned)yaw.stop_pending,
+@@ -398,7 +399,7 @@
+             (double)YAW_CONTROLLER_TARGET_LIMIT_DEG,
+             (double)YAW_CONTROLLER_HARD_LIMIT_DEG, (unsigned)YAW_CONTROLLER_SPEED_GUARD_ENABLED,
+             (unsigned)yaw.zero_set, (unsigned)APP_TELEMETRY_PERIOD_MS,
+-            (unsigned long)APP_CONSOLE_BAUDRATE, (unsigned long)yaw.rx_count);
++            (unsigned long)APP_CONSOLE_BAUDRATE, (unsigned long)yaw.rx_count, (unsigned)yaw.peer_step_locked);
+ #else
+         (void)snprintf(response, capacity,
+             "Y|STATUS|%s|ONLINE|%u|ACTIVE|%u|REQUESTED|%u|STATUS|%u|FAULT|%lu|AGE_MS|%lu|STOP_PENDING|%u|ANGLE|%.3f|TARGET|%.3f|KP|%.4f|KI|%.4f|KD|%.4f|LIMIT_NM|%.3f|TARGET_LIMIT_DEG|%.1f|HARD_LIMIT_DEG|%.1f|SOFT_DPS|%.1f|HARD_DPS|%.1f|SPEED_GUARD|%u|LIMITED|%u|ZERO_SET|%u|TELEM_MS|%u|RX|%lu\r\n",
+--- before/Output/Gimbal_Control/README.md
++++ after/Output/Gimbal_Control/README.md
+@@ -1,6 +1,6 @@
+ # Gimbal_Control
+ 
+-当前控制配置：Yaw `GL60II_FIXED_PID_V2Q`、Pitch `DM3507_CASCADE_V1G`、拨盘 `C610_FEEDBACK_TIME_V1F`。2026-10-19 只做等价框架精简，保留已有考核功能与可选回归档；该次没有调 PID、改变控制周期或烧录硬件。
++当前控制配置：Yaw `GL60II_FIXED_PID_V2R`、Pitch `DM3507_CASCADE_V1H`、拨盘 `C610_FEEDBACK_TIME_V1F`。2026-10-20 新增双轴阶跃互锁：一轴正式 STEP 时，另一轴捕获实测角并闭环保持到 5 秒测试结束或中止；保留本日固化的六个 Yaw PID。
+ 
+ 2026-10-20 按用户截图及确认，仅固化已达标的 Yaw 六个 PID 为上电默认值：位置 15.549 / 0.734 / 0.139，速度 0.00517 / 0.0035 / 0.000074。截图这一轮为最终稳定 168 ms、超调 0.130461°、稳态误差 −0.0965366°、I62=1；用户确认符合预期。仍使用原双环 PID，实验规划/前馈关闭，沿用现有面板。来源、适用范围和重新构建/烧录后的回读方法见 [六参数固化记录](../../01_学习笔记/Yaw达标六参数固化_20261020.md)。
+ 
+@@ -29,6 +29,10 @@
+ 阶跃按 CAN 实际接收时间统计：观察 5 s、末 1 s 时间加权稳态误差，误差带、超调和稳态误差上限均为 0.2°。PASS 要求最终进入误差带并保持到窗口结束，使用 Yaw 250 ms / Pitch 300 ms 时限；首次入带快不代表总成绩通过。
+ 
+ `STEP` 是相对软件零点的绝对 ±30°目标，需满足已准备、人工解锁、许可、近零静止和测量窗口门禁。Pitch −30°超出现有限位，会按原设计拒绝；不能通过改限位实现反向考核。
++
++双轴均启用时，另一轴还须已使能、反馈健康且静止。接受 STEP 后锁定另一轴当前实测角，屏蔽其摇杆、改目标、改 PID/前馈和第二轴 STEP；PID 保持工作，Pitch 重力补偿继续工作。完整 5 秒结束、HOME、改参中止或停机后释放互锁，仍保留捕获角，不跳回旧目标。停机、失联和故障保护优先；另一轴不健康会拒绝开始或中止本轮。`YAW STATUS` / `PITCH STATUS` 的 `PEER_STEP_LOCK=1` 表示该轴被对轴测试锁定。详见[双轴阶跃互锁操作](../../01_学习笔记/双轴阶跃互锁与Pitch通道_20261020.md)。
++
++Pitch 三个现有指标通道为 **I27 最终稳定时间(ms)、I28 超调量(°)、I30 稳态误差(°)**；I26 是首次入带时间。与 Yaw 的 I61/I28/I30 对齐时，Pitch 时间仪表应绑定 I27，原遥测索引和面板文件保持。
+ 
+ ## 常用操作
+ 
+--- before/Output/Gimbal_Control/Tests/README.md
++++ after/Output/Gimbal_Control/Tests/README.md
+@@ -1,4 +1,6 @@
+-> 2026-10-20 最新状态为 **Yaw V2Q / Pitch V1G**。仅固化用户截图并确认符合预期的 Yaw 六个 PID：位置 15.549/0.734/0.139，速度 0.00517/0.0035/0.000074；实验规划/前馈继续关闭。截图这一轮 I61=168 ms、I28=0.130461°、I30=−0.0965366°、I62=1，仅证明该轮记录。上电默认与回读方法见 [六参数固化记录](../../../01_学习笔记/Yaw达标六参数固化_20261020.md)。本次相关 8 组回归共 65,888 项全部通过，原 EIDE AC5/O0 全量 69 源项构建成功，0 错误、0 警告，尚未烧录；见[本次验证记录](../../../02_过程记录/Yaw达标六参数固化_20261020/实现与验证.md)。下文版本、参数及验证结果均为历史记录。
++> 2026-10-20 最新为 **Yaw V2R / Pitch V1H**：新增正式双轴 STEP 的对轴位置保持互锁，保留已固化六参。新增 `pitch_step_lock` 使用真实双轴后端和控制器，验证串口/遥控、实测角捕获、不重复捕获、输入屏蔽、双向完成解锁、HOME中止、对轴停机/失联和拒绝自动重启。本次完整 **71 组、553,157 项、0 失败，全部完成返回**，AC5/O0 全量 69 源项构建成功，0 错误、0 警告，尚未烧录。详见[双轴阶跃互锁验证](../../../02_过程记录/双轴阶跃互锁_20261020/实现与验证.md)。Pitch 现有最终稳定时间/超调/稳态误差为 I27/I28/I30，不改遥测索引或 VOFA 面板。下文为此前记录。
++
++> 2026-10-20 六参固化版本为 **Yaw V2Q / Pitch V1G**。仅固化用户截图并确认符合预期的 Yaw 六个 PID：位置 15.549/0.734/0.139，速度 0.00517/0.0035/0.000074；实验规划/前馈继续关闭。截图这一轮 I61=168 ms、I28=0.130461°、I30=−0.0965366°、I62=1，仅证明该轮记录。上电默认与回读方法见 [六参数固化记录](../../../01_学习笔记/Yaw达标六参数固化_20261020.md)。该次相关 8 组回归共 65,888 项全部通过，原 EIDE AC5/O0 全量 69 源项构建成功，0 错误、0 警告；见[该次验证记录](../../../02_过程记录/Yaw达标六参数固化_20261020/实现与验证.md)。下文版本、参数及验证结果均为历史记录。
+ 
+ > 当前版本为 **Yaw V2P / Pitch V1G**。用户已确认时间带、超调、稳态误差全部收紧为±0.2°；总通过按最终稳定时间Yaw250ms/Pitch300ms判定。Yaw默认六参更新为16.63/0.12/0.269与0.0081/0.003/0.000209。I61现在为±0.2°最终稳定时间，I62为综合通过；旧±0.5°达标结果不能作新标准证明。以[新参数与通道说明](../../../01_学习笔记/Yaw新参数与02度考核通道_20261018.md)为准，以下为历史内容。
+ 
+--- before/Output/Gimbal_Control/Tests/run_selftests.py
++++ after/Output/Gimbal_Control/Tests/run_selftests.py
+@@ -147,6 +147,8 @@
+         "gimbal_startup", "yaw_console", "pitch_console", "yaw_backend", "yaw_controller", "yaw_step", "yaw_cascade", "gl60_ii",
+         "pitch_backend", "pitch_controller", "pitch_step", "dm3507", "can_frame", "app_logic",
+         "remote_mapper", "safety_manager", "target_manager")]
++    groups["pitch_step_lock"] = groups["pitch_gimbal_startup"].copy()
++    groups["pitch_step_lock"][0] = root / "test_gimbal_step_lock.c"
+     groups["pitch_manual90"] = [root / "test_pitch_manual90.c"] + [app / (n + ".c") for n in (
+         "pitch_backend", "pitch_controller", "pitch_step", "dm3507", "yaw_cascade", "yaw_step", "can_frame",
+         "app_logic", "remote_mapper", "safety_manager", "target_manager")]
+--- before/Output/Gimbal_Control/Tests/test_pitch_backend.c
++++ after/Output/Gimbal_Control/Tests/test_pitch_backend.c
+@@ -1,6 +1,7 @@
+ #include "pitch_backend.h"
+ #include "can_bus.h"
+ #include "app_config.h"
++#include "yaw_backend.h"
+ #include <string.h>
+ #include <math.h>
+ 
+@@ -13,6 +14,10 @@
+ static uint8_t permission, deny_permission, pending;
+ static HAL_StatusTypeDef enable_result, torque_result, disable_result, query_result;
+ static float last_torque;
++
++/* 单轴夹具模拟就绪的Yaw；真实双轴互锁由pitch_step_lock组验证。 */
++uint8_t YawBackend_CanLockForStep(void) { return 1U; }
++uint8_t YawBackend_SetStepLock(uint8_t locked) { (void)locked; return 1U; }
+ 
+ uint32_t HAL_GetTick(void) { return now_ms; }
+ void CanBus_GetState(CanBusState *out) { if (out) { *out = bus; } }
+--- before/Output/Gimbal_Control/Tests/test_pitch_console.c
++++ after/Output/Gimbal_Control/Tests/test_pitch_console.c
+@@ -94,9 +94,9 @@
+     ConsoleReset(100U);
+     CHECK(!PitchConsole_Handle("YAW STATUS", response, sizeof(response)));
+     Command("PITCH STATUS", "COORD_CONFIRMED|0"); CHECK(!query_calls && !disable_calls && !enable_calls);
+-    CHECK(strstr(response, "DM3507_CASCADE_V1G") && strstr(response, "MIN_DEG|-18|MAX_DEG|33"));
++    CHECK(strstr(response, "DM3507_CASCADE_V1H") && strstr(response, "MIN_DEG|-18|MAX_DEG|33"));
+     CHECK(strstr(response, "HARD_MIN_DEG|-19|HARD_MAX_DEG|34") && strstr(response, "SUPPORT_REQUIRED|1\r\n"));
+-    Command("PITCH", "P|STATE|DM3507_CASCADE_V1G"); CHECK(strlen(response) < 300U);
++    Command("PITCH", "P|STATE|DM3507_CASCADE_V1H"); CHECK(strlen(response) < 300U);
+     Command("PITCH HELP", "P|HELP|READ|PITCH;PID;RESULT;STATUS");
+     Command("PITCH ?", "PITCH_ONLY|COORD 1;GHORIZ");
+     Command("PITCH PID", "POS|18.2,0.44,0.04|VEL|0.0065,0.014,4e-06|KG|-0.13");
+--- before/Output/Gimbal_Control/Tests/test_yaw_cascade_unlimited_console.c
++++ after/Output/Gimbal_Control/Tests/test_yaw_cascade_unlimited_console.c
+@@ -9,7 +9,7 @@
+     test_stage = 1;
+     CHECK(!YAW_CASCADE_OUTPUT_LIMITS_ENABLED);
+     ConsoleReset(1000); Control(1000, 0);
+-    Command(1000, "YAW", "Y|STATE|GL60II_FIXED_PID_V2Q"); CHECK(strlen(response) < 300U);
++    Command(1000, "YAW", "Y|STATE|GL60II_FIXED_PID_V2R"); CHECK(strlen(response) < 300U);
+     Command(1000, "YAW HELP", "Y|HELP|CTRL|FIXED_CASCADE_PID|READ|YAW;PID;RESULT;STATUS;STEP CHECK");
+     CHECK(!strstr(response, "FKA") && !strstr(response, "SHAPE"));
+     Command(1000, "YAW ?", "VIEW|YAW VIEW");
+--- before/Output/Gimbal_Control/Tests/test_yaw_manual50.c
++++ after/Output/Gimbal_Control/Tests/test_yaw_manual50.c
+@@ -47,7 +47,7 @@
+     CHECK(YAW_CONTROLLER_TARGET_LIMIT_DEG == 50 && YAW_CONTROLLER_HARD_LIMIT_DEG == 60);
+     CHECK(YAW_CONTROLLER_MANUAL_RATE_LIMIT_DPS == 90 && APP_STEP_DEGREES == 30);
+     ConsoleZeroActivate(1000U); clock_ms = 1066U;
+-    Command(clock_ms, "YAW STATUS", "GL60II_FIXED_PID_V2Q");
++    Command(clock_ms, "YAW STATUS", "GL60II_FIXED_PID_V2R");
+     CHECK(strstr(response, "|TARGET_LIMIT_DEG|50.0|HARD_LIMIT_DEG|60.0|") != 0);
+     Command(clock_ms, "YAW PID", "|POS|15.5490,0.7340,0.1390|VEL|0.005170,0.003500,0.000074");
+     before = state.controller.target_deg;
+--- before/README.md
++++ after/README.md
+@@ -1,6 +1,6 @@
+ # 16 · 云台调试：当前入口
+ 
+-> 2026-10-20 最新 Yaw 为 **V2Q**，已将用户达标截图六参固化：位置 15.549/0.734/0.139、速度 0.00517/0.0035/0.000074。当前配置见[原工程说明](Output/Gimbal_Control/README.md)，操作见[六参数固化记录](01_学习笔记/Yaw达标六参数固化_20261020.md)。以下 2026-10-17 的版本、参数和验证统计保留为历史记录。
++> 2026-10-20 最新版本为 **Yaw V2R / Pitch V1H**，新增[双轴阶跃互锁](01_学习笔记/双轴阶跃互锁与Pitch通道_20261020.md)。Yaw 达标六参保持位置 15.549/0.734/0.139、速度 0.00517/0.0035/0.000074。当前配置见[原工程说明](Output/Gimbal_Control/README.md)，参数来源见[六参数固化记录](01_学习笔记/Yaw达标六参数固化_20261020.md)。以下 2026-10-17 的版本、参数和验证统计保留为历史记录。
+ 
+ 更新时间：2026-10-17。新建独立Codex项目/对话，工作目录选本目录；固件继续使用原Gimbal_Control，最终所有功能在同一套代码中。
+ 
+--- /dev/null
++++ after/Output/Gimbal_Control/Tests/test_gimbal_step_lock.c
+@@ -0,0 +1,117 @@
++/* Exercise both real backends/controllers with the existing CAN/RC integration fixture. */
++#define test_run startup_fixture_not_run
++#include "test_gimbal_startup.c"
++#undef test_run
++
++static void Active(uint32_t base)
++{
++    Reset(base); Run(400U, 1000U); Run(100U, 1500U);
++    CHECK(yaw.active && pitch.active && yp && pp);
++    follow_target = 1U;
++}
++
++void test_run(void)
++{
++    YawStep measured;
++    uint32_t end, y_enables, p_enables, t;
++    float held, reference, kg;
++    char reply[1200];
++    test_stage = 1U;
++    Active(0U);
++    CHECK(PitchBackend_SetTarget(5.0f)); Run(300U, 1500U);
++    held = pitch.controller.angle_deg; reference = pitch.controller.reference_rad;
++    kg = pitch.controller.gravity_kg_nm;
++    CHECK(PitchBackend_SetTarget(6.0f)); /* Pending target differs from the measured hold pose. */
++    CHECK(YawBackend_StartStep(30.0f)); Read();
++    CHECK(pitch.peer_step_locked && !yaw.peer_step_locked && yaw.controller.target_deg == 30.0f);
++    CHECK(pitch.controller.target_deg == held && pitch.active && pp);
++    CHECK(pitch.controller.gravity_calibrated && pitch.controller.gravity_kg_nm == kg);
++    CHECK(pitch.controller.reference_rad == reference);
++    CHECK(PitchConsole_Handle("PITCH STATUS", reply, sizeof(reply)) && strstr(reply, "|PEER_STEP_LOCK|1|"));
++    CHECK(!PitchBackend_SetTarget(0.0f) && !PitchBackend_StartStep(30.0f));
++    CHECK(!PitchBackend_SetLoopParameter('P', 'P', 12.0f));
++    CHECK(!PitchBackend_SetGravityGain(0.0f));
++    input.remote.channels[1] = 1765U; Run(100U, 1500U);
++    CHECK(pitch.peer_step_locked && pitch.controller.target_deg == held && pitch.active);
++    CHECK(pitch.controller.reference_rad == reference && pitch.controller.gravity_calibrated);
++    /* A disturbance must be corrected against the original pose, never recaptured. */
++    follow_target = 0U; physical_pitch += 0.15f; Run(30U, 1500U);
++    CHECK(pitch.controller.target_deg == held && PitchBackend_SetStepLock(1U)); Read();
++    CHECK(pitch.controller.target_deg == held && pitch.peer_step_locked && yaw.active);
++
++    test_stage = 2U;
++    input.remote.channels[1] = 1500U;
++    YawBackend_GetStep(&measured); end = measured.start_ms + YAW_STEP_WINDOW_MS;
++    /* Ten-ms worst permitted control gap keeps the full-window lifecycle test bounded. */
++    while ((int32_t)(end - now) > 0) { Tick(now + 10U, 1500U, 1U, 1U, 1U); }
++    YawBackend_GetStep(&measured); Read();
++    CHECK(measured.phase == YAW_STEP_DONE && !pitch.peer_step_locked);
++    CHECK(pitch.active && pitch.controller.target_deg == held && pitch.controller.reference_rad == reference);
++    input.remote.channels[1] = 1765U; Run(20U, 1500U);
++    CHECK(pitch.controller.target_deg > held + 0.8f && pitch.active);
++
++    test_stage = 3U;
++    Active(10000U);
++    CHECK(YawBackend_SetParameter('T', 7.0f)); Run(300U, 1500U);
++    held = yaw.controller.angle_deg; reference = yaw.controller.reference_rad;
++    CHECK(YawBackend_SetParameter('T', 8.0f));
++    CHECK(PitchBackend_StartStep(30.0f)); Read();
++    CHECK(yaw.peer_step_locked && yaw.controller.target_deg == held && yaw.active && yp);
++    CHECK(YawConsole_Handle("YAW STATUS", reply, sizeof(reply)) && strstr(reply, "|PEER_STEP_LOCK|1"));
++    CHECK(!YawBackend_SetParameter('T', 0.0f) && !YawBackend_StartStep(30.0f));
++    CHECK(!YawBackend_SetLoopParameter('P', 'P', 12.0f));
++    CHECK(!YawBackend_SetShape(0U) && !YawBackend_SetFeedforward('E', 0.0f));
++    input.remote.channels[0] = 1765U; Run(100U, 1500U);
++    CHECK(yaw.controller.target_deg == held && yaw.active && yaw.controller.reference_rad == reference);
++    CHECK(PitchBackend_SetTarget(0.0f)); Read();
++    CHECK(!yaw.peer_step_locked && yaw.controller.target_deg == held);
++    PitchBackend_GetStep(&measured); CHECK(measured.phase == PITCH_STEP_ABORTED && !measured.pass);
++    Run(20U, 1500U); CHECK(yaw.controller.target_deg > held + 0.8f);
++
++    test_stage = 4U;
++    Active(20000U);
++    PitchBackend_Stop(); Read();
++    CHECK(!YawBackend_StartStep(30.0f)); Read();
++    CHECK(yaw.controller.target_deg == 0.0f && !pitch.peer_step_locked);
++    YawBackend_GetStep(&measured); CHECK(measured.phase == YAW_STEP_IDLE);
++    Active(30000U); CHECK(YawBackend_StartStep(-30.0f));
++    PitchBackend_Stop(); Run(20U, 1500U); Read();
++    CHECK(!yaw.active && !pitch.active && !yaw.peer_step_locked && !pitch.peer_step_locked);
++    YawBackend_GetStep(&measured); CHECK(measured.phase == YAW_STEP_ABORTED && !measured.pass);
++    y_enables = yc; p_enables = pc; Run(100U, 1500U);
++    CHECK(yc == y_enables && pc == p_enables);
++
++    test_stage = 5U;
++    Active(40000U); CHECK(PitchBackend_StartStep(30.0f));
++    for (t = 0U; t < 130U; t += 2U) { Tick(now + 2U, 1500U, 1U, 0U, 1U); }
++    Read(); CHECK(!yaw.active && !pitch.active && !yaw.peer_step_locked && !pitch.peer_step_locked);
++    PitchBackend_GetStep(&measured); CHECK(measured.phase == PITCH_STEP_ABORTED && !measured.pass);
++    Active(50000U); CHECK(YawBackend_StartStep(30.0f)); AppTasks_RequestStop(); Read();
++    CHECK(!yaw.active && !pitch.active && !yaw.peer_step_locked && !pitch.peer_step_locked);
++    YawBackend_GetStep(&measured); CHECK(measured.phase == YAW_STEP_ABORTED && !measured.pass);
++
++    test_stage = 6U;
++    Active(60000U); Run(30U, 2000U);
++    input.remote.channels[3] = 2000U; input.remote.channels[6] = 1500U; Run(20U, 2000U);
++    input.remote.channels[6] = 2000U; Run(20U, 2000U); Read();
++    YawBackend_GetStep(&measured);
++    CHECK(measured.phase == YAW_STEP_RUNNING && pitch.peer_step_locked && pitch.active);
++    input.remote.channels[6] = 1000U; Run(20U, 2000U); Read();
++    CHECK(!pitch.peer_step_locked && yaw.controller.target_deg == 0.0f);
++
++    test_stage = 7U;
++    Active(70000U); CHECK(PitchBackend_StartStep(30.0f));
++    PitchBackend_GetStep(&measured); end = measured.start_ms + PITCH_STEP_WINDOW_MS;
++    while ((int32_t)(end - now) > 0) { Tick(now + 10U, 1500U, 1U, 1U, 1U); }
++    PitchBackend_GetStep(&measured); Read();
++    CHECK(measured.phase == PITCH_STEP_DONE && !yaw.peer_step_locked && yaw.active && pitch.active);
++    Active(80000U); Run(30U, 2000U);
++    input.remote.channels[2] = 2000U; input.remote.channels[6] = 1500U; Run(20U, 2000U);
++    input.remote.channels[6] = 2000U; Run(20U, 2000U); Read();
++    PitchBackend_GetStep(&measured);
++    CHECK(measured.phase == PITCH_STEP_RUNNING && yaw.peer_step_locked && yaw.active);
++    YawBackend_Stop(); Run(20U, 2000U); Read();
++    CHECK(!yaw.active && !pitch.active && !yaw.peer_step_locked && !pitch.peer_step_locked);
++    PitchBackend_GetStep(&measured); CHECK(measured.phase == PITCH_STEP_ABORTED && !measured.pass);
++    test_done = 1U;
++}
+--- /dev/null
++++ after/01_学习笔记/双轴阶跃互锁与Pitch通道_20261020.md
+@@ -0,0 +1,33 @@
++# 双轴阶跃互锁与 Pitch 指标通道（2026-10-20）
++
++版本：Yaw `GL60II_FIXED_PID_V2R`，Pitch `DM3507_CASCADE_V1H`。沿用原工程、现有双环 PID 和原 ST-Link 下载流程。
++
++## 阶跃时另一轴保持
++
++- `YAW STEP 30` / `YAW STEP -30` 或遥控 Yaw 阶跃接受时，Pitch 捕获当时实测角并保持。
++- `PITCH STEP 30` 或遥控 Pitch 阶跃接受时，Yaw 捕获当时实测角并保持。
++- 两轴须已按原流程准备、使能且健康；被锁轴须静止、处于原允许范围。另一轴未就绪时拒绝测试，不替用户开启电机。
++- 被锁轴继续运行位置/速度闭环；Pitch 保留重力补偿。锁的是位置目标，不是失能或机械制动。
++- 锁定期间忽略被锁轴摇杆输入，拒绝其 TARGET/HOME、PID/前馈修改和 STEP；只读查询仍可用，STOP/OFF 和保护撤权仍有效。
++- 完整 5 秒测试结束、测试轴 HOME、改参中止或停机时，释放另一轴互锁。其目标仍保持在捕获角，不追赶旧目标；重新操作摇杆时才按原逻辑更新。
++- 另一轴反馈失效、停机或故障时，中止本轮并沿用原停机/重新解锁规则。
++
++锁定状态使用 `YAW STATUS` / `PITCH STATUS` 查看：`PEER_STEP_LOCK|1` 表示本轴正在为另一轴的 STEP 保持。Yaw 的 `YAW STEP CHECK` 新增对轴门禁，原因可为 `OTHER_AXIS_NOT_READY_OR_STEP_LOCKED`。
++
++PID、机械范围、控制周期、力矩发送周期、5 秒测量窗口和考核判据保持。本次没有启用轨迹、前馈或摩擦补偿。
++
++## Pitch 三个现有指标
++
++| 指标 | Pitch 通道 | 对应 Yaw 通道 | 单位 |
++| --- | --- | --- | --- |
++| 最终进入 ±0.2°并保持的时间 | **I27** | I61（同 I27） | ms |
++| 最大方向性超调 | **I28** | I28 | ° |
++| 有符号稳态误差 | **I30** | I30 | ° |
++
++Pitch **I26 是首次进入目标带的时间**。若要和 Yaw 当前时间仪表一致，将 Pitch 时间仪表由 I26 改绑 I27 即可。I28、I30 不用换通道。Pitch I32 为综合通过，I31 为稳态段有效标志；完整 5 秒结束后读取，未获得有效时间时为 −1。
++
++用户确认现有通道可用后只需告知，本次没有修改遥测索引或 VOFA 面板文件。
++
++## 构建与使用
++
++完成本次软件验证后，按原 EIDE 重新构建、原 **Ctrl+Alt+D** 下载并重新启动。先查询双轴版本和 PID，再沿用原阶跃流程。软件验证记录见[实现与验证](../02_过程记录/双轴阶跃互锁_20261020/实现与验证.md)。本次未操作电机或烧录器。

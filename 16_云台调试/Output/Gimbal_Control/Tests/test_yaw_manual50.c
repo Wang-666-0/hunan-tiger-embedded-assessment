@@ -1,5 +1,6 @@
 #define YAW_CASCADE_CONSOLE_TEST 1
 #include "test_yaw_console_backend.c"
+#include <math.h>
 
 /* 注入跟随目标的反馈只验证遥控接口/边界，不代表实机响应性能。 */
 static void ManualRun(uint32_t *clock_ms, uint32_t duration_ms, uint16_t channel)
@@ -43,13 +44,13 @@ void test_run(void)
     float held, before;
     YawStep step;
     test_stage = 1U;
-    CHECK(APP_YAW_POSITION_KP == 7.5f && !YAW_CASCADE_OUTPUT_LIMITS_ENABLED);
+    CHECK(APP_YAW_POSITION_KP == 15.549f && !YAW_CASCADE_OUTPUT_LIMITS_ENABLED);
     CHECK(YAW_CONTROLLER_TARGET_LIMIT_DEG == 50 && YAW_CONTROLLER_HARD_LIMIT_DEG == 60);
     CHECK(YAW_CONTROLLER_MANUAL_RATE_LIMIT_DPS == 90 && APP_STEP_DEGREES == 30);
     ConsoleZeroActivate(1000U); clock_ms = 1066U;
-    Command(clock_ms, "YAW STATUS", "GL60II_CASCADE_SHAPE_V2K");
+    Command(clock_ms, "YAW STATUS", "GL60II_FIXED_PID_V2Q");
     CHECK(strstr(response, "|TARGET_LIMIT_DEG|50.0|HARD_LIMIT_DEG|60.0|") != 0);
-    Command(clock_ms, "YAW PID", "|POS|7.5000,0.1500,0.0000|VEL|0.002500,0.003000,0.000000");
+    Command(clock_ms, "YAW PID", "|POS|15.5490,0.7340,0.1390|VEL|0.005170,0.003500,0.000074");
     before = state.controller.target_deg;
     ManualRun(&clock_ms, 100U, 1765U); /* 半杆精确45deg/s，100ms目标前进4.5度。 */
     CHECK(request.yaw_rate_dps == 45 && state.controller.target_deg - before > 4.499f &&
@@ -74,10 +75,11 @@ void test_run(void)
     CHECK(state.controller.target_deg == -50 && request.yaw_rate_dps == -90);
     ManualRun(&clock_ms, 100U, 1500U); CHECK(state.controller.target_deg == -50);
     CHECK(!YawBackend_StartStep(50) && !YawBackend_StartStep(-50));
-    /* CH5测试档屏蔽右摇杆；没有阶跃事件时目标继续保持。 */
-    held = state.controller.target_deg; receiver.channels[RC_YAW_CHANNEL] = 2000U;
+    /* CH5 captures the measured pose, then ignores manual stick rates. */
+    receiver.channels[RC_YAW_CHANNEL] = 2000U;
     clock_ms += 2U; Control(clock_ms, 2U);
-    CHECK(request.gimbal_mode == GIMBAL_TEST && request.yaw_rate_dps == 0 && state.controller.target_deg == held);
+    CHECK(request.gimbal_mode == GIMBAL_TEST && request.yaw_rate_dps == 0 && state.active && state.step_hold);
+    CHECK(fabsf(state.controller.target_deg - state.controller.angle_deg) <= YAW_STEP_BAND_DEG);
     receiver.channels[RC_YAW_CHANNEL] = 1500U;
     clock_ms += 2U; Control(clock_ms, 1U);
 
@@ -122,6 +124,6 @@ void test_run(void)
     test_stage = 7U;
     ConsoleReset(50000U); Read();
     CHECK(!state.active && !state.requested && !state.zero_set && !enable_calls && !torque_calls);
-    Command(50000U, "YAW PID", "|POS|7.5000,0.1500,0.0000|VEL|0.002500,0.003000,0.000000");
+    Command(50000U, "YAW PID", "|POS|15.5490,0.7340,0.1390|VEL|0.005170,0.003500,0.000074");
     test_done = 1U;
 }

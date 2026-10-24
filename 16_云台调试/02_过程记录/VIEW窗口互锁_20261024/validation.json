@@ -1,0 +1,68 @@
+{
+  "recorded_at": "2026-10-24T15:08:21+08:00",
+  "version": "VIEW_AXIS_HOLD_V1",
+  "groups": 14,
+  "checks": 214785,
+  "failures": 0,
+  "verified_test_input_hashes": 133,
+  "changed_files": [
+    "App/app_config.h",
+    "App/app_console.c",
+    "App/app_console.h",
+    "App/app_tasks.c",
+    "App/gimbal_step_sync.h",
+    "App/pitch_backend.c",
+    "App/pitch_backend.h",
+    "App/yaw_backend.c",
+    "App/yaw_backend.h",
+    "App/yaw_console.c",
+    "MDK-ARM/单发优化与阶跃锁轴操作说明.md",
+    "MDK-ARM/拨盘50ms连发操作说明.md",
+    "README.md",
+    "Tests/README.md",
+    "Tests/run_selftests.py",
+    "Tests/test_feeder_speed_view.c",
+    "Tests/test_gimbal_startup.c",
+    "Tests/test_pitch_console.c",
+    "Tests/test_gimbal_view_hold.c",
+    "MDK-ARM/VIEW窗口锁轴说明.md"
+  ],
+  "outputs": {
+    "Gimbal_Control.hex": {
+      "sha256": "e43db1c330e3fa405a97c4cd857cedb04183f093c4cfc217e3b4350e24b15342",
+      "size": 382712
+    },
+    "Gimbal_Control.axf": {
+      "sha256": "784dbaa2eda762c611e474036aac6dab9626787bff11dc91f9fab46d1d4e222a",
+      "size": 1619368
+    },
+    "compiler.log": {
+      "sha256": "9cb68914aaac5d7d054bf9ee0d7077c4c778cb7ee21febbf02ee4e3d19ea7d90",
+      "size": 326
+    },
+    "builder.params": {
+      "sha256": "48a0192ecc4705e07c12f04876aa689963c3a463a27a3304fe2d6a4e59252715",
+      "size": 7427
+    }
+  },
+  "build": {
+    "compiler": "ARM Compiler 5.06",
+    "sources": 69,
+    "optimization": "O0",
+    "rom_bytes": 136044,
+    "ram_bytes": 36928,
+    "success": true
+  },
+  "pid_parameters_unchanged": true,
+  "feeder_algorithm_unchanged": true,
+  "behavior": {
+    "PITCH VIEW": "yaw hold, pitch free",
+    "YAW VIEW": "pitch hold, yaw free",
+    "GIMBAL VIEW FREE": "release view locks",
+    "TELEM OFF": "retain locks",
+    "hold": "latch once, not follow feedback",
+    "applied_by": "existing safety-gated 2ms control task"
+  },
+  "flashed": false,
+  "hardware_tested": false
+}

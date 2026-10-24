@@ -1,0 +1,11 @@
+--- before/Output/Gimbal_Control/App/pitch_controller.h
++++ after/Output/Gimbal_Control/App/pitch_controller.h
+@@ -95,6 +95,7 @@
+ uint8_t PitchController_SetGravityOffset(PitchController *pitch, float offset_deg);
+ uint8_t PitchController_CaptureHorizontal(PitchController *pitch);
+ void PitchController_Stop(PitchController *pitch);
+-/* 无新CAN不推进积分/估计。手动rate限幅仅CH2映射，阶跃无速度业务限幅。 */
++/* 新CAN位置差分按Pitch独立2ms滤速/20ms滤加速度，无新CAN不推进积分/估计。
++ * 手动rate限幅仅CH2映射，阶跃无速度业务限幅。 */
+ float PitchController_Update(PitchController *pitch, float rate_dps, uint32_t now_ms, uint8_t allowed);
+ #endif

@@ -1,0 +1,30 @@
+--- before/Output/Gimbal_Control/App/pitch_console.c
++++ after/Output/Gimbal_Control/App/pitch_console.c
+@@ -335,12 +335,16 @@
+     if (strcmp(line, "PITCH BRAKE") == 0) {
+         PitchBackend_GetState(&pitch);
+         (void)snprintf(response, capacity,
+-            "P|BRAKE|MODE|TERMINAL_OVERSPEED|ENABLED|%u|TRACKING|%u|ACTIVE|%u|NM|%.6g|WINDOW_DEG|%.6g|GAIN|%.6g|MAX_NM|%.6g|DECEL_DPS2|%.6g|FLOOR_DPS|%.6g|TRIGGER_DPS|%.6g|DIRECT_STEP_DEFAULT|1\r\n",
++            "P|BRAKE|MODE|TERMINAL_AND_RETURN|ENABLED|%u|TRACKING|%u|ACTIVE|%u|NM|%.6g|WINDOW_DEG|%.6g|GAIN|%.6g|MAX_NM|%.6g|DECEL_DPS2|%.6g|FLOOR_DPS|%.6g|TRIGGER_DPS|%.6g|RETURN_MS|%lu|RETURN_GAIN|%.6g|RETURN_MAX_NM|%.6g|PEAK_NM|%.6g|RETURN_PEAK_NM|%.6g|N|%lu|RETURN_N|%lu|DIRECT_STEP_DEFAULT|1\r\n",
+             (unsigned)pitch.controller.brake.enabled, (unsigned)pitch.controller.brake.tracking,
+             (unsigned)pitch.controller.brake.active, (double)pitch.controller.brake.torque_nm,
+             (double)APP_PITCH_TERMINAL_BRAKE_WINDOW_DEG, (double)APP_PITCH_TERMINAL_BRAKE_GAIN,
+             (double)APP_PITCH_TERMINAL_BRAKE_LIMIT_NM, (double)APP_PITCH_TERMINAL_BRAKE_DECEL_DPS2,
+-            (double)APP_PITCH_TERMINAL_BRAKE_FLOOR_DPS, (double)pitch.controller.brake.safe_velocity_dps);
++            (double)APP_PITCH_TERMINAL_BRAKE_FLOOR_DPS, (double)pitch.controller.brake.safe_velocity_dps,
++            (unsigned long)APP_PITCH_CAPTURE_BRAKE_WINDOW_MS, (double)APP_PITCH_CAPTURE_BRAKE_GAIN,
++            (double)APP_PITCH_CAPTURE_BRAKE_LIMIT_NM, (double)pitch.controller.brake.peak_abs_nm,
++            (double)pitch.controller.brake.return_peak_nm, (unsigned long)pitch.controller.brake.active_frames,
++            (unsigned long)pitch.controller.brake.return_frames);
+         return 1U;
+     }
+     if (pending_operation) {
+@@ -351,7 +355,7 @@
+         if (!AppConsole_IsDiagnosticMode() && (!strcmp(line + 12U, "ON") || !strcmp(line + 12U, "OFF"))) {
+             accepted = PitchBackend_SetBrakeEnabled((uint8_t)!strcmp(line + 12U, "ON"));
+         }
+-        (void)snprintf(response, capacity, accepted ? "P|OK|BRAKE|%s|MODE|TERMINAL_OVERSPEED|ON_NEXT_MOVE\r\n" :
++        (void)snprintf(response, capacity, accepted ? "P|OK|BRAKE|%s|MODE|TERMINAL_AND_RETURN|ON_NEXT_MOVE\r\n" :
+             "P|ERROR|BRAKE|USE_ON_OFF|FINISH_STEP_FIRST\r\n", line + 12U);
+         return 1U;
+     }

@@ -1,0 +1,124 @@
+--- before/Output/Gimbal_Control/App/pitch_controller.c
++++ after/Output/Gimbal_Control/App/pitch_controller.c
+@@ -8,6 +8,7 @@
+ #endif
+ #define RAD_TO_DEG (180.0f / DM3507_POSITION_MAX_RAD)
+ #define HALF_TICK_RANGE 0x80000000UL
++#define LANDING_TRACE_WINDOW_MS 600U
+ #define RECOVERABLE_FAULTS (PITCH_CONTROLLER_FAULT_FEEDBACK | PITCH_CONTROLLER_FAULT_DATA | \
+     PITCH_CONTROLLER_FAULT_STATUS | PITCH_CONTROLLER_FAULT_TEMPERATURE | \
+     PITCH_CONTROLLER_FAULT_JUMP | PITCH_CONTROLLER_FAULT_LIMIT | PITCH_CONTROLLER_FAULT_TIMING)
+@@ -37,6 +38,49 @@
+ {
+     pitch->brake.peak_abs_nm = pitch->brake.return_peak_nm = 0.0f;
+     pitch->brake.active_frames = pitch->brake.return_frames = 0U;
++}
++static void start_landing_trace(PitchController *pitch, float span, uint32_t now_ms)
++{
++    PitchLandingTrace *trace = &pitch->landing;
++    memset(trace, 0, sizeof(*trace));
++    trace->active = (uint8_t)(absolute(span) >= 1.0f);
++    trace->direction = span > 0.0f ? 1.0f : -1.0f;
++    trace->target_deg = pitch->target_deg; trace->start_ms = now_ms;
++    trace->sequence = pitch->last_sequence;
++    trace->start_i_nm = trace->min_i_nm = trace->max_i_nm = pitch->cascade.speed_i;
++}
++static void sample_landing_trace(PitchController *pitch)
++{
++    PitchLandingTrace *trace = &pitch->landing;
++    uint32_t elapsed;
++    float remaining;
++    if (!trace->active) { return; }
++    if (pitch->target_deg != trace->target_deg) { trace->active = 0U; return; }
++    if (pitch->last_sequence == trace->sequence) { return; }
++    trace->sequence = pitch->last_sequence;
++    elapsed = pitch->last_feedback_ms - trace->start_ms;
++    /* 忽略命令接受前已入队的旧反馈，32位毫秒回绕正常处理。 */
++    if (elapsed >= HALF_TICK_RANGE) { return; }
++    if (elapsed > LANDING_TRACE_WINDOW_MS) { trace->active = 0U; return; }
++    remaining = trace->direction * (trace->target_deg - pitch->angle_deg);
++    if (!trace->arrived && remaining <= 0.2f) {
++        trace->arrived = 1U; trace->arrival_ms = pitch->last_feedback_ms;
++        trace->min_i_nm = trace->max_i_nm = pitch->cascade.speed_i;
++    }
++    if (!trace->arrived) { return; }
++    if (pitch->cascade.speed_i < trace->min_i_nm) { trace->min_i_nm = pitch->cascade.speed_i; }
++    if (pitch->cascade.speed_i > trace->max_i_nm) { trace->max_i_nm = pitch->cascade.speed_i; }
++    if (!trace->landed && trace->direction * pitch->velocity_dps <= PITCH_CONTROLLER_STATIONARY_SPEED_DPS) {
++        trace->landed = 1U; trace->land_ms = elapsed;
++        trace->land_i_nm = pitch->cascade.speed_i;
++        trace->land_raw_dps = pitch->velocity_dps;
++        trace->land_filtered_dps = pitch->cascade.velocity_dps;
++        trace->land_target_dps = pitch->cascade.target_velocity_dps;
++        trace->land_gravity_nm = pitch->gravity_torque_nm;
++        trace->land_brake_nm = pitch->brake.torque_nm;
++        trace->land_torque_nm = pitch->torque_nm;
++    }
++    if (remaining > trace->dip_deg) { trace->dip_deg = remaining; trace->dip_ms = elapsed; }
+ }
+ static float terminal_brake(PitchController *pitch, uint32_t age)
+ {
+@@ -169,6 +213,7 @@
+ {
+     if (!pitch) { return; }
+     pitch->active = pitch->have_control_tick = 0U; pitch->torque_nm = 0.0f;
++    pitch->landing.active = 0U;
+     pitch->gravity_torque_nm = pitch->pid_torque_nm = 0.0f;
+     pitch->gravity_i_transferred = 0U;
+     YawCascade_Stop(&pitch->cascade);
+@@ -282,6 +327,7 @@
+     } else { return 0U; }
+     if (pid->kp == kp && pid->ki == ki && pid->kd == kd) { return 1U; }
+     pid->kp = kp; pid->ki = ki; pid->kd = kd;
++    pitch->landing.active = 0U;
+     reset_brake(pitch);
+     YawCascade_Stop(&pitch->cascade); ++pitch->cascade.revision;
+     return 1U;
+@@ -293,6 +339,7 @@
+     pitch->target_deg = degrees; reset_shape(pitch);
+     reset_brake(pitch);
+     clear_brake_statistics(pitch);
++    memset(&pitch->landing, 0, sizeof(pitch->landing));
+     return 1U;
+ }
+ uint8_t PitchController_SetShape(PitchController *pitch, uint32_t duration_ms, float velocity_gain)
+@@ -319,10 +366,12 @@
+         pitch->target_deg = degrees; reset_shape(pitch); reset_brake(pitch); clear_brake_statistics(pitch);
+         pitch->shape.start_ms = now_ms; pitch->shape.start_deg = pitch->angle_deg;
+         pitch->shape.position_deg = pitch->angle_deg; pitch->shape.active = 1U;
++        start_landing_trace(pitch, degrees - pitch->angle_deg, now_ms);
+         return 1U;
+     }
+     span = degrees - pitch->angle_deg;
+     if (!PitchController_SetTarget(pitch, degrees)) { return 0U; }
++    start_landing_trace(pitch, span, now_ms);
+     if (!pitch->shape.duration_ms && pitch->brake.enabled && absolute(span) >= 1.0f) {
+         pitch->brake.direction = span > 0.0f ? 1.0f : -1.0f;
+         pitch->brake.target_deg = degrees; pitch->brake.tracking = 1U;
+@@ -355,6 +404,7 @@
+         (kg_nm != 0.0f && (!pitch->have_reference || !pitch->gravity_calibrated || pitch->faults ||
+          !finite_value(pitch->gravity_offset_deg) || !finite_value(pitch->angle_deg)))) { return 0U; }
+     if (pitch->gravity_kg_nm == kg_nm) { return 1U; }
++    pitch->landing.active = 0U;
+     pitch->gravity_i_transferred = 0U;
+     if (pitch->active && pitch->cascade.speed.ki > 0.0f) {
+         delta = gravity_at(pitch, pitch->gravity_kg_nm) - gravity_at(pitch, kg_nm);
+@@ -395,7 +445,7 @@
+     if (elapsed > PITCH_CONTROLLER_CONTROL_MAX_GAP_MS) { fault(pitch, PITCH_CONTROLLER_FAULT_TIMING); return 0.0f; }
+     pitch->active = 1U;
+     rate_dps = clamp(rate_dps, -APP_PITCH_RATE_LIMIT_DPS, APP_PITCH_RATE_LIMIT_DPS);
+-    if (rate_dps != 0.0f) { reset_brake(pitch); }
++    if (rate_dps != 0.0f) { reset_brake(pitch); pitch->landing.active = 0U; }
+     if (rate_dps != 0.0f && pitch->shape.active) {
+         /* 手动接管从实测位置继续，避免跳到尚未到达的最终目标。 */
+         pitch->target_deg = clamp(pitch->angle_deg, PITCH_CONTROLLER_TARGET_MIN_DEG, PITCH_CONTROLLER_TARGET_MAX_DEG);
+@@ -416,5 +466,7 @@
+         !finite_value(pitch->cascade.unsaturated_torque_nm)) {
+         fault(pitch, PITCH_CONTROLLER_FAULT_DATA); return 0.0f;
+     }
+-    pitch->torque_nm = torque; return torque;
+-}
++    pitch->torque_nm = torque;
++    sample_landing_trace(pitch);
++    return torque;
++}

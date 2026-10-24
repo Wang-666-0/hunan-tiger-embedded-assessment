@@ -1,6 +1,6 @@
 {
   "schema": "VOFA+ native export v100",
-  "commands": 30,
+  "commands": 33,
   "tabs": 3,
   "channels": 39,
   "baud": 921600,
@@ -56,16 +56,16 @@
     "I33": "settle_rpm",
     "I34": "settle_ms",
     "I35": "motion_timeout_ms",
-    "I36": "probe_accepted",
+    "I36": "last_motion_ms",
     "I37": "raw_rotor_pos",
     "I38": "raw_rotor_target"
   },
-  "action_policy": "Manual only; verify DIR/GEAR/CAL/zero before ARM; SINGLE requires real dual-wheel ready; no jog/probe",
+  "action_policy": "Compiled measured calibration; firmware prepares at safe OFF; manual recovery only at checked start pose; real wheels gate new shots",
   "native_import_verified": false,
   "hardware_used": false,
   "warnings": [
     "Structural validation only; VOFA GUI import not tested",
     "Widget input defaults are not applied board parameters",
-    "I36 reserved zero; completed interval and counts are software measurements, physical 20Hz still needs observation"
+    "I36 is last step latency; completion frequency is in FEEDER RESULT; physical 20Hz still needs observation"
   ]
 }

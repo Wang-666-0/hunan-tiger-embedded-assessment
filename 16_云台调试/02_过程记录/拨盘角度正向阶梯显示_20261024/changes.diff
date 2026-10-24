@@ -1,0 +1,144 @@
+--- before/App/app_config.h
++++ after/App/app_config.h
+@@ -168,7 +168,7 @@
+ #ifndef APP_FEEDER_ENABLED
+ #define APP_FEEDER_ENABLED (APP_REMOTE_PROFILE_ASSESSMENT && APP_YAW_ENABLED && APP_PITCH_ENABLED)
+ #endif
+-#define APP_FEEDER_VERSION "C610_PHASE_50MS_V1G"
++#define APP_FEEDER_VERSION "C610_PHASE_50MS_V1H"
+ #define APP_FEEDER_CURRENT_HARD_LIMIT 3000
+ #define APP_FEEDER_COMMAND_PERIOD_MS 2U
+ 
+--- before/App/app_console.c
++++ after/App/app_console.c
+@@ -349,7 +349,7 @@
+     if (strcmp(line, "FEEDER VIEW") == 0 || strcmp(line, "TELEM FEEDER") == 0 ||
+         strcmp(line, "FEEDER ANGLE VIEW") == 0 || strcmp(line, "TELEM FEEDER ANGLE") == 0) {
+         feeder_view = 1U;
+-        SendText("F|VIEW|ANGLE|GROUP|feeder|COLS|39|ACTUAL_SHAFT_DEG_I|0|TARGET_SHAFT_DEG_I|1|ACTUAL_ROTOR_RPM_I|2|TARGET_ROTOR_RPM_I|3|UNWRAPPED|1|REQUEST_MS|50|CONTROL_MS|2|BAUD|921600|PERIOD_MS|5\r\n"); return;
++        SendText("F|VIEW|ANGLE|GROUP|feeder|COLS|39|ACTUAL_SHAFT_DEG_I|0|TARGET_SHAFT_DEG_I|1|ANGLE_SIGN|-1|TARGET_MODE|STAIRCASE|ACTUAL_ROTOR_RPM_I|2|TARGET_ROTOR_RPM_I|3|UNWRAPPED|1|REQUEST_MS|50|CONTROL_MS|2|BAUD|921600|PERIOD_MS|5\r\n"); return;
+     }
+     if (strcmp(line, "YAW VIEW") == 0 || strcmp(line, "TELEM YAW") == 0 ||
+         strcmp(line, "PITCH VIEW") == 0 || strcmp(line, "TELEM PITCH") == 0) { feeder_view = 0U; }
+--- before/App/feeder_console.c
++++ after/App/feeder_console.c
+@@ -180,10 +180,16 @@
+     FeederBackendState state;
+     MotorHealth wheels;
+     const FeederController *c;
++    double display_position, display_target;
+     FeederBackend_GetState(&state); MotorBackend_GetHealth(&wheels); c = &state.controller;
++    /* VOFA I0/I1 use the opposite angle convention only at the serial output.
++     * Keep the accepted 40-degree target staircase, not the stream ramp.
++     * Normalize exact zero so the initial display does not print "-0". */
++    display_position = c->axis_position_deg == 0.0 ? 0.0 : -c->axis_position_deg;
++    display_target = c->axis_target_deg == 0.0 ? 0.0 : -c->axis_target_deg;
+     (void)snprintf(out, capacity,
+         "feeder:%.7g,%.7g,%d,%.6g,%d,%d,%.6g,%.6g,%.6g,%.6g,%.6g,%.6g,%d,%.6g,%u,%u,%u,%u,%u,%lu,%u,%lu,%lu,%lu,%lu,%lu,%lu,%u,%u,%lu,%lu,%lu,%.6g,%.6g,%lu,%lu,%lu,%.8g,%.8g\r\n",
+-        c->axis_position_deg, c->axis_target_deg, (int)c->raw_rpm, (double)c->target_rpm,
++        display_position, display_target, (int)c->raw_rpm, (double)c->target_rpm,
+         (int)c->command_raw, (int)c->raw_current,
+         (double)c->config.pos_kp, (double)c->config.speed_kp, (double)c->config.speed_ki,
+         (double)c->config.max_rpm, (double)c->config.current_limit, (double)c->config.step_deg,
+--- before/MDK-ARM/拨盘50ms连发操作说明.md
++++ after/MDK-ARM/拨盘50ms连发操作说明.md
+@@ -1,6 +1,6 @@
+ # 拨盘 50ms 连发与 VOFA 角度显示
+ 
+-本次直接修改当前 VS Code 工程，拨盘版本为 `C610_PHASE_50MS_V1G`。
++本次直接修改当前 VS Code 工程，拨盘版本为 `C610_PHASE_50MS_V1H`。
+ 
+ ## 连发行为
+ 
+@@ -24,8 +24,8 @@
+ 
+ | 通道 | 含义 | 单位 |
+ | --- | --- | --- |
+-| I0 | 实际拨盘输出轴累计角度 | ° |
+-| I1 | 已接受的目标拨盘输出轴累计角度 | ° |
++| I0 | 实际拨盘输出轴累计角度的相反数 | ° |
++| I1 | 已接受的目标拨盘输出轴累计角度的相反数 | ° |
+ | I2 | 实际电机转子转速 | rpm |
+ | I3 | 控制器目标电机转子转速 | rpm |
+ | I18 | 正在运动 | 0/1 |
+@@ -34,7 +34,7 @@
+ | I22 | 编码器确认完成数 | 次 |
+ | I23 | 拒绝请求数 | 次 |
+ 
+-角度是实测编码器多圈累计后除以减速比得到的输出轴角度，不在 360° 处折返。默认方向为编码器负方向，因此连发目标依次为 `0、−40、−80、−120…°`；这是坐标方向，步距仍是 40°。I1 是已接受的离散目标边界，控制器内部的平滑参考仍沿用原方案。
++VOFA 的 I0 和 I1 在串口输出时统一取相反数；默认安装方向下，目标以 `0、40、80、120…°` 向上形成阶梯，每 50ms 提出一个新目标，每发 40°，两次目标更新之间保持不变。I0 同样改为对应的正向实际角度。角度连续累计，不在 360° 处折返，初始零值打印为 0。I1 使用已接受的离散目标边界，原位置环内部的平滑参考、PID、电机方向均保持原设置。实际机械短暂反向时仍如实反映。
+ 
+ `FEEDER VIEW`、`TELEM FEEDER` 和 `TELEM FEEDER ANGLE` 都能切换到相同的 39 通道角度数据流。原有通道顺序兼容。
+ 
+@@ -58,7 +58,7 @@
+ FEEDER RESULT
+ ```
+ 
+-版本应显示 `C610_PHASE_50MS_V1G`，结果中的 `REQUEST_MS|50` 是请求周期，`RATE_HZ` 和 `CONT_DONE` 来自编码器实际跨过角度边界的统计。请求 20Hz 不代表实机已经达到 20Hz。
++版本应显示 `C610_PHASE_50MS_V1H`，结果中的 `REQUEST_MS|50` 是请求周期，`RATE_HZ` 和 `CONT_DONE` 来自编码器实际跨过角度边界的统计。请求 20Hz 不代表实机已经达到 20Hz。
+ 
+ VS Code 继续打开当前 `Gimbal_Control.code-workspace`，使用现有构建和烧录操作。产物为：
+ 
+--- before/Tests/test_feeder_speed_telemetry.c
++++ after/Tests/test_feeder_speed_telemetry.c
+@@ -21,6 +21,8 @@
+     CHECK(value[0] == -3568 && value[1] == 0 && value[2] == -100 && value[3] == 0);
+     CHECK(value[4] == 35.68f && value[5] == 1 && value[6] == 0 && value[7] == 0 && value[8] == 5);
+     CHECK(state.controller.raw_rpm == -3568 && !nonzero_calls);
++    FeederConsole_Telemetry(response, sizeof(response));
++    CHECK(strncmp(response, "feeder:0,0,", 11U) == 0);
+     test_stage = 2U;
+     StartNormal(100U, 2000U, 1U);
+     rotor_counts = 227; rotor_rpm = 600; Tick(now_ms + 1U);
+@@ -32,8 +34,9 @@
+         if (i < 38U) { CHECK(*end == ','); cursor = end + 1U; }
+         else { CHECK(strcmp(end, "\r\n") == 0); }
+     }
+-    CHECK(angle[0] > 9.97f && angle[0] < 9.98f && angle[1] == 40.0f);
++    CHECK(angle[0] < -9.97f && angle[0] > -9.98f && angle[1] == -40.0f);
+     CHECK(angle[2] == 600.0f && angle[18] == 1 && angle[21] == 1);
++    CHECK(angle[37] > 9.97f && angle[37] < 9.98f && angle[38] == 40.0f);
+     Read(); after = state; CHECK(!memcmp(&before, &after, sizeof(before)));
+     test_stage = 3U;
+     Reset(1000U); Feed(1001U); Feed(1002U); Feed(1003U);
+@@ -42,7 +45,7 @@
+     FeederConsole_Telemetry(response, sizeof(response));
+     angle[0] = strtof(response + 7U, &end); CHECK(*end == ',');
+     angle[1] = strtof(end + 1U, &end);
+-    CHECK(angle[0] < -0.27f && angle[0] > -0.29f && angle[1] == 0.0f);
++    CHECK(angle[0] > 0.27f && angle[0] < 0.29f && angle[1] == 0.0f);
+     CHECK(state.controller.config.direction == -1 && state.controller.config.gear_ratio == 35.68f);
+     test_done = 1U;
+ }
+--- before/Tests/test_feeder_stream.c
++++ after/Tests/test_feeder_stream.c
+@@ -1,6 +1,7 @@
+ #define test_run feeder_legacy_backend_run
+ #include "test_feeder_backend.c"
+ #undef test_run
++#include <stdlib.h>
+ 
+ /* These are deterministic encoder inputs, not an identified motor plant and
+  * not evidence that the real mechanism reaches 20Hz or this single-shot time. */
+@@ -61,6 +62,8 @@
+ void test_run(void)
+ {
+     uint32_t i, accepted;
++    char *angle_end;
++    double display_actual, display_target;
+     int64_t reference;
+     FeederConfig config;
+ 
+@@ -174,6 +177,12 @@
+               state.controller.axis_target_deg > -40.0 * state.controller.accepted - 0.01);
+         CHECK(state.controller.last_control_sequence == state.controller.feedback_sequence);
+         CHECK(state.controller.last_control_ms == start_stream + i);
++        FeederConsole_Telemetry(response, sizeof(response));
++        display_actual = strtod(response + 7U, &angle_end); CHECK(*angle_end == ',');
++        display_target = strtod(angle_end + 1U, &angle_end); CHECK(*angle_end == ',');
++        CHECK(display_actual >= 0.0 && display_actual + state.controller.axis_position_deg < 0.001 &&
++              display_actual + state.controller.axis_position_deg > -0.001);
++        CHECK(display_target == 40.0 * state.controller.accepted);
+     }
+     CHECK(current_calls - accepted == 300U && !state.controller.rejected);
+     CHECK(state.controller.completed == 11U && state.controller.accepted == 13U);

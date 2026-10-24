@@ -1,0 +1,744 @@
+--- before/Output/Gimbal_Control/App/app_config.h
++++ after/Output/Gimbal_Control/App/app_config.h
+@@ -20,16 +20,26 @@
+ #ifndef APP_PITCH_ENABLED
+ #define APP_PITCH_ENABLED 1U
+ #endif
+-#define APP_PITCH_VERSION "DM3507_CASCADE_V1G"
++#define APP_PITCH_VERSION "DM3507_RETURN_BRAKE_V1H"
+ #define APP_PITCH_COMMAND_PERIOD_MS 2U
+ #define APP_PITCH_ENABLE_TIMEOUT_MS 100U
+-#define APP_PITCH_POSITION_KP 18.2f
+-#define APP_PITCH_POSITION_KI 0.44f
+-#define APP_PITCH_POSITION_KD 0.04f
+-#define APP_PITCH_SPEED_KP 0.0065f
+-#define APP_PITCH_SPEED_KI 0.014f
+-#define APP_PITCH_SPEED_KD 0.000004f
+-#define APP_PITCH_GRAVITY_KG_NM (-0.13f)
++/* 2026-10-20按用户最新截图固化七参；该轮稳定402ms，尚未达到300ms。 */
++#define APP_PITCH_POSITION_KP 13.55f
++#define APP_PITCH_POSITION_KI 0.001f
++#define APP_PITCH_POSITION_KD 0.026f
++#define APP_PITCH_SPEED_KP 0.0062f
++#define APP_PITCH_SPEED_KI 0.1019f
++#define APP_PITCH_SPEED_KD 0.000050f
++#define APP_PITCH_GRAVITY_KG_NM (-0.48f)
++/* 首次到位后的单向回退阻尼；仅离散目标运动启用，不改变原双环增益。 */
++#define APP_PITCH_RETURN_BRAKE_ENABLED 1U
++#define APP_PITCH_RETURN_BRAKE_GAIN 0.02f /* 协议Nm/(deg/s)，待实机验证。 */
++#define APP_PITCH_RETURN_BRAKE_LIMIT_NM 0.30f
++#define APP_PITCH_RETURN_BRAKE_SLEW_NM_S 20.0f
++#define APP_PITCH_RETURN_BRAKE_ARRIVAL_DEG 0.2f
++#define APP_PITCH_RETURN_BRAKE_ERROR_DEG 0.03f
++#define APP_PITCH_RETURN_BRAKE_SPEED_DPS 2.0f
++#define APP_PITCH_RETURN_BRAKE_MAX_AGE_MS 10U
+ /* 上电支撑于已测水平基准，安全OFF自动准备，随后新CH5边沿才可使能。 */
+ #ifndef APP_GIMBAL_REMOTE_STARTUP_ENABLED
+ #define APP_GIMBAL_REMOTE_STARTUP_ENABLED (APP_REMOTE_PROFILE_ASSESSMENT && APP_YAW_ENABLED && APP_PITCH_ENABLED)
+--- before/Output/Gimbal_Control/App/app_console.c
++++ after/Output/Gimbal_Control/App/app_console.c
+@@ -297,7 +297,7 @@
+ #if APP_PITCH_ENABLED
+     if (strcmp(line, "TELEM PITCH") == 0 || strcmp(line, "PITCH VIEW") == 0) {
+         pitch_view = 1U;
+-        SendText("P|VIEW|PITCH|GROUP|pitch|COLS|58|PID_I|7_12|GFF_I|52_57|RESP02_I|26|SETTLE02_I|27|OS_DEG_I|28|SSE_DEG_I|30|PASS02_I|32|BAND_DEG|0.2|TIME_LIMIT_MS|300|OS_LIMIT_DEG|0.2|SSE_LIMIT_DEG|0.2\r\n"); return;
++        SendText("P|VIEW|PITCH|GROUP|pitch|COLS|60|PID_I|7_12|GFF_I|52_57|BRAKE_I|58_59|RESP02_I|26|SETTLE02_I|27|OS_DEG_I|28|SSE_DEG_I|30|PASS02_I|32|BAND_DEG|0.2|TIME_LIMIT_MS|300|OS_LIMIT_DEG|0.2|SSE_LIMIT_DEG|0.2\r\n"); return;
+     }
+     if (strcmp(line, "TELEM YAW") == 0 || strcmp(line, "YAW VIEW") == 0) {
+         pitch_view = 0U;
+@@ -587,12 +587,12 @@
+     PitchBackend_GetState(&pitch); PitchBackend_GetStep(&step);
+     taskEXIT_CRITICAL();
+     RemoteInput_GetState(&remote); AppTasks_GetState(&app); CanBus_GetState(&bus);
+-    /* Pitch原I0~I51保持；I52~I57追加Kg、水平偏置、前馈、PID、速度积分、标定。Yaw仍48列。
++    /* Pitch原I0~I57保持；追加I58回退刹车力矩、I59首次到位锁存。
+      * 同时只发当前选择的一组，保持921600/5ms的线路预算。 */
+     length = snprintf(telemetry, sizeof(telemetry),
+         "pitch:%.6g,%.6g,%.6g,%.6g,%.6g,%.6g,%.6g,%.6g,%.6g,%.6g,%.6g,%.6g,%.6g,%.6g"
+         ",%u,%u,%u,%u,%lu,%lu,%u,%u,%u,%u,%lu,%u,%ld,%ld,%.6g,%.6g,%.6g,%u,%u,%ld,%ld"
+-        ",%.6g,%.6g,%u,%lu,%u,%u,%u,%u,%u,%u,%lu,%u,%u,%u,%u,%u,%u,%.6g,%.6g,%.6g,%.6g,%.6g,%u\r\n",
++        ",%.6g,%.6g,%u,%lu,%u,%u,%u,%u,%u,%u,%lu,%u,%u,%u,%u,%u,%u,%.6g,%.6g,%.6g,%.6g,%.6g,%u,%.6g,%u\r\n",
+         (double)pitch.controller.angle_deg, (double)pitch.controller.target_deg,
+         (double)pitch.controller.cascade.target_velocity_dps, (double)pitch.controller.cascade.velocity_dps,
+         (double)pitch.controller.velocity_dps, (double)pitch.controller.torque_nm, (double)pitch.feedback.torque_nm,
+@@ -621,7 +621,8 @@
+         (unsigned)remote.channels[2], (unsigned)remote.channels[3],
+         (double)pitch.controller.gravity_kg_nm, (double)pitch.controller.gravity_offset_deg,
+         (double)pitch.controller.gravity_torque_nm, (double)pitch.controller.pid_torque_nm,
+-        (double)pitch.controller.cascade.speed_i, (unsigned)pitch.controller.gravity_calibrated);
++        (double)pitch.controller.cascade.speed_i, (unsigned)pitch.controller.gravity_calibrated,
++        (double)pitch.controller.brake_torque_nm, (unsigned)pitch.controller.brake_arrived);
+     if (length > 0 && (size_t)length < sizeof(telemetry)) { SendText(telemetry); }
+ }
+ #endif
+--- before/Output/Gimbal_Control/App/pitch_backend.c
++++ after/Output/Gimbal_Control/App/pitch_backend.c
+@@ -261,12 +261,23 @@
+                 step.gravity_kg_nm = state.controller.gravity_kg_nm;
+                 step.gravity_offset_deg = state.controller.gravity_offset_deg;
+                 step.gravity_calibrated = state.controller.gravity_calibrated;
++                step.pitch_brake_enabled = state.controller.brake_enabled;
+                 step.cascade = 1U; step.output_limits = 0U; step.vmax_dps = 0.0f;
+                 step.last_velocity_dps = state.controller.velocity_dps;
+                 step.last_torque_nm = submitted_torque;
+                 state.step_hold = 1U;
+             }
+         }
++    }
++    taskEXIT_CRITICAL(); return accepted;
++}
++
++uint8_t PitchBackend_SetBrakeEnabled(uint8_t enabled)
++{
++    uint8_t accepted = 0U;
++    taskENTER_CRITICAL();
++    if (enabled <= 1U && (step.phase != PITCH_STEP_RUNNING || enabled == state.controller.brake_enabled)) {
++        accepted = PitchController_SetBrakeEnabled(&state.controller, enabled);
+     }
+     taskEXIT_CRITICAL(); return accepted;
+ }
+--- before/Output/Gimbal_Control/App/pitch_backend.h
++++ after/Output/Gimbal_Control/App/pitch_backend.h
+@@ -42,6 +42,8 @@
+ uint8_t PitchBackend_SetLoopParameter(char loop, char parameter, float value);
+ uint8_t PitchBackend_SetGravityGain(float kg_nm);
+ uint8_t PitchBackend_SetGravityOffset(float offset_deg, uint8_t capture_horizontal);
++/* 测量窗口中拒绝改变刹车配置；不改变双环参数或清积分。 */
++uint8_t PitchBackend_SetBrakeEnabled(uint8_t enabled);
+ /* +/-30 is an absolute software-zero target, measured for five seconds and then held. */
+ uint8_t PitchBackend_StartStep(float degrees);
+ /* 控制任务只需编号时避免复制完整测量快照；不消费报告。 */
+--- before/Output/Gimbal_Control/App/pitch_console.c
++++ after/Output/Gimbal_Control/App/pitch_console.c
+@@ -134,13 +134,13 @@
+     proportional = p->active ? c->speed.kp * speed_error : 0.0f;
+     derivative = p->active ? -c->speed.kd * c->acceleration_dps2 : 0.0f;
+     length = snprintf(response, capacity,
+-        "P|%s|KG|%.6g|GOFF_DEG|%.6g|G_CAL|%u|G_REQUIRED|%u|PHYSICAL_DEG|%.3f|GFF_NM|%.6g|VP_NM|%.6g|VI_NM|%.6g|VD_NM|%.6g|PID_NM|%.6g|SUM_NM|%.6g|OUT_NM|%.6g|SAT|%u|I_TRANSFER|%u|RAM_ONLY|1\r\n",
++        "P|%s|KG|%.6g|GOFF_DEG|%.6g|G_CAL|%u|G_REQUIRED|%u|PHYSICAL_DEG|%.3f|GFF_NM|%.6g|VP_NM|%.6g|VI_NM|%.6g|VD_NM|%.6g|PID_NM|%.6g|SUM_NM|%.6g|OUT_NM|%.6g|SAT|%u|I_TRANSFER|%u|RAM_ONLY|1|BRAKE_NM|%.6g\r\n",
+         kind, (double)p->gravity_kg_nm, (double)p->gravity_offset_deg, (unsigned)p->gravity_calibrated,
+         (unsigned)(p->gravity_kg_nm != 0.0f && !p->gravity_calibrated),
+         (double)(p->angle_deg + p->gravity_offset_deg), (double)p->gravity_torque_nm,
+         (double)proportional, (double)c->speed_i, (double)derivative, (double)p->pid_torque_nm,
+         (double)c->unsaturated_torque_nm, (double)p->torque_nm, (unsigned)c->torque_limited,
+-        (unsigned)p->gravity_i_transferred);
++        (unsigned)p->gravity_i_transferred, (double)p->brake_torque_nm);
+     return (uint8_t)(length > 0 && (size_t)length < capacity);
+ }
+ 
+@@ -151,7 +151,7 @@
+     uint32_t rise = value->t10_ms != PITCH_STEP_UNREACHED && value->t90_ms != PITCH_STEP_UNREACHED ?
+         value->t90_ms - value->t10_ms : PITCH_STEP_UNREACHED;
+     int length = snprintf(response, capacity,
+-        "P|STEP|ID|%lu|STATE|%s|REASON|%s|VALID|%u|START|%.3f|TARGET|%.3f|WINDOW_MS|%lu|RESP_MS|%ld|T90_MS|%ld|RISE_MS|%ld|SETTLE_MS|%ld|OS_DEG|%.6f|OS_PCT|%.3f|SSE_DEG|%.6f|SSE_VALID|%u|PASS|%u|FAULT|%lu|VMAX_DPS|%.2f|TMAX_NM|%.5f|N|%lu|GAP_MS|%lu|SAT_N|%lu|CMD_N|%lu|FIRST_NM|%.5f|CTRL|CASCADE|PKP|%.6g|PKI|%.6g|PKD|%.6g|VKP|%.6g|VKI|%.6g|VKD|%.6g|OUTPUT_LIMITS|0|RESP_LIMIT_MS|300|RESPONSE|FIRST_IN_BAND|BAND02|0.2|RESP02_MS|%ld|SETTLE02_MS|%ld|PASS02|%u|TIME_LIMIT_MS|300|OS_LIMIT_DEG|0.2|SSE_LIMIT_DEG|0.2|SSE_PEAK_DEG|%.6g|ASSESSMENT|FINAL_SETTLE|KG|%.6g|GOFF_DEG|%.6g|G_CAL|%u\r\n",
++        "P|STEP|ID|%lu|STATE|%s|REASON|%s|VALID|%u|START|%.3f|TARGET|%.3f|WINDOW_MS|%lu|RESP_MS|%ld|T90_MS|%ld|RISE_MS|%ld|SETTLE_MS|%ld|OS_DEG|%.6f|OS_PCT|%.3f|SSE_DEG|%.6f|SSE_VALID|%u|PASS|%u|FAULT|%lu|VMAX_DPS|%.2f|TMAX_NM|%.5f|N|%lu|GAP_MS|%lu|SAT_N|%lu|CMD_N|%lu|FIRST_NM|%.5f|CTRL|CASCADE|PKP|%.6g|PKI|%.6g|PKD|%.6g|VKP|%.6g|VKI|%.6g|VKD|%.6g|OUTPUT_LIMITS|0|RESP_LIMIT_MS|300|RESPONSE|FIRST_IN_BAND|BAND02|0.2|RESP02_MS|%ld|SETTLE02_MS|%ld|PASS02|%u|TIME_LIMIT_MS|300|OS_LIMIT_DEG|0.2|SSE_LIMIT_DEG|0.2|SSE_PEAK_DEG|%.6g|ASSESSMENT|FINAL_SETTLE|KG|%.6g|GOFF_DEG|%.6g|G_CAL|%u|BRAKE|%u\r\n",
+         (unsigned long)value->id, value->phase <= PITCH_STEP_ABORTED ? phases[value->phase] : "UNKNOWN",
+         value->reason <= PITCH_STEP_FF_CHANGE ? reasons[value->reason] : "UNKNOWN",
+         (unsigned)(value->phase == PITCH_STEP_DONE), (double)value->start_deg, (double)value->target_deg,
+@@ -165,7 +165,8 @@
+         (double)value->vkp, (double)value->vki, (double)value->vkd,
+         (long)(int32_t)value->response_ms, (long)(int32_t)value->settle_ms, (unsigned)value->pass,
+         (double)value->ss_max_error,
+-        (double)value->gravity_kg_nm, (double)value->gravity_offset_deg, (unsigned)value->gravity_calibrated);
++        (double)value->gravity_kg_nm, (double)value->gravity_offset_deg, (unsigned)value->gravity_calibrated,
++        (unsigned)value->pitch_brake_enabled);
+     return (uint8_t)(length > 0 && (size_t)length < capacity);
+ }
+ 
+@@ -285,7 +286,7 @@
+     if (strcmp(line, "PITCH") == 0) { BriefStatus(response, capacity); return 1U; }
+     if (strcmp(line, "PITCH HELP") == 0 || strcmp(line, "PITCH ?") == 0) {
+         (void)snprintf(response, capacity,
+-            "P|HELP|READ|PITCH;PID;RESULT;STATUS|PREPARE|READY|STOP|OFF|VIEW|PITCH VIEW|TUNE|POS kp ki kd;VEL kp ki kd;PKP/PKI/PKD/VKP/VKI/VKD value|TELEM|TELEM OFF/ON|TEST|STEP [30];HOME;REMOTE_CH5_CH7|PITCH_ONLY|COORD 1;GHORIZ;FF;KG value;GOFF degrees\r\n");
++            "P|HELP|READ|PITCH;PID;RESULT;STATUS|PREPARE|READY|STOP|OFF|VIEW|PITCH VIEW|TUNE|POS kp ki kd;VEL kp ki kd;PKP/PKI/PKD/VKP/VKI/VKD value|TELEM|TELEM OFF/ON|TEST|STEP [30];HOME;REMOTE_CH5_CH7|PITCH_ONLY|COORD 1;GHORIZ;FF;KG value;GOFF degrees;BRAKE [ON/OFF]\r\n");
+         return 1U;
+     }
+     if (strcmp(line, "PITCH OFF") == 0) {
+@@ -315,9 +316,28 @@
+     if (strcmp(line, "PITCH FF") == 0) {
+         (void)GravityReport("FF", response, capacity); return 1U;
+     }
++    if (strcmp(line, "PITCH BRAKE") == 0) {
++        PitchBackend_GetState(&pitch);
++        (void)snprintf(response, capacity,
++            "P|BRAKE|%s|ENABLED|%u|TRACKING|%u|ARRIVED|%u|NM|%.6g|GAIN|%.6g|MAX_NM|%.6g|SCOPE|AFTER_FIRST_ARRIVAL_RETREAT_ONLY\r\n",
++            APP_PITCH_VERSION, (unsigned)pitch.controller.brake_enabled,
++            (unsigned)pitch.controller.brake_tracking, (unsigned)pitch.controller.brake_arrived,
++            (double)pitch.controller.brake_torque_nm, (double)APP_PITCH_RETURN_BRAKE_GAIN,
++            (double)APP_PITCH_RETURN_BRAKE_LIMIT_NM);
++        return 1U;
++    }
+     if (pending_operation) {
+         (void)snprintf(response, capacity, "P|BUSY|%s|USE_PITCH_OFF_TO_CANCEL\r\n",
+             pending_operation == 1U ? "CHECK" : "READY"); return 1U;
++    }
++    if (strncmp(line, "PITCH BRAKE ", 12U) == 0) {
++        uint8_t valid = (uint8_t)(strcmp(line + 12U, "ON") == 0 || strcmp(line + 12U, "OFF") == 0);
++        if (valid && !AppConsole_IsDiagnosticMode()) {
++            accepted = PitchBackend_SetBrakeEnabled((uint8_t)(strcmp(line + 12U, "ON") == 0));
++        }
++        if (accepted) { (void)snprintf(response, capacity, "P|OK|BRAKE|%s|NEXT_MOVE\r\n", line + 12U); }
++        else { (void)snprintf(response, capacity, "P|ERROR|BRAKE_USE_ON_OR_OFF_OUTSIDE_STEP\r\n"); }
++        return 1U;
+     }
+     if (strcmp(line, "PITCH CHECK") == 0 || strcmp(line, "PITCH READY") == 0) {
+         const char *reason = "QUERY_UNAVAILABLE_CAN_OR_MAILBOX";
+--- before/Output/Gimbal_Control/App/pitch_controller.c
++++ after/Output/Gimbal_Control/App/pitch_controller.c
+@@ -19,6 +19,46 @@
+ { x = fmodf(x, 360.0f); if (x > 180.0f) { x -= 360.0f; } else if (x < -180.0f) { x += 360.0f; } return x; }
+ static float gravity_at(const PitchController *pitch, float kg)
+ { return kg * cosf((pitch->angle_deg + pitch->gravity_offset_deg) / RAD_TO_DEG); }
++static void reset_brake(PitchController *pitch)
++{
++    pitch->brake_torque_nm = pitch->brake_direction = 0.0f;
++    pitch->brake_tracking = pitch->brake_arrived = 0U;
++    pitch->brake_sequence = pitch->last_sequence;
++    pitch->brake_feedback_ms = pitch->last_feedback_ms;
++    pitch->brake_previous_angle_deg = pitch->angle_deg;
++}
++static float return_brake(PitchController *pitch, uint32_t age)
++{
++    float delta, remaining, wanted = 0.0f, previous, rise;
++    uint32_t gap;
++    if (!pitch->brake_enabled || !pitch->brake_tracking ||
++        pitch->target_deg != pitch->brake_target_deg) {
++        reset_brake(pitch); return 0.0f;
++    }
++    /* 不让附加阻尼在缺帧期间持续盲推；原反馈超时保护仍由上层处理。 */
++    if (age > APP_PITCH_RETURN_BRAKE_MAX_AGE_MS) { pitch->brake_torque_nm = 0.0f; return 0.0f; }
++    if (pitch->brake_sequence == pitch->last_sequence) { return pitch->brake_torque_nm; }
++    delta = pitch->angle_deg - pitch->brake_previous_angle_deg;
++    gap = pitch->last_feedback_ms - pitch->brake_feedback_ms;
++    pitch->brake_previous_angle_deg = pitch->angle_deg;
++    pitch->brake_sequence = pitch->last_sequence;
++    pitch->brake_feedback_ms = pitch->last_feedback_ms;
++    remaining = pitch->brake_direction * (pitch->target_deg - pitch->angle_deg);
++    if (remaining <= APP_PITCH_RETURN_BRAKE_ARRIVAL_DEG) { pitch->brake_arrived = 1U; }
++    if (pitch->brake_arrived && remaining > APP_PITCH_RETURN_BRAKE_ERROR_DEG &&
++        delta * pitch->brake_direction < 0.0f &&
++        pitch->cascade.velocity_dps * pitch->brake_direction < -APP_PITCH_RETURN_BRAKE_SPEED_DPS) {
++        wanted = clamp(APP_PITCH_RETURN_BRAKE_GAIN *
++            (-pitch->cascade.velocity_dps * pitch->brake_direction - APP_PITCH_RETURN_BRAKE_SPEED_DPS),
++            0.0f, APP_PITCH_RETURN_BRAKE_LIMIT_NM);
++    }
++    /* 加力缓升；停止回退/实际位置开始返回目标时立即撤去，避免滤波滞后继续推。 */
++    previous = absolute(pitch->brake_torque_nm);
++    rise = APP_PITCH_RETURN_BRAKE_SLEW_NM_S * (float)(gap > 10U ? 10U : gap) * 0.001f;
++    if (wanted > previous + rise) { wanted = previous + rise; }
++    pitch->brake_torque_nm = pitch->brake_direction * wanted;
++    return pitch->brake_torque_nm;
++}
+ void PitchController_InvalidateGravity(PitchController *pitch)
+ {
+     if (!pitch) { return; }
+@@ -39,6 +79,7 @@
+ {
+     if (!pitch) { return; }
+     memset(pitch, 0, sizeof(*pitch)); pitch->feedback_divisor = 1U;
++    pitch->brake_enabled = APP_PITCH_RETURN_BRAKE_ENABLED;
+     YawCascade_Init(&pitch->cascade);
+     /* 用户确认写入的上电默认；不改变Yaw默认增益。 */
+     pitch->cascade.position.kp = APP_PITCH_POSITION_KP;
+@@ -56,6 +97,7 @@
+     pitch->active = pitch->have_control_tick = 0U; pitch->torque_nm = 0.0f;
+     pitch->gravity_torque_nm = pitch->pid_torque_nm = 0.0f;
+     pitch->gravity_i_transferred = 0U;
++    reset_brake(pitch);
+     YawCascade_Stop(&pitch->cascade);
+     pitch->target_deg = finite_value(pitch->angle_deg) ?
+         clamp(pitch->angle_deg, PITCH_CONTROLLER_TARGET_MIN_DEG, PITCH_CONTROLLER_TARGET_MAX_DEG) : 0.0f;
+@@ -162,6 +204,7 @@
+     } else { return 0U; }
+     if (pid->kp == kp && pid->ki == ki && pid->kd == kd) { return 1U; }
+     pid->kp = kp; pid->ki = ki; pid->kd = kd;
++    reset_brake(pitch);
+     YawCascade_Stop(&pitch->cascade); ++pitch->cascade.revision;
+     return 1U;
+ }
+@@ -169,7 +212,20 @@
+ {
+     if (!pitch || !finite_value(degrees) || degrees < PITCH_CONTROLLER_TARGET_MIN_DEG ||
+         degrees > PITCH_CONTROLLER_TARGET_MAX_DEG || !pitch->have_reference || pitch->faults) { return 0U; }
++    if (pitch->target_deg != degrees) {
++        reset_brake(pitch);
++        if (pitch->active && absolute(degrees - pitch->angle_deg) >= 1.0f) {
++            pitch->brake_direction = degrees > pitch->angle_deg ? 1.0f : -1.0f;
++            pitch->brake_target_deg = degrees; pitch->brake_tracking = 1U;
++        }
++    }
+     pitch->target_deg = degrees; return 1U;
++}
++uint8_t PitchController_SetBrakeEnabled(PitchController *pitch, uint8_t enabled)
++{
++    if (!pitch || enabled > 1U) { return 0U; }
++    if (pitch->brake_enabled != enabled) { reset_brake(pitch); pitch->brake_enabled = enabled; }
++    return 1U;
+ }
+ uint8_t PitchController_SetGravityOffset(PitchController *pitch, float offset_deg)
+ {
+@@ -205,7 +261,7 @@
+ float PitchController_Update(PitchController *pitch, float rate_dps, uint32_t now_ms, uint8_t allowed)
+ {
+     uint32_t age, elapsed;
+-    float torque;
++    float torque, feedforward;
+     if (!pitch) { return 0.0f; }
+     if (!finite_value(rate_dps) || !finite_value(pitch->gravity_kg_nm) ||
+         !finite_value(pitch->gravity_offset_deg) || absolute(pitch->gravity_kg_nm) > PITCH_CONTROLLER_TORQUE_LIMIT_NM ||
+@@ -231,12 +287,14 @@
+     if (elapsed > PITCH_CONTROLLER_CONTROL_MAX_GAP_MS) { fault(pitch, PITCH_CONTROLLER_FAULT_TIMING); return 0.0f; }
+     pitch->active = 1U;
+     rate_dps = clamp(rate_dps, -APP_PITCH_RATE_LIMIT_DPS, APP_PITCH_RATE_LIMIT_DPS);
++    if (rate_dps != 0.0f) { reset_brake(pitch); }
+     pitch->target_deg = clamp(pitch->target_deg + rate_dps * (float)elapsed * 0.001f,
+         PITCH_CONTROLLER_TARGET_MIN_DEG, PITCH_CONTROLLER_TARGET_MAX_DEG);
+     pitch->gravity_torque_nm = gravity_at(pitch, pitch->gravity_kg_nm);
++    feedforward = pitch->gravity_torque_nm + return_brake(pitch, age);
+     torque = YawCascade_UpdateWithFeedforward(&pitch->cascade, pitch->target_deg - pitch->angle_deg,
+-        pitch->last_feedback_ms, pitch->last_sequence, PITCH_CONTROLLER_TORQUE_LIMIT_NM, pitch->gravity_torque_nm);
+-    pitch->pid_torque_nm = pitch->cascade.unsaturated_torque_nm - pitch->gravity_torque_nm;
++        pitch->last_feedback_ms, pitch->last_sequence, PITCH_CONTROLLER_TORQUE_LIMIT_NM, feedforward);
++    pitch->pid_torque_nm = pitch->cascade.unsaturated_torque_nm - feedforward;
+     if (!finite_value(torque) || !finite_value(pitch->cascade.position_i) ||
+         !finite_value(pitch->cascade.speed_i) || !finite_value(pitch->cascade.target_velocity_dps) ||
+         !finite_value(pitch->cascade.unsaturated_torque_nm)) {
+--- before/Output/Gimbal_Control/App/pitch_controller.h
++++ after/Output/Gimbal_Control/App/pitch_controller.h
+@@ -40,6 +40,11 @@
+      * 未标定时保留系数，禁止使能；不保存跨重启的软件零点/相位。 */
+     float gravity_kg_nm, gravity_offset_deg, gravity_torque_nm, pid_torque_nm;
+     uint8_t gravity_calibrated, gravity_i_transferred;
++    /* 首次到位后只抵抗向起点回退的运动；实际位置增量与滤波速度须同向。
++     * brake_torque_nm独立于PID/重力项，参加同一总力矩抗饱和。 */
++    float brake_torque_nm, brake_direction, brake_target_deg, brake_previous_angle_deg;
++    uint32_t brake_sequence, brake_feedback_ms;
++    uint8_t brake_enabled, brake_tracking, brake_arrived;
+     uint32_t last_feedback_ms, last_sequence, faults, last_control_ms;
+     uint32_t stationary_started_ms;
+     uint8_t have_feedback, have_reference, active, have_control_tick;
+@@ -55,6 +60,7 @@
+ /* P:deg->deg/s；V:deg/s->协议Nm。参数输入范围并非PID输出限幅。 */
+ uint8_t PitchController_SetPid(PitchController *pitch, char which, float kp, float ki, float kd);
+ uint8_t PitchController_SetTarget(PitchController *pitch, float degrees);
++uint8_t PitchController_SetBrakeEnabled(PitchController *pitch, uint8_t enabled);
+ void PitchController_InvalidateGravity(PitchController *pitch);
+ uint8_t PitchController_SetGravityGain(PitchController *pitch, float kg_nm);
+ /* 关闭且已建立软件零点时声明水平偏置；不改变软件零点。 */
+--- before/Output/Gimbal_Control/App/yaw_step.h
++++ after/Output/Gimbal_Control/App/yaw_step.h
+@@ -35,6 +35,7 @@
+     /* Pitch冻结试验条件；Yaw保持0，不使用这些字段。 */
+     float gravity_kg_nm, gravity_offset_deg;
+     uint8_t gravity_calibrated;
++    uint8_t pitch_brake_enabled; /* Pitch测量窗口冻结；Yaw不使用。 */
+     uint8_t cascade, output_limits;
+     uint8_t phase, reason, pending, band_active, sse_valid, pass;
+ } YawStep;
+--- before/Output/Gimbal_Control/README.md
++++ after/Output/Gimbal_Control/README.md
+@@ -1,6 +1,6 @@
+ # Gimbal_Control
+ 
+-当前控制配置：Yaw `GL60II_FIXED_PID_V2Q`、Pitch `DM3507_CASCADE_V1G`、拨盘 `C610_FEEDBACK_TIME_V1F`。2026-10-19 只做等价框架精简，保留已有考核功能与可选回归档；该次没有调 PID、改变控制周期或烧录硬件。
++当前控制配置：Yaw `GL60II_FIXED_PID_V2Q`、Pitch `DM3507_RETURN_BRAKE_V1H`、拨盘 `C610_FEEDBACK_TIME_V1F`。Pitch按2026-10-20最后截图固化七参，并加入首次到位后抵抗回退的有界阻尼，默认开启；使用与通道见[Pitch回退刹车](../../01_学习笔记/Pitch到位回退刹车_20261020.md)。2026-10-19框架精简与下文Yaw截图说明保留。
+ 
+ 2026-10-20 按用户截图及确认，仅固化已达标的 Yaw 六个 PID 为上电默认值：位置 15.549 / 0.734 / 0.139，速度 0.00517 / 0.0035 / 0.000074。截图这一轮为最终稳定 168 ms、超调 0.130461°、稳态误差 −0.0965366°、I62=1；用户确认符合预期。仍使用原双环 PID，实验规划/前馈关闭，沿用现有面板。来源、适用范围和重新构建/烧录后的回读方法见 [六参数固化记录](../../01_学习笔记/Yaw达标六参数固化_20261020.md)。
+ 
+@@ -16,9 +16,9 @@
+ | 项目 | Yaw | Pitch |
+ | --- | --- | --- |
+ | 驱动 | CAN1 ID1，GL60 II | CAN1 ID2，DM3507 |
+-| 位置 PID | 15.549 / 0.734 / 0.139 | 18.2 / 0.44 / 0.04 |
+-| 速度 PID | 0.00517 / 0.0035 / 0.000074 | 0.0065 / 0.014 / 0.000004 |
+-| 前馈 | 生产关闭实验规划/前馈 | 重力系数 −0.13，需有效水平标定 |
++| 位置 PID | 15.549 / 0.734 / 0.139 | 13.55 / 0.001 / 0.026 |
++| 速度 PID | 0.00517 / 0.0035 / 0.000074 | 0.0062 / 0.1019 / 0.000050 |
++| 前馈 | 生产关闭实验规划/前馈 | 重力系数 −0.48，需有效水平标定；独立回退阻尼默认开启 |
+ | 手动目标范围 | ±50° | −18°～+33° |
+ | 越界保护 | ±60° | −19°～+34° |
+ | 力矩提交周期 | 10 ms | 2 ms |
+@@ -46,7 +46,7 @@
+ 
+ 遥控仍为 CH1/CH2 双轴手动，CH5 总模式，CH6 摩擦轮/射击模式，CH7 阶跃确认/回参考，CH8 扳机与失联锁，CH3/CH4 选择 Pitch/Yaw 阶跃。CH5 测试模式禁止摩擦轮和拨盘。
+ 
+-USART1 保持 921600、5 ms 遥测周期：Yaw 72 列、Pitch 58 列、拨盘 39 列，原列序及串口回复保持。Yaw 考核看 I60 首次入带、I61 最终稳定时间、I62 综合通过；Pitch 看 I26、I27、I32。
++USART1 保持 921600、5 ms 遥测周期：Yaw 72 列、Pitch 60 列、拨盘 39 列。Pitch原I0～I57保持，追加I58刹车力矩、I59首次到位锁存。Yaw 考核看 I60 首次入带、I61 最终稳定时间、I62 综合通过；Pitch 看 I26、I27、I32。
+ 
+ ## 构建与验证
+ 
+--- before/Output/Gimbal_Control/Tests/README.md
++++ after/Output/Gimbal_Control/Tests/README.md
+@@ -1,3 +1,5 @@
++> 2026-10-20 Pitch更新为 **V1H**：最新七参固化并加入到位后回退刹车，默认开启。71组548121项全部完成且正常返回，0失败；AC5/O0完整构建0错误0警告。见[实现与验证](../../../02_过程记录/Pitch回退刹车_20261020/实现与验证.md)。软件检查不代表实机300ms达标，以下Pitch旧版本及参数保留为历史。
++
+ > 2026-10-20 最新状态为 **Yaw V2Q / Pitch V1G**。仅固化用户截图并确认符合预期的 Yaw 六个 PID：位置 15.549/0.734/0.139，速度 0.00517/0.0035/0.000074；实验规划/前馈继续关闭。截图这一轮 I61=168 ms、I28=0.130461°、I30=−0.0965366°、I62=1，仅证明该轮记录。上电默认与回读方法见 [六参数固化记录](../../../01_学习笔记/Yaw达标六参数固化_20261020.md)。本次相关 8 组回归共 65,888 项全部通过，原 EIDE AC5/O0 全量 69 源项构建成功，0 错误、0 警告，尚未烧录；见[本次验证记录](../../../02_过程记录/Yaw达标六参数固化_20261020/实现与验证.md)。下文版本、参数及验证结果均为历史记录。
+ 
+ > 当前版本为 **Yaw V2P / Pitch V1G**。用户已确认时间带、超调、稳态误差全部收紧为±0.2°；总通过按最终稳定时间Yaw250ms/Pitch300ms判定。Yaw默认六参更新为16.63/0.12/0.269与0.0081/0.003/0.000209。I61现在为±0.2°最终稳定时间，I62为综合通过；旧±0.5°达标结果不能作新标准证明。以[新参数与通道说明](../../../01_学习笔记/Yaw新参数与02度考核通道_20261018.md)为准，以下为历史内容。
+--- before/Output/Gimbal_Control/Tests/run_selftests.py
++++ after/Output/Gimbal_Control/Tests/run_selftests.py
+@@ -140,6 +140,7 @@
+     groups["pitch_protocol"] = [root / "test_pitch_protocol.c", app / "dm3507.c", app / "can_frame.c"]
+     groups["pitch_controller"] = [root / "test_pitch_controller.c", app / "pitch_controller.c", app / "yaw_cascade.c"]
+     groups["pitch_gravity"] = [root / "test_pitch_gravity.c", app / "pitch_controller.c", app / "yaw_cascade.c"]
++    groups["pitch_return_brake"] = [root / "test_pitch_return_brake.c", app / "pitch_controller.c", app / "yaw_cascade.c"]
+     groups["pitch_step"] = [root / "test_pitch_step.c", app / "pitch_step.c", app / "yaw_step.c"]
+     groups["pitch_backend"] = [root / "test_pitch_backend.c"] + [app / (n + ".c") for n in (
+         "pitch_backend", "pitch_controller", "pitch_step", "dm3507", "yaw_cascade", "yaw_step", "can_frame")]
+--- before/Output/Gimbal_Control/Tests/test_gimbal_startup.c
++++ after/Output/Gimbal_Control/Tests/test_gimbal_startup.c
+@@ -151,7 +151,7 @@
+     CHECK(!yc && !pc && !cc && !yfd && !pfd && !startup.ready);
+     Run(400U, 1000U);
+     CHECK(startup.ready && startup.reference_latched && yaw.zero_set && pitch.zero_set);
+-    CHECK(pitch.controller.gravity_calibrated && pitch.controller.gravity_kg_nm == -0.13f);
++    CHECK(pitch.controller.gravity_calibrated && pitch.controller.gravity_kg_nm == -0.48f);
+     CHECK(fabsf(yaw.controller.angle_deg) < 0.01f && fabsf(pitch.controller.angle_deg) < 0.01f);
+     CHECK(!yc && !pc && yfd && pfd && cc && rearm_barriers);
+     CHECK(GimbalStartup_TakeEvent(&event) && event.ready && !GimbalStartup_TakeEvent(&event));
+@@ -190,7 +190,7 @@
+     Run(100U, 1500U); Run(200U, 1000U);
+     CHECK(!yaw.active && !pitch.active && yc == before_y && pc == before_p);
+     CHECK(startup.phase == GIMBAL_STARTUP_BLOCKED && startup.reason == GIMBAL_STARTUP_REFERENCE_LOST);
+-    CHECK(pitch.controller.gravity_kg_nm == -0.13f && !pitch.controller.gravity_calibrated);
++    CHECK(pitch.controller.gravity_kg_nm == -0.48f && !pitch.controller.gravity_calibrated);
+     physical_yaw = 10.0f; physical_pitch = 100.0f; Run(50U, 1000U);
+     CHECK(GimbalStartup_Request(&input.remote, now, 0U)); AppTasks_RequestStop(); Run(400U, 1000U);
+     CHECK(startup.ready && pitch.controller.gravity_calibrated && !pitch.controller.faults);
+--- before/Output/Gimbal_Control/Tests/test_pitch_backend.c
++++ after/Output/Gimbal_Control/Tests/test_pitch_backend.c
+@@ -196,5 +196,28 @@
+     Activate(7000U); Apply(7046U, 0U);
+     CHECK(state.stop_reason == PITCH_STOP_PERMISSION && !state.active && !permission);
+     Apply(7048U, 0U); Read(); CHECK(state.stop_reason == PITCH_STOP_PERMISSION && state.stop_id == 1U);
++
++    test_stage = 7U;
++    Activate(8000U); request.gimbal_mode = GIMBAL_TEST;
++    CHECK(PitchBackend_StartStep(30.0f)); Read();
++    CHECK(state.controller.brake_tracking && !state.controller.brake_arrived);
++    PitchBackend_GetStep(&measurement); CHECK(measurement.pitch_brake_enabled == 1U);
++    CHECK(!PitchBackend_SetBrakeEnabled(0U) && PitchBackend_SetBrakeEnabled(1U));
++    for (tick = 8046U; tick <= 8104U; tick += 2U) {
++        frame = Feedback(tick, 1U, (float)(tick - 8044U) * 29.9f / 60.0f, 500.0f);
++        now_ms = tick; CHECK(PitchBackend_OnFrame(&frame)); Apply(tick, 1U);
++    }
++    CHECK(state.controller.brake_arrived && state.controller.brake_torque_nm == 0.0f);
++    /* Drive real position differentiation far enough to observe a reversed velocity. */
++    for (tick = 8106U; tick <= 8144U; tick += 2U) {
++        frame = Feedback(tick, 1U, 29.9f - (float)(tick - 8104U) * 0.075f, -75.0f);
++        now_ms = tick; CHECK(PitchBackend_OnFrame(&frame)); Apply(tick, 1U);
++    }
++    CHECK(state.controller.brake_torque_nm > 0.0f && state.controller.brake_torque_nm <= 0.30f);
++    CHECK(PitchBackend_SetTarget(0.0f)); Read();
++    CHECK(state.controller.brake_tracking && !state.controller.brake_arrived && state.controller.brake_torque_nm == 0.0f);
++    CHECK(state.controller.brake_direction == -1.0f);
++    PitchBackend_Stop(); Read();
++    CHECK(!state.controller.brake_tracking && state.controller.brake_torque_nm == 0.0f);
+     test_done = 1U;
+ }
+--- before/Output/Gimbal_Control/Tests/test_pitch_console.c
++++ after/Output/Gimbal_Control/Tests/test_pitch_console.c
+@@ -44,7 +44,7 @@
+     ConsoleReset(6000U);
+     Command("PITCH KG -0.2", "P|ERROR|");
+     Command("PITCH CHECK", "P|BUSY|CHECK");
+-    calls = query_calls; Command("PITCH FF", "P|FF|KG|-0.13"); CHECK(query_calls == calls);
++    calls = query_calls; Command("PITCH FF", "P|FF|KG|-0.48"); CHECK(query_calls == calls);
+     Command("PITCH KG -0.2", "P|BUSY|CHECK"); PitchConsole_CancelPreparation();
+     Feed(6000U, 0U); Feed(6020U, 0U); Receiver(6020U, 1000U);
+     Command("PITCH COORD 1", "P|OK|COORD"); Command("PITCH ZERO", "P|OK|SOFTWARE_ZERO");
+@@ -94,12 +94,12 @@
+     ConsoleReset(100U);
+     CHECK(!PitchConsole_Handle("YAW STATUS", response, sizeof(response)));
+     Command("PITCH STATUS", "COORD_CONFIRMED|0"); CHECK(!query_calls && !disable_calls && !enable_calls);
+-    CHECK(strstr(response, "DM3507_CASCADE_V1G") && strstr(response, "MIN_DEG|-18|MAX_DEG|33"));
++    CHECK(strstr(response, "DM3507_RETURN_BRAKE_V1H") && strstr(response, "MIN_DEG|-18|MAX_DEG|33"));
+     CHECK(strstr(response, "HARD_MIN_DEG|-19|HARD_MAX_DEG|34") && strstr(response, "SUPPORT_REQUIRED|1\r\n"));
+-    Command("PITCH", "P|STATE|DM3507_CASCADE_V1G"); CHECK(strlen(response) < 300U);
++    Command("PITCH", "P|STATE|DM3507_RETURN_BRAKE_V1H"); CHECK(strlen(response) < 300U);
+     Command("PITCH HELP", "P|HELP|READ|PITCH;PID;RESULT;STATUS");
+     Command("PITCH ?", "PITCH_ONLY|COORD 1;GHORIZ");
+-    Command("PITCH PID", "POS|18.2,0.44,0.04|VEL|0.0065,0.014,4e-06|KG|-0.13");
++    Command("PITCH PID", "POS|13.55,0.001,0.026|VEL|0.0062,0.1019,5e-05|KG|-0.48");
+     Command("PITCH BAD", "UNKNOWN_COMMAND|USE|PITCH HELP");
+     CHECK(!query_calls && !enable_calls && !disable_calls && !torque_calls && !stop_calls && !rearm_calls);
+     Command("PITCH READY", "COORD_UNCONFIRMED"); CHECK(!query_calls);
+@@ -135,7 +135,7 @@
+     Command("PITCH RESULT", "STATE|RUNNING"); CHECK(strstr(response, "RESP_LIMIT_MS|300"));
+     CHECK(strstr(response, "|BAND02|0.2|") && strstr(response, "|TIME_LIMIT_MS|300|OS_LIMIT_DEG|0.2|SSE_LIMIT_DEG|0.2|"));
+     CHECK(strstr(response, "|ASSESSMENT|FINAL_SETTLE|") && !strstr(response, "PASS05"));
+-    Command("PITCH PKP 18.2", "P|OK|PARAMETER"); PitchBackend_GetStep(&measurement);
++    Command("PITCH PKP 13.55", "P|OK|PARAMETER"); PitchBackend_GetStep(&measurement);
+     CHECK(measurement.phase == PITCH_STEP_RUNNING);
+     Command("PITCH PKP 13", "P|OK|PARAMETER"); PitchBackend_GetStep(&measurement); Read();
+     CHECK(measurement.phase == PITCH_STEP_ABORTED && state.controller.target_deg == 30.0f);
+@@ -193,5 +193,23 @@
+     application.logic.stop_trace.source = 255U;
+     Command("PITCH GUARD", "SOURCE|UNKNOWN");
+     CHECK(!query_calls && !enable_calls && !disable_calls && !torque_calls && !stop_calls && !rearm_calls);
++    test_stage = 7U;
++    ConsoleReset(8000U);
++    Command("PITCH BRAKE", "ENABLED|1|TRACKING|0|ARRIVED|0|NM|0");
++    CHECK(!query_calls && !enable_calls && !disable_calls && !torque_calls);
++    Command("PITCH BRAKE OFF", "P|OK|BRAKE|OFF|NEXT_MOVE"); Read(); CHECK(!state.controller.brake_enabled);
++    Command("PITCH BRAKE ON extra", "P|ERROR|");
++    Command("PITCH BRAKE maybe", "P|ERROR|");
++    Command("PITCH BRAKE ON", "P|OK|BRAKE|ON|NEXT_MOVE"); Read(); CHECK(state.controller.brake_enabled);
++    Activate(9000U); Receiver(9044U, 2000U); application.logic.safety.operator_armed = 1U;
++    CHECK(PitchBackend_StartStep(30.0f));
++    Command("PITCH BRAKE OFF", "P|ERROR|");
++    Command("PITCH RESULT", "BRAKE|1");
++    Command("PITCH BRAKE", "ENABLED|1|TRACKING|1|ARRIVED|0");
++    Command("PITCH HOME", "P|OK|HOME");
++    before = state.controller.cascade.revision;
++    Command("PITCH BRAKE OFF", "P|OK|BRAKE|OFF|NEXT_MOVE"); Read();
++    CHECK(state.controller.cascade.revision == before && !state.controller.brake_enabled);
++    PitchBackend_GetStep(&measurement); CHECK(measurement.pitch_brake_enabled == 1U);
+     test_done = 1U;
+ }
+--- before/Output/Gimbal_Control/Tests/test_pitch_console_dma.c
++++ after/Output/Gimbal_Control/Tests/test_pitch_console_dma.c
+@@ -73,7 +73,7 @@
+ #endif
+     test_stage = 4U;
+     clear_output(); Burst("TELEM OFF\r\nPITCH VIEW\r\n"); AppConsole_Poll();
+-    CHECK(strstr(output, "C|OK|TELEM|OFF") && strstr(output, "GROUP|pitch|COLS|58"));
++    CHECK(strstr(output, "C|OK|TELEM|OFF") && strstr(output, "GROUP|pitch|COLS|60"));
+     now += 100U; clear_output(); AppConsole_Poll(); CHECK(!output_length);
+     before = pitch_commands;
+     Burst("PITCH PID\r\n"); AppConsole_Poll(); CHECK(pitch_commands == before + 1U && strstr(output, "P|MOCK"));
+--- before/Output/Gimbal_Control/Tests/test_pitch_controller.c
++++ after/Output/Gimbal_Control/Tests/test_pitch_controller.c
+@@ -36,7 +36,7 @@
+     CHECK(!PitchController_CaptureReference(0) && !PitchController_SetFeedbackDivisor(0, 1U));
+     CHECK(!PitchController_SetTarget(0, 30.0f) && PitchController_Update(0, 0.0f, 0U, 1U) == 0.0f);
+     PitchController_Init(&pitch); CHECK(!pitch.have_reference && pitch.feedback_divisor == 1U);
+-    CHECK(pitch.cascade.position.kp == 18.2f && pitch.cascade.speed.kp == 0.0065f);
++    CHECK(pitch.cascade.position.kp == 13.55f && pitch.cascade.speed.kp == 0.0062f);
+     sample(100U, 170.0f, 0.0f, 0U); CHECK(!pitch.have_reference && !pitch.faults);
+     CHECK(!PitchController_CaptureReference(&pitch) && !PitchController_SetTarget(&pitch, 30.0f));
+     sample(110U, 170.0f, 0.0f, 0U); CHECK(!PitchController_CaptureReference(&pitch));
+--- before/Output/Gimbal_Control/Tests/test_pitch_gravity.c
++++ after/Output/Gimbal_Control/Tests/test_pitch_gravity.c
+@@ -22,7 +22,7 @@
+     union { uint32_t bits; float value; } bad;
+     test_stage = 1U;
+     PitchController_Init(&pitch);
+-    CHECK(pitch.gravity_kg_nm == -0.13f && !pitch.gravity_calibrated);
++    CHECK(pitch.gravity_kg_nm == -0.48f && !pitch.gravity_calibrated);
+     CHECK(!PitchController_SetGravityGain(&pitch, -0.2f));
+     CHECK(!PitchController_SetGravityOffset(&pitch, 0.0f));
+     CHECK(PitchController_SetGravityGain(&pitch, 0.0f));
+--- before/Output/Gimbal_Control/Tests/test_pitch_manual90.c
++++ after/Output/Gimbal_Control/Tests/test_pitch_manual90.c
+@@ -10,13 +10,13 @@
+ static void Defaults(void)
+ {
+     Read();
+-    CHECK(state.controller.cascade.position.kp == 18.2f);
+-    CHECK(state.controller.cascade.position.ki == 0.44f);
+-    CHECK(state.controller.cascade.position.kd == 0.04f);
+-    CHECK(state.controller.cascade.speed.kp == 0.0065f);
+-    CHECK(state.controller.cascade.speed.ki == 0.014f);
+-    CHECK(state.controller.cascade.speed.kd == 0.000004f);
+-    CHECK(state.controller.gravity_kg_nm == -0.13f);
++    CHECK(state.controller.cascade.position.kp == 13.55f);
++    CHECK(state.controller.cascade.position.ki == 0.001f);
++    CHECK(state.controller.cascade.position.kd == 0.026f);
++    CHECK(state.controller.cascade.speed.kp == 0.0062f);
++    CHECK(state.controller.cascade.speed.ki == 0.1019f);
++    CHECK(state.controller.cascade.speed.kd == 0.000050f);
++    CHECK(state.controller.gravity_kg_nm == -0.48f);
+ }
+ static void Tick(uint32_t ms, uint16_t ch5, uint16_t ch2, uint8_t fresh)
+ {
+@@ -50,7 +50,7 @@
+     CHECK(PitchBackend_Request(1U));
+     Apply(ms + 22U, 1U); /* An unlock before calibration must never send FC. */
+     CHECK(!enable_calls && !torque_calls && !state.active && !state.enabling && !permission);
+-    CHECK(!state.controller.faults && state.requested && state.controller.gravity_kg_nm == -0.13f);
++    CHECK(!state.controller.faults && state.requested && state.controller.gravity_kg_nm == -0.48f);
+     CHECK(PitchBackend_SetGravityOffset(0.0f, 1U)); Read();
+     CHECK(state.controller.gravity_calibrated && !enable_calls && !torque_calls);
+     Tick(ms + 24U, 1000U, 1500U, 1U);
+@@ -58,7 +58,7 @@
+     CHECK(state.enabling && enable_calls == 1U && logic.safety.operator_armed);
+     Feed(ms + 28U, 1U); Tick(ms + 28U, 1500U, 1500U, 1U);
+     Tick(ms + 30U, 1500U, 1500U, 1U);
+-    CHECK(state.active && !state.controller.faults && near(state.controller.gravity_torque_nm, -0.13f));
++    CHECK(state.active && !state.controller.faults && near(state.controller.gravity_torque_nm, -0.48f));
+ }
+ static void Manual(uint32_t *ms, uint32_t duration, uint16_t ch2)
+ {
+--- before/Output/Gimbal_Control/Tests/test_pitch_telemetry.c
++++ after/Output/Gimbal_Control/Tests/test_pitch_telemetry.c
+@@ -40,7 +40,7 @@
+ static float columns[72];
+ static void parse(const char *group)
+ {
+-    uint32_t i, count = strcmp(group, "pitch:") == 0 ? 58U : 72U;
++    uint32_t i, count = strcmp(group, "pitch:") == 0 ? 60U : 72U;
+     const char *cursor = output + strlen(group);
+     char *end;
+     CHECK(strncmp(output, group, strlen(group)) == 0);
+@@ -65,7 +65,7 @@
+     yaw_sample.controller.angle_deg = 11.25f; yaw_sample.controller.cascade.position.kp = 10.0f;
+     now = 100U; clear_output(); AppConsole_Poll(); parse("gimbal:");
+     CHECK(columns[0] == 11.25f && columns[7] == 10.0f);
+-    clear_output(); command_line("TELEM PITCH"); CHECK(strstr(output, "GROUP|pitch|COLS|58") != 0);
++    clear_output(); command_line("TELEM PITCH"); CHECK(strstr(output, "GROUP|pitch|COLS|60") != 0);
+     remote_yaw = 1471U; remote_other_sticks[0] = 1482U;
+     remote_other_sticks[1] = 1513U; remote_other_sticks[2] = 1524U;
+     pitch_sample.controller.angle_deg = -1.234f; pitch_sample.controller.target_deg = 30.0f;
+@@ -85,6 +85,8 @@
+     pitch_sample.controller.pid_torque_nm = 7.38f;
+     pitch_sample.controller.cascade.speed_i = -0.03f;
+     pitch_sample.controller.gravity_calibrated = 1U;
++    pitch_sample.controller.brake_torque_nm = 0.12f;
++    pitch_sample.controller.brake_arrived = 1U;
+     pitch_sample.online = pitch_sample.active = pitch_sample.requested = pitch_sample.zero_set = 1U;
+     pitch_sample.coord_confirmed = 1U; pitch_sample.feedback.status = 1U;
+     pitch_sample.feedback.temp_mos = 38U; pitch_sample.feedback.temp_rotor = 41U;
+@@ -109,6 +111,7 @@
+     CHECK(columns[48] == 1471 && columns[49] == 1482 && columns[50] == 1513 && columns[51] == 1524);
+     CHECK(columns[52] == -0.21f && columns[53] == 12.0f && columns[54] == -0.18f);
+     CHECK(columns[55] == 7.38f && columns[56] == -0.03f && columns[57] == 1.0f);
++    CHECK(columns[58] == 0.12f && columns[59] == 1.0f);
+     test_stage = 2U;
+     clear_output(); command_line("PITCH VKP 0.02"); CHECK(pitch_commands == 1 && yaw_commands == 0);
+     clear_output(); command_line("YAW VKP 0.0037"); CHECK(pitch_commands == 1 && yaw_commands == 1);
+@@ -164,7 +167,7 @@
+     startup_event_pending = 1U; clear_output(); AppConsole_Poll();
+     CHECK(strstr(output, "G|AUTO|PHASE|READY|REASON|NONE|READY|1|REFERENCE|1") && !strstr(output, "pitch:"));
+     clear_output(); command_line("PITCH PID"); CHECK(strstr(output, "P|MOCK") && !strstr(output, "pitch:"));
+-    clear_output(); command_line("PITCH VIEW"); CHECK(strstr(output, "P|VIEW|PITCH|GROUP|pitch|COLS|58"));
++    clear_output(); command_line("PITCH VIEW"); CHECK(strstr(output, "P|VIEW|PITCH|GROUP|pitch|COLS|60"));
+     now += 100U; clear_output(); AppConsole_Poll(); CHECK(!output_length);
+     CHECK(!stops && !pitch_cancel_count);
+     clear_output(); command_line("TELEM ON"); CHECK(strstr(output, "C|OK|TELEM|ON"));
+--- before/README.md
++++ after/README.md
+@@ -1,4 +1,6 @@
+ # 16 · 云台调试：当前入口
++
++> 2026-10-20 Pitch更新为 **V1H**：按用户最后截图固化位置13.55/0.001/0.026、速度0.0062/0.1019/0.000050、Kg−0.48，增加首次到位后的回退刹车，默认开启。操作见[Pitch到位回退刹车](01_学习笔记/Pitch到位回退刹车_20261020.md)。71组548121项软件检查通过，AC5/O0完整构建成功，尚未烧录或证明实机300ms达标。下文旧Pitch版本和七参保留为历史。
+ 
+ > 2026-10-20 最新 Yaw 为 **V2Q**，已将用户达标截图六参固化：位置 15.549/0.734/0.139、速度 0.00517/0.0035/0.000074。当前配置见[原工程说明](Output/Gimbal_Control/README.md)，操作见[六参数固化记录](01_学习笔记/Yaw达标六参数固化_20261020.md)。以下 2026-10-17 的版本、参数和验证统计保留为历史记录。
+ 
+--- /dev/null
++++ Output/Gimbal_Control/Tests/test_pitch_return_brake.c
+@@ -0,0 +1,114 @@
++/* Replay positions through the actual controller. This is not a plant/performance model. */
++#define test_run original_pitch_controller_test_run
++#include "test_pitch_controller.c"
++#undef test_run
++
++static void brake_ready(uint32_t ms, float start, float end)
++{
++    ready(ms, 0.0f);
++    CHECK(PitchController_SetPid(&pitch, 'P', 0.0f, 0.0f, 0.0f));
++    CHECK(PitchController_SetPid(&pitch, 'V', 0.0f, 0.0f, 0.0f));
++    sample(ms + 32U, start, 0.0f, 1U);
++    CHECK(PitchController_SetTarget(&pitch, start));
++    CHECK(near(PitchController_Update(&pitch, 0.0f, ms + 32U, 1U), 0.0f));
++    CHECK(PitchController_SetTarget(&pitch, end));
++    CHECK(pitch.brake_tracking && !pitch.brake_arrived && pitch.brake_enabled);
++}
++static float move(uint32_t ms, float angle, float observed_velocity)
++{
++    sample(ms, angle, observed_velocity, 1U);
++    /* Isolate the damping rule from observer transients; real position increments still gate it. */
++    pitch.cascade.velocity_dps = observed_velocity;
++    return PitchController_Update(&pitch, 0.0f, ms, 1U);
++}
++void test_run(void)
++{
++    uint32_t ms;
++    float torque, previous_angle, pi, vi;
++    union { uint32_t bits; float value; } invalid;
++    test_stage = 1U;
++    CHECK(!PitchController_SetBrakeEnabled(0, 1U));
++    PitchController_Init(&pitch);
++    CHECK(!PitchController_SetBrakeEnabled(&pitch, 2U));
++    CHECK(pitch.brake_enabled && APP_PITCH_POSITION_KP == 13.55f);
++    CHECK(pitch.cascade.position.ki == 0.001f && pitch.cascade.position.kd == 0.026f);
++    CHECK(pitch.cascade.speed.kp == 0.0062f && pitch.cascade.speed.ki == 0.1019f);
++    CHECK(pitch.cascade.speed.kd == 0.000050f && pitch.gravity_kg_nm == -0.48f);
++    brake_ready(100U, 0.0f, 30.0f);
++    CHECK(near(move(134U, 25.0f, 100.0f), 0.0f) && !pitch.brake_arrived);
++    CHECK(near(move(136U, 24.9f, -20.0f), 0.0f)); /* retreat before first arrival: no brake */
++    CHECK(near(move(138U, 29.9f, 20.0f), 0.0f) && pitch.brake_arrived);
++    CHECK(PitchController_SetTarget(&pitch, 30.0f) && pitch.brake_arrived); /* identical target */
++    torque = move(140U, 29.7f, -20.0f);
++    CHECK(near(torque, 0.04f) && pitch.brake_torque_nm > 0.0f);
++    CHECK(near(pitch.pid_torque_nm, 0.0f) && near(pitch.cascade.feedforward_nm, torque));
++    CHECK(near(PitchController_Update(&pitch, 0.0f, 141U, 1U), torque)); /* no duplicate ramp */
++    previous_angle = 29.7f;
++    for (ms = 142U; ms <= 170U; ms += 2U) {
++        torque = move(ms, previous_angle - 0.05f, -100.0f);
++        CHECK(torque > 0.0f && torque <= APP_PITCH_RETURN_BRAKE_LIMIT_NM);
++        CHECK(torque * (pitch.angle_deg - previous_angle) <= 0.0f); /* removes energy from retreat */
++        previous_angle = pitch.angle_deg;
++    }
++    CHECK(near(torque, 0.30f));
++    CHECK(near(move(172U, previous_angle + 0.01f, -20.0f), 0.0f)); /* stale filtered sign */
++    CHECK(near(move(174U, previous_angle + 0.01f, -20.0f), 0.0f)); /* stationary */
++    CHECK(near(move(176U, 30.2f, 20.0f), 0.0f));
++    CHECK(near(move(178U, 30.1f, -20.0f), 0.0f)); /* returning from overshoot towards target */
++
++    test_stage = 2U;
++    brake_ready(1000U, 30.0f, 0.0f);
++    CHECK(near(move(1034U, 0.1f, -20.0f), 0.0f) && pitch.brake_arrived);
++    torque = move(1036U, 0.3f, 20.0f);
++    CHECK(near(torque, -0.04f) && torque * 0.2f < 0.0f);
++    CHECK(near(move(1038U, 0.29f, 20.0f), 0.0f)); /* returns towards zero */
++    CHECK(PitchController_SetTarget(&pitch, -10.0f));
++    CHECK(!pitch.brake_arrived && pitch.brake_torque_nm == 0.0f);
++    (void)PitchController_Update(&pitch, 1.0f, 1040U, 1U);
++    CHECK(!pitch.brake_tracking && !pitch.brake_arrived && pitch.brake_torque_nm == 0.0f);
++
++    test_stage = 3U;
++    brake_ready(2000U, 0.0f, 30.0f);
++    (void)move(2034U, 29.9f, 20.0f); (void)move(2036U, 29.7f, -20.0f);
++    CHECK(pitch.brake_torque_nm > 0.0f);
++    for (ms = 2038U; ms <= 2048U; ms += 2U) { (void)PitchController_Update(&pitch, 0.0f, ms, 1U); }
++    CHECK(pitch.brake_torque_nm == 0.0f && !pitch.faults); /* stale auxiliary output removed */
++    (void)move(2050U, 29.6f, -20.0f);
++    pi = pitch.cascade.position_i = 1.0f; vi = pitch.cascade.speed_i = 0.1f;
++    CHECK(PitchController_SetBrakeEnabled(&pitch, 0U));
++    CHECK(!pitch.brake_tracking && !pitch.brake_arrived && pitch.brake_torque_nm == 0.0f);
++    CHECK(pitch.cascade.position_i == pi && pitch.cascade.speed_i == vi);
++    CHECK(PitchController_SetBrakeEnabled(&pitch, 1U));
++    CHECK(pitch.cascade.position_i == pi && pitch.cascade.speed_i == vi);
++    CHECK(!pitch.brake_tracking); /* new move required after changing mode */
++
++    test_stage = 4U;
++    brake_ready(3000U, 0.0f, 30.0f);
++    (void)move(3034U, 29.9f, 20.0f);
++    pitch.cascade.position.kp = 100.0f; pitch.cascade.speed.kp = 1.0f;
++    pitch.cascade.position.ki = 30.0f; pitch.cascade.speed.ki = 10.0f;
++    CHECK(move(3036U, 29.7f, -20.0f) == 10.0f && pitch.cascade.torque_limited);
++    CHECK(pitch.brake_torque_nm > 0.0f && pitch.cascade.speed_i == 0.0f);
++    CHECK(PitchController_Update(&pitch, 0.0f, 3038U, 0U) == 0.0f);
++    CHECK(!pitch.brake_tracking && !pitch.brake_arrived && pitch.brake_torque_nm == 0.0f);
++    brake_ready(4000U, 0.0f, 30.0f);
++    (void)move(4034U, 29.9f, 20.0f); (void)move(4036U, 29.7f, -20.0f);
++    invalid.bits = 0x7FC00000U;
++    CHECK(PitchController_Update(&pitch, invalid.value, 4038U, 1U) == 0.0f);
++    CHECK(pitch.faults && !pitch.brake_arrived && pitch.brake_torque_nm == 0.0f);
++    brake_ready(5000U, 0.0f, 30.0f);
++    (void)move(5034U, 29.9f, 20.0f); (void)move(5036U, 29.7f, -20.0f);
++    CHECK(PitchController_SetPid(&pitch, 'V', 0.01f, 0.01f, 0.0f));
++    CHECK(!pitch.brake_tracking && pitch.brake_torque_nm == 0.0f);
++
++    test_stage = 5U;
++    /* Millisecond wrap must not change the damping direction or ramp interval. */
++    brake_ready(0xFFFFFFD0UL, 0.0f, 30.0f);
++    (void)move(0xFFFFFFF2UL, 29.9f, 20.0f);
++    (void)move(0xFFFFFFF4UL, 29.7f, -20.0f);
++    for (ms = 0xFFFFFFF6UL; ms != 4U; ms += 2U) { (void)PitchController_Update(&pitch, 0.0f, ms, 1U); }
++    CHECK(!pitch.faults && pitch.brake_torque_nm == 0.0f);
++    CHECK(move(4U, 29.5f, -20.0f) > 0.0f);
++    CHECK(!pitch.faults);
++    test_done = 1U;
++}

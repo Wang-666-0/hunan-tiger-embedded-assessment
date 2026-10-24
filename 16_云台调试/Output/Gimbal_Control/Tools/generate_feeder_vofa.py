@@ -18,7 +18,7 @@ CHANNELS = [
     ("raw_rpm", "转子实际 RPM"),
     ("target_rotor_rpm", "转子目标 RPM"),
     ("command_raw", "C610给定 raw"),
-    ("fb_current_raw", "C610反馈电流 raw"),
+    ("fb_current_raw", "C610反馈转矩 raw"),
     ("pos_kp", "位置 KP"),
     ("speed_kp", "速度 KP"),
     ("speed_ki", "速度 KI"),
@@ -49,16 +49,16 @@ CHANNELS = [
     ("settle_rpm", "到位转子速度 RPM"),
     ("settle_ms", "到位确认 ms"),
     ("motion_timeout_ms", "动作超时 ms"),
-    ("probe_accepted", "预留 I36 恒0"),
+    ("last_motion_ms", "最近单步耗时 ms"),
     ("raw_rotor_pos", "原始累计转子 deg"),
     ("raw_rotor_target", "原始目标转子 deg"),
 ]
 
 # These are widget input defaults, never an applied configuration. Every input
 # also displays its own telemetry channel, so the board remains the authority.
-DEFAULTS = dict(PKP=5.0, VKP=2.0, VKI=5.0, RPM=300.0, LIMIT=1000.0,
-                TOL=1.0, SETTLE=20.0, TIMEOUT=1000.0, DIR=0.0,
-                GEAR=1.0, CAL=0.0, STEP=40.0)
+DEFAULTS = dict(PKP=8.0, VKP=2.0, VKI=5.0, RPM=3600.0, LIMIT=3000.0,
+                TOL=1.5, SETTLE=10.0, TIMEOUT=3000.0, DIR=-1.0,
+                GEAR=35.68, CAL=1.0, STEP=40.0)
 
 
 def read(name):
@@ -164,7 +164,7 @@ def main():
         return dict(name=label, widgets=widgets, file_url="", bg=deepcopy(original_tab["bg"]))
 
     observe = [chart([37], 10, 10, 810, 290, -400, 400),
-               chart([2, 3], 10, 320, 810, 250, -350, 350)]
+               chart([2, 3], 10, 320, 810, 250, -6200, 6200)]
     for i, spec in enumerate([
         ("DIR 实测后选±1 / 0未确认", "DIR", 12, -1, 1, 1, 0),
         ("GEAR 实测转子/输出轴", "GEAR", 13, 0.1, 100, 0.01, 3),
@@ -177,6 +177,7 @@ def main():
         ("指令与接线 INFO", "FEEDER INFO"), ("实际参数 PID", "FEEDER PID"),
         ("拨盘 OFF", "FEEDER OFF"), ("清故障 CLEAR", "FEEDER CLEAR"),
         ("静止置零 ZERO", "FEEDER ZERO"),
+        ("人工恢复 READY", "FEEDER READY"),
     ]):
         observe.append(button(label, text, 850 + i % 3 * 200, 265 + i // 3 * 75))
     for i, channel in enumerate([16, 26, 25, 27, 19, 28, 12, 13, 14, 15]):
@@ -187,8 +188,8 @@ def main():
     observe.append(gauge(37, 1003, 595, -4000, 4000, 2))
     observe.append(gauge(38, 1156, 595, -4000, 4000, 2))
 
-    closed_loop = [chart([0, 1], 10, 10, 810, 300, -5, 85),
-                   chart([2, 3], 10, 330, 810, 250, -350, 350),
+    closed_loop = [chart([0, 1], 10, 10, 810, 300, -405, 5),
+                   chart([2, 3], 10, 330, 810, 250, -6200, 6200),
                    chart([4, 5], 10, 600, 810, 250, -3000, 3000)]
     for i, spec in enumerate([
         ("位置 KP I6", "PKP", 6, 0.001, 100, 0.05, 3),
@@ -208,17 +209,19 @@ def main():
         ("实测确认后 ARM", "FEEDER ARM", "先核对实际接线、输出轴40度、DIR、GEAR、CAL与静止零点；确认前禁止ARM"),
         ("互锁单发 SINGLE", "FEEDER SINGLE", "仅人工单次请求；须正常模式、拨盘已ARM及真实双轮稳速；拒绝请求不补发"),
         ("状态 STATUS", "FEEDER STATUS", "查询板端状态与动作计数"),
+        ("实际射频 RESULT", "FEEDER RESULT", "读取编码器实际完成边界的频率，不能代替实弹计数"),
+        ("人工恢复 READY", "FEEDER READY", "安全OFF且确认机构起点后人工恢复；正常启动自动准备，无需点击"),
     ]):
         closed_loop.append(button(label, text, 850 + i % 3 * 200, 485 + i // 3 * 75, intro=intro))
     for i, channel in enumerate([17, 18, 20, 19]):
-        closed_loop.append(gauge(channel, 850 + i * 150, 655, 0, 512 if channel == 19 else 1))
+        closed_loop.append(gauge(channel, 850 + i * 150, 735, 0, 512 if channel == 19 else 1))
 
     counts = [chart([21, 22, 23, 24], 10, 10, 810, 300, 0, 100),
               chart([31], 850, 10, 590, 300, 0, 150),
               chart([0, 1], 10, 330, 810, 250, -5, 405),
               chart([26], 850, 330, 590, 250, 0, 100)]
     for i, channel in enumerate([21, 22, 23, 24, 29, 30, 31, 36, 33, 34, 35, 28]):
-        high = {31: 150, 33: 100, 34: 100, 35: 5000, 28: 1, 36: 1}.get(channel, 1000)
+        high = {31: 150, 33: 100, 34: 100, 35: 5000, 28: 1, 36: 3000}.get(channel, 1000)
         counts.append(gauge(channel, 10 + i % 8 * 153, 605 + i // 8 * 190, 0, high))
     counts.append(button("拨盘 VIEW", "FEEDER VIEW", 1240, 615))
     counts.append(button("实际计数 STATUS", "FEEDER STATUS", 1240, 690))
@@ -303,11 +306,11 @@ def main():
                 "all loops off", "buttons send on press only", "empty serial port",
                 "empty command buffer/history", "no serial/network/motor access"],
         channel_map={f"I{i}": name for i, (name, _) in enumerate(CHANNELS)},
-        action_policy="Manual only; verify DIR/GEAR/CAL/zero before ARM; SINGLE requires real dual-wheel ready; no jog/probe",
+        action_policy="Compiled measured calibration; firmware prepares at safe OFF; manual recovery only at checked start pose; real wheels gate new shots",
         native_import_verified=False, hardware_used=False,
         warnings=["Structural validation only; VOFA GUI import not tested",
                   "Widget input defaults are not applied board parameters",
-                  "I36 reserved zero; completed interval and counts are software measurements, physical 20Hz still needs observation"]))
+                  "I36 is last step latency; completion frequency is in FEEDER RESULT; physical 20Hz still needs observation"]))
     print(f"Generated and structurally validated {count} commands, 3 tabs, 39 channels: {OUTPUT}")
 
 

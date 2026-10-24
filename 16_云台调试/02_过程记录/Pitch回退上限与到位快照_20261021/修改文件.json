@@ -1,0 +1,12 @@
+[
+  "README.md",
+  "01_学习笔记/Pitch回退捕获阻尼_20261021.md",
+  "Output/Gimbal_Control/README.md",
+  "Output/Gimbal_Control/App/app_config.h",
+  "Output/Gimbal_Control/App/pitch_console.c",
+  "Output/Gimbal_Control/App/pitch_controller.c",
+  "Output/Gimbal_Control/App/pitch_controller.h",
+  "Output/Gimbal_Control/Tests/README.md",
+  "Output/Gimbal_Control/Tests/test_pitch_console.c",
+  "Output/Gimbal_Control/Tests/test_pitch_terminal_brake.c"
+]

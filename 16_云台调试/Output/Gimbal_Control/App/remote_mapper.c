@@ -80,11 +80,7 @@ void RemoteMapper_Map(const RemoteFrame *frame, RemoteCommand *command)
         }
         command->neutral = command->yaw_rate_dps == 0.0f && command->pitch_rate_dps == 0.0f &&
             command->wheel_switch == RC_LOW && command->trigger == RC_LOW &&
-            command->step == RC_MIDDLE &&
-            frame->channels[RC_STEP_YAW_CHANNEL] >= RC_CENTER - RC_DEADBAND &&
-            frame->channels[RC_STEP_YAW_CHANNEL] <= RC_CENTER + RC_DEADBAND &&
-            frame->channels[RC_STEP_PITCH_CHANNEL] >= RC_CENTER - RC_DEADBAND &&
-            frame->channels[RC_STEP_PITCH_CHANNEL] <= RC_CENTER + RC_DEADBAND;
+            command->step == RC_MIDDLE && command->step_selection_centered;
     }
 #else
     command->failsafe_ok = SwitchPosition(frame->channels[RC_FAILSAFE_CHANNEL]) == RC_HIGH;

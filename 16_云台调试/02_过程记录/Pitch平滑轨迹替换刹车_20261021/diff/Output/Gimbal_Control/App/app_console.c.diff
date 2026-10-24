@@ -1,0 +1,37 @@
+--- before/Output/Gimbal_Control/App/app_console.c
++++ after/Output/Gimbal_Control/App/app_console.c
+@@ -297,7 +297,7 @@
+ #if APP_PITCH_ENABLED
+     if (strcmp(line, "TELEM PITCH") == 0 || strcmp(line, "PITCH VIEW") == 0) {
+         pitch_view = 1U;
+-        SendText("P|VIEW|PITCH|GROUP|pitch|COLS|60|PID_I|7_12|GFF_I|52_57|BRAKE_I|58_59|RESP02_I|26|SETTLE02_I|27|OS_DEG_I|28|SSE_DEG_I|30|PASS02_I|32|BAND_DEG|0.2|TIME_LIMIT_MS|300|OS_LIMIT_DEG|0.2|SSE_LIMIT_DEG|0.2\r\n"); return;
++        SendText("P|VIEW|PITCH|GROUP|pitch|COLS|65|PID_I|7_12|GFF_I|52_57|RESERVED_I|58_59|SHAPE_I|60_64|RESP02_I|26|SETTLE02_I|27|OS_DEG_I|28|SSE_DEG_I|30|PASS02_I|32|BAND_DEG|0.2|TIME_LIMIT_MS|300|OS_LIMIT_DEG|0.2|SSE_LIMIT_DEG|0.2\r\n"); return;
+     }
+     if (strcmp(line, "TELEM YAW") == 0 || strcmp(line, "YAW VIEW") == 0) {
+         pitch_view = 0U;
+@@ -587,12 +587,12 @@
+     PitchBackend_GetState(&pitch); PitchBackend_GetStep(&step);
+     taskEXIT_CRITICAL();
+     RemoteInput_GetState(&remote); AppTasks_GetState(&app); CanBus_GetState(&bus);
+-    /* Pitch原I0~I57保持；追加I58回退刹车力矩、I59首次到位锁存。
++    /* Pitch原I0~I57保持，I58/I59保留为0；I60~I64为规划参考及配置。
+      * 同时只发当前选择的一组，保持921600/5ms的线路预算。 */
+     length = snprintf(telemetry, sizeof(telemetry),
+         "pitch:%.6g,%.6g,%.6g,%.6g,%.6g,%.6g,%.6g,%.6g,%.6g,%.6g,%.6g,%.6g,%.6g,%.6g"
+         ",%u,%u,%u,%u,%lu,%lu,%u,%u,%u,%u,%lu,%u,%ld,%ld,%.6g,%.6g,%.6g,%u,%u,%ld,%ld"
+-        ",%.6g,%.6g,%u,%lu,%u,%u,%u,%u,%u,%u,%lu,%u,%u,%u,%u,%u,%u,%.6g,%.6g,%.6g,%.6g,%.6g,%u,%.6g,%u\r\n",
++        ",%.6g,%.6g,%u,%lu,%u,%u,%u,%u,%u,%u,%lu,%u,%u,%u,%u,%u,%u,%.6g,%.6g,%.6g,%.6g,%.6g,%u,0,0,%.6g,%.6g,%u,%lu,%.6g\r\n",
+         (double)pitch.controller.angle_deg, (double)pitch.controller.target_deg,
+         (double)pitch.controller.cascade.target_velocity_dps, (double)pitch.controller.cascade.velocity_dps,
+         (double)pitch.controller.velocity_dps, (double)pitch.controller.torque_nm, (double)pitch.feedback.torque_nm,
+@@ -622,7 +622,9 @@
+         (double)pitch.controller.gravity_kg_nm, (double)pitch.controller.gravity_offset_deg,
+         (double)pitch.controller.gravity_torque_nm, (double)pitch.controller.pid_torque_nm,
+         (double)pitch.controller.cascade.speed_i, (unsigned)pitch.controller.gravity_calibrated,
+-        (double)pitch.controller.brake_torque_nm, (unsigned)pitch.controller.brake_arrived);
++        (double)pitch.controller.shape.position_deg, (double)pitch.controller.shape.velocity_dps,
++        (unsigned)pitch.controller.shape.active, (unsigned long)pitch.controller.shape.duration_ms,
++        (double)pitch.controller.shape.velocity_gain);
+     if (length > 0 && (size_t)length < sizeof(telemetry)) { SendText(telemetry); }
+ }
+ #endif

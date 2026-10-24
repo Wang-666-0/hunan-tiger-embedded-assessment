@@ -1,0 +1,83 @@
+{
+  "baseline_recorded_at": "2026-10-19T10:58:45+08:00",
+  "after_recorded_at": "2026-10-19T11:07:20+08:00",
+  "groups": 70,
+  "baseline_checks": 546677,
+  "after_checks": 546821,
+  "failures": 0,
+  "group_names_and_compile_defines_unchanged": true,
+  "critical_sources_unchanged": [
+    "App/app_config.h",
+    "App/yaw_controller.c",
+    "App/yaw_controller.h",
+    "App/yaw_cascade.c",
+    "App/yaw_cascade.h",
+    "App/yaw_step.c",
+    "App/yaw_step.h",
+    "App/pitch_controller.h",
+    "App/pitch_step.c",
+    "App/pitch_step.h",
+    "App/can_bus.c",
+    "App/can_bus.h",
+    "App/gimbal_startup.c",
+    "App/safety_manager.c",
+    "App/app_logic.c",
+    "App/target_manager.c",
+    "App/motor_backend.c",
+    "App/flywheel_jog.c",
+    "App/flywheel_speed.c",
+    "App/feeder_backend.c",
+    "App/feeder_controller.c"
+  ],
+  "telemetry_wire_metrics_unchanged": {
+    "feeder_backend": {
+      "telemetry_max_bytes": 151,
+      "telemetry_max_wire_us": 1639
+    },
+    "yaw_telemetry": {
+      "telemetry_max_bytes": 344,
+      "telemetry_max_wire_us": 3733
+    },
+    "pitch_telemetry": {
+      "telemetry_max_bytes": 314,
+      "telemetry_max_wire_us": 3408
+    }
+  },
+  "check_count_deltas": {
+    "yaw_backend_guarded": 19,
+    "yaw_performance": 6,
+    "yaw_console_backend": 30,
+    "yaw_console_backend_guarded": 30,
+    "yaw_cascade_console": 6,
+    "yaw_shape_console": 6,
+    "yaw_repeat_step": 8,
+    "yaw_feedforward_console": 5,
+    "yaw_cascade_unlimited_console": 5,
+    "yaw_manual50": 4,
+    "pitch_backend": 13,
+    "pitch_manual90": 5,
+    "pitch_console": 7
+  },
+  "baseline_o0_rom_bytes": 122560,
+  "after_o0_rom_bytes": 122500,
+  "cleanup_files": [
+    "Output/Gimbal_Control/App/app_console.c",
+    "Output/Gimbal_Control/App/app_tasks.c",
+    "Output/Gimbal_Control/App/pitch_backend.c",
+    "Output/Gimbal_Control/App/pitch_backend.h",
+    "Output/Gimbal_Control/App/pitch_console.c",
+    "Output/Gimbal_Control/App/pitch_controller.c",
+    "Output/Gimbal_Control/App/README.md",
+    "Output/Gimbal_Control/App/remote_mapper.c",
+    "Output/Gimbal_Control/App/yaw_backend.c",
+    "Output/Gimbal_Control/App/yaw_backend.h",
+    "Output/Gimbal_Control/App/yaw_console.c",
+    "Output/Gimbal_Control/README.md",
+    "Output/Gimbal_Control/Tests/test_pitch_backend.c",
+    "Output/Gimbal_Control/Tests/test_yaw_backend.c",
+    "Output/Gimbal_Control/Tests/test_yaw_console_backend.c",
+    "Output/Gimbal_Control/Tests/test_yaw_repeat_step.c",
+    "Output/Gimbal_Control/App/console_parse.h"
+  ],
+  "note": "HAL/RTOS mocked. No flash, hardware motion, or measured step-performance improvement."
+}

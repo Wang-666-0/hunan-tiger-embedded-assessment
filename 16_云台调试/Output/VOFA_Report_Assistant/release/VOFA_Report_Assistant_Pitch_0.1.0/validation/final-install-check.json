@@ -1,0 +1,22 @@
+{
+  "originalFilesChecked": 76,
+  "changedOriginalFiles": 0,
+  "payload": [
+    {
+      "name": ".report-assistant-package.json",
+      "matchesInstalled": true
+    },
+    {
+      "name": "HostBridge.js",
+      "matchesInstalled": true
+    },
+    {
+      "name": "report_assistant.qml",
+      "matchesInstalled": true
+    },
+    {
+      "name": "ReportEngine.js",
+      "matchesInstalled": true
+    }
+  ]
+}

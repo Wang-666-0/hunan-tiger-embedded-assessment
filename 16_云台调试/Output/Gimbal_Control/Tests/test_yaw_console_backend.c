@@ -267,13 +267,17 @@ void test_run(void)
     ConsoleZeroActivate(8000U);
     Command(8068U, "YAW STEP 30", "Y|OK|STEP_STARTED");
     YawBackend_GetStep(&measurement); CHECK(measurement.phase == YAW_STEP_RUNNING && state.step_hold);
+    CHECK(measurement.id == 1U && YawBackend_GetStepId() == measurement.id);
     Command(8070U, "YAW KP 0.8", "Y|OK|PARAMETER");
     YawBackend_GetStep(&measurement);
     CHECK(measurement.phase == YAW_STEP_ABORTED && measurement.reason == YAW_STEP_PID_CHANGE);
+    CHECK(measurement.id == 1U && YawBackend_GetStepId() == measurement.id);
     CHECK(state.active && state.step_hold && state.controller.target_deg == 30.0f && state.controller.pid.kp == 0.8f);
     CHECK(YawConsole_Poll(step_response, sizeof(step_response)));
     CHECK(strstr(step_response, "|STATE|ABORTED|REASON|PID_CHANGE|VALID|0|") != 0);
     CHECK(!YawConsole_Poll(step_response, sizeof(step_response)));
+    YawBackend_GetStep(&measurement);
+    CHECK(!measurement.pending && measurement.id == 1U && YawBackend_GetStepId() == measurement.id);
     Command(8072U, "YAW TARGET 0", "Y|OK|PARAMETER"); CHECK(!state.step_hold && state.controller.target_deg == 0.0f);
 
     test_stage = 9U;
@@ -290,12 +294,15 @@ void test_run(void)
     }
     YawBackend_GetStep(&measurement);
     CHECK(measurement.phase == YAW_STEP_DONE && measurement.sse_valid && !measurement.pass);
+    CHECK(measurement.id == 1U && YawBackend_GetStepId() == measurement.id);
     CHECK(measurement.response_ms >= 1480U && measurement.response_ms <= 1510U && measurement.max_gap_ms == 10U);
     CHECK(state.active && state.step_hold && state.controller.target_deg == 30.0f && state.controller.faults == 0U);
     CHECK(YawConsole_Poll(step_response, sizeof(step_response)));
     CHECK(strstr(step_response, "|STATE|DONE|REASON|NONE|VALID|1|") != 0);
     CHECK(strstr(step_response, "|SSE_VALID|1|PASS|0|FAULT|0|") != 0);
     CHECK(strlen(step_response) < 600U && !YawConsole_Poll(step_response, sizeof(step_response)));
+    YawBackend_GetStep(&measurement);
+    CHECK(!measurement.pending && measurement.id == 1U && YawBackend_GetStepId() == measurement.id);
     Command(14072U, "YAW RESULT", "|STATE|DONE|");
     receiver.channels[RC_STEP_CHANNEL] = 1000U; Control(14074U, 2U);
     CHECK(state.controller.target_deg == 0.0f && !state.step_hold && state.active);

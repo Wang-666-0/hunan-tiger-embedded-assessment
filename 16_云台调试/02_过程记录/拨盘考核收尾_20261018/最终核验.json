@@ -1,0 +1,33 @@
+{
+  "success": true,
+  "version": "C610_ASSESSMENT_20HZ_V1E",
+  "app_changes": [
+    "App/app_config.h",
+    "App/app_tasks.c",
+    "App/feeder_backend.c",
+    "App/feeder_backend.h",
+    "App/feeder_console.c",
+    "App/feeder_controller.c",
+    "App/feeder_controller.h",
+    "App/target_manager.c",
+    "App/target_manager.h"
+  ],
+  "protected_app_files": 57,
+  "other_sources_unchanged": 37,
+  "groups": 69,
+  "checks": 537914,
+  "failures": 0,
+  "build_sources": 69,
+  "vofa_channels": 39,
+  "normal_startup_requires_serial": false,
+  "hardware_verified": false,
+  "physical_20hz_verified": false,
+  "flashed": false,
+  "hex_generated": false,
+  "static_stack_bytes_plus_unknown": {
+    "ConsoleTask": 2032,
+    "ControlTask": 1768,
+    "CanTask": 344,
+    "RemoteTask": 188
+  }
+}

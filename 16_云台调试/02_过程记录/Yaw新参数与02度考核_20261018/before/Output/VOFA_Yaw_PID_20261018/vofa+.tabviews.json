@@ -1,0 +1,2264 @@
+{
+  "type": "tabviews",
+  "vnumber": 100,
+  "ctx": [
+    {
+      "tabs": [
+        {
+          "name": "Yaw 达标PID",
+          "widgets": [
+            {
+              "path": "WaveChart",
+              "type": "inside",
+              "ctx": {
+                ".": {
+                  "ctx": {
+                    ".": {
+                      "x": 10,
+                      "y": 10,
+                      "width": 760,
+                      "height": 420
+                    },
+                    "resize_border": {
+                      "ctx": {
+                        ".": {
+                          "full_screen": false,
+                          "full_height": false,
+                          "full_width": false
+                        }
+                      }
+                    }
+                  },
+                  "font_size": 15,
+                  "xy_mode": false
+                },
+                "axis_x_wave": {
+                  "ctx": {
+                    ".": {
+                      "max_value": 49999,
+                      "min_value": 0,
+                      "left_index": 48999,
+                      "right_index": 49999,
+                      "unit_text": "ms",
+                      "decimal": 0
+                    },
+                    "container": {
+                      "ctx": []
+                    }
+                  }
+                },
+                "axis_x_wave2": {
+                  "ctx": {
+                    ".": {
+                      "max_value": 5,
+                      "min_value": -5,
+                      "left_index": -30.191351709225493,
+                      "right_index": 59.787527946480004,
+                      "unit_text": ""
+                    },
+                    "container": {
+                      "ctx": []
+                    }
+                  }
+                },
+                "axis_x_histog": {
+                  "ctx": {
+                    ".": {
+                      "max_value": 5,
+                      "min_value": -5,
+                      "left_index": 0,
+                      "right_index": 10,
+                      "unit_text": "unit",
+                      "decimal": 3
+                    },
+                    "container": {
+                      "ctx": []
+                    }
+                  }
+                },
+                "axis_x_freq": {
+                  "ctx": {
+                    ".": {
+                      "max_value": 5,
+                      "min_value": -5,
+                      "left_index": 0,
+                      "right_index": 257,
+                      "unit_text": "hz",
+                      "decimal": 3
+                    },
+                    "container": {
+                      "ctx": []
+                    }
+                  }
+                },
+                "axis_y_wave": {
+                  "ctx": {
+                    ".": {
+                      "top_value": 33,
+                      "bottom_value": -2,
+                      "bar_index": 5,
+                      "decimal": 3
+                    }
+                  }
+                },
+                "axis_y_bar": {
+                  "ctx": {
+                    ".": {
+                      "top_value": 33,
+                      "bottom_value": -2,
+                      "bar_index": 5,
+                      "decimal": 3
+                    }
+                  }
+                },
+                "wave_check": {
+                  "checked": true
+                },
+                "bar_check": {
+                  "checked": false
+                },
+                "freq_check": {
+                  "checked": false
+                },
+                "histog_check": {
+                  "checked": false
+                },
+                "simplify_check": {
+                  "checked": false
+                },
+                "all_font_on": {
+                  "checked": false
+                },
+                "hide_axis_x_check": {
+                  "checked": false
+                },
+                "hide_axis_y_check": {
+                  "checked": false
+                },
+                "hide_border_check": {
+                  "checked": false
+                },
+                "auto_bt_menu": {
+                  "locked": false
+                },
+                "rbw": {
+                  "ctx": {
+                    ".": {
+                      "histog_gap_num": 10,
+                      "freq_gap_num": 257,
+                      "lines": [
+                        0,
+                        1
+                      ],
+                      "fake_continuous": false,
+                      "line_width": 2
+                    }
+                  }
+                },
+                "x_ch_menu": {
+                  "indecies": []
+                },
+                "theme": {
+                  "ctx": {
+                    ".": {
+                      "lineColor2": "#ff5500",
+                      "lineColor2Follow1": true,
+                      "lineColor2Follow2": false,
+                      "lineColor": "black",
+                      "lineColorFollow1": false,
+                      "lineColorFollow2": true
+                    },
+                    "bgProperties": {
+                      "ctx": {
+                        ".": {
+                          "bgType": 0,
+                          "bgOnTop": true,
+                          "bgOpacity": 1,
+                          "bgRatio": 1,
+                          "bgFillMode": 1,
+                          "bgLR": 0,
+                          "bgLRMargin": 0,
+                          "bgTB": 0,
+                          "bgTBMargin": 0,
+                          "bgSource": "",
+                          "bgColor": "#ffffff",
+                          "bgColorOpacity": 0.6,
+                          "bgSourceFollowed": false,
+                          "bgColorFollowed": true
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            },
+            {
+              "path": "slider",
+              "ctx": {
+                ".": {
+                  "ctx": {
+                    ".": {
+                      "x": 790,
+                      "y": 10,
+                      "width": 275,
+                      "height": 105
+                    },
+                    "resize_border": {
+                      "ctx": {
+                        ".": {
+                          "full_screen": false,
+                          "full_height": false,
+                          "full_width": false
+                        }
+                      }
+                    }
+                  },
+                  "from": 0,
+                  "to": 25,
+                  "step_size": 0.5
+                },
+                "slider_inside": {
+                  "target_value": 14
+                },
+                "argument_menu": {
+                  "ctx": {
+                    ".": {
+                      "hex_on": false,
+                      "model_ctx": [
+                        {
+                          "float_value": 14,
+                          "hex_value": "00 00 60 41",
+                          "enabled": false
+                        },
+                        {
+                          "float_value": 14,
+                          "hex_value": "00 00 60 41",
+                          "enabled": true
+                        },
+                        {
+                          "float_value": 14,
+                          "hex_value": "00 00 60 41",
+                          "enabled": true
+                        }
+                      ]
+                    }
+                  }
+                },
+                "cmd_menu": {
+                  "ctx": [
+                    0
+                  ]
+                },
+                "ch_menu": {
+                  "ctx": 7
+                },
+                "value_menu": {
+                  "ctx": {
+                    "attr": {
+                      "visible": true,
+                      "font_scale": 1,
+                      "color_": "black",
+                      "decimal": 2,
+                      "color_link_ch": true,
+                      "color_link_theme": false
+                    }
+                  }
+                },
+                "name_menu": {
+                  "ctx": {
+                    "attr": {
+                      "visible": true,
+                      "font_scale": 1,
+                      "color_": "black",
+                      "color_link_ch": true,
+                      "color_link_theme": true,
+                      "name_": "位置 KP",
+                      "name_link_ch": false,
+                      "name_link_cmd": false
+                    }
+                  }
+                },
+                "theme": {
+                  "ctx": {
+                    ".": {
+                      "bgColorFollow": true,
+                      "bgColor": "#ffffff",
+                      "opacity": 1,
+                      "hideBorder": false
+                    }
+                  }
+                }
+              }
+            },
+            {
+              "path": "slider",
+              "ctx": {
+                ".": {
+                  "ctx": {
+                    ".": {
+                      "x": 790,
+                      "y": 125,
+                      "width": 275,
+                      "height": 105
+                    },
+                    "resize_border": {
+                      "ctx": {
+                        ".": {
+                          "full_screen": false,
+                          "full_height": false,
+                          "full_width": false
+                        }
+                      }
+                    }
+                  },
+                  "from": 0,
+                  "to": 1,
+                  "step_size": 0.05
+                },
+                "slider_inside": {
+                  "target_value": 0.15
+                },
+                "argument_menu": {
+                  "ctx": {
+                    ".": {
+                      "hex_on": false,
+                      "model_ctx": [
+                        {
+                          "float_value": 0.15,
+                          "hex_value": "9a 99 19 3e",
+                          "enabled": false
+                        },
+                        {
+                          "float_value": 0.15,
+                          "hex_value": "9a 99 19 3e",
+                          "enabled": true
+                        },
+                        {
+                          "float_value": 0.15,
+                          "hex_value": "9a 99 19 3e",
+                          "enabled": true
+                        }
+                      ]
+                    }
+                  }
+                },
+                "cmd_menu": {
+                  "ctx": [
+                    1
+                  ]
+                },
+                "ch_menu": {
+                  "ctx": 8
+                },
+                "value_menu": {
+                  "ctx": {
+                    "attr": {
+                      "visible": true,
+                      "font_scale": 1,
+                      "color_": "black",
+                      "decimal": 3,
+                      "color_link_ch": true,
+                      "color_link_theme": false
+                    }
+                  }
+                },
+                "name_menu": {
+                  "ctx": {
+                    "attr": {
+                      "visible": true,
+                      "font_scale": 1,
+                      "color_": "black",
+                      "color_link_ch": true,
+                      "color_link_theme": true,
+                      "name_": "位置 KI",
+                      "name_link_ch": false,
+                      "name_link_cmd": false
+                    }
+                  }
+                },
+                "theme": {
+                  "ctx": {
+                    ".": {
+                      "bgColorFollow": true,
+                      "bgColor": "#ffffff",
+                      "opacity": 1,
+                      "hideBorder": false
+                    }
+                  }
+                }
+              }
+            },
+            {
+              "path": "slider",
+              "ctx": {
+                ".": {
+                  "ctx": {
+                    ".": {
+                      "x": 790,
+                      "y": 240,
+                      "width": 275,
+                      "height": 105
+                    },
+                    "resize_border": {
+                      "ctx": {
+                        ".": {
+                          "full_screen": false,
+                          "full_height": false,
+                          "full_width": false
+                        }
+                      }
+                    }
+                  },
+                  "from": 0,
+                  "to": 1,
+                  "step_size": 0.01
+                },
+                "slider_inside": {
+                  "target_value": 0.15
+                },
+                "argument_menu": {
+                  "ctx": {
+                    ".": {
+                      "hex_on": false,
+                      "model_ctx": [
+                        {
+                          "float_value": 0.15,
+                          "hex_value": "9a 99 19 3e",
+                          "enabled": false
+                        },
+                        {
+                          "float_value": 0.15,
+                          "hex_value": "9a 99 19 3e",
+                          "enabled": true
+                        },
+                        {
+                          "float_value": 0.15,
+                          "hex_value": "9a 99 19 3e",
+                          "enabled": true
+                        }
+                      ]
+                    }
+                  }
+                },
+                "cmd_menu": {
+                  "ctx": [
+                    2
+                  ]
+                },
+                "ch_menu": {
+                  "ctx": 9
+                },
+                "value_menu": {
+                  "ctx": {
+                    "attr": {
+                      "visible": true,
+                      "font_scale": 1,
+                      "color_": "black",
+                      "decimal": 3,
+                      "color_link_ch": true,
+                      "color_link_theme": false
+                    }
+                  }
+                },
+                "name_menu": {
+                  "ctx": {
+                    "attr": {
+                      "visible": true,
+                      "font_scale": 1,
+                      "color_": "black",
+                      "color_link_ch": true,
+                      "color_link_theme": true,
+                      "name_": "位置 KD",
+                      "name_link_ch": false,
+                      "name_link_cmd": false
+                    }
+                  }
+                },
+                "theme": {
+                  "ctx": {
+                    ".": {
+                      "bgColorFollow": true,
+                      "bgColor": "#ffffff",
+                      "opacity": 1,
+                      "hideBorder": false
+                    }
+                  }
+                }
+              }
+            },
+            {
+              "path": "slider",
+              "ctx": {
+                ".": {
+                  "ctx": {
+                    ".": {
+                      "x": 1080,
+                      "y": 10,
+                      "width": 275,
+                      "height": 105
+                    },
+                    "resize_border": {
+                      "ctx": {
+                        ".": {
+                          "full_screen": false,
+                          "full_height": false,
+                          "full_width": false
+                        }
+                      }
+                    }
+                  },
+                  "from": 0,
+                  "to": 0.015,
+                  "step_size": 0.0001
+                },
+                "slider_inside": {
+                  "target_value": 0.0075
+                },
+                "argument_menu": {
+                  "ctx": {
+                    ".": {
+                      "hex_on": false,
+                      "model_ctx": [
+                        {
+                          "float_value": 0.0075,
+                          "hex_value": "8f c2 f5 3b",
+                          "enabled": false
+                        },
+                        {
+                          "float_value": 0.0075,
+                          "hex_value": "8f c2 f5 3b",
+                          "enabled": true
+                        },
+                        {
+                          "float_value": 0.0075,
+                          "hex_value": "8f c2 f5 3b",
+                          "enabled": true
+                        }
+                      ]
+                    }
+                  }
+                },
+                "cmd_menu": {
+                  "ctx": [
+                    3
+                  ]
+                },
+                "ch_menu": {
+                  "ctx": 10
+                },
+                "value_menu": {
+                  "ctx": {
+                    "attr": {
+                      "visible": true,
+                      "font_scale": 1,
+                      "color_": "black",
+                      "decimal": 5,
+                      "color_link_ch": true,
+                      "color_link_theme": false
+                    }
+                  }
+                },
+                "name_menu": {
+                  "ctx": {
+                    "attr": {
+                      "visible": true,
+                      "font_scale": 1,
+                      "color_": "black",
+                      "color_link_ch": true,
+                      "color_link_theme": true,
+                      "name_": "速度 KP",
+                      "name_link_ch": false,
+                      "name_link_cmd": false
+                    }
+                  }
+                },
+                "theme": {
+                  "ctx": {
+                    ".": {
+                      "bgColorFollow": true,
+                      "bgColor": "#ffffff",
+                      "opacity": 1,
+                      "hideBorder": false
+                    }
+                  }
+                }
+              }
+            },
+            {
+              "path": "slider",
+              "ctx": {
+                ".": {
+                  "ctx": {
+                    ".": {
+                      "x": 1080,
+                      "y": 125,
+                      "width": 275,
+                      "height": 105
+                    },
+                    "resize_border": {
+                      "ctx": {
+                        ".": {
+                          "full_screen": false,
+                          "full_height": false,
+                          "full_width": false
+                        }
+                      }
+                    }
+                  },
+                  "from": 0,
+                  "to": 0.02,
+                  "step_size": 0.0005
+                },
+                "slider_inside": {
+                  "target_value": 0.005
+                },
+                "argument_menu": {
+                  "ctx": {
+                    ".": {
+                      "hex_on": false,
+                      "model_ctx": [
+                        {
+                          "float_value": 0.005,
+                          "hex_value": "0a d7 a3 3b",
+                          "enabled": false
+                        },
+                        {
+                          "float_value": 0.005,
+                          "hex_value": "0a d7 a3 3b",
+                          "enabled": true
+                        },
+                        {
+                          "float_value": 0.005,
+                          "hex_value": "0a d7 a3 3b",
+                          "enabled": true
+                        }
+                      ]
+                    }
+                  }
+                },
+                "cmd_menu": {
+                  "ctx": [
+                    4
+                  ]
+                },
+                "ch_menu": {
+                  "ctx": 11
+                },
+                "value_menu": {
+                  "ctx": {
+                    "attr": {
+                      "visible": true,
+                      "font_scale": 1,
+                      "color_": "black",
+                      "decimal": 4,
+                      "color_link_ch": true,
+                      "color_link_theme": false
+                    }
+                  }
+                },
+                "name_menu": {
+                  "ctx": {
+                    "attr": {
+                      "visible": true,
+                      "font_scale": 1,
+                      "color_": "black",
+                      "color_link_ch": true,
+                      "color_link_theme": true,
+                      "name_": "速度 KI",
+                      "name_link_ch": false,
+                      "name_link_cmd": false
+                    }
+                  }
+                },
+                "theme": {
+                  "ctx": {
+                    ".": {
+                      "bgColorFollow": true,
+                      "bgColor": "#ffffff",
+                      "opacity": 1,
+                      "hideBorder": false
+                    }
+                  }
+                }
+              }
+            },
+            {
+              "path": "slider",
+              "ctx": {
+                ".": {
+                  "ctx": {
+                    ".": {
+                      "x": 1080,
+                      "y": 240,
+                      "width": 275,
+                      "height": 105
+                    },
+                    "resize_border": {
+                      "ctx": {
+                        ".": {
+                          "full_screen": false,
+                          "full_height": false,
+                          "full_width": false
+                        }
+                      }
+                    }
+                  },
+                  "from": 0,
+                  "to": 0.0005,
+                  "step_size": 1e-05
+                },
+                "slider_inside": {
+                  "target_value": 0.00018
+                },
+                "argument_menu": {
+                  "ctx": {
+                    ".": {
+                      "hex_on": false,
+                      "model_ctx": [
+                        {
+                          "float_value": 0.00018,
+                          "hex_value": "62 be 3c 39",
+                          "enabled": false
+                        },
+                        {
+                          "float_value": 0.00018,
+                          "hex_value": "62 be 3c 39",
+                          "enabled": true
+                        },
+                        {
+                          "float_value": 0.00018,
+                          "hex_value": "62 be 3c 39",
+                          "enabled": true
+                        }
+                      ]
+                    }
+                  }
+                },
+                "cmd_menu": {
+                  "ctx": [
+                    5
+                  ]
+                },
+                "ch_menu": {
+                  "ctx": 12
+                },
+                "value_menu": {
+                  "ctx": {
+                    "attr": {
+                      "visible": true,
+                      "font_scale": 1,
+                      "color_": "black",
+                      "decimal": 6,
+                      "color_link_ch": true,
+                      "color_link_theme": false
+                    }
+                  }
+                },
+                "name_menu": {
+                  "ctx": {
+                    "attr": {
+                      "visible": true,
+                      "font_scale": 1,
+                      "color_": "black",
+                      "color_link_ch": true,
+                      "color_link_theme": true,
+                      "name_": "速度 KD",
+                      "name_link_ch": false,
+                      "name_link_cmd": false
+                    }
+                  }
+                },
+                "theme": {
+                  "ctx": {
+                    ".": {
+                      "bgColorFollow": true,
+                      "bgColor": "#ffffff",
+                      "opacity": 1,
+                      "hideBorder": false
+                    }
+                  }
+                }
+              }
+            },
+            {
+              "path": "bound_bt",
+              "ctx": {
+                ".": {
+                  "ctx": {
+                    ".": {
+                      "x": 790,
+                      "y": 365,
+                      "width": 170,
+                      "height": 65
+                    },
+                    "resize_border": {
+                      "ctx": {
+                        ".": {
+                          "full_screen": false,
+                          "full_height": false,
+                          "full_width": false
+                        }
+                      }
+                    }
+                  }
+                },
+                "argument_menu": {
+                  "ctx": {
+                    ".": {
+                      "hex_on": false,
+                      "model_ctx": [
+                        {
+                          "float_value": 1,
+                          "hex_value": "00 00 80 3f",
+                          "enabled": true
+                        },
+                        {
+                          "float_value": 0,
+                          "hex_value": "00 00 00 00",
+                          "enabled": false
+                        }
+                      ]
+                    }
+                  }
+                },
+                "cmd_menu": {
+                  "ctx": [
+                    6
+                  ]
+                },
+                "name_menu": {
+                  "ctx": {
+                    "attr": {
+                      "visible": true,
+                      "font_scale": 1,
+                      "color_": "black",
+                      "color_link_ch": false,
+                      "color_link_theme": true,
+                      "name_": "Yaw PID",
+                      "name_link_ch": false,
+                      "name_link_cmd": false
+                    }
+                  }
+                },
+                "theme": {
+                  "ctx": {
+                    ".": {
+                      "color1": "#ffffff",
+                      "color2": "#005bb6",
+                      "colorBorder": "#d0d0d0",
+                      "color1Follow": true,
+                      "color2Follow": true,
+                      "colorBorderFollow": true,
+                      "borderWidth": 1.33,
+                      "opacity": 1
+                    }
+                  }
+                }
+              }
+            },
+            {
+              "path": "bound_bt",
+              "ctx": {
+                ".": {
+                  "ctx": {
+                    ".": {
+                      "x": 975,
+                      "y": 365,
+                      "width": 170,
+                      "height": 65
+                    },
+                    "resize_border": {
+                      "ctx": {
+                        ".": {
+                          "full_screen": false,
+                          "full_height": false,
+                          "full_width": false
+                        }
+                      }
+                    }
+                  }
+                },
+                "argument_menu": {
+                  "ctx": {
+                    ".": {
+                      "hex_on": false,
+                      "model_ctx": [
+                        {
+                          "float_value": 1,
+                          "hex_value": "00 00 80 3f",
+                          "enabled": true
+                        },
+                        {
+                          "float_value": 0,
+                          "hex_value": "00 00 00 00",
+                          "enabled": false
+                        }
+                      ]
+                    }
+                  }
+                },
+                "cmd_menu": {
+                  "ctx": [
+                    7
+                  ]
+                },
+                "name_menu": {
+                  "ctx": {
+                    "attr": {
+                      "visible": true,
+                      "font_scale": 1,
+                      "color_": "black",
+                      "color_link_ch": false,
+                      "color_link_theme": true,
+                      "name_": "Yaw 状态",
+                      "name_link_ch": false,
+                      "name_link_cmd": false
+                    }
+                  }
+                },
+                "theme": {
+                  "ctx": {
+                    ".": {
+                      "color1": "#ffffff",
+                      "color2": "#005bb6",
+                      "colorBorder": "#d0d0d0",
+                      "color1Follow": true,
+                      "color2Follow": true,
+                      "colorBorderFollow": true,
+                      "borderWidth": 1.33,
+                      "opacity": 1
+                    }
+                  }
+                }
+              }
+            },
+            {
+              "path": "bound_bt",
+              "ctx": {
+                ".": {
+                  "ctx": {
+                    ".": {
+                      "x": 1160,
+                      "y": 365,
+                      "width": 170,
+                      "height": 65
+                    },
+                    "resize_border": {
+                      "ctx": {
+                        ".": {
+                          "full_screen": false,
+                          "full_height": false,
+                          "full_width": false
+                        }
+                      }
+                    }
+                  }
+                },
+                "argument_menu": {
+                  "ctx": {
+                    ".": {
+                      "hex_on": false,
+                      "model_ctx": [
+                        {
+                          "float_value": 1,
+                          "hex_value": "00 00 80 3f",
+                          "enabled": true
+                        },
+                        {
+                          "float_value": 0,
+                          "hex_value": "00 00 00 00",
+                          "enabled": false
+                        }
+                      ]
+                    }
+                  }
+                },
+                "cmd_menu": {
+                  "ctx": [
+                    8
+                  ]
+                },
+                "name_menu": {
+                  "ctx": {
+                    "attr": {
+                      "visible": true,
+                      "font_scale": 1,
+                      "color_": "black",
+                      "color_link_ch": false,
+                      "color_link_theme": true,
+                      "name_": "阶跃 +30",
+                      "name_link_ch": false,
+                      "name_link_cmd": false
+                    }
+                  }
+                },
+                "theme": {
+                  "ctx": {
+                    ".": {
+                      "color1": "#ffffff",
+                      "color2": "#005bb6",
+                      "colorBorder": "#d0d0d0",
+                      "color1Follow": true,
+                      "color2Follow": true,
+                      "colorBorderFollow": true,
+                      "borderWidth": 1.33,
+                      "opacity": 1
+                    }
+                  }
+                }
+              }
+            },
+            {
+              "path": "bound_bt",
+              "ctx": {
+                ".": {
+                  "ctx": {
+                    ".": {
+                      "x": 790,
+                      "y": 440,
+                      "width": 170,
+                      "height": 65
+                    },
+                    "resize_border": {
+                      "ctx": {
+                        ".": {
+                          "full_screen": false,
+                          "full_height": false,
+                          "full_width": false
+                        }
+                      }
+                    }
+                  }
+                },
+                "argument_menu": {
+                  "ctx": {
+                    ".": {
+                      "hex_on": false,
+                      "model_ctx": [
+                        {
+                          "float_value": 1,
+                          "hex_value": "00 00 80 3f",
+                          "enabled": true
+                        },
+                        {
+                          "float_value": 0,
+                          "hex_value": "00 00 00 00",
+                          "enabled": false
+                        }
+                      ]
+                    }
+                  }
+                },
+                "cmd_menu": {
+                  "ctx": [
+                    9
+                  ]
+                },
+                "name_menu": {
+                  "ctx": {
+                    "attr": {
+                      "visible": true,
+                      "font_scale": 1,
+                      "color_": "black",
+                      "color_link_ch": false,
+                      "color_link_theme": true,
+                      "name_": "回零 HOME",
+                      "name_link_ch": false,
+                      "name_link_cmd": false
+                    }
+                  }
+                },
+                "theme": {
+                  "ctx": {
+                    ".": {
+                      "color1": "#ffffff",
+                      "color2": "#005bb6",
+                      "colorBorder": "#d0d0d0",
+                      "color1Follow": true,
+                      "color2Follow": true,
+                      "colorBorderFollow": true,
+                      "borderWidth": 1.33,
+                      "opacity": 1
+                    }
+                  }
+                }
+              }
+            },
+            {
+              "path": "bound_bt",
+              "ctx": {
+                ".": {
+                  "ctx": {
+                    ".": {
+                      "x": 975,
+                      "y": 440,
+                      "width": 170,
+                      "height": 65
+                    },
+                    "resize_border": {
+                      "ctx": {
+                        ".": {
+                          "full_screen": false,
+                          "full_height": false,
+                          "full_width": false
+                        }
+                      }
+                    }
+                  }
+                },
+                "argument_menu": {
+                  "ctx": {
+                    ".": {
+                      "hex_on": false,
+                      "model_ctx": [
+                        {
+                          "float_value": 1,
+                          "hex_value": "00 00 80 3f",
+                          "enabled": true
+                        },
+                        {
+                          "float_value": 0,
+                          "hex_value": "00 00 00 00",
+                          "enabled": false
+                        }
+                      ]
+                    }
+                  }
+                },
+                "cmd_menu": {
+                  "ctx": [
+                    10
+                  ]
+                },
+                "name_menu": {
+                  "ctx": {
+                    "attr": {
+                      "visible": true,
+                      "font_scale": 1,
+                      "color_": "black",
+                      "color_link_ch": false,
+                      "color_link_theme": true,
+                      "name_": "完整结果",
+                      "name_link_ch": false,
+                      "name_link_cmd": false
+                    }
+                  }
+                },
+                "theme": {
+                  "ctx": {
+                    ".": {
+                      "color1": "#ffffff",
+                      "color2": "#005bb6",
+                      "colorBorder": "#d0d0d0",
+                      "color1Follow": true,
+                      "color2Follow": true,
+                      "colorBorderFollow": true,
+                      "borderWidth": 1.33,
+                      "opacity": 1
+                    }
+                  }
+                }
+              }
+            },
+            {
+              "path": "bound_bt",
+              "ctx": {
+                ".": {
+                  "ctx": {
+                    ".": {
+                      "x": 1160,
+                      "y": 440,
+                      "width": 170,
+                      "height": 65
+                    },
+                    "resize_border": {
+                      "ctx": {
+                        ".": {
+                          "full_screen": false,
+                          "full_height": false,
+                          "full_width": false
+                        }
+                      }
+                    }
+                  }
+                },
+                "argument_menu": {
+                  "ctx": {
+                    ".": {
+                      "hex_on": false,
+                      "model_ctx": [
+                        {
+                          "float_value": 1,
+                          "hex_value": "00 00 80 3f",
+                          "enabled": true
+                        },
+                        {
+                          "float_value": 0,
+                          "hex_value": "00 00 00 00",
+                          "enabled": false
+                        }
+                      ]
+                    }
+                  }
+                },
+                "cmd_menu": {
+                  "ctx": [
+                    11
+                  ]
+                },
+                "name_menu": {
+                  "ctx": {
+                    "attr": {
+                      "visible": true,
+                      "font_scale": 1,
+                      "color_": "black",
+                      "color_link_ch": false,
+                      "color_link_theme": true,
+                      "name_": "阶跃就绪检查",
+                      "name_link_ch": false,
+                      "name_link_cmd": false
+                    }
+                  }
+                },
+                "theme": {
+                  "ctx": {
+                    ".": {
+                      "color1": "#ffffff",
+                      "color2": "#005bb6",
+                      "colorBorder": "#d0d0d0",
+                      "color1Follow": true,
+                      "color2Follow": true,
+                      "colorBorderFollow": true,
+                      "borderWidth": 1.33,
+                      "opacity": 1
+                    }
+                  }
+                }
+              }
+            },
+            {
+              "path": "bound_bt",
+              "ctx": {
+                ".": {
+                  "ctx": {
+                    ".": {
+                      "x": 790,
+                      "y": 515,
+                      "width": 170,
+                      "height": 65
+                    },
+                    "resize_border": {
+                      "ctx": {
+                        ".": {
+                          "full_screen": false,
+                          "full_height": false,
+                          "full_width": false
+                        }
+                      }
+                    }
+                  }
+                },
+                "argument_menu": {
+                  "ctx": {
+                    ".": {
+                      "hex_on": false,
+                      "model_ctx": [
+                        {
+                          "float_value": 1,
+                          "hex_value": "00 00 80 3f",
+                          "enabled": true
+                        },
+                        {
+                          "float_value": 0,
+                          "hex_value": "00 00 00 00",
+                          "enabled": false
+                        }
+                      ]
+                    }
+                  }
+                },
+                "cmd_menu": {
+                  "ctx": [
+                    12
+                  ]
+                },
+                "name_menu": {
+                  "ctx": {
+                    "attr": {
+                      "visible": true,
+                      "font_scale": 1,
+                      "color_": "black",
+                      "color_link_ch": false,
+                      "color_link_theme": true,
+                      "name_": "安全准备 READY",
+                      "name_link_ch": false,
+                      "name_link_cmd": false
+                    }
+                  }
+                },
+                "theme": {
+                  "ctx": {
+                    ".": {
+                      "color1": "#ffffff",
+                      "color2": "#005bb6",
+                      "colorBorder": "#d0d0d0",
+                      "color1Follow": true,
+                      "color2Follow": true,
+                      "colorBorderFollow": true,
+                      "borderWidth": 1.33,
+                      "opacity": 1
+                    }
+                  }
+                }
+              }
+            },
+            {
+              "path": "bound_bt",
+              "ctx": {
+                ".": {
+                  "ctx": {
+                    ".": {
+                      "x": 975,
+                      "y": 515,
+                      "width": 170,
+                      "height": 65
+                    },
+                    "resize_border": {
+                      "ctx": {
+                        ".": {
+                          "full_screen": false,
+                          "full_height": false,
+                          "full_width": false
+                        }
+                      }
+                    }
+                  }
+                },
+                "argument_menu": {
+                  "ctx": {
+                    ".": {
+                      "hex_on": false,
+                      "model_ctx": [
+                        {
+                          "float_value": 1,
+                          "hex_value": "00 00 80 3f",
+                          "enabled": true
+                        },
+                        {
+                          "float_value": 0,
+                          "hex_value": "00 00 00 00",
+                          "enabled": false
+                        }
+                      ]
+                    }
+                  }
+                },
+                "cmd_menu": {
+                  "ctx": [
+                    13
+                  ]
+                },
+                "name_menu": {
+                  "ctx": {
+                    "attr": {
+                      "visible": true,
+                      "font_scale": 1,
+                      "color_": "black",
+                      "color_link_ch": false,
+                      "color_link_theme": true,
+                      "name_": "Yaw 波形",
+                      "name_link_ch": false,
+                      "name_link_cmd": false
+                    }
+                  }
+                },
+                "theme": {
+                  "ctx": {
+                    ".": {
+                      "color1": "#ffffff",
+                      "color2": "#005bb6",
+                      "colorBorder": "#d0d0d0",
+                      "color1Follow": true,
+                      "color2Follow": true,
+                      "colorBorderFollow": true,
+                      "borderWidth": 1.33,
+                      "opacity": 1
+                    }
+                  }
+                }
+              }
+            },
+            {
+              "path": "bound_bt",
+              "ctx": {
+                ".": {
+                  "ctx": {
+                    ".": {
+                      "x": 1160,
+                      "y": 515,
+                      "width": 170,
+                      "height": 65
+                    },
+                    "resize_border": {
+                      "ctx": {
+                        ".": {
+                          "full_screen": false,
+                          "full_height": false,
+                          "full_width": false
+                        }
+                      }
+                    }
+                  }
+                },
+                "argument_menu": {
+                  "ctx": {
+                    ".": {
+                      "hex_on": false,
+                      "model_ctx": [
+                        {
+                          "float_value": 1,
+                          "hex_value": "00 00 80 3f",
+                          "enabled": true
+                        },
+                        {
+                          "float_value": 0,
+                          "hex_value": "00 00 00 00",
+                          "enabled": false
+                        }
+                      ]
+                    }
+                  }
+                },
+                "cmd_menu": {
+                  "ctx": [
+                    14
+                  ]
+                },
+                "name_menu": {
+                  "ctx": {
+                    "attr": {
+                      "visible": true,
+                      "font_scale": 1,
+                      "color_": "black",
+                      "color_link_ch": false,
+                      "color_link_theme": true,
+                      "name_": "停止 STOP",
+                      "name_link_ch": false,
+                      "name_link_cmd": false
+                    }
+                  }
+                },
+                "theme": {
+                  "ctx": {
+                    ".": {
+                      "color1": "#ffffff",
+                      "color2": "#005bb6",
+                      "colorBorder": "#d0d0d0",
+                      "color1Follow": true,
+                      "color2Follow": true,
+                      "colorBorderFollow": true,
+                      "borderWidth": 1.33,
+                      "opacity": 1
+                    }
+                  }
+                }
+              }
+            }
+          ],
+          "file_url": "",
+          "bg": {
+            ".": {
+              "bgType": 1,
+              "bgOnTop": false,
+              "bgOpacity": 1,
+              "bgRatio": 1,
+              "bgFillMode": 1,
+              "bgLR": 0,
+              "bgLRMargin": 0,
+              "bgTB": 0,
+              "bgTBMargin": 0,
+              "bgSource": "",
+              "bgColor": "#ffffff",
+              "bgColorOpacity": 1,
+              "bgSourceFollowed": true,
+              "bgColorFollowed": true
+            }
+          }
+        },
+        {
+          "name": "角度-速度-力矩诊断",
+          "widgets": [
+            {
+              "path": "WaveChart",
+              "type": "inside",
+              "ctx": {
+                ".": {
+                  "ctx": {
+                    ".": {
+                      "x": 10,
+                      "y": 10,
+                      "width": 660,
+                      "height": 310
+                    },
+                    "resize_border": {
+                      "ctx": {
+                        ".": {
+                          "full_screen": false,
+                          "full_height": false,
+                          "full_width": false
+                        }
+                      }
+                    }
+                  },
+                  "font_size": 15,
+                  "xy_mode": false
+                },
+                "axis_x_wave": {
+                  "ctx": {
+                    ".": {
+                      "max_value": 49999,
+                      "min_value": 0,
+                      "left_index": 48999,
+                      "right_index": 49999,
+                      "unit_text": "ms",
+                      "decimal": 0
+                    },
+                    "container": {
+                      "ctx": []
+                    }
+                  }
+                },
+                "axis_x_wave2": {
+                  "ctx": {
+                    ".": {
+                      "max_value": 5,
+                      "min_value": -5,
+                      "left_index": -30.191351709225493,
+                      "right_index": 59.787527946480004,
+                      "unit_text": ""
+                    },
+                    "container": {
+                      "ctx": []
+                    }
+                  }
+                },
+                "axis_x_histog": {
+                  "ctx": {
+                    ".": {
+                      "max_value": 5,
+                      "min_value": -5,
+                      "left_index": 0,
+                      "right_index": 10,
+                      "unit_text": "unit",
+                      "decimal": 3
+                    },
+                    "container": {
+                      "ctx": []
+                    }
+                  }
+                },
+                "axis_x_freq": {
+                  "ctx": {
+                    ".": {
+                      "max_value": 5,
+                      "min_value": -5,
+                      "left_index": 0,
+                      "right_index": 257,
+                      "unit_text": "hz",
+                      "decimal": 3
+                    },
+                    "container": {
+                      "ctx": []
+                    }
+                  }
+                },
+                "axis_y_wave": {
+                  "ctx": {
+                    ".": {
+                      "top_value": 33,
+                      "bottom_value": -2,
+                      "bar_index": 5,
+                      "decimal": 3
+                    }
+                  }
+                },
+                "axis_y_bar": {
+                  "ctx": {
+                    ".": {
+                      "top_value": 33,
+                      "bottom_value": -2,
+                      "bar_index": 5,
+                      "decimal": 3
+                    }
+                  }
+                },
+                "wave_check": {
+                  "checked": true
+                },
+                "bar_check": {
+                  "checked": false
+                },
+                "freq_check": {
+                  "checked": false
+                },
+                "histog_check": {
+                  "checked": false
+                },
+                "simplify_check": {
+                  "checked": false
+                },
+                "all_font_on": {
+                  "checked": false
+                },
+                "hide_axis_x_check": {
+                  "checked": false
+                },
+                "hide_axis_y_check": {
+                  "checked": false
+                },
+                "hide_border_check": {
+                  "checked": false
+                },
+                "auto_bt_menu": {
+                  "locked": false
+                },
+                "rbw": {
+                  "ctx": {
+                    ".": {
+                      "histog_gap_num": 10,
+                      "freq_gap_num": 257,
+                      "lines": [
+                        0,
+                        1
+                      ],
+                      "fake_continuous": false,
+                      "line_width": 2
+                    }
+                  }
+                },
+                "x_ch_menu": {
+                  "indecies": []
+                },
+                "theme": {
+                  "ctx": {
+                    ".": {
+                      "lineColor2": "#ff5500",
+                      "lineColor2Follow1": true,
+                      "lineColor2Follow2": false,
+                      "lineColor": "black",
+                      "lineColorFollow1": false,
+                      "lineColorFollow2": true
+                    },
+                    "bgProperties": {
+                      "ctx": {
+                        ".": {
+                          "bgType": 0,
+                          "bgOnTop": true,
+                          "bgOpacity": 1,
+                          "bgRatio": 1,
+                          "bgFillMode": 1,
+                          "bgLR": 0,
+                          "bgLRMargin": 0,
+                          "bgTB": 0,
+                          "bgTBMargin": 0,
+                          "bgSource": "",
+                          "bgColor": "#ffffff",
+                          "bgColorOpacity": 0.6,
+                          "bgSourceFollowed": false,
+                          "bgColorFollowed": true
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            },
+            {
+              "path": "WaveChart",
+              "type": "inside",
+              "ctx": {
+                ".": {
+                  "ctx": {
+                    ".": {
+                      "x": 690,
+                      "y": 10,
+                      "width": 660,
+                      "height": 310
+                    },
+                    "resize_border": {
+                      "ctx": {
+                        ".": {
+                          "full_screen": false,
+                          "full_height": false,
+                          "full_width": false
+                        }
+                      }
+                    }
+                  },
+                  "font_size": 15,
+                  "xy_mode": false
+                },
+                "axis_x_wave": {
+                  "ctx": {
+                    ".": {
+                      "max_value": 49999,
+                      "min_value": 0,
+                      "left_index": 48999,
+                      "right_index": 49999,
+                      "unit_text": "ms",
+                      "decimal": 0
+                    },
+                    "container": {
+                      "ctx": []
+                    }
+                  }
+                },
+                "axis_x_wave2": {
+                  "ctx": {
+                    ".": {
+                      "max_value": 5,
+                      "min_value": -5,
+                      "left_index": -30.191351709225493,
+                      "right_index": 59.787527946480004,
+                      "unit_text": ""
+                    },
+                    "container": {
+                      "ctx": []
+                    }
+                  }
+                },
+                "axis_x_histog": {
+                  "ctx": {
+                    ".": {
+                      "max_value": 5,
+                      "min_value": -5,
+                      "left_index": 0,
+                      "right_index": 10,
+                      "unit_text": "unit",
+                      "decimal": 3
+                    },
+                    "container": {
+                      "ctx": []
+                    }
+                  }
+                },
+                "axis_x_freq": {
+                  "ctx": {
+                    ".": {
+                      "max_value": 5,
+                      "min_value": -5,
+                      "left_index": 0,
+                      "right_index": 257,
+                      "unit_text": "hz",
+                      "decimal": 3
+                    },
+                    "container": {
+                      "ctx": []
+                    }
+                  }
+                },
+                "axis_y_wave": {
+                  "ctx": {
+                    ".": {
+                      "top_value": 400,
+                      "bottom_value": -400,
+                      "bar_index": 5,
+                      "decimal": 3
+                    }
+                  }
+                },
+                "axis_y_bar": {
+                  "ctx": {
+                    ".": {
+                      "top_value": 400,
+                      "bottom_value": -400,
+                      "bar_index": 5,
+                      "decimal": 3
+                    }
+                  }
+                },
+                "wave_check": {
+                  "checked": true
+                },
+                "bar_check": {
+                  "checked": false
+                },
+                "freq_check": {
+                  "checked": false
+                },
+                "histog_check": {
+                  "checked": false
+                },
+                "simplify_check": {
+                  "checked": false
+                },
+                "all_font_on": {
+                  "checked": false
+                },
+                "hide_axis_x_check": {
+                  "checked": false
+                },
+                "hide_axis_y_check": {
+                  "checked": false
+                },
+                "hide_border_check": {
+                  "checked": false
+                },
+                "auto_bt_menu": {
+                  "locked": false
+                },
+                "rbw": {
+                  "ctx": {
+                    ".": {
+                      "histog_gap_num": 10,
+                      "freq_gap_num": 257,
+                      "lines": [
+                        2,
+                        3
+                      ],
+                      "fake_continuous": false,
+                      "line_width": 2
+                    }
+                  }
+                },
+                "x_ch_menu": {
+                  "indecies": []
+                },
+                "theme": {
+                  "ctx": {
+                    ".": {
+                      "lineColor2": "#ff5500",
+                      "lineColor2Follow1": true,
+                      "lineColor2Follow2": false,
+                      "lineColor": "black",
+                      "lineColorFollow1": false,
+                      "lineColorFollow2": true
+                    },
+                    "bgProperties": {
+                      "ctx": {
+                        ".": {
+                          "bgType": 0,
+                          "bgOnTop": true,
+                          "bgOpacity": 1,
+                          "bgRatio": 1,
+                          "bgFillMode": 1,
+                          "bgLR": 0,
+                          "bgLRMargin": 0,
+                          "bgTB": 0,
+                          "bgTBMargin": 0,
+                          "bgSource": "",
+                          "bgColor": "#ffffff",
+                          "bgColorOpacity": 0.6,
+                          "bgSourceFollowed": false,
+                          "bgColorFollowed": true
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            },
+            {
+              "path": "WaveChart",
+              "type": "inside",
+              "ctx": {
+                ".": {
+                  "ctx": {
+                    ".": {
+                      "x": 10,
+                      "y": 340,
+                      "width": 660,
+                      "height": 310
+                    },
+                    "resize_border": {
+                      "ctx": {
+                        ".": {
+                          "full_screen": false,
+                          "full_height": false,
+                          "full_width": false
+                        }
+                      }
+                    }
+                  },
+                  "font_size": 15,
+                  "xy_mode": false
+                },
+                "axis_x_wave": {
+                  "ctx": {
+                    ".": {
+                      "max_value": 49999,
+                      "min_value": 0,
+                      "left_index": 48999,
+                      "right_index": 49999,
+                      "unit_text": "ms",
+                      "decimal": 0
+                    },
+                    "container": {
+                      "ctx": []
+                    }
+                  }
+                },
+                "axis_x_wave2": {
+                  "ctx": {
+                    ".": {
+                      "max_value": 5,
+                      "min_value": -5,
+                      "left_index": -30.191351709225493,
+                      "right_index": 59.787527946480004,
+                      "unit_text": ""
+                    },
+                    "container": {
+                      "ctx": []
+                    }
+                  }
+                },
+                "axis_x_histog": {
+                  "ctx": {
+                    ".": {
+                      "max_value": 5,
+                      "min_value": -5,
+                      "left_index": 0,
+                      "right_index": 10,
+                      "unit_text": "unit",
+                      "decimal": 3
+                    },
+                    "container": {
+                      "ctx": []
+                    }
+                  }
+                },
+                "axis_x_freq": {
+                  "ctx": {
+                    ".": {
+                      "max_value": 5,
+                      "min_value": -5,
+                      "left_index": 0,
+                      "right_index": 257,
+                      "unit_text": "hz",
+                      "decimal": 3
+                    },
+                    "container": {
+                      "ctx": []
+                    }
+                  }
+                },
+                "axis_y_wave": {
+                  "ctx": {
+                    ".": {
+                      "top_value": 1,
+                      "bottom_value": -1,
+                      "bar_index": 5,
+                      "decimal": 3
+                    }
+                  }
+                },
+                "axis_y_bar": {
+                  "ctx": {
+                    ".": {
+                      "top_value": 1,
+                      "bottom_value": -1,
+                      "bar_index": 5,
+                      "decimal": 3
+                    }
+                  }
+                },
+                "wave_check": {
+                  "checked": true
+                },
+                "bar_check": {
+                  "checked": false
+                },
+                "freq_check": {
+                  "checked": false
+                },
+                "histog_check": {
+                  "checked": false
+                },
+                "simplify_check": {
+                  "checked": false
+                },
+                "all_font_on": {
+                  "checked": false
+                },
+                "hide_axis_x_check": {
+                  "checked": false
+                },
+                "hide_axis_y_check": {
+                  "checked": false
+                },
+                "hide_border_check": {
+                  "checked": false
+                },
+                "auto_bt_menu": {
+                  "locked": false
+                },
+                "rbw": {
+                  "ctx": {
+                    ".": {
+                      "histog_gap_num": 10,
+                      "freq_gap_num": 257,
+                      "lines": [
+                        5,
+                        6,
+                        56,
+                        57
+                      ],
+                      "fake_continuous": false,
+                      "line_width": 2
+                    }
+                  }
+                },
+                "x_ch_menu": {
+                  "indecies": []
+                },
+                "theme": {
+                  "ctx": {
+                    ".": {
+                      "lineColor2": "#ff5500",
+                      "lineColor2Follow1": true,
+                      "lineColor2Follow2": false,
+                      "lineColor": "black",
+                      "lineColorFollow1": false,
+                      "lineColorFollow2": true
+                    },
+                    "bgProperties": {
+                      "ctx": {
+                        ".": {
+                          "bgType": 0,
+                          "bgOnTop": true,
+                          "bgOpacity": 1,
+                          "bgRatio": 1,
+                          "bgFillMode": 1,
+                          "bgLR": 0,
+                          "bgLRMargin": 0,
+                          "bgTB": 0,
+                          "bgTBMargin": 0,
+                          "bgSource": "",
+                          "bgColor": "#ffffff",
+                          "bgColorOpacity": 0.6,
+                          "bgSourceFollowed": false,
+                          "bgColorFollowed": true
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            },
+            {
+              "path": "WaveChart",
+              "type": "inside",
+              "ctx": {
+                ".": {
+                  "ctx": {
+                    ".": {
+                      "x": 690,
+                      "y": 340,
+                      "width": 660,
+                      "height": 310
+                    },
+                    "resize_border": {
+                      "ctx": {
+                        ".": {
+                          "full_screen": false,
+                          "full_height": false,
+                          "full_width": false
+                        }
+                      }
+                    }
+                  },
+                  "font_size": 15,
+                  "xy_mode": false
+                },
+                "axis_x_wave": {
+                  "ctx": {
+                    ".": {
+                      "max_value": 49999,
+                      "min_value": 0,
+                      "left_index": 48999,
+                      "right_index": 49999,
+                      "unit_text": "ms",
+                      "decimal": 0
+                    },
+                    "container": {
+                      "ctx": []
+                    }
+                  }
+                },
+                "axis_x_wave2": {
+                  "ctx": {
+                    ".": {
+                      "max_value": 5,
+                      "min_value": -5,
+                      "left_index": -30.191351709225493,
+                      "right_index": 59.787527946480004,
+                      "unit_text": ""
+                    },
+                    "container": {
+                      "ctx": []
+                    }
+                  }
+                },
+                "axis_x_histog": {
+                  "ctx": {
+                    ".": {
+                      "max_value": 5,
+                      "min_value": -5,
+                      "left_index": 0,
+                      "right_index": 10,
+                      "unit_text": "unit",
+                      "decimal": 3
+                    },
+                    "container": {
+                      "ctx": []
+                    }
+                  }
+                },
+                "axis_x_freq": {
+                  "ctx": {
+                    ".": {
+                      "max_value": 5,
+                      "min_value": -5,
+                      "left_index": 0,
+                      "right_index": 257,
+                      "unit_text": "hz",
+                      "decimal": 3
+                    },
+                    "container": {
+                      "ctx": []
+                    }
+                  }
+                },
+                "axis_y_wave": {
+                  "ctx": {
+                    ".": {
+                      "top_value": 2,
+                      "bottom_value": -2,
+                      "bar_index": 5,
+                      "decimal": 3
+                    }
+                  }
+                },
+                "axis_y_bar": {
+                  "ctx": {
+                    ".": {
+                      "top_value": 2,
+                      "bottom_value": -2,
+                      "bar_index": 5,
+                      "decimal": 3
+                    }
+                  }
+                },
+                "wave_check": {
+                  "checked": true
+                },
+                "bar_check": {
+                  "checked": false
+                },
+                "freq_check": {
+                  "checked": false
+                },
+                "histog_check": {
+                  "checked": false
+                },
+                "simplify_check": {
+                  "checked": false
+                },
+                "all_font_on": {
+                  "checked": false
+                },
+                "hide_axis_x_check": {
+                  "checked": false
+                },
+                "hide_axis_y_check": {
+                  "checked": false
+                },
+                "hide_border_check": {
+                  "checked": false
+                },
+                "auto_bt_menu": {
+                  "locked": false
+                },
+                "rbw": {
+                  "ctx": {
+                    ".": {
+                      "histog_gap_num": 10,
+                      "freq_gap_num": 257,
+                      "lines": [
+                        58
+                      ],
+                      "fake_continuous": false,
+                      "line_width": 2
+                    }
+                  }
+                },
+                "x_ch_menu": {
+                  "indecies": []
+                },
+                "theme": {
+                  "ctx": {
+                    ".": {
+                      "lineColor2": "#ff5500",
+                      "lineColor2Follow1": true,
+                      "lineColor2Follow2": false,
+                      "lineColor": "black",
+                      "lineColorFollow1": false,
+                      "lineColorFollow2": true
+                    },
+                    "bgProperties": {
+                      "ctx": {
+                        ".": {
+                          "bgType": 0,
+                          "bgOnTop": true,
+                          "bgOpacity": 1,
+                          "bgRatio": 1,
+                          "bgFillMode": 1,
+                          "bgLR": 0,
+                          "bgLRMargin": 0,
+                          "bgTB": 0,
+                          "bgTBMargin": 0,
+                          "bgSource": "",
+                          "bgColor": "#ffffff",
+                          "bgColorOpacity": 0.6,
+                          "bgSourceFollowed": false,
+                          "bgColorFollowed": true
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          ],
+          "file_url": "",
+          "bg": {
+            ".": {
+              "bgType": 1,
+              "bgOnTop": false,
+              "bgOpacity": 1,
+              "bgRatio": 1,
+              "bgFillMode": 1,
+              "bgLR": 0,
+              "bgLRMargin": 0,
+              "bgTB": 0,
+              "bgTBMargin": 0,
+              "bgSource": "",
+              "bgColor": "#ffffff",
+              "bgColorOpacity": 1,
+              "bgSourceFollowed": true,
+              "bgColorFollowed": true
+            }
+          }
+        }
+      ],
+      "is_top": true,
+      "x": 0,
+      "y": 0,
+      "width": 1920,
+      "height": 1080,
+      "currentIndex": 0,
+      "lastIndex": 0,
+      "file_url": ""
+    }
+  ]
+}

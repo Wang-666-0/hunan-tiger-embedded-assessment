@@ -1,0 +1,10 @@
+--- before/Output/Gimbal_Control/App/yaw_step.h
++++ after/Output/Gimbal_Control/App/yaw_step.h
+@@ -35,7 +35,6 @@
+     /* Pitch冻结试验条件；Yaw保持0，不使用这些字段。 */
+     float gravity_kg_nm, gravity_offset_deg;
+     uint8_t gravity_calibrated;
+-    uint8_t pitch_brake_enabled; /* Pitch测量窗口冻结；Yaw不使用。 */
+     uint8_t cascade, output_limits;
+     uint8_t phase, reason, pending, band_active, sse_valid, pass;
+ } YawStep;

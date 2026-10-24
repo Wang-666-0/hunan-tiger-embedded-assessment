@@ -1,0 +1,15 @@
+{
+  "position": {
+    "kp": 10.678,
+    "ki": 24.153,
+    "kd": 0.002
+  },
+  "speed": {
+    "kp": 0.00406,
+    "ki": 0.0005,
+    "kd": 1e-06
+  },
+  "gravity_kg_nm": -0.13,
+  "control_period_ms": 2,
+  "source": "latest user screenshot 6858f37d; supersedes 62d35933"
+}

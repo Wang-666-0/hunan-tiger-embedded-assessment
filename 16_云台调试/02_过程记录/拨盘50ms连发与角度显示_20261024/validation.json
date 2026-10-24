@@ -1,0 +1,23 @@
+{
+  "groups": 12,
+  "checks": 102598,
+  "failures": 0,
+  "matching_source_hashes": 123,
+  "feeder_version": "C610_PHASE_50MS_V1G",
+  "interval_ms": 50,
+  "control_period_ms": 2,
+  "angle_view": "FEEDER ANGLE VIEW",
+  "i0": "real output-shaft accumulated degrees",
+  "i1": "accepted output-shaft target degrees",
+  "ac5_o0_build": true,
+  "rom_bytes": 132972,
+  "ram_bytes": 36912,
+  "flashed": false,
+  "hardware_tested": false,
+  "artifact_sha256": {
+    "Gimbal_Control.hex": "00c02c047c679f2d869dafa15724c79f2027f51299b7548938291d65640227f2",
+    "Gimbal_Control.axf": "706c3b32f3cfd62d8cb99574a6038250a8a02ba29380ca79fed88a2b0a83f2fe",
+    "compiler.log": "24aeda853ba25ed064467a602306e3c20bc01a117c51673075e66dd33540b4f2",
+    "builder.params": "48a0192ecc4705e07c12f04876aa689963c3a463a27a3304fe2d6a4e59252715"
+  }
+}

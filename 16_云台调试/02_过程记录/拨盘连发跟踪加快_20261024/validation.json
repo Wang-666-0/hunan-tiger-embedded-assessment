@@ -1,0 +1,27 @@
+{
+  "version": "C610_FAST_TRACK_V1I",
+  "groups": 8,
+  "checks": 102330,
+  "failures": 0,
+  "matching_source_hashes": 123,
+  "pos_kp": 10,
+  "speed_kp": 2,
+  "speed_ki": 8,
+  "phase_ms": 0,
+  "interval_ms": 50,
+  "step_deg": 40,
+  "control_period_ms": 2,
+  "current_limit_raw": 3000,
+  "continuous_max_rpm": 5800,
+  "build": "AC5/O0 full rebuild 69 sources",
+  "rom_bytes": 133144,
+  "ram_bytes": 36912,
+  "flashed": false,
+  "hardware_tested": false,
+  "artifact_sha256": {
+    "Gimbal_Control.axf": "334049981ee1c404cd89d021e379caf32cb9331a20f3e176a9789b955ad00802",
+    "Gimbal_Control.hex": "98dcafc9e8fd14309191b28faccf149970b2fe61a9093d895385f88b18aab86b",
+    "compiler.log": "4652763b54e123673bc761297279c6519c7f9654c7ab5ad3ee0650527f824f74",
+    "builder.params": "48a0192ecc4705e07c12f04876aa689963c3a463a27a3304fe2d6a4e59252715"
+  }
+}

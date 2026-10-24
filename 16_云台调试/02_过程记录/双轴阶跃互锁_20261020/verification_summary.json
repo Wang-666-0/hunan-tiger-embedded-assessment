@@ -1,0 +1,22 @@
+{
+  "success": true,
+  "groups": 71,
+  "checks": 553157,
+  "failures": 0,
+  "finished_and_returned": 71,
+  "step_lock_checks": 6336,
+  "test_source_hashes_match": true,
+  "only_config_versions_changed": true,
+  "control_math_and_telemetry_unchanged": [
+    "App/yaw_cascade.c",
+    "App/yaw_controller.c",
+    "App/pitch_controller.c",
+    "App/yaw_step.c",
+    "App/pitch_step.c",
+    "App/app_console.c"
+  ],
+  "compiler_errors": 0,
+  "compiler_warnings": 0,
+  "hardware_flashed": false,
+  "vofa_configuration_changed": false
+}

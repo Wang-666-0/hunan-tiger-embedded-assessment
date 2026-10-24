@@ -101,7 +101,7 @@ static float update(YawCascade *loop, float error_deg, uint32_t feedback_ms,
     loop->velocity_limited = 0U;
 #endif
     if (reference) {
-        loop->target_velocity_dps += (1.0f + loop->position.kd) * reference->velocity_dps;
+        loop->target_velocity_dps += reference->velocity_dps;
 #if YAW_CASCADE_OUTPUT_LIMITS_ENABLED
         wanted = loop->target_velocity_dps;
         loop->target_velocity_dps = clamp(wanted, -loop->velocity_limit_dps, loop->velocity_limit_dps);
@@ -110,11 +110,8 @@ static float update(YawCascade *loop, float error_deg, uint32_t feedback_ms,
     }
     loop->feedforward_limited = 0U;
     if (ff) {
-        float speed_abs = loop->target_velocity_dps < 0.0f ? -loop->target_velocity_dps : loop->target_velocity_dps;
-        float wanted_ff = ff->bias_nm + ff->velocity_gain * loop->target_velocity_dps +
-            ff->friction_nm * loop->target_velocity_dps / (speed_abs + ff->friction_velocity_dps);
-        feedforward_nm = clamp(wanted_ff, -ff->limit_nm, ff->limit_nm);
-        loop->feedforward_limited = (uint8_t)(wanted_ff > ff->limit_nm || wanted_ff < -ff->limit_nm);
+        feedforward_nm = ff->torque_nm;
+        loop->feedforward_limited = ff->limited;
     }
     loop->feedforward_nm = feedforward_nm;
     speed_error = loop->target_velocity_dps - loop->velocity_dps;
@@ -133,14 +130,23 @@ float YawCascade_UpdateWithFeedforward(YawCascade *loop, float error_deg, uint32
 {
     return update(loop, error_deg, feedback_ms, sequence, torque_limit_nm, feedforward_nm, 0, 0);
 }
-float YawCascade_UpdateWithCompensation(YawCascade *loop, float error_deg, uint32_t feedback_ms,
-                        uint32_t sequence, float torque_limit_nm, const YawCascadeFeedforward *ff)
-{
-    return update(loop, error_deg, feedback_ms, sequence, torque_limit_nm, 0.0f, ff, 0);
-}
 float YawCascade_UpdateTracking(YawCascade *loop, float error_deg, uint32_t feedback_ms,
                         uint32_t sequence, float torque_limit_nm, const YawCascadeFeedforward *ff,
                         const YawCascadeReference *reference)
 {
-    return update(loop, error_deg, feedback_ms, sequence, torque_limit_nm, 0.0f, ff, reference);
+    YawCascadeReference legacy;
+    if (!reference) { return update(loop, error_deg, feedback_ms, sequence, torque_limit_nm, 0.0f, ff, 0); }
+    /* 保持旧Yaw跟踪接口的D前馈语义。 */
+    legacy = *reference;
+    legacy.velocity_dps *= 1.0f + loop->position.kd;
+    return update(loop, error_deg, feedback_ms, sequence, torque_limit_nm, 0.0f, ff, &legacy);
+}
+float YawCascade_UpdateReference(YawCascade *loop, float error_deg, uint32_t feedback_ms,
+                        uint32_t sequence, float torque_limit_nm, float feedforward_nm,
+                        float velocity_ff_dps, uint8_t freeze_position_i)
+{
+    YawCascadeReference reference;
+    reference.velocity_dps = velocity_ff_dps;
+    reference.freeze_position_i = freeze_position_i;
+    return update(loop, error_deg, feedback_ms, sequence, torque_limit_nm, feedforward_nm, 0, &reference);
 }

@@ -1,0 +1,206 @@
+--- before/Output/Gimbal_Control/App/pitch_controller.c
++++ after/Output/Gimbal_Control/App/pitch_controller.c
+@@ -19,45 +19,26 @@
+ { x = fmodf(x, 360.0f); if (x > 180.0f) { x -= 360.0f; } else if (x < -180.0f) { x += 360.0f; } return x; }
+ static float gravity_at(const PitchController *pitch, float kg)
+ { return kg * cosf((pitch->angle_deg + pitch->gravity_offset_deg) / RAD_TO_DEG); }
+-static void reset_brake(PitchController *pitch)
+-{
+-    pitch->brake_torque_nm = pitch->brake_direction = 0.0f;
+-    pitch->brake_tracking = pitch->brake_arrived = 0U;
+-    pitch->brake_sequence = pitch->last_sequence;
+-    pitch->brake_feedback_ms = pitch->last_feedback_ms;
+-    pitch->brake_previous_angle_deg = pitch->angle_deg;
+-}
+-static float return_brake(PitchController *pitch, uint32_t age)
+-{
+-    float delta, remaining, wanted = 0.0f, previous, rise;
+-    uint32_t gap;
+-    if (!pitch->brake_enabled || !pitch->brake_tracking ||
+-        pitch->target_deg != pitch->brake_target_deg) {
+-        reset_brake(pitch); return 0.0f;
+-    }
+-    /* 不让附加阻尼在缺帧期间持续盲推；原反馈超时保护仍由上层处理。 */
+-    if (age > APP_PITCH_RETURN_BRAKE_MAX_AGE_MS) { pitch->brake_torque_nm = 0.0f; return 0.0f; }
+-    if (pitch->brake_sequence == pitch->last_sequence) { return pitch->brake_torque_nm; }
+-    delta = pitch->angle_deg - pitch->brake_previous_angle_deg;
+-    gap = pitch->last_feedback_ms - pitch->brake_feedback_ms;
+-    pitch->brake_previous_angle_deg = pitch->angle_deg;
+-    pitch->brake_sequence = pitch->last_sequence;
+-    pitch->brake_feedback_ms = pitch->last_feedback_ms;
+-    remaining = pitch->brake_direction * (pitch->target_deg - pitch->angle_deg);
+-    if (remaining <= APP_PITCH_RETURN_BRAKE_ARRIVAL_DEG) { pitch->brake_arrived = 1U; }
+-    if (pitch->brake_arrived && remaining > APP_PITCH_RETURN_BRAKE_ERROR_DEG &&
+-        delta * pitch->brake_direction < 0.0f &&
+-        pitch->cascade.velocity_dps * pitch->brake_direction < -APP_PITCH_RETURN_BRAKE_SPEED_DPS) {
+-        wanted = clamp(APP_PITCH_RETURN_BRAKE_GAIN *
+-            (-pitch->cascade.velocity_dps * pitch->brake_direction - APP_PITCH_RETURN_BRAKE_SPEED_DPS),
+-            0.0f, APP_PITCH_RETURN_BRAKE_LIMIT_NM);
+-    }
+-    /* 加力缓升；停止回退/实际位置开始返回目标时立即撤去，避免滤波滞后继续推。 */
+-    previous = absolute(pitch->brake_torque_nm);
+-    rise = APP_PITCH_RETURN_BRAKE_SLEW_NM_S * (float)(gap > 10U ? 10U : gap) * 0.001f;
+-    if (wanted > previous + rise) { wanted = previous + rise; }
+-    pitch->brake_torque_nm = pitch->brake_direction * wanted;
+-    return pitch->brake_torque_nm;
++static void reset_shape(PitchController *pitch)
++{
++    pitch->shape.active = 0U;
++    pitch->shape.position_deg = pitch->target_deg;
++    pitch->shape.velocity_dps = pitch->shape.acceleration_dps2 = 0.0f;
++}
++static void update_shape(PitchController *pitch, uint32_t now_ms)
++{
++    uint32_t elapsed;
++    float u, u2, u3, span, seconds, remaining;
++    if (!pitch->shape.active) { reset_shape(pitch); return; }
++    elapsed = now_ms - pitch->shape.start_ms;
++    if (elapsed >= pitch->shape.duration_ms) { reset_shape(pitch); return; }
++    seconds = (float)pitch->shape.duration_ms * 0.001f;
++    u = (float)elapsed / (float)pitch->shape.duration_ms;
++    u2 = u * u; u3 = u2 * u; remaining = 1.0f - u;
++    span = pitch->target_deg - pitch->shape.start_deg;
++    pitch->shape.position_deg = pitch->shape.start_deg + span * u3 * (10.0f + u * (-15.0f + 6.0f * u));
++    pitch->shape.velocity_dps = span * 30.0f * u2 * remaining * remaining / seconds;
++    pitch->shape.acceleration_dps2 = span * 60.0f * u * remaining * (1.0f - 2.0f * u) / (seconds * seconds);
+ }
+ void PitchController_InvalidateGravity(PitchController *pitch)
+ {
+@@ -79,7 +60,8 @@
+ {
+     if (!pitch) { return; }
+     memset(pitch, 0, sizeof(*pitch)); pitch->feedback_divisor = 1U;
+-    pitch->brake_enabled = APP_PITCH_RETURN_BRAKE_ENABLED;
++    pitch->shape.duration_ms = APP_PITCH_SHAPE_MS;
++    pitch->shape.velocity_gain = APP_PITCH_SHAPE_VELOCITY_GAIN;
+     YawCascade_Init(&pitch->cascade);
+     /* 用户确认写入的上电默认；不改变Yaw默认增益。 */
+     pitch->cascade.position.kp = APP_PITCH_POSITION_KP;
+@@ -97,10 +79,10 @@
+     pitch->active = pitch->have_control_tick = 0U; pitch->torque_nm = 0.0f;
+     pitch->gravity_torque_nm = pitch->pid_torque_nm = 0.0f;
+     pitch->gravity_i_transferred = 0U;
+-    reset_brake(pitch);
+     YawCascade_Stop(&pitch->cascade);
+     pitch->target_deg = finite_value(pitch->angle_deg) ?
+         clamp(pitch->angle_deg, PITCH_CONTROLLER_TARGET_MIN_DEG, PITCH_CONTROLLER_TARGET_MAX_DEG) : 0.0f;
++    reset_shape(pitch);
+ }
+ uint8_t PitchController_OnFeedback(PitchController *pitch, const Dm3507Feedback *feedback)
+ {
+@@ -137,6 +119,7 @@
+         PitchController_InvalidateGravity(pitch);
+         pitch->continuous_rad = pitch->reference_rad = feedback->position_rad;
+         pitch->angle_deg = pitch->target_deg = 0.0f;
++        reset_shape(pitch);
+         pitch->have_reference = 0U; pitch->stationary_samples = 0U;
+         YawCascade_ResetObserver(&pitch->cascade);
+     } else {
+@@ -175,6 +158,7 @@
+     } else { PitchController_InvalidateGravity(pitch); }
+     PitchController_Stop(pitch); pitch->reference_rad = pitch->continuous_rad;
+     pitch->angle_deg = pitch->target_deg = 0.0f; pitch->have_reference = 1U;
++    reset_shape(pitch);
+     YawCascade_ResetObserver(&pitch->cascade); pitch->faults &= ~(uint32_t)RECOVERABLE_FAULTS;
+     return 1U;
+ }
+@@ -186,6 +170,7 @@
+     PitchController_Stop(pitch); pitch->feedback_divisor = divisor; pitch->have_reference = 0U;
+     PitchController_InvalidateGravity(pitch);
+     pitch->reference_rad = pitch->continuous_rad; pitch->angle_deg = pitch->target_deg = 0.0f;
++    reset_shape(pitch);
+     pitch->velocity_dps = pitch->velocity_dps * (divisor == 7U ? 1.0f / 7.0f : 7.0f);
+     pitch->stationary_samples = 0U; YawCascade_ResetObserver(&pitch->cascade);
+     return 1U;
+@@ -204,7 +189,6 @@
+     } else { return 0U; }
+     if (pid->kp == kp && pid->ki == ki && pid->kd == kd) { return 1U; }
+     pid->kp = kp; pid->ki = ki; pid->kd = kd;
+-    reset_brake(pitch);
+     YawCascade_Stop(&pitch->cascade); ++pitch->cascade.revision;
+     return 1U;
+ }
+@@ -212,20 +196,34 @@
+ {
+     if (!pitch || !finite_value(degrees) || degrees < PITCH_CONTROLLER_TARGET_MIN_DEG ||
+         degrees > PITCH_CONTROLLER_TARGET_MAX_DEG || !pitch->have_reference || pitch->faults) { return 0U; }
+-    if (pitch->target_deg != degrees) {
+-        reset_brake(pitch);
+-        if (pitch->active && absolute(degrees - pitch->angle_deg) >= 1.0f) {
+-            pitch->brake_direction = degrees > pitch->angle_deg ? 1.0f : -1.0f;
+-            pitch->brake_target_deg = degrees; pitch->brake_tracking = 1U;
+-        }
+-    }
+-    pitch->target_deg = degrees; return 1U;
+-}
+-uint8_t PitchController_SetBrakeEnabled(PitchController *pitch, uint8_t enabled)
+-{
+-    if (!pitch || enabled > 1U) { return 0U; }
+-    if (pitch->brake_enabled != enabled) { reset_brake(pitch); pitch->brake_enabled = enabled; }
+-    return 1U;
++    pitch->target_deg = degrees; reset_shape(pitch);
++    return 1U;
++}
++uint8_t PitchController_SetShape(PitchController *pitch, uint32_t duration_ms, float velocity_gain)
++{
++    if (!pitch || (duration_ms != 0U && (duration_ms < 100U || duration_ms > 250U)) ||
++        !finite_value(velocity_gain) || velocity_gain < 0.0f || velocity_gain > 1.0f) { return 0U; }
++    if (pitch->shape.duration_ms == duration_ms && pitch->shape.velocity_gain == velocity_gain) { return 1U; }
++    if (pitch->shape.active) { return 0U; }
++    pitch->shape.duration_ms = duration_ms; pitch->shape.velocity_gain = velocity_gain;
++    return 1U;
++}
++uint8_t PitchController_StartMove(PitchController *pitch, float degrees, uint32_t now_ms)
++{
++    if (!pitch || !finite_value(degrees) || degrees < PITCH_CONTROLLER_TARGET_MIN_DEG ||
++        degrees > PITCH_CONTROLLER_TARGET_MAX_DEG || !pitch->active || !pitch->have_reference ||
++        !pitch->have_feedback || pitch->faults || pitch->last_status != 1U ||
++        now_ms - pitch->last_feedback_ms >= PITCH_CONTROLLER_FEEDBACK_TIMEOUT_MS) { return 0U; }
++    if (pitch->shape.active) { return (uint8_t)(degrees == pitch->target_deg); }
++    if (pitch->shape.duration_ms && absolute(degrees - pitch->angle_deg) >= 1.0f) {
++        if (absolute(pitch->velocity_dps) > PITCH_CONTROLLER_STATIONARY_SPEED_DPS ||
++            absolute(pitch->cascade.velocity_dps) > PITCH_CONTROLLER_STATIONARY_SPEED_DPS) { return 0U; }
++        pitch->target_deg = degrees; reset_shape(pitch);
++        pitch->shape.start_ms = now_ms; pitch->shape.start_deg = pitch->angle_deg;
++        pitch->shape.position_deg = pitch->angle_deg; pitch->shape.active = 1U;
++        return 1U;
++    }
++    return PitchController_SetTarget(pitch, degrees);
+ }
+ uint8_t PitchController_SetGravityOffset(PitchController *pitch, float offset_deg)
+ {
+@@ -261,7 +259,7 @@
+ float PitchController_Update(PitchController *pitch, float rate_dps, uint32_t now_ms, uint8_t allowed)
+ {
+     uint32_t age, elapsed;
+-    float torque, feedforward;
++    float torque, velocity_ff;
+     if (!pitch) { return 0.0f; }
+     if (!finite_value(rate_dps) || !finite_value(pitch->gravity_kg_nm) ||
+         !finite_value(pitch->gravity_offset_deg) || absolute(pitch->gravity_kg_nm) > PITCH_CONTROLLER_TORQUE_LIMIT_NM ||
+@@ -287,14 +285,20 @@
+     if (elapsed > PITCH_CONTROLLER_CONTROL_MAX_GAP_MS) { fault(pitch, PITCH_CONTROLLER_FAULT_TIMING); return 0.0f; }
+     pitch->active = 1U;
+     rate_dps = clamp(rate_dps, -APP_PITCH_RATE_LIMIT_DPS, APP_PITCH_RATE_LIMIT_DPS);
+-    if (rate_dps != 0.0f) { reset_brake(pitch); }
++    if (rate_dps != 0.0f && pitch->shape.active) {
++        /* 手动接管从实测位置继续，避免跳到尚未到达的最终目标。 */
++        pitch->target_deg = clamp(pitch->angle_deg, PITCH_CONTROLLER_TARGET_MIN_DEG, PITCH_CONTROLLER_TARGET_MAX_DEG);
++        reset_shape(pitch);
++    }
+     pitch->target_deg = clamp(pitch->target_deg + rate_dps * (float)elapsed * 0.001f,
+         PITCH_CONTROLLER_TARGET_MIN_DEG, PITCH_CONTROLLER_TARGET_MAX_DEG);
++    update_shape(pitch, now_ms);
++    velocity_ff = pitch->shape.velocity_gain * pitch->shape.velocity_dps;
+     pitch->gravity_torque_nm = gravity_at(pitch, pitch->gravity_kg_nm);
+-    feedforward = pitch->gravity_torque_nm + return_brake(pitch, age);
+-    torque = YawCascade_UpdateWithFeedforward(&pitch->cascade, pitch->target_deg - pitch->angle_deg,
+-        pitch->last_feedback_ms, pitch->last_sequence, PITCH_CONTROLLER_TORQUE_LIMIT_NM, feedforward);
+-    pitch->pid_torque_nm = pitch->cascade.unsaturated_torque_nm - feedforward;
++    torque = YawCascade_UpdateReference(&pitch->cascade, pitch->shape.position_deg - pitch->angle_deg,
++        pitch->last_feedback_ms, pitch->last_sequence, PITCH_CONTROLLER_TORQUE_LIMIT_NM,
++        pitch->gravity_torque_nm, velocity_ff, pitch->shape.active);
++    pitch->pid_torque_nm = pitch->cascade.unsaturated_torque_nm - pitch->gravity_torque_nm;
+     if (!finite_value(torque) || !finite_value(pitch->cascade.position_i) ||
+         !finite_value(pitch->cascade.speed_i) || !finite_value(pitch->cascade.target_velocity_dps) ||
+         !finite_value(pitch->cascade.unsaturated_torque_nm)) {

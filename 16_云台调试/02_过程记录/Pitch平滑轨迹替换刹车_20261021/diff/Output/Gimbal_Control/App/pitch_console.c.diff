@@ -1,0 +1,128 @@
+--- before/Output/Gimbal_Control/App/pitch_console.c
++++ after/Output/Gimbal_Control/App/pitch_console.c
+@@ -134,13 +134,14 @@
+     proportional = p->active ? c->speed.kp * speed_error : 0.0f;
+     derivative = p->active ? -c->speed.kd * c->acceleration_dps2 : 0.0f;
+     length = snprintf(response, capacity,
+-        "P|%s|KG|%.6g|GOFF_DEG|%.6g|G_CAL|%u|G_REQUIRED|%u|PHYSICAL_DEG|%.3f|GFF_NM|%.6g|VP_NM|%.6g|VI_NM|%.6g|VD_NM|%.6g|PID_NM|%.6g|SUM_NM|%.6g|OUT_NM|%.6g|SAT|%u|I_TRANSFER|%u|RAM_ONLY|1|BRAKE_NM|%.6g\r\n",
++        "P|%s|KG|%.6g|GOFF_DEG|%.6g|G_CAL|%u|G_REQUIRED|%u|PHYSICAL_DEG|%.3f|GFF_NM|%.6g|VP_NM|%.6g|VI_NM|%.6g|VD_NM|%.6g|PID_NM|%.6g|SUM_NM|%.6g|OUT_NM|%.6g|SAT|%u|I_TRANSFER|%u|RAM_ONLY|1|SHAPE_ACTIVE|%u|REF_DEG|%.6g|REF_DPS|%.6g\r\n",
+         kind, (double)p->gravity_kg_nm, (double)p->gravity_offset_deg, (unsigned)p->gravity_calibrated,
+         (unsigned)(p->gravity_kg_nm != 0.0f && !p->gravity_calibrated),
+         (double)(p->angle_deg + p->gravity_offset_deg), (double)p->gravity_torque_nm,
+         (double)proportional, (double)c->speed_i, (double)derivative, (double)p->pid_torque_nm,
+         (double)c->unsaturated_torque_nm, (double)p->torque_nm, (unsigned)c->torque_limited,
+-        (unsigned)p->gravity_i_transferred, (double)p->brake_torque_nm);
++        (unsigned)p->gravity_i_transferred, (unsigned)p->shape.active,
++        (double)p->shape.position_deg, (double)p->shape.velocity_dps);
+     return (uint8_t)(length > 0 && (size_t)length < capacity);
+ }
+ 
+@@ -151,7 +152,7 @@
+     uint32_t rise = value->t10_ms != PITCH_STEP_UNREACHED && value->t90_ms != PITCH_STEP_UNREACHED ?
+         value->t90_ms - value->t10_ms : PITCH_STEP_UNREACHED;
+     int length = snprintf(response, capacity,
+-        "P|STEP|ID|%lu|STATE|%s|REASON|%s|VALID|%u|START|%.3f|TARGET|%.3f|WINDOW_MS|%lu|RESP_MS|%ld|T90_MS|%ld|RISE_MS|%ld|SETTLE_MS|%ld|OS_DEG|%.6f|OS_PCT|%.3f|SSE_DEG|%.6f|SSE_VALID|%u|PASS|%u|FAULT|%lu|VMAX_DPS|%.2f|TMAX_NM|%.5f|N|%lu|GAP_MS|%lu|SAT_N|%lu|CMD_N|%lu|FIRST_NM|%.5f|CTRL|CASCADE|PKP|%.6g|PKI|%.6g|PKD|%.6g|VKP|%.6g|VKI|%.6g|VKD|%.6g|OUTPUT_LIMITS|0|RESP_LIMIT_MS|300|RESPONSE|FIRST_IN_BAND|BAND02|0.2|RESP02_MS|%ld|SETTLE02_MS|%ld|PASS02|%u|TIME_LIMIT_MS|300|OS_LIMIT_DEG|0.2|SSE_LIMIT_DEG|0.2|SSE_PEAK_DEG|%.6g|ASSESSMENT|FINAL_SETTLE|KG|%.6g|GOFF_DEG|%.6g|G_CAL|%u|BRAKE|%u\r\n",
++        "P|STEP|ID|%lu|STATE|%s|REASON|%s|VALID|%u|START|%.3f|TARGET|%.3f|WINDOW_MS|%lu|RESP_MS|%ld|T90_MS|%ld|RISE_MS|%ld|SETTLE_MS|%ld|OS_DEG|%.6f|OS_PCT|%.3f|SSE_DEG|%.6f|SSE_VALID|%u|PASS|%u|FAULT|%lu|VMAX_DPS|%.2f|TMAX_NM|%.5f|N|%lu|GAP_MS|%lu|SAT_N|%lu|CMD_N|%lu|FIRST_NM|%.5f|CTRL|CASCADE|PKP|%.6g|PKI|%.6g|PKD|%.6g|VKP|%.6g|VKI|%.6g|VKD|%.6g|OUTPUT_LIMITS|0|RESP_LIMIT_MS|300|RESPONSE|FIRST_IN_BAND|BAND02|0.2|RESP02_MS|%ld|SETTLE02_MS|%ld|PASS02|%u|TIME_LIMIT_MS|300|OS_LIMIT_DEG|0.2|SSE_LIMIT_DEG|0.2|SSE_PEAK_DEG|%.6g|ASSESSMENT|FINAL_SETTLE|KG|%.6g|GOFF_DEG|%.6g|G_CAL|%u|SHAPE_MS|%lu|SHAPEV|%.6g\r\n",
+         (unsigned long)value->id, value->phase <= PITCH_STEP_ABORTED ? phases[value->phase] : "UNKNOWN",
+         value->reason <= PITCH_STEP_FF_CHANGE ? reasons[value->reason] : "UNKNOWN",
+         (unsigned)(value->phase == PITCH_STEP_DONE), (double)value->start_deg, (double)value->target_deg,
+@@ -166,7 +167,7 @@
+         (long)(int32_t)value->response_ms, (long)(int32_t)value->settle_ms, (unsigned)value->pass,
+         (double)value->ss_max_error,
+         (double)value->gravity_kg_nm, (double)value->gravity_offset_deg, (unsigned)value->gravity_calibrated,
+-        (unsigned)value->pitch_brake_enabled);
++        (unsigned long)value->shape_ms, (double)value->shape_velocity_gain);
+     return (uint8_t)(length > 0 && (size_t)length < capacity);
+ }
+ 
+@@ -286,7 +287,7 @@
+     if (strcmp(line, "PITCH") == 0) { BriefStatus(response, capacity); return 1U; }
+     if (strcmp(line, "PITCH HELP") == 0 || strcmp(line, "PITCH ?") == 0) {
+         (void)snprintf(response, capacity,
+-            "P|HELP|READ|PITCH;PID;RESULT;STATUS|PREPARE|READY|STOP|OFF|VIEW|PITCH VIEW|TUNE|POS kp ki kd;VEL kp ki kd;PKP/PKI/PKD/VKP/VKI/VKD value|TELEM|TELEM OFF/ON|TEST|STEP [30];HOME;REMOTE_CH5_CH7|PITCH_ONLY|COORD 1;GHORIZ;FF;KG value;GOFF degrees;BRAKE [ON/OFF]\r\n");
++            "P|HELP|READ|PITCH;PID;RESULT;STATUS|PREPARE|READY|STOP|OFF|VIEW|PITCH VIEW|TUNE|POS kp ki kd;VEL kp ki kd;PKP/PKI/PKD/VKP/VKI/VKD value|TELEM|TELEM OFF/ON|TEST|STEP [30];HOME;REMOTE_CH5_CH7|PITCH_ONLY|COORD 1;GHORIZ;FF;KG value;GOFF degrees;SHAPE [ms];SHAPEV [gain]\r\n");
+         return 1U;
+     }
+     if (strcmp(line, "PITCH OFF") == 0) {
+@@ -316,27 +317,50 @@
+     if (strcmp(line, "PITCH FF") == 0) {
+         (void)GravityReport("FF", response, capacity); return 1U;
+     }
+-    if (strcmp(line, "PITCH BRAKE") == 0) {
++    if (strcmp(line, "PITCH SHAPE") == 0) {
+         PitchBackend_GetState(&pitch);
+         (void)snprintf(response, capacity,
+-            "P|BRAKE|%s|ENABLED|%u|TRACKING|%u|ARRIVED|%u|NM|%.6g|GAIN|%.6g|MAX_NM|%.6g|SCOPE|AFTER_FIRST_ARRIVAL_RETREAT_ONLY\r\n",
+-            APP_PITCH_VERSION, (unsigned)pitch.controller.brake_enabled,
+-            (unsigned)pitch.controller.brake_tracking, (unsigned)pitch.controller.brake_arrived,
+-            (double)pitch.controller.brake_torque_nm, (double)APP_PITCH_RETURN_BRAKE_GAIN,
+-            (double)APP_PITCH_RETURN_BRAKE_LIMIT_NM);
++            "P|SHAPE|MS|%lu|VEL_FF|%.6g|ACTIVE|%u|REF_DEG|%.6g|REF_DPS|%.6g|REF_DPS2|%.6g|GOAL_DEG|%.6g|PI_FREEZE|%u|T0|STEP_ACCEPTED|ASSESSMENT|FINAL_GOAL\r\n",
++            (unsigned long)pitch.controller.shape.duration_ms, (double)pitch.controller.shape.velocity_gain,
++            (unsigned)pitch.controller.shape.active, (double)pitch.controller.shape.position_deg,
++            (double)pitch.controller.shape.velocity_dps, (double)pitch.controller.shape.acceleration_dps2,
++            (double)pitch.controller.target_deg, (unsigned)pitch.controller.shape.active);
++        return 1U;
++    }
++    if (strcmp(line, "PITCH SHAPEV") == 0) {
++        PitchBackend_GetState(&pitch);
++        (void)snprintf(response, capacity, "P|SHAPEV|%.6g\r\n", (double)pitch.controller.shape.velocity_gain);
++        return 1U;
++    }
++    if (strcmp(line, "PITCH BRAKE") == 0 || strcmp(line, "PITCH BRAKE OFF") == 0) {
++        (void)snprintf(response, capacity, "P|BRAKE|REMOVED|ENABLED|0|USE|PITCH SHAPE\r\n");
++        return 1U;
++    }
++    if (strncmp(line, "PITCH BRAKE ", 12U) == 0) {
++        (void)snprintf(response, capacity, "P|ERROR|REMOVED|BRAKE|USE|PITCH SHAPE\r\n");
+         return 1U;
+     }
+     if (pending_operation) {
+         (void)snprintf(response, capacity, "P|BUSY|%s|USE_PITCH_OFF_TO_CANCEL\r\n",
+             pending_operation == 1U ? "CHECK" : "READY"); return 1U;
+     }
+-    if (strncmp(line, "PITCH BRAKE ", 12U) == 0) {
+-        uint8_t valid = (uint8_t)(strcmp(line + 12U, "ON") == 0 || strcmp(line + 12U, "OFF") == 0);
+-        if (valid && !AppConsole_IsDiagnosticMode()) {
+-            accepted = PitchBackend_SetBrakeEnabled((uint8_t)(strcmp(line + 12U, "ON") == 0));
+-        }
+-        if (accepted) { (void)snprintf(response, capacity, "P|OK|BRAKE|%s|NEXT_MOVE\r\n", line + 12U); }
+-        else { (void)snprintf(response, capacity, "P|ERROR|BRAKE_USE_ON_OR_OFF_OUTSIDE_STEP\r\n"); }
++    if (strncmp(line, "PITCH SHAPE ", 12U) == 0) {
++        if (ConsoleParse_Number(line + 12U, &value) && value >= 0.0f && value <= 250.0f &&
++            value == (float)(uint32_t)value && !AppConsole_IsDiagnosticMode()) {
++            PitchBackend_GetState(&pitch);
++            accepted = PitchBackend_SetShape((uint32_t)value, pitch.controller.shape.velocity_gain);
++        }
++        (void)snprintf(response, capacity, accepted ? "P|OK|SHAPE|MS|%.0f\r\n" :
++            "P|ERROR|SHAPE|USE_0_OR_100_TO_250_MS|FINISH_STEP_FIRST\r\n", (double)value);
++        return 1U;
++    }
++    if (strncmp(line, "PITCH SHAPEV ", 13U) == 0) {
++        if (ConsoleParse_Number(line + 13U, &value) && !AppConsole_IsDiagnosticMode()) {
++            PitchBackend_GetState(&pitch);
++            accepted = PitchBackend_SetShape(pitch.controller.shape.duration_ms, value);
++        }
++        (void)snprintf(response, capacity, accepted ? "P|OK|SHAPEV|%.6g\r\n" :
++            "P|ERROR|SHAPEV|USE_0_TO_1|FINISH_STEP_FIRST\r\n", (double)value);
+         return 1U;
+     }
+     if (strcmp(line, "PITCH CHECK") == 0 || strcmp(line, "PITCH READY") == 0) {
+@@ -426,7 +450,7 @@
+         if (strcmp(RemoteReason(0U), "OK") == 0) { accepted = PitchBackend_SetTarget(0.0f); }
+         taskEXIT_CRITICAL();
+         (void)snprintf(response, capacity, accepted ? "P|OK|HOME|TARGET|0\r\n" :
+-            "P|ERROR|HOME_REQUIRES_ARMED_ACTIVE\r\n"); return 1U;
++            "P|ERROR|HOME_REQUIRES_ARMED_ACTIVE_IDLE_PROFILE_AND_STATIONARY\r\n"); return 1U;
+     }
+     if (strncmp(line, "PITCH TARGET ", 13U) == 0) {
+         uint8_t parsed = ConsoleParse_Number(line + 13U, &value);
+@@ -436,7 +460,7 @@
+         }
+         taskEXIT_CRITICAL();
+         (void)snprintf(response, capacity, accepted ? "P|OK|TARGET|%.3f|HOLD|1\r\n" :
+-            "P|ERROR|TARGET_REQUIRES_ARMED_ACTIVE_AND_WITHIN_50\r\n", (double)value); return 1U;
++            "P|ERROR|TARGET_REQUIRES_ARMED_ACTIVE_IDLE_PROFILE_AND_STATIONARY_WITHIN_RANGE\r\n", (double)value); return 1U;
+     }
+     if (strncmp(line, "PITCH POS ", 10U) == 0 || strncmp(line, "PITCH VEL ", 10U) == 0) {
+         float kp, ki, kd;

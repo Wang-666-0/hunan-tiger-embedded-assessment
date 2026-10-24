@@ -71,11 +71,14 @@ static void Apply(uint32_t timestamp, uint8_t allowed)
 { now_ms = timestamp; PitchBackend_Apply(&request, allowed, 0U); Read(); }
 static void Reset(uint32_t timestamp)
 {
+    PitchStep snapshot;
     memset(&bus, 0, sizeof(bus)); memset(&request, 0, sizeof(request)); bus.started = 1U;
     now_ms = timestamp; enable_calls = torque_calls = disable_calls = query_calls = cancel_calls = 0U;
     permission = deny_permission = pending = 0U;
     enable_result = torque_result = disable_result = query_result = HAL_OK;
     last_torque = 0.0f; PitchBackend_Init(); Read();
+    PitchBackend_GetStep(&snapshot);
+    CHECK(snapshot.id == 0U && PitchBackend_GetStepId() == snapshot.id);
 }
 static void Prepare(uint32_t timestamp)
 {
@@ -99,6 +102,7 @@ static void Activate(uint32_t timestamp)
         Apply(t, 1U);
     }
     CHECK(state.active && !state.controller.faults && torque_calls && permission);
+    CHECK(PitchBackend_SetShape(200U, 0.2f)); /* Keep legacy-profile fixtures explicit. */
 }
 
 void test_run(void)
@@ -130,19 +134,28 @@ void test_run(void)
     test_stage = 3U;
     Activate(2000U); CHECK(!PitchBackend_StartStep(1.0f)); CHECK(!PitchBackend_StartStep(50.0f));
     CHECK(!PitchBackend_StartStep(-30.0f)); Read(); CHECK(state.controller.target_deg == 0.0f);
+    PitchBackend_GetStep(&measurement);
+    CHECK(measurement.id == 0U && PitchBackend_GetStepId() == measurement.id);
     CHECK(PitchBackend_StartStep(30.0f)); PitchBackend_GetStep(&measurement);
     CHECK(measurement.phase == PITCH_STEP_RUNNING && measurement.target_deg == 30.0f);
+    CHECK(measurement.id == 1U && PitchBackend_GetStepId() == measurement.id);
     CHECK(measurement.kp == APP_PITCH_POSITION_KP && measurement.vkp == APP_PITCH_SPEED_KP);
     before = torque_calls; Apply(2046U, 1U); CHECK(torque_calls == before + 1U);
     CHECK(PitchBackend_SetLoopPid('P', APP_PITCH_POSITION_KP, APP_PITCH_POSITION_KI, APP_PITCH_POSITION_KD));
     PitchBackend_GetStep(&measurement); CHECK(measurement.phase == PITCH_STEP_RUNNING);
     CHECK(PitchBackend_SetLoopParameter('P', 'I', 0.3f)); PitchBackend_GetStep(&measurement); Read();
     CHECK(measurement.phase == PITCH_STEP_ABORTED && measurement.reason == PITCH_STEP_PID_CHANGE);
+    CHECK(measurement.id == 1U && PitchBackend_GetStepId() == measurement.id);
     CHECK(measurement.ki == APP_PITCH_POSITION_KI && state.controller.target_deg == 30.0f);
     CHECK(!PitchBackend_SetLoopParameter('V', 'P', -0.1f));
-    CHECK(PitchBackend_TakeStepReport(&measurement)); CHECK(!PitchBackend_TakeStepReport(&measurement));
-    CHECK(PitchBackend_SetTarget(0.0f)); PitchBackend_GetStep(&measurement);
+    CHECK(PitchBackend_TakeStepReport(&measurement));
+    CHECK(measurement.id == 1U && PitchBackend_GetStepId() == measurement.id);
+    CHECK(!PitchBackend_TakeStepReport(&measurement));
+    PitchBackend_GetStep(&measurement);
+    CHECK(!measurement.pending && measurement.id == 1U && PitchBackend_GetStepId() == measurement.id);
+    CHECK(!PitchBackend_SetTarget(0.0f)); PitchBackend_GetStep(&measurement);
     CHECK(measurement.phase != PITCH_STEP_RUNNING && measurement.pass == 0U);
+    CHECK(state.controller.shape.active && state.controller.target_deg == 30.0f);
 
     test_stage = 4U;
     Activate(3000U); request.gimbal_mode = GIMBAL_TEST;
@@ -152,7 +165,8 @@ void test_run(void)
     request.step_axis = GIMBAL_STEP_PITCH; request.step_sequence = 2U;
     Apply(3048U, 1U); CHECK(PitchBackend_TakeRemoteStepEvent(&event) && event.result == 1U);
     request.step_return_event = 1U; request.step_sequence = 3U; Apply(3050U, 1U);
-    CHECK(PitchBackend_TakeRemoteStepEvent(&event) && event.result == 2U && event.target_deg == 0.0f);
+    CHECK(PitchBackend_TakeRemoteStepEvent(&event) && event.result == 3U && event.target_deg == 0.0f);
+    CHECK(state.controller.shape.active && state.controller.target_deg == 30.0f);
     request.step_event = 0U; request.gimbal_mode = GIMBAL_MANUAL; Apply(3052U, 1U);
     CHECK(!state.active && !state.requested && !permission && state.stop_pending);
     CHECK(state.stop_reason == PITCH_STOP_MODE_EXIT && state.stop_id == 1U && state.stopped_ms == 3052U);
@@ -185,5 +199,46 @@ void test_run(void)
     Activate(7000U); Apply(7046U, 0U);
     CHECK(state.stop_reason == PITCH_STOP_PERMISSION && !state.active && !permission);
     Apply(7048U, 0U); Read(); CHECK(state.stop_reason == PITCH_STOP_PERMISSION && state.stop_id == 1U);
+
+    test_stage = 7U;
+    Activate(8000U); request.gimbal_mode = GIMBAL_TEST;
+    Apply(8044U, 1U); /* Enter/latch test mode before accepting a new move. */
+    CHECK(PitchBackend_StartStep(30.0f)); Read();
+    CHECK(state.controller.shape.active && state.controller.target_deg == 30.0f);
+    CHECK(state.controller.shape.start_ms == 8044U && state.controller.shape.position_deg == state.controller.angle_deg);
+    PitchBackend_GetStep(&measurement);
+    CHECK(measurement.start_ms == 8044U && measurement.target_deg == 30.0f);
+    CHECK(measurement.shape_ms == 200U && measurement.shape_velocity_gain == 0.2f);
+    CHECK(!PitchBackend_SetShape(180U, 0.2f) && !PitchBackend_SetShape(200U, 0.3f));
+    CHECK(PitchBackend_SetShape(200U, 0.2f));
+    CHECK(PitchBackend_SetTarget(30.0f)); Read();
+    CHECK(state.controller.shape.start_ms == 8044U);
+    PitchBackend_GetStep(&measurement); CHECK(measurement.phase == PITCH_STEP_RUNNING);
+    CHECK(!PitchBackend_SetTarget(0.0f));
+    /* Feedback is a deterministic recorded path, not a plant/performance model. */
+    for (tick = 8046U; tick <= 8284U; tick += 2U) {
+        float u = (float)(tick - 8044U) / 200.0f;
+        float angle = u >= 1.0f ? 30.0f : 30.0f * u * u * u * (10.0f + u * (-15.0f + 6.0f * u));
+        frame = Feedback(tick, 1U, angle, 0.0f);
+        now_ms = tick; CHECK(PitchBackend_OnFrame(&frame)); Apply(tick, 1U);
+    }
+    CHECK(!state.controller.shape.active && state.controller.shape.position_deg == 30.0f);
+    CHECK(state.controller.shape.velocity_dps == 0.0f && state.controller.shape.acceleration_dps2 == 0.0f);
+    PitchBackend_GetStep(&measurement);
+    CHECK(measurement.phase == PITCH_STEP_RUNNING && measurement.start_ms == 8044U);
+    CHECK(measurement.target_deg == 30.0f && measurement.elapsed_ms == 240U);
+    CHECK(measurement.response_ms >= 180U && measurement.response_ms < 200U);
+    CHECK(!PitchBackend_SetShape(180U, 0.2f)); /* Lock lasts the full measurement, not only the profile. */
+    CHECK(PitchBackend_SetTarget(0.0f)); Read();
+    CHECK(state.controller.shape.active && state.controller.shape.start_ms == 8284U && state.controller.target_deg == 0.0f);
+    PitchBackend_GetStep(&measurement);
+    CHECK(measurement.phase == PITCH_STEP_ABORTED && measurement.reason == PITCH_STEP_TARGET_CHANGE);
+    CHECK(measurement.target_deg == 30.0f && measurement.start_ms == 8044U && measurement.shape_ms == 200U);
+    CHECK(!PitchBackend_SetShape(180U, 0.2f)); /* An active HOME profile also locks configuration. */
+    PitchBackend_Stop(); Read();
+    CHECK(!state.controller.shape.active && state.controller.shape.velocity_dps == 0.0f);
+    CHECK(PitchBackend_SetShape(180U, 0.3f));
+    CHECK(!PitchBackend_SetShape(99U, 0.3f) && !PitchBackend_SetShape(251U, 0.3f));
+    CHECK(!PitchBackend_SetShape(200U, -0.1f) && !PitchBackend_SetShape(200U, 1.1f));
     test_done = 1U;
 }

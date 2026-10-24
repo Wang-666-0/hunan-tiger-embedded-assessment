@@ -47,9 +47,14 @@ def main():
     output = Path(tempfile.mkdtemp(prefix="gimbal-foundation-selftests-"))
     groups = {
         "feeder_controller": [root / "test_feeder_controller.c", app / "feeder_controller.c"],
+        "feeder_single": [root / "test_feeder_single.c", app / "feeder_controller.c"],
+        "feeder_cadence": [root / "test_feeder_cadence.c", app / "target_manager.c"],
         "feeder_can": [root / "test_feeder_can.c"] + [app / (n + ".c") for n in (
             "can_bus", "dm3507", "gl60_ii", "can_frame", "dm_diag", "vesc_diag")],
         "feeder_backend": [root / "test_feeder_backend.c"] + [app / (n + ".c") for n in (
+            "feeder_controller", "feeder_backend", "feeder_console", "remote_mapper", "target_manager",
+            "app_logic", "safety_manager")],
+        "feeder_stream": [root / "test_feeder_stream.c"] + [app / (n + ".c") for n in (
             "feeder_controller", "feeder_backend", "feeder_console", "remote_mapper", "target_manager",
             "app_logic", "safety_manager")],
         "feeder_wheels": [root / "test_feeder_wheels.c"] + [app / (n + ".c") for n in (
@@ -120,6 +125,8 @@ def main():
     groups["yaw_shape_console"] = [root / "test_yaw_shape_console.c"] + [app / (n + ".c") for n in (
         "yaw_console", "yaw_backend", "yaw_controller", "yaw_step", "gl60_ii", "can_frame",
         "remote_mapper", "app_logic", "safety_manager", "target_manager")]
+    groups["yaw_repeat_step"] = groups["yaw_shape_console"].copy()
+    groups["yaw_repeat_step"][0] = root / "test_yaw_repeat_step.c"
     groups["yaw_step_assessment"] = [root / "test_yaw_step_assessment.c", app / "yaw_step.c"]
     groups["yaw_feedforward_console"] = [root / "test_yaw_feedforward_console.c"] + [app / (n + ".c") for n in (
         "yaw_console", "yaw_backend", "yaw_controller", "yaw_step", "gl60_ii", "can_frame",
@@ -134,7 +141,10 @@ def main():
         "can_bus", "gl60_ii", "can_frame", "dm_diag", "vesc_diag")]
     groups["pitch_protocol"] = [root / "test_pitch_protocol.c", app / "dm3507.c", app / "can_frame.c"]
     groups["pitch_controller"] = [root / "test_pitch_controller.c", app / "pitch_controller.c", app / "yaw_cascade.c"]
+    groups["pitch_observer"] = [root / "test_pitch_observer.c", app / "pitch_controller.c", app / "yaw_cascade.c"]
     groups["pitch_gravity"] = [root / "test_pitch_gravity.c", app / "pitch_controller.c", app / "yaw_cascade.c"]
+    groups["pitch_shape"] = [root / "test_pitch_shape.c", app / "pitch_controller.c", app / "yaw_cascade.c"]
+    groups["pitch_terminal_brake"] = [root / "test_pitch_terminal_brake.c", app / "pitch_controller.c", app / "yaw_cascade.c"]
     groups["pitch_step"] = [root / "test_pitch_step.c", app / "pitch_step.c", app / "yaw_step.c"]
     groups["pitch_backend"] = [root / "test_pitch_backend.c"] + [app / (n + ".c") for n in (
         "pitch_backend", "pitch_controller", "pitch_step", "dm3507", "yaw_cascade", "yaw_step", "can_frame")]
@@ -142,6 +152,10 @@ def main():
         "gimbal_startup", "yaw_console", "pitch_console", "yaw_backend", "yaw_controller", "yaw_step", "yaw_cascade", "gl60_ii",
         "pitch_backend", "pitch_controller", "pitch_step", "dm3507", "can_frame", "app_logic",
         "remote_mapper", "safety_manager", "target_manager")]
+    groups["pitch_test_hold"] = groups["pitch_gimbal_startup"].copy()
+    groups["pitch_test_hold"][0] = root / "test_gimbal_test_hold.c"
+    groups["pitch_view_hold"] = groups["pitch_gimbal_startup"].copy()
+    groups["pitch_view_hold"][0] = root / "test_gimbal_view_hold.c"
     groups["pitch_manual90"] = [root / "test_pitch_manual90.c"] + [app / (n + ".c") for n in (
         "pitch_backend", "pitch_controller", "pitch_step", "dm3507", "yaw_cascade", "yaw_step", "can_frame",
         "app_logic", "remote_mapper", "safety_manager", "target_manager")]
@@ -159,6 +173,11 @@ def main():
     groups["pitch_console_dma"] = [root / "test_pitch_console_dma.c"] + [app / (n + ".c") for n in (
         "app_console", "can_frame", "dm_diag", "vesc_diag")]
     groups["pitch_dual_uart_dma"] = groups["pitch_console_dma"]
+    groups["pitch_display_sim"] = [root / "test_pitch_display_sim.c"]
+    groups["feeder_speed_view"] = [root / "test_feeder_speed_view.c"] + [app / (n + ".c") for n in (
+        "app_console", "can_frame", "dm_diag", "vesc_diag")]
+    groups["feeder_speed_telemetry"] = [root / "test_feeder_speed_telemetry.c"] + [app / (n + ".c") for n in (
+        "feeder_controller", "feeder_backend", "feeder_console", "remote_mapper", "target_manager", "app_logic", "safety_manager")]
     groups["pitch_remote_dma"] = [root / "test_remote_input_dma.c"] + [app / (n + ".c") for n in (
         "remote_input", "ibus", "app_logic", "remote_mapper", "safety_manager", "target_manager")]
     for sources in groups.values():
@@ -213,6 +232,8 @@ def main():
         # Historical console fixtures mock only their original actuator APIs.
         # Feeder groups exercise the production three-actuator build explicitly.
         profile_flags += ["-DAPP_FEEDER_ENABLED=" + ("1" if name.startswith("feeder_") else "0")]
+        if name in ("yaw_shape", "yaw_shape_console", "yaw_feedforward", "yaw_feedforward_console"):
+            profile_flags += ["-DAPP_YAW_EXPERIMENTAL_TRACKING=1"]
         if name.endswith("_guarded"):
             profile_flags += ["-DYAW_CONTROLLER_SPEED_GUARD_ENABLED=1"]
         if name in ("yaw_controller_guarded", "yaw_backend_guarded", "yaw_console",

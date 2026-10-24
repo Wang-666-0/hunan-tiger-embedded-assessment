@@ -1,0 +1,54 @@
+{
+  "error": "",
+  "head": 400,
+  "values": [
+    400,
+    2,
+    3
+  ],
+  "status": "已接入 VOFA FireWater 显示文本（非原始串口流）· VOFA 尚未连接 · 清空/隐藏原接收区会影响完整性",
+  "notice": "",
+  "stats": {
+    "receivedLines": 418,
+    "telemetryLines": 400,
+    "otherLines": 18,
+    "droppedEvents": 0,
+    "droppedReports": 0,
+    "droppedReportLines": 0,
+    "truncatedLines": 0,
+    "gaps": 0
+  },
+  "reports": [
+    {
+      "command": "PITCH CHECK",
+      "status": "complete",
+      "lines": [
+        "P|BUSY|CHECK|QUERY|CC|123",
+        "P|CHECK|QUERY|NEW_FEEDBACK|ANGLE|30.12"
+      ]
+    },
+    {
+      "command": "PITCH PID",
+      "status": "complete",
+      "lines": [
+        "P|PID|PKP|1|PKI|0|PKD|0|VKP|2|VKI|0|VKD|0"
+      ]
+    }
+  ],
+  "events": [
+    "R|RX|EPOCH|30",
+    "R|RX|EPOCH|60",
+    "R|RX|EPOCH|90",
+    "P|STATUS|QUERY|SNAPSHOT_ONLY|ANGLE|31",
+    "R|RX|EPOCH|120",
+    "R|RX|EPOCH|150",
+    "R|RX|EPOCH|180",
+    "R|RX|EPOCH|210",
+    "R|RX|EPOCH|240",
+    "R|RX|EPOCH|270",
+    "R|RX|EPOCH|300",
+    "R|RX|EPOCH|330",
+    "R|RX|EPOCH|360",
+    "R|RX|EPOCH|390"
+  ]
+}

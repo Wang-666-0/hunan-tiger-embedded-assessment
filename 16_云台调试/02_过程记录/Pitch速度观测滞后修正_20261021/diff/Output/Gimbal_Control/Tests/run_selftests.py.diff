@@ -1,0 +1,10 @@
+--- before/Output/Gimbal_Control/Tests/run_selftests.py
++++ after/Output/Gimbal_Control/Tests/run_selftests.py
+@@ -139,6 +139,7 @@
+         "can_bus", "gl60_ii", "can_frame", "dm_diag", "vesc_diag")]
+     groups["pitch_protocol"] = [root / "test_pitch_protocol.c", app / "dm3507.c", app / "can_frame.c"]
+     groups["pitch_controller"] = [root / "test_pitch_controller.c", app / "pitch_controller.c", app / "yaw_cascade.c"]
++    groups["pitch_observer"] = [root / "test_pitch_observer.c", app / "pitch_controller.c", app / "yaw_cascade.c"]
+     groups["pitch_gravity"] = [root / "test_pitch_gravity.c", app / "pitch_controller.c", app / "yaw_cascade.c"]
+     groups["pitch_shape"] = [root / "test_pitch_shape.c", app / "pitch_controller.c", app / "yaw_cascade.c"]
+     groups["pitch_terminal_brake"] = [root / "test_pitch_terminal_brake.c", app / "pitch_controller.c", app / "yaw_cascade.c"]

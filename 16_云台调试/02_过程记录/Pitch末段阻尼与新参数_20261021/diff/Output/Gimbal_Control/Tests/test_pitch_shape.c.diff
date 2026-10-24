@@ -1,0 +1,32 @@
+--- before/Output/Gimbal_Control/Tests/test_pitch_shape.c
++++ after/Output/Gimbal_Control/Tests/test_pitch_shape.c
+@@ -10,6 +10,8 @@
+ {
+     uint32_t offset;
+     ready(base, 0.0f);
++    CHECK(PitchController_SetShape(&pitch, 200U, 0.2f)); /* Explicit legacy-profile fixture. */
++    CHECK(PitchController_SetBrakeEnabled(&pitch, 0U));
+     sample(base + 32U, start, 0.0f, 1U);
+     CHECK(PitchController_SetTarget(&pitch, start));
+     (void)PitchController_Update(&pitch, 0.0f, base + 32U, 1U);
+@@ -118,9 +120,9 @@
+     union { uint32_t bits; float value; } invalid;
+     test_stage = 1U;
+     PitchController_Init(&pitch);
+-    CHECK(pitch.shape.duration_ms == 200U && pitch.shape.velocity_gain == 0.2f && !pitch.shape.active);
+-    CHECK(pitch.cascade.position.kp == 13.81f && pitch.cascade.position.ki == 0.586f);
+-    CHECK(pitch.cascade.position.kd == 0.009f && pitch.cascade.speed.kp == 0.0061f);
++    CHECK(pitch.shape.duration_ms == 0U && pitch.shape.velocity_gain == 0.0f && !pitch.shape.active);
++    CHECK(pitch.cascade.position.kp == 14.4f && pitch.cascade.position.ki == 0.672f);
++    CHECK(pitch.cascade.position.kd == 0.009f && pitch.cascade.speed.kp == 0.0063f);
+     CHECK(pitch.cascade.speed.ki == 0.0874f && pitch.cascade.speed.kd == 0.000008f);
+     CHECK(pitch.gravity_kg_nm == -0.47f);
+     CHECK(!PitchController_SetShape(0, 200U, 0.2f));
+@@ -162,6 +164,7 @@
+     CHECK(PitchController_SetTarget(&pitch, 30.0f));
+     CHECK(!pitch.shape.active && pitch.shape.position_deg == 30.0f);
+     CHECK(pitch.cascade.position_i == pi && pitch.cascade.speed_i == vi);
++    CHECK(PitchController_SetTarget(&pitch, 10.0f));
+     CHECK(PitchController_StartMove(&pitch, 30.0f, now + 2U));
+     CHECK(pitch.shape.active);
+     CHECK(PitchController_SetTarget(&pitch, 10.0f));

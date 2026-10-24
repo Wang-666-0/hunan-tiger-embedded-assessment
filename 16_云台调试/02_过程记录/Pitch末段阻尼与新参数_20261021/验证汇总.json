@@ -1,0 +1,99 @@
+{
+  "recorded_at": "2026-10-21T09:19:11+08:00",
+  "success": true,
+  "groups": 72,
+  "checks": 558544,
+  "failures": 0,
+  "all_finished_returned": true,
+  "source_files_verified": 130,
+  "source_mismatch": [],
+  "pitch_groups": [
+    {
+      "name": "pitch_protocol",
+      "checks": 16430,
+      "failures": 0
+    },
+    {
+      "name": "pitch_controller",
+      "checks": 418,
+      "failures": 0
+    },
+    {
+      "name": "pitch_gravity",
+      "checks": 162,
+      "failures": 0
+    },
+    {
+      "name": "pitch_shape",
+      "checks": 3808,
+      "failures": 0
+    },
+    {
+      "name": "pitch_terminal_brake",
+      "checks": 3907,
+      "failures": 0
+    },
+    {
+      "name": "pitch_step",
+      "checks": 36,
+      "failures": 0
+    },
+    {
+      "name": "pitch_backend",
+      "checks": 709,
+      "failures": 0
+    },
+    {
+      "name": "pitch_gimbal_startup",
+      "checks": 3441,
+      "failures": 0
+    },
+    {
+      "name": "pitch_manual90",
+      "checks": 5912,
+      "failures": 0
+    },
+    {
+      "name": "pitch_console",
+      "checks": 806,
+      "failures": 0
+    },
+    {
+      "name": "pitch_can",
+      "checks": 381,
+      "failures": 0
+    },
+    {
+      "name": "pitch_remote",
+      "checks": 35,
+      "failures": 0
+    },
+    {
+      "name": "pitch_integration",
+      "checks": 38,
+      "failures": 0
+    },
+    {
+      "name": "pitch_telemetry",
+      "checks": 29312,
+      "failures": 0,
+      "telemetry_max_bytes": 348,
+      "telemetry_max_wire_us": 3777
+    },
+    {
+      "name": "pitch_console_dma",
+      "checks": 779,
+      "failures": 0
+    },
+    {
+      "name": "pitch_dual_uart_dma",
+      "checks": 781,
+      "failures": 0
+    },
+    {
+      "name": "pitch_remote_dma",
+      "checks": 1867,
+      "failures": 0
+    }
+  ]
+}

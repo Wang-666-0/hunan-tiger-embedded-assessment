@@ -5,9 +5,12 @@
 #define YAW_STEP_STEADY_MS 1000U
 #define YAW_STEP_BAND_DEG 0.2f
 #define YAW_STEP_SETTLE_HOLD_MS 50U
-/* 新考核独立跟踪，原±0.2统计/近零启动门禁保持。 */
-#define YAW_STEP_ASSESSMENT_BAND_DEG 0.5f
-#define YAW_STEP_ASSESSMENT_LIMIT_MS 250U
+/* 正式考核：最终进入±0.2后保持到窗口末，同时限制超调和稳态误差。 */
+#define YAW_STEP_RESPONSE_LIMIT_MS 250U
+#define YAW_STEP_OVERSHOOT_LIMIT_DEG 0.2f
+#define YAW_STEP_SSE_LIMIT_DEG 0.2f
+/* 仅吸收单精度相减的边界舍入，远小于一个编码器刻度。 */
+#define YAW_STEP_COMPARE_EPS_DEG 0.00001f
 #define YAW_STEP_UNREACHED 0xFFFFFFFFUL
 typedef enum { YAW_STEP_IDLE, YAW_STEP_RUNNING, YAW_STEP_DONE, YAW_STEP_ABORTED } YawStepPhase;
 typedef enum {
@@ -17,21 +20,22 @@ typedef enum {
 typedef struct {
     uint32_t id, start_ms, last_ms, elapsed_ms, samples, max_gap_ms;
     uint32_t t10_ms, t90_ms, response_ms, settle_ms, band_since_ms;
-    uint32_t response05_ms, settle05_ms, band05_since_ms;
     uint32_t ss_duration_ms, ss_samples, faults, limited_samples;
     uint32_t command_samples;
     uint32_t shape_ms;
+    float shape_velocity_gain;
     float start_deg, target_deg, span_deg, direction, last_angle_deg;
     float last_velocity_dps, last_torque_nm, overshoot_deg, overshoot_pct;
     float steady_error_deg, peak_velocity_dps, peak_torque_nm;
     float first_command_nm;
     float ss_integral, ss_max_error, kp, ki, kd;
     float vkp, vki, vkd, vmax_dps;
-    float ff_bias_nm, ff_angle_gain, ff_velocity_gain, ff_friction_nm, ff_velocity_dps, ff_limit_nm;
-    uint8_t ff_enabled, band05_active, pass05;
+    float ff_acceleration_gain, ff_limit_nm;
+    uint8_t ff_enabled;
     /* Pitch冻结试验条件；Yaw保持0，不使用这些字段。 */
     float gravity_kg_nm, gravity_offset_deg;
     uint8_t gravity_calibrated;
+    uint8_t pitch_brake_enabled;
     uint8_t cascade, output_limits;
     uint8_t phase, reason, pending, band_active, sse_valid, pass;
 } YawStep;
@@ -39,7 +43,8 @@ typedef struct {
  * t0为命令接受时刻，后续时间来自CAN实际接收戳；不使用VOFA绘图dt。
  * RESP=首次反馈进入目标±0.2度的时刻，不要求持续保持；一旦取得不改写。
  * SETTLE=窗口末仍在带内至少50ms的最后一次进入时刻；
- * 稳态值是第4~5秒的时间加权均值。 */
+ * 稳态值是第4~5秒的时间加权均值；有效还要求该段始终在±0.2内。
+ * PASS用SETTLE判时间；首次进入很快但随后离带不算通过。 */
 void YawStep_Init(YawStep *step);
 uint8_t YawStep_Start(YawStep *step, uint32_t now_ms, float start_deg, float target_deg);
 void YawStep_Sample(YawStep *step, uint32_t received_ms, float angle_deg,
@@ -48,4 +53,6 @@ void YawStep_Sample(YawStep *step, uint32_t received_ms, float angle_deg,
  * 独立于反馈采样，首个反馈即故障也不丢失已提交的首段指令。 */
 void YawStep_Command(YawStep *step, uint32_t now_ms, float torque_nm);
 void YawStep_Abort(YawStep *step, uint32_t now_ms, YawStepReason reason, uint32_t faults);
+/* 共用完成判定，调用轴提供250/300ms时限；无输出副作用。 */
+uint8_t YawStep_Passed(const YawStep *step, uint32_t limit_ms);
 #endif

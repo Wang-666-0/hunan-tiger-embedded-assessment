@@ -1,0 +1,27 @@
+--- before/Output/Gimbal_Control/App/pitch_console.c
++++ after/Output/Gimbal_Control/App/pitch_console.c
+@@ -335,7 +335,7 @@
+     if (strcmp(line, "PITCH BRAKE") == 0) {
+         PitchBackend_GetState(&pitch);
+         (void)snprintf(response, capacity,
+-            "P|BRAKE|MODE|TERMINAL_AND_RETURN|ENABLED|%u|TRACKING|%u|ACTIVE|%u|NM|%.6g|WINDOW_DEG|%.6g|GAIN|%.6g|MAX_NM|%.6g|DECEL_DPS2|%.6g|FLOOR_DPS|%.6g|TRIGGER_DPS|%.6g|RETURN_MS|%lu|RETURN_GAIN|%.6g|RETURN_MAX_NM|%.6g|PEAK_NM|%.6g|RETURN_PEAK_NM|%.6g|N|%lu|RETURN_N|%lu|DIRECT_STEP_DEFAULT|1\r\n",
++            "P|BRAKE|MODE|TERMINAL_AND_RETURN|ENABLED|%u|TRACKING|%u|ACTIVE|%u|NM|%.6g|WINDOW_DEG|%.6g|GAIN|%.6g|MAX_NM|%.6g|DECEL_DPS2|%.6g|FLOOR_DPS|%.6g|TRIGGER_DPS|%.6g|RETURN_MS|%lu|RETURN_GAIN|%.6g|RETURN_MAX_NM|%.6g|PEAK_NM|%.6g|RETURN_PEAK_NM|%.6g|N|%lu|RETURN_N|%lu|LAND_SEEN|%u|LAND_MS|%lu|VI_START_NM|%.6g|LAND_RAW_DPS|%.6g|LAND_FILT_DPS|%.6g|LAND_VREF_DPS|%.6g|LAND_VI_NM|%.6g|LAND_G_NM|%.6g|LAND_BRAKE_NM|%.6g|LAND_OUT_NM|%.6g|VI_MIN_AFTER_NM|%.6g|VI_MAX_AFTER_NM|%.6g|DIP_DEG|%.6g|DIP_MS|%lu|DIRECT_STEP_DEFAULT|1\r\n",
+             (unsigned)pitch.controller.brake.enabled, (unsigned)pitch.controller.brake.tracking,
+             (unsigned)pitch.controller.brake.active, (double)pitch.controller.brake.torque_nm,
+             (double)APP_PITCH_TERMINAL_BRAKE_WINDOW_DEG, (double)APP_PITCH_TERMINAL_BRAKE_GAIN,
+@@ -344,7 +344,14 @@
+             (unsigned long)APP_PITCH_CAPTURE_BRAKE_WINDOW_MS, (double)APP_PITCH_CAPTURE_BRAKE_GAIN,
+             (double)APP_PITCH_CAPTURE_BRAKE_LIMIT_NM, (double)pitch.controller.brake.peak_abs_nm,
+             (double)pitch.controller.brake.return_peak_nm, (unsigned long)pitch.controller.brake.active_frames,
+-            (unsigned long)pitch.controller.brake.return_frames);
++            (unsigned long)pitch.controller.brake.return_frames,
++            (unsigned)pitch.controller.landing.landed, (unsigned long)pitch.controller.landing.land_ms,
++            (double)pitch.controller.landing.start_i_nm, (double)pitch.controller.landing.land_raw_dps,
++            (double)pitch.controller.landing.land_filtered_dps, (double)pitch.controller.landing.land_target_dps,
++            (double)pitch.controller.landing.land_i_nm, (double)pitch.controller.landing.land_gravity_nm,
++            (double)pitch.controller.landing.land_brake_nm, (double)pitch.controller.landing.land_torque_nm,
++            (double)pitch.controller.landing.min_i_nm, (double)pitch.controller.landing.max_i_nm,
++            (double)pitch.controller.landing.dip_deg, (unsigned long)pitch.controller.landing.dip_ms);
+         return 1U;
+     }
+     if (pending_operation) {

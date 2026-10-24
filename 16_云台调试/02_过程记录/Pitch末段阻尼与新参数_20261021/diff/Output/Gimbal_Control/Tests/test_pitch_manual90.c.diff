@@ -1,0 +1,16 @@
+--- before/Output/Gimbal_Control/Tests/test_pitch_manual90.c
++++ after/Output/Gimbal_Control/Tests/test_pitch_manual90.c
+@@ -10,10 +10,10 @@
+ static void Defaults(void)
+ {
+     Read();
+-    CHECK(state.controller.cascade.position.kp == 13.81f);
+-    CHECK(state.controller.cascade.position.ki == 0.586f);
++    CHECK(state.controller.cascade.position.kp == 14.4f);
++    CHECK(state.controller.cascade.position.ki == 0.672f);
+     CHECK(state.controller.cascade.position.kd == 0.009f);
+-    CHECK(state.controller.cascade.speed.kp == 0.0061f);
++    CHECK(state.controller.cascade.speed.kp == 0.0063f);
+     CHECK(state.controller.cascade.speed.ki == 0.0874f);
+     CHECK(state.controller.cascade.speed.kd == 0.000008f);
+     CHECK(state.controller.gravity_kg_nm == -0.47f);

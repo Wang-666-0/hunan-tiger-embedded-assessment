@@ -1,0 +1,24 @@
+{
+  "version": "C610_PHASE_50MS_V1H",
+  "groups": 6,
+  "checks": 60099,
+  "failures": 0,
+  "matching_source_hashes": 117,
+  "i0_sign": -1,
+  "i1_sign": -1,
+  "target_display": "accepted boundary staircase",
+  "nominal_interval_ms": 50,
+  "step_deg": 40,
+  "control_period_ms": 2,
+  "build": "AC5/O0 full rebuild 69 sources",
+  "rom_bytes": 133140,
+  "ram_bytes": 36912,
+  "flashed": false,
+  "hardware_tested": false,
+  "artifact_sha256": {
+    "Gimbal_Control.axf": "66e753fc81e7083da5d69a294d42968ee0cf9a394ec0fa5171836ea415333bb9",
+    "Gimbal_Control.hex": "ec4b542b48c5afb8691e4c28ee9c9f8ace0ee170e3b75d118bc2181f0155eed8",
+    "compiler.log": "a472e75e0352962b66444685d9363e6612e464df676776f1c74030c29126fce4",
+    "builder.params": "48a0192ecc4705e07c12f04876aa689963c3a463a27a3304fe2d6a4e59252715"
+  }
+}

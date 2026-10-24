@@ -157,6 +157,19 @@
         "subCmds": []
       },
       {
+        "name": "人工恢复 READY",
+        "intro_on": true,
+        "intro": "仅人工单次发送；以板端返回及反馈值为准",
+        "hex_on": false,
+        "loop_on": false,
+        "loop_ms": 100,
+        "loop_count": 1,
+        "cmd_hex": "46 45 45 44 45 52 20 52 45 41 44 59 0A",
+        "is_group": false,
+        "down": false,
+        "subCmds": []
+      },
+      {
         "name": "位置 KP I6",
         "intro_on": true,
         "intro": "先在OFF状态手动转动核对方向及GEAR；确认前禁止ARM。输入初值不会自动生效，实际值看绑定反馈。",
@@ -334,6 +347,32 @@
         "loop_ms": 100,
         "loop_count": 1,
         "cmd_hex": "46 45 45 44 45 52 20 53 54 41 54 55 53 0A",
+        "is_group": false,
+        "down": false,
+        "subCmds": []
+      },
+      {
+        "name": "实际射频 RESULT",
+        "intro_on": true,
+        "intro": "读取编码器实际完成边界的频率，不能代替实弹计数",
+        "hex_on": false,
+        "loop_on": false,
+        "loop_ms": 100,
+        "loop_count": 1,
+        "cmd_hex": "46 45 45 44 45 52 20 52 45 53 55 4C 54 0A",
+        "is_group": false,
+        "down": false,
+        "subCmds": []
+      },
+      {
+        "name": "人工恢复 READY",
+        "intro_on": true,
+        "intro": "安全OFF且确认机构起点后人工恢复；正常启动自动准备，无需点击",
+        "hex_on": false,
+        "loop_on": false,
+        "loop_ms": 100,
+        "loop_count": 1,
+        "cmd_hex": "46 45 45 44 45 52 20 52 45 41 44 59 0A",
         "is_group": false,
         "down": false,
         "subCmds": []

@@ -1,0 +1,28 @@
+{
+  "success": true,
+  "version": "C610_POSITION_DIAG_V1B",
+  "groups": 68,
+  "checks": 528053,
+  "failures": 0,
+  "build_sources": 69,
+  "changed_app_files": [
+    "app_config.h",
+    "feeder_console.c",
+    "feeder_controller.c",
+    "feeder_controller.h"
+  ],
+  "unchanged_app_files": 62,
+  "original_config_defines_preserved_except_feeder_version": true,
+  "defaults_motion_and_jump_thresholds_preserved": true,
+  "output_step_deg": 40,
+  "manual_calibration_deg": 90,
+  "static_stack_bytes_plus_unknown": {
+    "ConsoleTask": 2032,
+    "ControlTask": 1760,
+    "CanTask": 344,
+    "RemoteTask": 188
+  },
+  "hardware_tested": false,
+  "flashed": false,
+  "hex_generated": false
+}

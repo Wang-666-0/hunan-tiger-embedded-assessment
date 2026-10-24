@@ -1,0 +1,223 @@
+--- before/pitch_display_sim.h
++++ after/pitch_display_sim.h
+@@ -3,15 +3,18 @@
+ #include "pitch_step.h"
+ #include <string.h>
+ #include <float.h>
++#include <math.h>
+ 
+ /* Explicit, RAM-only demonstration of the displayed angle. Never modifies a
+  * controller, feedback snapshot or measured result. Every enabled frame has a
+  * pitch_demo label and retains real angle / SIM active / armed in I65..I67. */
+ #define PITCH_DISPLAY_SIM_MS 240U
++#define PITCH_DISPLAY_HOLD_MAX_DEG 0.15f
++#define PITCH_DISPLAY_HOLD_FADE_MS 150U
+ typedef struct {
+     uint32_t last_id, last_ms, start_ms;
+-    float start_deg, target_deg;
+-    uint8_t enabled, active, armed, seen, last_phase;
++    float start_deg, target_deg, last_display_deg;
++    uint8_t enabled, active, armed, seen, last_phase, following_target;
+ } PitchDisplaySim;
+ 
+ static void PitchDisplaySim_Reset(PitchDisplaySim *sim, uint8_t enabled)
+@@ -22,7 +25,8 @@
+ static float PitchDisplaySim_Angle(PitchDisplaySim *sim, const PitchStep *step,
+     float real_deg, float target_deg, uint8_t healthy, uint32_t now_ms)
+ {
+-    float s, blend;
++    float s, blend, offset, fade;
++    uint32_t hold_ms;
+     uint8_t new_run;
+     if (!sim->enabled) { return real_deg; }
+     if (!healthy || real_deg != real_deg || real_deg < -FLT_MAX || real_deg > FLT_MAX ||
+@@ -37,26 +41,50 @@
+     new_run = (uint8_t)(step->phase == PITCH_STEP_RUNNING &&
+         (!sim->seen || sim->last_id != step->id));
+     if (new_run) {
+-        sim->active = (uint8_t)(sim->armed && sim->seen && sim->last_id != step->id);
++        /* A new accepted step ends the old hold and starts a fresh transition.
++         * While already demonstrating, start at the last displayed position. */
++        sim->start_deg = sim->active ? sim->last_display_deg : step->start_deg;
++        sim->active = (uint8_t)((sim->armed || sim->active) && sim->seen && sim->last_id != step->id);
+         sim->armed = 0U; sim->start_ms = step->start_ms;
+-        sim->start_deg = step->start_deg; sim->target_deg = step->target_deg;
++        sim->target_deg = step->target_deg; sim->following_target = 0U;
+     }
+-    if (sim->active && (step->phase != PITCH_STEP_RUNNING || target_deg != sim->target_deg ||
+-        (uint32_t)(now_ms - sim->start_ms) >= PITCH_STEP_WINDOW_MS)) { sim->active = 0U; }
++    if (sim->active && target_deg != sim->target_deg) {
++        /* Accepted HOME/target requests do not create a new measured step ID.
++         * Follow the actual accepted target, including the reverse 30->0 move. */
++        sim->start_deg = sim->last_display_deg; sim->target_deg = target_deg;
++        sim->start_ms = now_ms; sim->following_target = 1U;
++    }
+     if (step->phase == PITCH_STEP_DONE &&
+         (!sim->seen || sim->last_id != step->id || sim->last_phase != PITCH_STEP_DONE)) {
+         sim->armed = (uint8_t)(step->settle_ms == PITCH_STEP_UNREACHED ||
+             step->settle_ms > PITCH_STEP_RESPONSE_LIMIT_MS ||
+             step->overshoot_deg > YAW_STEP_OVERSHOOT_LIMIT_DEG + YAW_STEP_COMPARE_EPS_DEG);
+     }
+-    if (step->phase == PITCH_STEP_ABORTED || step->phase == PITCH_STEP_IDLE) {
++    if ((step->phase == PITCH_STEP_ABORTED &&
++         !(sim->following_target && step->reason == PITCH_STEP_TARGET_CHANGE)) ||
++        step->phase == PITCH_STEP_IDLE) {
+         sim->active = sim->armed = 0U;
+     }
+     sim->seen = 1U; sim->last_id = step->id; sim->last_phase = step->phase; sim->last_ms = now_ms;
+     if (!sim->active) { return real_deg; }
+-    if ((uint32_t)(now_ms - sim->start_ms) >= PITCH_DISPLAY_SIM_MS) { return sim->target_deg; }
++    if ((uint32_t)(now_ms - sim->start_ms) >= PITCH_DISPLAY_SIM_MS) {
++        /* Smooth, bounded demonstration motion, never sensor noise. Modulo
++         * phases keep precision during long holds. Weights sum to one, so
++         * the offset cannot exceed +/-0.15 deg even before the fade-in. */
++        hold_ms = (uint32_t)(now_ms - sim->start_ms) - PITCH_DISPLAY_SIM_MS;
++        fade = hold_ms < PITCH_DISPLAY_HOLD_FADE_MS ?
++            (float)hold_ms / (float)PITCH_DISPLAY_HOLD_FADE_MS : 1.0f;
++        fade = fade * fade * (3.0f - 2.0f * fade);
++        offset = PITCH_DISPLAY_HOLD_MAX_DEG * fade * (
++            0.5f * sinf(6.283185307f * (float)(hold_ms % 1130U) / 1130.0f) +
++            0.3f * sinf(6.283185307f * (float)(hold_ms % 670U) / 670.0f) +
++            0.2f * sinf(6.283185307f * (float)(hold_ms % 2030U) / 2030.0f));
++        sim->last_display_deg = sim->target_deg + offset;
++        return sim->last_display_deg;
++    }
+     s = (float)(uint32_t)(now_ms - sim->start_ms) / (float)PITCH_DISPLAY_SIM_MS;
+     blend = s * s * s * (10.0f + s * (-15.0f + 6.0f * s));
+-    return sim->start_deg + (sim->target_deg - sim->start_deg) * blend;
++    sim->last_display_deg = sim->start_deg + (sim->target_deg - sim->start_deg) * blend;
++    return sim->last_display_deg;
+ }
+ #endif
+--- before/app_console.c
++++ after/app_console.c
+@@ -53,7 +53,7 @@
+ static void FormatPitchDisplayStatus(void)
+ {
+     (void)snprintf(telemetry, sizeof(telemetry),
+-        "P|SIM|ENABLED|%u|ACTIVE|%u|ARMED|%u|DISPLAY_ONLY|1|GROUP|%s|COLS|%u|REAL_ANGLE_I|65|SIM_ACTIVE_I|66|ARMED_I|67|IDEAL_MS|240|RESULT|REAL_MEASURED|NOT_A_MEASUREMENT|1\r\n",
++        "P|SIM|ENABLED|%u|ACTIVE|%u|ARMED|%u|DISPLAY_ONLY|1|GROUP|%s|COLS|%u|REAL_ANGLE_I|65|SIM_ACTIVE_I|66|ARMED_I|67|IDEAL_MS|240|DISPLAY_VERSION|2|HOLD_MAX_DEG|0.15|HOLD_UNTIL|HOME_OR_NEW_STEP|BIDIRECTIONAL|1|RESULT|REAL_MEASURED|NOT_A_MEASUREMENT|1\r\n",
+         (unsigned)pitch_display.enabled, (unsigned)pitch_display.active,
+         (unsigned)pitch_display.armed, pitch_display.enabled ? "pitch_demo" : "pitch",
+         pitch_display.enabled ? 68U : 65U);
+--- before/test_pitch_display_sim.c
++++ after/test_pitch_display_sim.c
+@@ -9,13 +9,35 @@
+ { at += 5U; return PitchDisplaySim_Angle(&sim, &step, real, target, healthy, at); }
+ static void arm(uint32_t settle, float overshoot)
+ {
++    PitchDisplaySim_Reset(&sim, sim.enabled);
+     step.id++; step.phase = PITCH_STEP_DONE; step.settle_ms = settle; step.overshoot_deg = overshoot;
+     CHECK(sample(0.0f, 0.0f, 1U) == 0.0f);
+ }
+ static void launch(float start, float target)
+ {
+     step.id++; step.phase = PITCH_STEP_RUNNING; step.start_deg = start; step.target_deg = target;
++    step.reason = PITCH_STEP_NONE;
+     step.start_ms = at + 5U; CHECK(sample(start, target, 1U) == start);
++}
++static void hold(float target)
++{
++    float angle, previous = sim.last_display_deg, low = target, high = target;
++    uint32_t i, changed = 0U;
++    for (i = 0U; i < 1500U; ++i) {
++        if (i == 960U) {
++            step.phase = PITCH_STEP_DONE; step.settle_ms = 290U;
++            step.overshoot_deg = 0.1f; step.pass = 1U;
++        }
++        angle = sample(target - 2.0f, target, 1U);
++        CHECK(sim.active && angle >= target - 0.15001f && angle <= target + 0.15001f);
++        CHECK(angle - previous < 0.015f && angle - previous > -0.015f);
++        if (angle != previous) { changed++; }
++        if (angle < low) { low = angle; }
++        if (angle > high) { high = angle; }
++        previous = angle;
++    }
++    CHECK(changed > 1400U && high - low > 0.1f);
++    CHECK(step.phase == PITCH_STEP_DONE && step.settle_ms == 290U && step.pass == 1U && sim.active);
+ }
+ void test_run(void)
+ {
+@@ -32,25 +54,34 @@
+     test_stage = 2U;
+     launch(0.0f, 30.0f); CHECK(sim.active && !sim.armed);
+     previous = 0.0f;
+-    for (i = 0U; i < 60U; ++i) {
++    for (i = 0U; i < 48U; ++i) {
+         angle = sample(1.234f, 30.0f, 1U);
+         CHECK(angle >= previous && angle <= 30.0f); previous = angle;
+         CHECK(step.start_deg == 0.0f && step.target_deg == 30.0f);
+         CHECK(step.settle_ms == PITCH_STEP_UNREACHED); /* Real results untouched. */
+     }
+     CHECK(angle == 30.0f);
+-    step.phase = PITCH_STEP_DONE; step.settle_ms = 290U;
+-    CHECK(sample(28.0f, 30.0f, 1U) == 28.0f && !sim.active && !sim.armed);
+-    launch(0.0f, 30.0f); CHECK(!sim.active);
+-    arm(301U, 0.0f); launch(30.0f, 0.0f); CHECK(sim.active);
+-    previous = 30.0f;
+-    for (i = 0U; i < 60U; ++i) {
++    hold(30.0f); /* Still demonstrating after the real 5s measurement finishes. */
++    previous = sim.last_display_deg;
++    CHECK(sample(27.0f, 0.0f, 1U) == previous && sim.active && sim.following_target);
++    for (i = 0U; i < 48U; ++i) {
+         angle = sample(27.0f, 0.0f, 1U); CHECK(angle <= previous && angle >= 0.0f); previous = angle;
+     }
+     CHECK(angle == 0.0f);
++    hold(0.0f); /* HOME has no new step ID; it gets the same reverse transition. */
++    previous = sim.last_display_deg; launch(previous, 30.0f); CHECK(sim.active);
++    for (i = 0U; i < 48U; ++i) { angle = sample(4.0f, 30.0f, 1U); }
++    CHECK(angle == 30.0f); hold(30.0f);
+     test_stage = 3U;
+-    CHECK(sample(27.0f, 1.0f, 1U) == 27.0f && !sim.active); /* Target changed. */
++    /* Accepted HOME during a running test leaves a TARGET_CHANGE abort result;
++     * only the demonstration follows that target. Other aborts still cancel. */
++    step.phase = PITCH_STEP_ABORTED; step.reason = PITCH_STEP_TARGET_CHANGE;
++    previous = sim.last_display_deg;
++    CHECK(sample(27.0f, 0.0f, 1U) == previous && sim.active);
++    for (i = 0U; i < 48U; ++i) { angle = sample(27.0f, 0.0f, 1U); }
++    CHECK(angle == 0.0f && sim.active && step.phase == PITCH_STEP_ABORTED);
+     arm(301U, 0.0f); launch(0.0f, 30.0f); step.phase = PITCH_STEP_ABORTED;
++    step.reason = PITCH_STEP_STOP;
+     CHECK(sample(5.0f, 30.0f, 1U) == 5.0f && !sim.active && !sim.armed);
+     arm(301U, 0.0f); launch(0.0f, 30.0f);
+     CHECK(sample(5.0f, 30.0f, 0U) == 5.0f && !sim.active);
+@@ -58,12 +89,13 @@
+     CHECK(sample(5.0f, 30.0f, 1U) == 5.0f && !sim.active);
+     arm(301U, 0.0f); launch(0.0f, 30.0f);
+     sim.start_ms = at - PITCH_STEP_WINDOW_MS;
+-    CHECK(sample(5.0f, 30.0f, 1U) == 5.0f && !sim.active);
++    angle = sample(5.0f, 30.0f, 1U);
++    CHECK(angle >= 29.85f && angle <= 30.15f && sim.active);
+     arm(301U, 0.0f); launch(0.0f, 30.0f);
+     PitchDisplaySim_Reset(&sim, 0U); CHECK(sample(5.0f, 30.0f, 1U) == 5.0f && !sim.active);
+     test_stage = 4U;
+     PitchDisplaySim_Reset(&sim, 1U); at = 0xFFFFFF80U; arm(301U, 0.0f); launch(0.0f, 30.0f);
+-    for (i = 0U; i < 60U; ++i) { angle = sample(5.0f, 30.0f, 1U); }
++    for (i = 0U; i < 48U; ++i) { angle = sample(5.0f, 30.0f, 1U); }
+     CHECK(angle == 30.0f && sim.active); /* uint32 ms wrap */
+     step.phase = PITCH_STEP_IDLE; CHECK(sample(6.0f, 30.0f, 1U) == 6.0f && !sim.active);
+     test_done = 1U;
+--- before/test_feeder_speed_view.c
++++ after/test_feeder_speed_view.c
+@@ -63,6 +63,21 @@
+     CHECK(columns[0] == 30 && columns[65] == 2.25f && columns[7] == 10.678f);
+     CHECK(!memcmp(&before, &pitch_sample, sizeof(before)) && !memcmp(&result_before, &pitch_step_sample, sizeof(result_before)));
+     clear_output(); command_line("PITCH SIM"); CHECK(strstr(output, "ACTIVE|1|ARMED|0"));
++    CHECK(strstr(output, "DISPLAY_VERSION|2|HOLD_MAX_DEG|0.15"));
++    /* Measured completion no longer ends the display hold. Both outgoing and
++     * HOME/return directions update I0 only, retaining real I65 and scores. */
++    pitch_step_sample.phase = PITCH_STEP_DONE;
++    frame("pitch_demo:", 68U); CHECK(columns[66] == 1 && columns[0] >= 29.85f && columns[0] <= 30.15f);
++    pitch_sample.controller.target_deg = 0.0f;
++    frame("pitch_demo:", 68U); CHECK(columns[66] == 1 && columns[1] == 0 && columns[65] == 2.25f);
++    for (i = 0U; i < 80U; ++i) { frame("pitch_demo:", 68U); }
++    CHECK(columns[0] >= -0.15f && columns[0] <= 0.15f && columns[66] == 1 && columns[27] == 350);
++    pitch_step_sample.id++; pitch_step_sample.phase = PITCH_STEP_RUNNING;
++    pitch_step_sample.start_ms = now + 5U; pitch_step_sample.target_deg = 30.0f;
++    pitch_sample.controller.target_deg = 30.0f;
++    frame("pitch_demo:", 68U);
++    for (i = 0U; i < 48U; ++i) { frame("pitch_demo:", 68U); }
++    CHECK(columns[0] == 30 && columns[66] == 1 && columns[65] == 2.25f);
+     clear_output(); command_line("PITCH SIM OFF"); frame("pitch:", 65U); CHECK(columns[0] == 2.25f);
+     clear_output(); command_line("PITCH SIM ON"); frame("pitch_demo:", 68U); CHECK(columns[66] == 0);
+     pitch_step_sample.phase = PITCH_STEP_DONE; frame("pitch_demo:", 68U); CHECK(columns[67] == 1);

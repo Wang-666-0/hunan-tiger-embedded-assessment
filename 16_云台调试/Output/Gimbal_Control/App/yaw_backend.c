@@ -10,6 +10,7 @@ static YawStep step;
 static YawRemoteStepEvent remote_step_event;
 static uint32_t last_step_sequence;
 static uint8_t remote_event_pending, step_from_remote;
+static GimbalMode last_mode;
 static uint8_t monitoring, cancel_pending, sent, rearm_request;
 static uint8_t preparation_hold;
 static float last_submitted_torque_nm;
@@ -34,6 +35,32 @@ static uint8_t Online(uint32_t now)
     return state.controller.have_feedback &&
         (uint32_t)(now - state.feedback.received_ms) < YAW_CONTROLLER_FEEDBACK_TIMEOUT_MS &&
         state.feedback.fault_epoch == bus.fault_epoch;
+}
+
+static uint32_t StepBlocks(uint32_t now)
+{
+    uint32_t blocks = 0U;
+    if (!state.zero_set || !state.controller.have_reference) { blocks |= YAW_STEP_BLOCK_REFERENCE; }
+    if (!state.requested || !state.active || !state.controller.active) { blocks |= YAW_STEP_BLOCK_INACTIVE; }
+    if (state.enabling || state.stop_pending || clear_waiting_disable) { blocks |= YAW_STEP_BLOCK_TRANSITION; }
+    if (!Online(now) || state.feedback.status != 1U) { blocks |= YAW_STEP_BLOCK_FEEDBACK; }
+    if (state.controller.faults) { blocks |= YAW_STEP_BLOCK_FAULT; }
+    if (!CanBus_YawAllowed()) { blocks |= YAW_STEP_BLOCK_PERMISSION; }
+    if (fabsf(state.controller.target_deg) > YAW_STEP_BAND_DEG) { blocks |= YAW_STEP_BLOCK_HOME; }
+    if (fabsf(state.controller.angle_deg) > YAW_STEP_BAND_DEG) { blocks |= YAW_STEP_BLOCK_POSITION; }
+#if YAW_CONTROLLER_CASCADE_ENABLED
+    if (fabsf(state.controller.cascade.velocity_dps) > YAW_CONTROLLER_STATIONARY_SPEED_DPS ||
+        fabsf(state.controller.velocity_dps) > YAW_STEP_RAW_SPEED_SANITY_DPS) { blocks |= YAW_STEP_BLOCK_MOVING; }
+    if (state.step_still_samples < 2U || state.controller.last_feedback_ms - state.step_still_since_ms <
+        YAW_CONTROLLER_STATIONARY_HOLD_MS) { blocks |= YAW_STEP_BLOCK_STILL; }
+#else
+    if (fabsf(state.controller.velocity_dps) > YAW_CONTROLLER_STATIONARY_SPEED_DPS) { blocks |= YAW_STEP_BLOCK_MOVING; }
+    if (state.controller.stationary_samples < 2U || state.controller.last_feedback_ms - state.controller.stationary_started_ms <
+        YAW_CONTROLLER_STATIONARY_HOLD_MS) { blocks |= YAW_STEP_BLOCK_STILL; }
+#endif
+    if (step.phase == YAW_STEP_RUNNING) { blocks |= YAW_STEP_BLOCK_WINDOW; }
+    if (state.view_locked) { blocks |= YAW_STEP_BLOCK_VIEW; }
+    return blocks;
 }
 
 static uint8_t CaptureForStart(void)
@@ -76,6 +103,7 @@ void YawBackend_Init(void)
     YawStep_Init(&step);
     memset(&remote_step_event, 0, sizeof(remote_step_event));
     last_step_sequence = 0U; remote_event_pending = step_from_remote = 0U;
+    last_mode = GIMBAL_MANUAL;
     state.controller.motion_guard_active = 0U;
     monitoring = cancel_pending = sent = rearm_request = 0U;
     preparation_hold = 0U;
@@ -97,6 +125,11 @@ void YawBackend_GetState(YawBackendState *out)
     state.online = Online(HAL_GetTick());
     state.feedback_age_ms = state.controller.have_feedback ?
         (uint32_t)(HAL_GetTick() - state.feedback.received_ms) : 0U;
+    state.step_blocks = StepBlocks(HAL_GetTick());
+    state.step_still_ms = state.step_still_samples ? state.controller.last_feedback_ms - state.step_still_since_ms : 0U;
+    state.step_window_left_ms = step.phase == YAW_STEP_RUNNING &&
+        (uint32_t)(HAL_GetTick() - step.start_ms) < YAW_STEP_WINDOW_MS ?
+        YAW_STEP_WINDOW_MS - (uint32_t)(HAL_GetTick() - step.start_ms) : 0U;
     *out = state;
     taskEXIT_CRITICAL();
 }
@@ -107,6 +140,9 @@ void YawBackend_Stop(void)
     YawStep_Abort(&step, HAL_GetTick(), state.controller.faults ? YAW_STEP_FAULT : YAW_STEP_STOP,
                   state.controller.faults);
     state.step_hold = 0U;
+    state.view_hold_pending = state.view_locked;
+    last_mode = GIMBAL_MANUAL;
+    state.step_still_samples = 0U;
     step_from_remote = 0U;
     CanBus_SetYawPermission(0U);
     YawController_Stop(&state.controller);
@@ -204,6 +240,16 @@ uint8_t YawBackend_OnFrame(const CanFrame *frame)
         } else { clear_stationary_samples = 0U; }
         state.feedback = feedback; state.rx_count++;
         (void)YawController_OnFeedback(&state.controller, &feedback);
+        /* 重复STEP使用连续编码器静止观察；不改失能设零/清错的原始速度门禁。
+         * 原速度近零有量化和抖动，仅作为较宽的一致性检查，不能单独触发。 */
+        if (state.rx_count > 1U && gap && gap < YAW_CONTROLLER_FEEDBACK_TIMEOUT_MS &&
+            !state.controller.faults && feedback.status <= 1U &&
+            fabsf(state.controller.cascade.velocity_dps) <= YAW_CONTROLLER_STATIONARY_SPEED_DPS &&
+            fabsf(state.controller.velocity_dps) <= YAW_STEP_RAW_SPEED_SANITY_DPS &&
+            fabsf(delta * 57.2957795f) <= 0.05f + 0.5f * (float)gap / 1000.0f) {
+            if (!state.step_still_samples) { state.step_still_since_ms = feedback.received_ms; }
+            if (state.step_still_samples < 255U) { ++state.step_still_samples; }
+        } else { state.step_still_samples = 0U; }
         if (!state.controller.have_reference) { state.zero_set = 0U; }
         /* 仅标记新发生且来源明确的关闭状态运动记录。
          * 先去掉已被健康参考捕获清除的旧标签，不能把后来的运行故障误标。 */
@@ -248,7 +294,7 @@ uint8_t YawBackend_SetParameter(char parameter, float value)
         accepted = YawController_SetPid(&state.controller, state.controller.pid.kp, value, state.controller.pid.kd);
     } else if (parameter == 'D') {
         accepted = YawController_SetPid(&state.controller, state.controller.pid.kp, state.controller.pid.ki, value);
-    } else if (parameter == 'T' && state.active && Online(HAL_GetTick()) && CanBus_YawAllowed()) {
+    } else if (parameter == 'T' && !state.view_locked && state.active && Online(HAL_GetTick()) && CanBus_YawAllowed()) {
         accepted = YawController_SetTarget(&state.controller, value);
     }
     if (accepted) {
@@ -321,7 +367,8 @@ uint8_t YawBackend_SetFeedforward(char parameter, float value)
     uint8_t accepted = 0U, off_allowed, active_allowed;
     uint32_t revision;
     taskENTER_CRITICAL();
-    if (state.controller.shape.active && !(parameter == 'E' && value == 0.0f)) {
+    /* 五秒窗口内保持试验条件；显式关闭仍接受，并使本轮结果无效。 */
+    if (step.phase == YAW_STEP_RUNNING && !(parameter == 'E' && value == 0.0f)) {
         taskEXIT_CRITICAL(); return 0U;
     }
     off_allowed = (uint8_t)(!state.active && !state.enabling && !state.stop_pending);
@@ -369,26 +416,28 @@ uint8_t YawBackend_CaptureReference(void)
     taskEXIT_CRITICAL(); return accepted;
 }
 
+uint8_t YawBackend_SetShapeVelocityGain(float gain)
+{
+    uint8_t accepted = 0U;
+    taskENTER_CRITICAL();
+    if (gain == state.controller.shape.velocity_gain) { accepted = 1U; }
+    else if (step.phase != YAW_STEP_RUNNING) {
+        accepted = YawController_SetShapeVelocityGain(&state.controller, gain);
+    }
+    taskEXIT_CRITICAL(); return accepted;
+}
+
 uint8_t YawBackend_StartStep(float degrees)
 {
     uint8_t accepted = 0U;
     taskENTER_CRITICAL();
-    if ((degrees == 30.0f || degrees == -30.0f) && state.zero_set && state.requested &&
-        state.active && state.controller.active && !state.enabling && !state.stop_pending &&
-        !clear_waiting_disable && Online(HAL_GetTick()) && state.feedback.status == 1U &&
-        !state.controller.faults && CanBus_YawAllowed() &&
-        fabsf(state.controller.angle_deg) <= YAW_STEP_BAND_DEG &&
-        fabsf(state.controller.target_deg) <= YAW_STEP_BAND_DEG &&
-        fabsf(state.controller.velocity_dps) <= YAW_CONTROLLER_STATIONARY_SPEED_DPS &&
-        state.controller.stationary_samples >= 2U &&
-        state.controller.last_feedback_ms - state.controller.stationary_started_ms >=
-            YAW_CONTROLLER_STATIONARY_HOLD_MS && step.phase != YAW_STEP_RUNNING &&
+    if ((degrees == 30.0f || degrees == -30.0f) && !StepBlocks(HAL_GetTick()) &&
         YawController_SetTarget(&state.controller, degrees)) {
         accepted = YawStep_Start(&step, HAL_GetTick(), state.controller.angle_deg, degrees);
         if (accepted) {
             YawController_StartShape(&state.controller, step.start_ms);
             step.shape_ms = state.controller.shape.active ? state.controller.shape.duration_ms : 0U;
-            step.kp = state.controller.pid.kp; step.ki = state.controller.pid.ki; step.kd = state.controller.pid.kd;
+            step.shape_velocity_gain = state.controller.shape.active ? state.controller.shape.velocity_gain : 0.0f;
 #if YAW_CONTROLLER_CASCADE_ENABLED
             step.kp = state.controller.cascade.position.kp;
             step.ki = state.controller.cascade.position.ki;
@@ -400,9 +449,10 @@ uint8_t YawBackend_StartStep(float degrees)
             step.cascade = 1U;
             step.output_limits = YAW_CASCADE_OUTPUT_LIMITS_ENABLED;
             step.ff_enabled = state.controller.ff.enabled;
-            step.ff_bias_nm = state.controller.ff.bias_nm; step.ff_angle_gain = state.controller.ff.angle_gain;
-            step.ff_velocity_gain = state.controller.ff.velocity_gain; step.ff_friction_nm = state.controller.ff.friction_nm;
-            step.ff_velocity_dps = state.controller.ff.friction_velocity_dps; step.ff_limit_nm = state.controller.ff.limit_nm;
+            step.ff_acceleration_gain = state.controller.ff.acceleration_gain;
+            step.ff_limit_nm = state.controller.ff.limit_nm;
+#else
+            step.kp = state.controller.pid.kp; step.ki = state.controller.pid.ki; step.kd = state.controller.pid.kd;
 #endif
             step.last_velocity_dps = state.controller.velocity_dps;
             step.last_torque_nm = last_submitted_torque_nm;
@@ -411,6 +461,12 @@ uint8_t YawBackend_StartStep(float degrees)
         }
     }
     taskEXIT_CRITICAL(); return accepted;
+}
+uint32_t YawBackend_GetStepId(void)
+{
+    uint32_t id;
+    taskENTER_CRITICAL(); id = step.id; taskEXIT_CRITICAL();
+    return id;
 }
 void YawBackend_GetStep(YawStep *out)
 {
@@ -438,6 +494,8 @@ static void RemoteNotice(const TargetRequest *request, uint8_t result)
     remote_step_event.sequence = request->step_sequence;
     remote_step_event.target_deg = request->step_delta_deg;
     remote_step_event.result = result; remote_event_pending = 1U;
+    remote_step_event.blocks = result == 3U ? StepBlocks(HAL_GetTick()) : 0U;
+    if (result == 3U && !remote_step_event.blocks) { remote_step_event.blocks = YAW_STEP_BLOCK_PERMISSION; }
 }
 
 uint8_t YawBackend_TakeRearmRequest(void)
@@ -514,6 +572,46 @@ uint8_t YawBackend_ClearCommsFault(void)
     taskEXIT_CRITICAL(); return accepted;
 }
 
+uint8_t YawBackend_HoldCurrent(void)
+{
+    uint8_t accepted = 0U;
+    float target;
+    taskENTER_CRITICAL();
+    target = state.controller.angle_deg;
+    /* Match the existing start-capture allowance for endpoint quantization. */
+    if (target > YAW_CONTROLLER_TARGET_LIMIT_DEG &&
+        target <= YAW_CONTROLLER_TARGET_LIMIT_DEG + YAW_STEP_BAND_DEG) {
+        target = YAW_CONTROLLER_TARGET_LIMIT_DEG;
+    } else if (target < -YAW_CONTROLLER_TARGET_LIMIT_DEG &&
+        target >= -YAW_CONTROLLER_TARGET_LIMIT_DEG - YAW_STEP_BAND_DEG) {
+        target = -YAW_CONTROLLER_TARGET_LIMIT_DEG;
+    }
+    if (state.active && state.requested && !state.enabling && !state.stop_pending &&
+        Online(HAL_GetTick()) && state.feedback.status == 1U && CanBus_YawAllowed() &&
+        !state.controller.faults) {
+        if (state.view_locked && !state.view_hold_pending) { accepted = 1U; }
+        else if (YawController_SetTarget(&state.controller, target)) {
+            YawStep_Abort(&step, HAL_GetTick(), YAW_STEP_MANUAL, 0U);
+            /* Preserve observer and inner load compensation. */
+            state.controller.cascade.position_i = 0.0f;
+            state.controller.integral = 0.0f;
+            state.step_hold = 1U; step_from_remote = (uint8_t)!state.view_locked;
+            state.view_hold_pending = 0U; accepted = 1U;
+        }
+    }
+    taskEXIT_CRITICAL(); return accepted;
+}
+
+void YawBackend_SetViewLock(uint8_t locked)
+{
+    taskENTER_CRITICAL(); locked = (uint8_t)(locked != 0U);
+    if (state.view_locked != locked) {
+        state.view_locked = state.view_hold_pending = locked;
+        if (!locked) { state.step_hold = step_from_remote = 0U; }
+    }
+    taskEXIT_CRITICAL();
+}
+
 void YawBackend_Apply(const TargetRequest *request, uint8_t allowed, uint8_t diagnostic)
 {
     uint32_t now = HAL_GetTick();
@@ -579,10 +677,27 @@ void YawBackend_Apply(const TargetRequest *request, uint8_t allowed, uint8_t dia
         }
         taskEXIT_CRITICAL(); return;
     }
-    if (state.step_hold && step_from_remote && request->gimbal_mode != GIMBAL_TEST) {
+    if ((last_mode == GIMBAL_TEST || (state.step_hold && step_from_remote)) &&
+        request->gimbal_mode != GIMBAL_TEST) {
         YawStep_Abort(&step, now, YAW_STEP_MANUAL, 0U);
         YawBackend_Stop(); rearm_request = 1U; taskEXIT_CRITICAL(); return;
     }
+    if (state.view_locked && state.view_hold_pending && !YawBackend_HoldCurrent()) {
+        YawBackend_Stop(); rearm_request = 1U; taskEXIT_CRITICAL(); return;
+    }
+    if (new_step && state.view_locked && request->step_axis == GIMBAL_STEP_YAW) {
+        RemoteNotice(request, 3U); new_step = 0U;
+    }
+#if APP_REMOTE_PROFILE_ASSESSMENT
+    if (request->gimbal_mode == GIMBAL_TEST &&
+        (last_mode != GIMBAL_TEST || (new_step && request->step_axis == GIMBAL_STEP_PITCH))) {
+        if (!YawBackend_HoldCurrent()) {
+            if (new_step) { RemoteNotice(request, 3U); }
+            YawBackend_Stop(); rearm_request = 1U; taskEXIT_CRITICAL(); return;
+        }
+    }
+#endif
+    last_mode = request->gimbal_mode;
     if (new_step) {
         if (request->gimbal_mode != GIMBAL_TEST) { RemoteNotice(request, 3U); }
         else if (request->step_return_event
@@ -598,12 +713,12 @@ void YawBackend_Apply(const TargetRequest *request, uint8_t allowed, uint8_t dia
         } else { RemoteNotice(request, 3U); }
     }
     /* 测试模式保留TargetManager的CH4选方向、CH7确认/回参考；回中不清目标。 */
-    if (state.step_hold && request->yaw_rate_dps != 0.0f) {
+    if (!state.view_locked && state.step_hold && request->gimbal_mode == GIMBAL_MANUAL && request->yaw_rate_dps != 0.0f) {
         YawStep_Abort(&step, now, YAW_STEP_MANUAL, 0U);
         YawBackend_Stop(); rearm_request = 1U; taskEXIT_CRITICAL(); return;
     }
     (void)YawController_Update(&state.controller,
-        request->gimbal_mode == GIMBAL_MANUAL ? request->yaw_rate_dps : 0.0f, now, 1U);
+        request->gimbal_mode == GIMBAL_MANUAL && !state.view_locked ? request->yaw_rate_dps : 0.0f, now, 1U);
     if (state.controller.faults) {
         YawBackend_Stop(); rearm_request = 1U; taskEXIT_CRITICAL(); return;
     }

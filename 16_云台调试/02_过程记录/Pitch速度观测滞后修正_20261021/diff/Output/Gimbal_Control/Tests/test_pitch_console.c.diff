@@ -1,0 +1,22 @@
+--- before/Output/Gimbal_Control/Tests/test_pitch_console.c
++++ after/Output/Gimbal_Control/Tests/test_pitch_console.c
+@@ -94,9 +94,9 @@
+     ConsoleReset(100U);
+     CHECK(!PitchConsole_Handle("YAW STATUS", response, sizeof(response)));
+     Command("PITCH STATUS", "COORD_CONFIRMED|0"); CHECK(!query_calls && !disable_calls && !enable_calls);
+-    CHECK(strstr(response, "DM3507_CAPTURE_BRAKE_V2E") && strstr(response, "MIN_DEG|-18|MAX_DEG|33"));
++    CHECK(strstr(response, "DM3507_FAST_OBSERVER_V2F") && strstr(response, "MIN_DEG|-18|MAX_DEG|33"));
+     CHECK(strstr(response, "HARD_MIN_DEG|-19|HARD_MAX_DEG|34") && strstr(response, "SUPPORT_REQUIRED|1\r\n"));
+-    Command("PITCH", "P|STATE|DM3507_CAPTURE_BRAKE_V2E"); CHECK(strlen(response) < 300U);
++    Command("PITCH", "P|STATE|DM3507_FAST_OBSERVER_V2F"); CHECK(strlen(response) < 300U);
+     Command("PITCH HELP", "P|HELP|READ|PITCH;PID;RESULT;STATUS");
+     Command("PITCH ?", "PITCH_ONLY|COORD 1;GHORIZ");
+     Command("PITCH PID", "POS|14.4,0.687,0.009|VEL|0.0063,0.0874,8e-06|KG|-0.47");
+@@ -233,6 +233,7 @@
+     Command("PITCH SHAPE", "ACTIVE|0|REF_DEG|30|REF_DPS|0");
+     Command("PITCH BRAKE", "LAND_SEEN|1|LAND_MS|");
+     CHECK(strstr(response, "VI_START_NM|") && strstr(response, "LAND_OUT_NM|") && strstr(response, "DIP_DEG|"));
++    CHECK(strstr(response, "V_FILTER_MS|2|A_FILTER_MS|20|"));
+     CHECK(strstr(response, "DIRECT_STEP_DEFAULT|1\r\n") && strlen(response) < sizeof(response) - 1U);
+     Command("PITCH SHAPE 180", "P|ERROR|"); /* Full five-second measurement still owns the settings. */
+     Command("PITCH HOME", "P|OK|HOME");

@@ -11,6 +11,8 @@
 static FeederBackendState state;
 static uint8_t owned, rearm, was_allowed, single_pending, have_completed;
 static uint32_t last_tx_ms, last_success_ms, event_sequence, single_ms, completed_ms;
+static uint32_t auto_quiet_since;
+static uint8_t auto_quiet, reference_captured, manual_hold;
 
 static uint8_t Fresh(void)
 {
@@ -50,17 +52,23 @@ void FeederBackend_Init(void)
     memset(&state, 0, sizeof(state)); Feeder_Init(&state.controller);
     owned = rearm = was_allowed = single_pending = have_completed = 0U;
     last_tx_ms = last_success_ms = event_sequence = single_ms = completed_ms = 0U;
+    auto_quiet_since = 0U; auto_quiet = reference_captured = manual_hold = 0U;
 }
 
 void FeederBackend_Stop(void)
 {
     taskENTER_CRITICAL();
     state.armed = was_allowed = single_pending = 0U;
-    if (state.controller.busy) { state.controller.have_zero = 0U; }
+    if (state.controller.busy && state.controller.outstanding) { state.controller.have_zero = 0U; }
     Feeder_Stop(&state.controller);
     CanBus_SetFeederPermission(0U);
     if (owned) { state.stop_pending = 1U; }
     taskEXIT_CRITICAL();
+}
+
+void FeederBackend_ManualOff(void)
+{
+    taskENTER_CRITICAL(); manual_hold = 1U; FeederBackend_Stop(); taskEXIT_CRITICAL();
 }
 
 uint8_t FeederBackend_OnFrame(const CanFrame *frame)
@@ -113,6 +121,7 @@ uint8_t FeederBackend_Zero(void)
     taskENTER_CRITICAL();
     if (!state.armed && !state.stop_pending && RemoteGuard(1U)) {
         result = Feeder_Zero(&state.controller, HAL_GetTick());
+        if (result) { reference_captured = 1U; }
     }
     taskEXIT_CRITICAL(); return result;
 }
@@ -126,6 +135,43 @@ uint8_t FeederBackend_Arm(void)
         (state.controller.config.direction == 1 || state.controller.config.direction == -1)) {
         state.armed = owned = state.stop_pending = 1U;
         rearm = was_allowed = single_pending = 0U; result = 1U;
+        reference_captured = 1U;
+        manual_hold = 0U;
+    }
+    taskEXIT_CRITICAL(); return result;
+}
+
+uint8_t FeederBackend_Ready(void)
+{
+    uint8_t result = 0U;
+    taskENTER_CRITICAL();
+    /* Explicit human reference acknowledgement at safe OFF; never a boot action.
+     * All original clear/zero/arm guards still apply, including quiet feedback. */
+    if (!state.armed && !state.stop_pending && RemoteGuard(1U) && Fresh() &&
+        state.controller.config.calibrated && state.controller.config.direction &&
+        Feeder_Clear(&state.controller, HAL_GetTick()) &&
+        Feeder_Zero(&state.controller, HAL_GetTick())) { result = FeederBackend_Arm(); }
+    taskEXIT_CRITICAL(); return result;
+}
+
+uint8_t FeederBackend_PrepareRemote(void)
+{
+    uint8_t result = 0U;
+    uint32_t now;
+    taskENTER_CRITICAL(); now = HAL_GetTick();
+    /* Called only after the original gimbal preparation is ready. No motor
+     * movement during OFF; one initial reference per boot, never silent fault
+     * clearing or recapturing a half-shot reference after an interruption. */
+    if (manual_hold || state.armed || state.stop_pending || !RemoteGuard(1U) || !Fresh() ||
+        state.controller.faults || !state.controller.config.calibrated ||
+        !state.controller.config.direction ||
+        (reference_captured && !state.controller.have_zero) ||
+        state.controller.raw_rpm > state.controller.config.settle_rpm ||
+        state.controller.raw_rpm < -state.controller.config.settle_rpm) { auto_quiet = 0U; }
+    else {
+        if (!auto_quiet) { auto_quiet = 1U; auto_quiet_since = now; }
+        if (now - auto_quiet_since >= 100U && state.controller.recovery_samples >= 3U &&
+            (state.controller.have_zero || FeederBackend_Zero())) { result = FeederBackend_Arm(); }
     }
     taskEXIT_CRITICAL(); return result;
 }
@@ -145,7 +191,7 @@ uint8_t FeederBackend_Single(void)
 void FeederBackend_Apply(const TargetRequest *request, uint8_t output_allowed,
                          uint8_t wheels_ready, uint8_t diagnostic)
 {
-    uint32_t now, accepted, completed, faults;
+    uint32_t now, accepted, completed, aborted, faults;
     uint8_t eligible, allowed, event, was_busy, console_single;
     int16_t current;
     HAL_StatusTypeDef result;
@@ -153,7 +199,9 @@ void FeederBackend_Apply(const TargetRequest *request, uint8_t output_allowed,
     was_busy = state.controller.busy; faults = state.controller.faults;
     eligible = request && output_allowed && !diagnostic && request->gimbal_mode == GIMBAL_MANUAL &&
         request->friction_requested;
-    allowed = state.armed && eligible && wheels_ready && !state.stop_pending;
+    /* Speed readiness authorizes a new shot, not a half-shot abort. Actual
+     * wheel feedback loss/fault still revokes the shared output permission. */
+    allowed = state.armed && eligible && (wheels_ready || was_busy) && !state.stop_pending;
     console_single = single_pending;
     event = request && request->shot_event;
     if (single_pending) {
@@ -163,7 +211,9 @@ void FeederBackend_Apply(const TargetRequest *request, uint8_t output_allowed,
     }
     if (event) { event_sequence++; }
     accepted = state.controller.accepted; completed = state.controller.completed;
-    current = Feeder_Step(&state.controller, now, allowed, wheels_ready, event, event_sequence);
+    aborted = state.controller.aborted;
+    current = Feeder_Run(&state.controller, now, allowed, wheels_ready, event, event_sequence,
+                        request && request->continuous_fire && !console_single);
     if (state.controller.accepted != accepted) {
         if (!console_single && request && request->fire_mode == FIRE_CONTINUOUS) { state.continuous_accepted++; }
         else { state.single_accepted++; }
@@ -172,9 +222,9 @@ void FeederBackend_Apply(const TargetRequest *request, uint8_t output_allowed,
         state.completed_interval_ms = have_completed ? now - completed_ms : 0U;
         completed_ms = now; have_completed = 1U;
     }
-    if ((was_busy && !state.controller.busy && state.controller.completed == completed) ||
+    if (state.controller.aborted != aborted ||
         (state.armed && state.controller.faults != faults)) {
-        if (was_busy && state.controller.completed == completed) { state.controller.have_zero = 0U; }
+        if (state.controller.aborted != aborted) { state.controller.have_zero = 0U; }
         FeederBackend_Stop(); rearm = 1U; allowed = 0U;
     } else if (was_allowed && !eligible) {
         if (request && output_allowed && !diagnostic && request->gimbal_mode == GIMBAL_MANUAL) {

@@ -1,0 +1,19 @@
+✔ normal first run remains real and does not mutate its input (1.7332ms)
+✔ only the next new step after a failed completed result is simulated (2.3202ms)
+✔ ideal curve is monotone, stays within endpoints and settles at 240ms in both directions (0.8657ms)
+✔ completion restores real I0 immediately and retains the actual failed score (0.2559ms)
+✔ overshoot threshold triggers while a passing time and overshoot do not (0.2872ms)
+✔ aborts, disable, goal change and lost reception cancel simulation (0.3896ms)
+✔ an aborted old run does not arm the following run (0.1921ms)
+✔ stream decoder accepts split lines and native pitch prefix on its own line (0.7972ms)
+✔ other groups, malformed columns and nonfinite values cannot masquerade as pitch (0.362ms)
+✔ time reset clears automatic arming and storage is bounded (3.8454ms)
+✔ QML always identifies SIM and the receive bridge has no serial-send entry point (42.8892ms)
+ℹ tests 11
+ℹ suites 0
+ℹ pass 11
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 217.6721

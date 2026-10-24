@@ -1,0 +1,11 @@
+# Yaw V2M 加速度前馈面板
+
+这是独立生成的VOFA+原生JSON配置，不会自动修改正在使用的面板，也不会打开串口或发送命令。包含加速度前馈、PID、角度/速度/力矩诊断三个页面。
+
+请先备份当前VOFA配置，再按原导入流程加载本目录的cmds、tabviews和config文件。JSON结构和绑定已验证，原生GUI导入尚未验证。串口使用921600、8N1和FireWater，选择实际端口；关闭循环发送。固件需为GL60II_CASCADE_ACCEL_V2M。
+
+主要控件：FKA→I71，FMAX→I54，SHAPE→I64，SHAPEV→I70，FF状态→I48；实际加速度前馈I55，规划加速度I68。旧I49～I53固定0，旧补偿命令已删除。当前72列，PID和其它既有索引保持。
+
+首次测试先固定SHAPE160、SHAPEV0、FMAX0.05、FKA0且FF OFF，保存完整结果，再对比FKA0.000002且FF ON。每次只改变FKA。以5秒结束后的SETTLE05≤250 ms评估。
+
+详细操作见 ../../01_学习笔记/Yaw加速度前馈精简与VOFA_20261018.md。生成器为 ../Gimbal_Control/Tools/generate_yaw_ff_vofa.py。

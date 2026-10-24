@@ -71,9 +71,9 @@ void test_run(void)
     CHECK(saved.phase == YAW_STEP_DONE && saved.pass && saved.sse_valid && saved.response_ms == 200);
     CHECK(state.active && state.step_hold && state.controller.target_deg == 30);
     CHECK(YawConsole_Poll(report, sizeof(report)));
-    CHECK(strstr(report, "|RESP_MS|200|") && strstr(report, "|OS_DEG|0.000|") && strstr(report, "|SSE_VALID|1|PASS|1|"));
+    CHECK(strstr(report, "|RESP_MS|200|") && strstr(report, "|OS_DEG|0.000000|") && strstr(report, "|SSE_VALID|1|PASS|1|"));
     CHECK(strstr(report, "|SAT_N|") && strstr(report, "|PKP|8.0000|PKI|0.0000|PKD|0.0000|"));
-    CHECK(strstr(report, "|CTRL|CASCADE|VKP|0.001000|VKI|0.004000|VKD|0.000000|VREF_MAX_DPS|180.0|VFILTER_MS|10|OUTPUT_LIMITS|1|BAND05|0.5|"));
+    CHECK(strstr(report, "|CTRL|CASCADE|VKP|0.001000|VKI|0.004000|VKD|0.000000|VREF_MAX_DPS|180.0|VFILTER_MS|10|OUTPUT_LIMITS|1|BAND02|0.2|"));
     CHECK(strlen(report) < 900U && !YawConsole_Poll(report, sizeof(report)));
     Command(10072U, "YAW VKI 0.006", "Y|OK|PARAMETER");
     Command(10072U, "YAW RESULT", "|VKI|0.004000|");

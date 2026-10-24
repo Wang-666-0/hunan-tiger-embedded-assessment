@@ -1,0 +1,12 @@
+--- before/Output/Gimbal_Control/Tests/test_pitch_terminal_brake.c
++++ after/Output/Gimbal_Control/Tests/test_pitch_terminal_brake.c
+@@ -113,7 +113,8 @@
+     (void)PitchController_Update(&pitch, 0.0f, now, 1U);
+     CHECK(pitch.brake.approach_done && pitch.brake.torque_nm == 0.0f);
+     CHECK(pitch.landing.landed && pitch.landing.land_ms == 152U);
+-    CHECK(pitch.landing.land_raw_dps == 0.0f && pitch.landing.land_filtered_dps * sign > 100.0f);
++    CHECK(pitch.landing.land_raw_dps == 0.0f && pitch.landing.land_filtered_dps * sign > 90.0f &&
++          pitch.landing.land_filtered_dps * sign < 110.0f);
+     CHECK(pitch.landing.land_i_nm == pitch.cascade.speed_i && pitch.landing.land_torque_nm == pitch.torque_nm);
+     CHECK(pitch.landing.land_target_dps == pitch.cascade.target_velocity_dps);
+     CHECK(pitch.landing.land_gravity_nm == pitch.gravity_torque_nm && pitch.landing.land_brake_nm == pitch.brake.torque_nm);

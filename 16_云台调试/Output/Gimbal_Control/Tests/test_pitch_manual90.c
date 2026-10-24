@@ -10,12 +10,12 @@ static uint8_t near(float a, float b) { return (uint8_t)(fabsf(a - b) < 0.001f);
 static void Defaults(void)
 {
     Read();
-    CHECK(state.controller.cascade.position.kp == 18.2f);
-    CHECK(state.controller.cascade.position.ki == 0.44f);
-    CHECK(state.controller.cascade.position.kd == 0.04f);
-    CHECK(state.controller.cascade.speed.kp == 0.0065f);
-    CHECK(state.controller.cascade.speed.ki == 0.014f);
-    CHECK(state.controller.cascade.speed.kd == 0.000004f);
+    CHECK(state.controller.cascade.position.kp == 10.678f);
+    CHECK(state.controller.cascade.position.ki == 24.153f);
+    CHECK(state.controller.cascade.position.kd == 0.002f);
+    CHECK(state.controller.cascade.speed.kp == 0.00406f);
+    CHECK(state.controller.cascade.speed.ki == 0.0005f);
+    CHECK(state.controller.cascade.speed.kd == 0.000001f);
     CHECK(state.controller.gravity_kg_nm == -0.13f);
 }
 static void Tick(uint32_t ms, uint16_t ch5, uint16_t ch2, uint8_t fresh)

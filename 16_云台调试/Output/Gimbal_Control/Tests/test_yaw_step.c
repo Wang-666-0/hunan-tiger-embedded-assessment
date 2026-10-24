@@ -134,7 +134,7 @@ void test_run(void)
             CHECK(step.response_ms == 150U);
         }
         CHECK(step.phase == YAW_STEP_DONE && step.settle_ms == 500U);
-        CHECK(step.sse_valid && step.pass && step.steady_error_deg == 0.0f);
+        CHECK(step.sse_valid && !step.pass && step.steady_error_deg == 0.0f);
     }
     test_done = 1U;
 }

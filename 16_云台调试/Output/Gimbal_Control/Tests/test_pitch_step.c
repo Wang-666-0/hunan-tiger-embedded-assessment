@@ -43,7 +43,7 @@ void test_run(void)
         float angle = t == 150U || t >= 2000U ? 30.0f : 29.5f;
         PitchStep_Sample(&pitch, 100U + t, angle, 0.0f, 0.5f, 0U);
     }
-    CHECK(pitch.response_ms == 150U && pitch.settle_ms == 2000U && pitch.sse_valid && pitch.pass);
+    CHECK(pitch.response_ms == 150U && pitch.settle_ms == 2000U && pitch.sse_valid && !pitch.pass);
     test_stage = 4U;
     PitchStep_Init(&pitch); CHECK(PitchStep_Start(&pitch, 0U, 0.0f, 30.0f));
     for (t = 10U; t <= 5000U; t += 10U) {
@@ -68,6 +68,8 @@ void test_run(void)
     for (t = 10U; t <= 5000U; t += 10U) {
         PitchStep_Sample(&pitch, t, t < 300U ? 0.0f : 29.7f, 0.0f, 0.1f, 0U);
     }
-    CHECK(pitch.settle05_ms == 300U && pitch.pass05 && !pitch.pass);
+    CHECK(pitch.response_ms == PITCH_STEP_UNREACHED && pitch.settle_ms == PITCH_STEP_UNREACHED && !pitch.pass);
+    ramp(0U, 300U, 30.0f); CHECK(pitch.pass && !yaw.pass && pitch.settle_ms == 300U);
+    ramp(0U, 310U, 30.0f); CHECK(!pitch.pass && pitch.settle_ms == 310U);
     test_done = 1U;
 }

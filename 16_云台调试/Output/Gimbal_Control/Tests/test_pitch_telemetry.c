@@ -37,10 +37,10 @@ uint8_t YawConsole_Handle(const char *text, char *response, size_t capacity)
 }
 void YawBackend_GetState(YawBackendState *out) { *out = yaw_sample; }
 void YawBackend_GetStep(YawStep *out) { *out = yaw_step_sample; }
-static float columns[70];
+static float columns[72];
 static void parse(const char *group)
 {
-    uint32_t i, count = strcmp(group, "pitch:") == 0 ? 58U : 70U;
+    uint32_t i, count = strcmp(group, "pitch:") == 0 ? 65U : 72U;
     const char *cursor = output + strlen(group);
     char *end;
     CHECK(strncmp(output, group, strlen(group)) == 0);
@@ -65,7 +65,7 @@ void PITCH_TELEMETRY_TEST_ENTRY(void)
     yaw_sample.controller.angle_deg = 11.25f; yaw_sample.controller.cascade.position.kp = 10.0f;
     now = 100U; clear_output(); AppConsole_Poll(); parse("gimbal:");
     CHECK(columns[0] == 11.25f && columns[7] == 10.0f);
-    clear_output(); command_line("TELEM PITCH"); CHECK(strstr(output, "GROUP|pitch|COLS|58") != 0);
+    clear_output(); command_line("TELEM PITCH"); CHECK(strstr(output, "GROUP|pitch|COLS|65") != 0);
     remote_yaw = 1471U; remote_other_sticks[0] = 1482U;
     remote_other_sticks[1] = 1513U; remote_other_sticks[2] = 1524U;
     pitch_sample.controller.angle_deg = -1.234f; pitch_sample.controller.target_deg = 30.0f;
@@ -85,13 +85,20 @@ void PITCH_TELEMETRY_TEST_ENTRY(void)
     pitch_sample.controller.pid_torque_nm = 7.38f;
     pitch_sample.controller.cascade.speed_i = -0.03f;
     pitch_sample.controller.gravity_calibrated = 1U;
+    pitch_sample.controller.brake.torque_nm = -0.08f;
+    pitch_sample.controller.brake.active = 1U;
+    pitch_sample.controller.shape.position_deg = 14.75f;
+    pitch_sample.controller.shape.velocity_dps = 281.25f;
+    pitch_sample.controller.shape.active = 1U;
+    pitch_sample.controller.shape.duration_ms = 200U;
+    pitch_sample.controller.shape.velocity_gain = 0.2f;
     pitch_sample.online = pitch_sample.active = pitch_sample.requested = pitch_sample.zero_set = 1U;
     pitch_sample.coord_confirmed = 1U; pitch_sample.feedback.status = 1U;
     pitch_sample.feedback.temp_mos = 38U; pitch_sample.feedback.temp_rotor = 41U;
     pitch_sample.rx_count = 210U; pitch_sample.feedback_age_ms = 2U;
     pitch_sample.feedback.position_rad = 0.2f; pitch_sample.feedback.velocity_rad_s = 1.6f;
     pitch_step_sample.id = 3U; pitch_step_sample.phase = PITCH_STEP_DONE;
-    pitch_step_sample.response_ms = 290U; pitch_step_sample.settle_ms = 800U;
+    pitch_step_sample.response_ms = 290U; pitch_step_sample.settle_ms = 290U;
     pitch_step_sample.overshoot_deg = 0.1f; pitch_step_sample.steady_error_deg = -0.02f;
     pitch_step_sample.sse_valid = pitch_step_sample.pass = 1U;
     pitch_step_sample.t10_ms = 30U; pitch_step_sample.t90_ms = 180U;
@@ -102,13 +109,16 @@ void PITCH_TELEMETRY_TEST_ENTRY(void)
     CHECK(columns[10] == 0.02f && columns[11] == 0.03f && columns[12] == 0.00005f);
     CHECK(columns[14] == 1 && columns[15] == 1 && columns[17] == 1 && columns[19] == 2);
     CHECK(columns[21] == 1 && columns[23] == 1 && columns[24] == 3);
-    CHECK(columns[26] == 290 && columns[27] == 800 && columns[31] == 1 && columns[32] == 1);
+    CHECK(columns[26] == 290 && columns[27] == 290 && columns[31] == 1 && columns[32] == 1);
     CHECK(columns[33] == 180 && columns[34] == 150 && columns[37] == 1 && columns[38] == 210);
     CHECK(columns[46] == 38 && columns[47] == 41);
     CHECK(columns[41] == 1000 && columns[42] == 1500 && columns[43] == 1500 && columns[44] == 2000);
     CHECK(columns[48] == 1471 && columns[49] == 1482 && columns[50] == 1513 && columns[51] == 1524);
     CHECK(columns[52] == -0.21f && columns[53] == 12.0f && columns[54] == -0.18f);
     CHECK(columns[55] == 7.38f && columns[56] == -0.03f && columns[57] == 1.0f);
+    CHECK(columns[58] == -0.08f && columns[59] == 1.0f);
+    CHECK(columns[60] == 14.75f && columns[61] == 281.25f && columns[62] == 1.0f);
+    CHECK(columns[63] == 200.0f && columns[64] == 0.2f);
     test_stage = 2U;
     clear_output(); command_line("PITCH VKP 0.02"); CHECK(pitch_commands == 1 && yaw_commands == 0);
     clear_output(); command_line("YAW VKP 0.0037"); CHECK(pitch_commands == 1 && yaw_commands == 1);
@@ -146,13 +156,20 @@ void PITCH_TELEMETRY_TEST_ENTRY(void)
     pitch_sample.controller.gravity_torque_nm = -9.99999f;
     pitch_sample.controller.pid_torque_nm = -1.23456789e9f;
     pitch_sample.controller.cascade.speed_i = -9.99999f;
+    pitch_sample.controller.shape.position_deg = -49.9999f;
+    pitch_sample.controller.shape.velocity_dps = -1300.125f;
+    pitch_sample.controller.shape.duration_ms = 500U;
+    pitch_sample.controller.shape.velocity_gain = 1.0f;
     remote_yaw = remote_other_sticks[0] = remote_other_sticks[1] = remote_other_sticks[2] = 65535U;
     now += 5U; clear_output(); AppConsole_Poll(); parse("pitch:");
     CHECK(columns[0] < -49.999f && columns[2] < -1.234e9f && columns[5] == -10);
     CHECK(columns[35] < -3.14f && columns[36] == -200 && columns[46] == 255);
     CHECK(columns[48] == 65535 && columns[49] == 65535 && columns[50] == 65535 && columns[51] == 65535);
+    CHECK(columns[58] == -0.08f && columns[59] == 1.0f);
+    CHECK(columns[60] < -49.999f && columns[61] < -1300.0f && columns[62] == 1.0f);
+    CHECK(columns[63] == 500.0f && columns[64] == 1.0f);
     test_stage = 4U;
-    clear_output(); command_line("TELEM YAW"); CHECK(strstr(output, "GROUP|gimbal|COLS|70") != 0);
+    clear_output(); command_line("TELEM YAW"); CHECK(strstr(output, "GROUP|gimbal|COLS|72") != 0);
     now += 5U; clear_output(); AppConsole_Poll(); parse("gimbal:"); CHECK(columns[7] == 10);
     test_stage = 5U;
     clear_output(); command_line("HELP"); CHECK(strstr(output, "C|HELP|AXIS|YAW;PITCH"));
@@ -164,12 +181,14 @@ void PITCH_TELEMETRY_TEST_ENTRY(void)
     startup_event_pending = 1U; clear_output(); AppConsole_Poll();
     CHECK(strstr(output, "G|AUTO|PHASE|READY|REASON|NONE|READY|1|REFERENCE|1") && !strstr(output, "pitch:"));
     clear_output(); command_line("PITCH PID"); CHECK(strstr(output, "P|MOCK") && !strstr(output, "pitch:"));
-    clear_output(); command_line("PITCH VIEW"); CHECK(strstr(output, "P|VIEW|PITCH|GROUP|pitch|COLS|58"));
+    clear_output(); command_line("PITCH VIEW"); CHECK(strstr(output, "P|VIEW|PITCH|GROUP|pitch|COLS|65"));
+    CHECK(strstr(output, "TERMINAL_BRAKE_NM_I|58|TERMINAL_BRAKE_ACTIVE_I|59|SHAPE_I|60_64|") && !strstr(output, "BRAKE_I"));
     now += 100U; clear_output(); AppConsole_Poll(); CHECK(!output_length);
     CHECK(!stops && !pitch_cancel_count);
     clear_output(); command_line("TELEM ON"); CHECK(strstr(output, "C|OK|TELEM|ON"));
     now += 5U; clear_output(); AppConsole_Poll(); parse("pitch:");
-    clear_output(); command_line("YAW VIEW"); CHECK(strstr(output, "Y|VIEW|YAW|GROUP|gimbal|COLS|70"));
+    clear_output(); command_line("YAW VIEW"); CHECK(strstr(output, "Y|VIEW|YAW|GROUP|gimbal|COLS|72"));
+    CHECK(strstr(output, "PASS02_I|62|BAND_DEG|0.2|TIME_LIMIT_MS|250|"));
     now += 5U; clear_output(); AppConsole_Poll(); parse("gimbal:");
     clear_output(); command_line("STOP"); CHECK(stops == 1 && pitch_cancel_count == 1);
     test_stage = 6U;

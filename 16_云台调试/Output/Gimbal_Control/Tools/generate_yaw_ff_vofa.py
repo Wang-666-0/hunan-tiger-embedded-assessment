@@ -10,7 +10,7 @@ import struct
 
 PROJECT = Path(__file__).resolve().parents[1]
 REFERENCE = PROJECT.parent / "VOFA_Pitch_20261017"
-OUTPUT = PROJECT.parent / "VOFA_Yaw_FF_20261017"
+OUTPUT = PROJECT.parent / "VOFA_Yaw_PID_02deg_20261018"
 
 
 def read(name):
@@ -28,7 +28,7 @@ def main():
     button_template = next(w for w in templates if w["path"] == "bound_bt")
     wave_template = next(w for w in templates if w["path"] == "WaveChart")
     gauge_template = next(w for w in templates if w["path"] == "gauge")
-    commands["ctx"].update(name="Yaw V2J 前馈", loop_on=False, loop_count=1, down=True)
+    commands["ctx"].update(name="Yaw V2P ±0.2度考核", loop_on=False, loop_count=1, down=True)
     commands["ctx"]["subCmds"] = []
 
     def command(name, text):
@@ -62,7 +62,7 @@ def main():
     def button(label, text, x, y, width=170):
         widget = place(deepcopy(button_template), x, y, width, 65)
         widget["ctx"]["cmd_menu"]["ctx"] = [command(label, text)]
-        # Send only on press: HOME/STEP and FF toggles must not be duplicated on release.
+        # Send only on press: HOME/STEP must not be duplicated on release.
         args = widget["ctx"]["argument_menu"]["ctx"]["."]["model_ctx"]
         args[0]["enabled"], args[1]["enabled"] = True, False
         name_widget(widget, label)
@@ -92,55 +92,35 @@ def main():
     def tab(label, widgets):
         return dict(name=label, widgets=widgets, file_url="", bg=deepcopy(original_tab["bg"]))
 
-    ff_widgets = [chart([0, 1], 10, 10, 760, 420, -2, 33)]
-    ff_parameters = [
-        ("偏置 FBIAS", "YAW FBIAS %f", 49, -0.1, 0.1, 0.005, 0, 3),
-        ("角度斜率 FANG", "YAW FANG %f", 50, -0.003, 0.003, 0.0001, 0, 4),
-        ("速度系数 FKV", "YAW FKV %f", 51, 0, 0.0005, 0.00002, 0, 5),
-        ("摩擦幅值 FC", "YAW FC %f", 52, 0, 0.1, 0.005, 0, 3),
-        ("平滑速度 FVS", "YAW FVS %f", 53, 1, 20, 1, 5, 1),
-        ("前馈限幅 FMAX", "YAW FMAX %f", 54, 0, 0.2, 0.01, 0.1, 2),
-    ]
-    for i, spec in enumerate(ff_parameters):
-        ff_widgets.append(slider(*spec, 790 + i % 2 * 290, 10 + i // 2 * 115))
-    for i, (label, text) in enumerate([
-        ("前馈 ON", "YAW FF ON"), ("前馈 OFF", "YAW FF OFF"), ("前馈详情", "YAW FF"),
-        ("Yaw 波形", "YAW VIEW"), ("阶跃 +30", "YAW STEP 30"), ("回零 HOME", "YAW HOME"),
-        ("完整结果", "YAW RESULT"), ("停止 STOP", "STOP"),
-    ]):
-        ff_widgets.append(button(label, text, 790 + i % 3 * 185, 365 + i // 3 * 75))
-    for i, args in enumerate([
-        ("前馈开关 I48", 48, 0, 1, 0), ("稳定05 ms I61", 61, -1, 1000, 0),
-        ("新PASS05 I62", 62, 0, 1, 0), ("超调 deg I28", 28, 0, 2, 3),
-        ("前馈饱和 I59", 59, 0, 1, 0),
-    ]):
-        label, channel, low, high, decimal = args
-        ff_widgets.append(gauge(label, channel, 10 + i * 152, 440, low, high, decimal))
-
     pid_widgets = [chart([0, 1], 10, 10, 760, 420, -2, 33)]
     pid_parameters = [
-        ("位置 KP", "YAW PKP %f", 7, 0, 20, 0.25, 7.5, 2),
-        ("位置 KI", "YAW PKI %f", 8, 0, 0.5, 0.01, 0.15, 3),
-        ("位置 KD", "YAW PKD %f", 9, 0, 0.05, 0.001, 0, 3),
-        ("速度 KP", "YAW VKP %f", 10, 0, 0.006, 0.0001, 0.0025, 5),
-        ("速度 KI", "YAW VKI %f", 11, 0, 0.01, 0.0005, 0.003, 4),
-        ("速度 KD", "YAW VKD %f", 12, 0, 0.00001, 0.000001, 0, 6),
+        ("位置 KP", "YAW PKP %f", 7, 0, 25, 0.01, 16.63, 3),
+        ("位置 KI", "YAW PKI %f", 8, 0, 1, 0.01, 0.12, 3),
+        ("位置 KD", "YAW PKD %f", 9, 0, 1, 0.001, 0.269, 3),
+        ("速度 KP", "YAW VKP %f", 10, 0, 0.015, 0.0001, 0.0081, 5),
+        ("速度 KI", "YAW VKI %f", 11, 0, 0.02, 0.0001, 0.003, 5),
+        ("速度 KD", "YAW VKD %f", 12, 0, 0.0005, 0.000001, 0.000209, 6),
     ]
     for i, spec in enumerate(pid_parameters):
         pid_widgets.append(slider(*spec, 790 + (i // 3) * 290, 10 + i % 3 * 115))
     for i, (label, text) in enumerate([
         ("Yaw PID", "YAW PID"), ("Yaw 状态", "YAW STATUS"), ("阶跃 +30", "YAW STEP 30"),
-        ("回零 HOME", "YAW HOME"), ("完整结果", "YAW RESULT"), ("前馈 OFF", "YAW FF OFF"),
+        ("回零 HOME", "YAW HOME"), ("完整结果", "YAW RESULT"), ("阶跃就绪检查", "YAW STEP CHECK"), ("安全准备 READY", "YAW READY"), ("Yaw 波形", "YAW VIEW"), ("停止 STOP", "STOP"),
     ]):
         pid_widgets.append(button(label, text, 790 + i % 3 * 185, 365 + i // 3 * 75))
+    pid_widgets.extend([
+        gauge("±0.2稳定时间 ms ≤250", 61, 10, 440, 0, 500, 0),
+        gauge("超调 ° ≤0.2", 28, 195, 440, 0, 0.5, 4),
+        gauge("稳态误差 ° ±0.2", 30, 380, 440, -0.3, 0.3, 4),
+        gauge("总通过 1=通过", 62, 565, 440, 0, 1, 0)])
     diagnostics = [chart([0, 1], 10, 10, 660, 310, -2, 33),
         chart([2, 3], 690, 10, 660, 310, -400, 400),
-        chart([5, 6, 55, 56, 57], 10, 340, 660, 310, -1, 1),
+        chart([5, 6, 56, 57], 10, 340, 660, 310, -1, 1),
         chart([58], 690, 340, 660, 310, -2, 2)]
-    tabs["ctx"][0].update(tabs=[tab("Yaw 前馈", ff_widgets), tab("Yaw PID", pid_widgets),
+    tabs["ctx"][0].update(tabs=[tab("Yaw ±0.2度考核", pid_widgets),
         tab("角度-速度-力矩诊断", diagnostics)], currentIndex=0, lastIndex=0, width=1920, height=1080, file_url="")
     # Additional read-only commands are available in the command list, not action sliders.
-    command("前馈状态", "YAW FF")
+    command("阶跃就绪检查", "YAW STEP CHECK")
     command("阶跃 -30", "YAW STEP -30")
     command("暂停波形", "TELEM OFF")
     command("恢复波形", "TELEM ON")
@@ -153,7 +133,7 @@ def main():
     view["tx_rx_zone"]["ctx"]["send_record_model"]["ctx"] = []
     view["color_bar"]["ctx"]["."].update(delta_t=5, left_index=48999, right_index=49999)
     settings = view["settingsPanel"]["ctx"]["."]["settings_ctx"]
-    for i in range(64):
+    for i in range(72):
         if i >= len(settings):
             settings.append(deepcopy(settings[0]))
         settings[i].update(value=0, name=f"I{i}", scale=1, yoffset=0, xoffset=0)
@@ -170,18 +150,19 @@ def main():
                 if "cmd_menu" in ctx:
                     assert 0 <= ctx["cmd_menu"]["ctx"][0] < count
                 if "ch_menu" in ctx:
-                    assert 0 <= ctx["ch_menu"]["ctx"] < 64
+                    assert 0 <= ctx["ch_menu"]["ctx"] < 72
                 if widget["path"] == "WaveChart":
-                    assert all(0 <= i < 64 for i in ctx["rbw"]["ctx"]["."]["lines"])
+                    assert all(0 <= i < 72 for i in ctx["rbw"]["ctx"]["."]["lines"])
     for cmd in commands["ctx"]["subCmds"]:
         wire = bytes.fromhex(cmd["cmd_hex"])
         assert wire.endswith(b"\n") and not cmd["loop_on"]
+        assert not any(old in wire for old in (b"FBIAS", b"FANG", b"FKV", b" FC", b"FVS", b"FKA", b"FMAX", b"SHAPE", b"YAW FF"))
         if b"%" in wire:
             assert wire.count(b"%f") == 1
-    write("validation.json", dict(schema="VOFA+ native export v100", commands=count, tabs=3,
-        channels=64, baud=921600, delta_t_ms=5, checks="JSON, command paths, data indices, LF, loop off",
+    write("validation.json", dict(schema="VOFA+ native export v100", commands=count, tabs=2,
+        channels=72, baud=921600, delta_t_ms=5, checks="JSON, command paths, data indices, LF, loop off, retired commands absent",
         source=str(REFERENCE), native_import_verified=False, hardware_used=False))
-    print(f"Generated and structurally validated {count} commands, 3 tabs: {OUTPUT}")
+    print(f"Generated and structurally validated {count} commands, 2 tabs: {OUTPUT}")
 
 
 if __name__ == "__main__":

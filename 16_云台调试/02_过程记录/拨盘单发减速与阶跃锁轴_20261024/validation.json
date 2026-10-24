@@ -1,0 +1,74 @@
+{
+  "recorded_at": "2026-10-24T14:34:31+08:00",
+  "version": "C610_SINGLE_BRAKE_V1J",
+  "groups": 19,
+  "checks": 139093,
+  "failures": 0,
+  "verified_test_input_hashes": 136,
+  "changed_files": [
+    "App/app_config.h",
+    "App/app_tasks.c",
+    "App/feeder_console.c",
+    "App/feeder_controller.c",
+    "App/feeder_controller.h",
+    "App/pitch_backend.c",
+    "App/pitch_backend.h",
+    "App/yaw_backend.c",
+    "App/yaw_backend.h",
+    "MDK-ARM/拨盘50ms连发操作说明.md",
+    "README.md",
+    "Tests/README.md",
+    "Tests/run_selftests.py",
+    "Tests/test_feeder_backend.c",
+    "Tests/test_feeder_controller.c",
+    "Tests/test_gimbal_startup.c",
+    "Tests/test_pitch_backend.c",
+    "Tests/test_pitch_terminal_brake.c",
+    "Tests/test_yaw_manual50.c",
+    "App/gimbal_step_sync.h",
+    "Tests/test_feeder_single.c",
+    "Tests/test_gimbal_test_hold.c",
+    "MDK-ARM/单发优化与阶跃锁轴操作说明.md"
+  ],
+  "outputs": {
+    "Gimbal_Control.axf": {
+      "sha256": "f5ef70e0710d46424edbcc6536c2be4041bc21efb63cc612394c84059a0d77ec",
+      "size": 1613952
+    },
+    "Gimbal_Control.hex": {
+      "sha256": "0de464ce8edc57372428c7a205387de09a35dcd347bb957faf6652e960644994",
+      "size": 379022
+    },
+    "compiler.log": {
+      "sha256": "9f74d204183904fb208f423c87ce8b6c4486589813de26d34c9d41bd29a434ee",
+      "size": 326
+    },
+    "builder.params": {
+      "sha256": "48a0192ecc4705e07c12f04876aa689963c3a463a27a3304fe2d6a4e59252715",
+      "size": 7427
+    }
+  },
+  "build": {
+    "compiler": "ARM Compiler 5.06",
+    "optimization": "O0",
+    "sources": 69,
+    "success": true,
+    "rom_bytes": 134732,
+    "ram_bytes": 36920
+  },
+  "pitch_macros_unchanged": true,
+  "scope": {
+    "single_only_decel_rpm_s": 50000,
+    "preview_ms": 12,
+    "brake_delay_ms": 8,
+    "integral_relax_ms": 12,
+    "current_limit_raw": 3000,
+    "request_ms": 50,
+    "control_ms": 2,
+    "test_entry_hold": "measured_pose",
+    "companion_hold": "once_per_accepted_remote_or_console_step"
+  },
+  "flashed": false,
+  "hardware_tested": false,
+  "test_method": "ARM GCC -Wall -Wextra -Werror + Unicorn; actual C, HAL/RTOS mocked; no hardware"
+}

@@ -9,9 +9,10 @@
 #endif
 
 typedef struct { float kp, ki, kd; } YawCascadePid;
-/* 力矩补偿使用内环速度参考，不对理想位置阶跃或实际加速度作前馈。 */
+/* 调用方根据规划加速度计算、限幅后的前馈力矩。Pitch不使用此结构。 */
 typedef struct {
-    float bias_nm, velocity_gain, friction_nm, friction_velocity_dps, limit_nm;
+    float torque_nm;
+    uint8_t limited;
 } YawCascadeFeedforward;
 typedef struct {
     float velocity_dps;
@@ -46,9 +47,10 @@ float YawCascade_Update(YawCascade *loop, float error_deg, uint32_t feedback_ms,
 /* 前馈参加力矩求和及抗饱和；原Yaw入口始终传0。单位均为协议Nm。 */
 float YawCascade_UpdateWithFeedforward(YawCascade *loop, float error_deg, uint32_t feedback_ms,
                         uint32_t sequence, float torque_limit_nm, float feedforward_nm);
-/* bias + Kv*vref + Fc*vref/(|vref|+Vs)，先裁前馈再参加总力矩抗饱和。 */
-float YawCascade_UpdateWithCompensation(YawCascade *loop, float error_deg, uint32_t feedback_ms,
-                         uint32_t sequence, float torque_limit_nm, const YawCascadeFeedforward *ff);
+/* Pitch参考速度直接相加，位置D仅作用于实测速度，避免隐含放大前馈。 */
+float YawCascade_UpdateReference(YawCascade *loop, float error_deg, uint32_t feedback_ms,
+                        uint32_t sequence, float torque_limit_nm, float feedforward_nm,
+                        float velocity_ff_dps, uint8_t freeze_position_i);
 /* Yaw平滑阶跃专用：已知参考速度进入外环，D对速度跟踪误差作用。
  * 仅规划运动段冻结外环积分；内环积分/抗饱和仍按实际CAN反馈更新。 */
 float YawCascade_UpdateTracking(YawCascade *loop, float error_deg, uint32_t feedback_ms,

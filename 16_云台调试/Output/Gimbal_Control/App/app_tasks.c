@@ -15,19 +15,14 @@
 #if APP_PITCH_ENABLED
 #include "pitch_backend.h"
 #endif
+#if APP_YAW_ENABLED && APP_PITCH_ENABLED
+#include "gimbal_step_sync.h"
+#endif
 #include "task.h"
 #include <string.h>
 
 static AppState published;
 static volatile uint32_t stop_sequence;
-#if APP_YAW_ENABLED && APP_PITCH_ENABLED
-static uint32_t YawStepId(void)
-{ YawStep step; YawBackend_GetStep(&step); return step.id; }
-#endif
-#if APP_PITCH_ENABLED
-static uint32_t PitchStepId(void)
-{ PitchStep step; PitchBackend_GetStep(&step); return step.id; }
-#endif
 
 void AppTasks_RequireRearm(void)
 {
@@ -112,12 +107,14 @@ static void ControlTask(void *argument)
 #if APP_YAW_ENABLED
     YawBackendState yaw;
 #if APP_PITCH_ENABLED
-    uint32_t yaw_step_observed = 0U, yaw_step_current;
+    GimbalStepSync step_sync = {0U, 0U};
 #endif
 #endif
 #if APP_PITCH_ENABLED
     PitchBackendState pitch;
+#if !APP_YAW_ENABLED
     uint32_t pitch_step_observed = 0U, pitch_step_current;
+#endif
 #endif
 #if APP_YAW_ENABLED || APP_PITCH_ENABLED
     RemoteCommand demanded;
@@ -159,6 +156,9 @@ static void ControlTask(void *argument)
         input.stop_sequence = stop_sequence;
         GimbalStartup_Update(&input, AppConsole_IsDiagnosticMode());
 #endif
+#if APP_YAW_ENABLED && APP_PITCH_ENABLED
+        GimbalStepSync_ApplyViewHold(AppConsole_GetViewHoldMask());
+#endif
         MotorBackend_GetHealth(&current.motors);
         input.backend_ready = current.motors.ready;
         input.feedback_ready = current.motors.feedback_ready;
@@ -184,15 +184,11 @@ static void ControlTask(void *argument)
 #endif
         input.stop_sequence = stop_sequence;
 #if APP_YAW_ENABLED && APP_PITCH_ENABLED
-        /* 串口和遥控真正接受的新阶跃均记住轴，先同步再消费CH7回参考。 */
-        yaw_step_current = YawStepId();
-        if (yaw_step_current != yaw_step_observed) {
-            TargetManager_RecordAcceptedTestAxis(&current.logic.targets, GIMBAL_STEP_YAW);
-            yaw_step_observed = yaw_step_current;
-        }
-#endif
-#if APP_PITCH_ENABLED
-        pitch_step_current = PitchStepId();
+        GimbalStepSync_Update(&step_sync, &current.logic.targets,
+            demanded.gimbal_mode == GIMBAL_TEST && current.logic.safety.output_allowed &&
+            !AppConsole_IsDiagnosticMode());
+#elif APP_PITCH_ENABLED
+        pitch_step_current = PitchBackend_GetStepId();
         if (pitch_step_current != pitch_step_observed) {
             TargetManager_RecordAcceptedTestAxis(&current.logic.targets, GIMBAL_STEP_PITCH);
             pitch_step_observed = pitch_step_current;
@@ -200,6 +196,9 @@ static void ControlTask(void *argument)
 #endif
         AppLogic_Step(&current.logic, &input, current.motors.flywheels_ready);
         jog_request = current.logic.targets.request;
+#if APP_YAW_ENABLED && APP_PITCH_ENABLED
+        GimbalStepSync_FilterViewRequest(&jog_request, AppConsole_GetViewHoldMask());
+#endif
 #if APP_REMOTE_PROFILE_ASSESSMENT
         jog_request.wheel_reset_allowed = current.logic.command.valid &&
             current.logic.command.failsafe_ok && current.logic.command.wheel_switch == RC_LOW;
@@ -222,11 +221,9 @@ static void ControlTask(void *argument)
 #if APP_YAW_ENABLED
         YawBackend_Apply(&jog_request, current.logic.safety.output_allowed, AppConsole_IsDiagnosticMode());
 #if APP_PITCH_ENABLED
-        yaw_step_current = YawStepId();
-        if (yaw_step_current != yaw_step_observed) {
-            TargetManager_RecordAcceptedTestAxis(&current.logic.targets, GIMBAL_STEP_YAW);
-            yaw_step_observed = yaw_step_current;
-        }
+        GimbalStepSync_Update(&step_sync, &current.logic.targets,
+            jog_request.gimbal_mode == GIMBAL_TEST && current.logic.safety.output_allowed &&
+            !AppConsole_IsDiagnosticMode());
 #endif
         if (YawBackend_TakeRearmRequest()) {
             AppLogic_RecordStop(&current.logic, &input, APP_STOP_SOURCE_YAW);
@@ -236,11 +233,17 @@ static void ControlTask(void *argument)
 #endif
 #if APP_PITCH_ENABLED
         PitchBackend_Apply(&jog_request, current.logic.safety.output_allowed, AppConsole_IsDiagnosticMode());
-        pitch_step_current = PitchStepId();
+#if APP_YAW_ENABLED
+        GimbalStepSync_Update(&step_sync, &current.logic.targets,
+            jog_request.gimbal_mode == GIMBAL_TEST && current.logic.safety.output_allowed &&
+            !AppConsole_IsDiagnosticMode());
+#else
+        pitch_step_current = PitchBackend_GetStepId();
         if (pitch_step_current != pitch_step_observed) {
             TargetManager_RecordAcceptedTestAxis(&current.logic.targets, GIMBAL_STEP_PITCH);
             pitch_step_observed = pitch_step_current;
         }
+#endif
         if (PitchBackend_TakeRearmRequest()) {
             AppLogic_RecordStop(&current.logic, &input, APP_STOP_SOURCE_PITCH);
             AppTasks_RequestStop();
@@ -273,6 +276,11 @@ static void ControlTask(void *argument)
         }
         current.stop_sequence = input.stop_sequence;
         published = current;
+#if APP_FEEDER_ENABLED
+        if (GimbalStartup_OutputReady() && !AppConsole_IsDiagnosticMode()) {
+            (void)FeederBackend_PrepareRemote();
+        }
+#endif
         taskEXIT_CRITICAL();
         vTaskDelayUntil(&wake, pdMS_TO_TICKS(APP_CONTROL_PERIOD_MS));
     }

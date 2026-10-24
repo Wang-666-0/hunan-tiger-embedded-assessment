@@ -10,6 +10,7 @@ typedef struct {
     uint8_t friction_requested, shot_event, step_event;
     GimbalMode step_axis;
     uint8_t step_return_event, wheel_reset_allowed;
+    uint8_t continuous_fire; /* Live qualified hold, cleared on release/guard failure. */
 } TargetRequest;
 
 typedef struct {

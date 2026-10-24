@@ -1,0 +1,29 @@
+{
+  "success": true,
+  "version": "C610_FEEDBACK_TIME_V1F",
+  "app_changes": [
+    "App/app_config.h",
+    "App/feeder_console.c",
+    "App/feeder_controller.c",
+    "App/feeder_controller.h",
+    "App/pitch_console.c"
+  ],
+  "protected_app_files": 61,
+  "other_sources_unchanged": 37,
+  "groups": 11,
+  "checks": 60155,
+  "failures": 0,
+  "build_sources": 69,
+  "vofa_channels": 39,
+  "normal_startup_requires_serial": false,
+  "hardware_verified": false,
+  "physical_20hz_verified": false,
+  "flashed": false,
+  "hex_generated": false,
+  "static_stack_bytes_plus_unknown": {
+    "ConsoleTask": 2032,
+    "ControlTask": 1768,
+    "CanTask": 344,
+    "RemoteTask": 188
+  }
+}

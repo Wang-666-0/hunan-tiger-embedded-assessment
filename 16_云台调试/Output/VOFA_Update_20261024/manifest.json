@@ -1,0 +1,27 @@
+{
+  "files": {
+    "README.md": "8d71fef377509de8a9a701921861048e854cdcee31a0264c683f09c8b63ac78c",
+    "native/validation.json": "d1f252331d4f2c23498f7a527c135fa3abedcb9acc19e21cba9b7b4b2e4d12b6",
+    "native/vofa+.cmds.json": "8f86064b3dfb06143b27e43ee028052249f8006808eaaa2f06355789b4dd8619",
+    "native/vofa+.config.json": "7103b655d2273ee4da44bb9e0c96948d80635dbe8600c8613b11ac97cdd607ca",
+    "native/vofa+.tabviews.json": "3f6331abe3425ae25b48e8f0442649f13fecac38736406464a35d219585acce0",
+    "validation/firmware_selected_tests.json": "9eb80db9673a0b2f446368396d8942729f0f36b5df301b6bd0a4ecf04fa5338c",
+    "validation/sim_tests.log": "975a2bc33d4771fe72ae51dd7f9d69bad973167a5ead0774943b877bab883564",
+    "plugins/widgets/pitch_sim_plot/pitch_sim_plot.qml": "cccdfba19ec59777b90a8156ddf03e411bd8c352d856c9844385698f38d13de1",
+    "plugins/widgets/pitch_sim_plot/ReceiveBridge.js": "19653b9579a520daa5fc3e0f44b195daaf8d3afa2f7bac1c242ac32f64e06aac",
+    "plugins/widgets/pitch_sim_plot/SimEngine.js": "b301eabf0f2189808f6c5caa41f760756b9becd61a924138f2fd1cd4e67b870b"
+  },
+  "simulation_only_in_widget": true,
+  "firmware_tests": {
+    "groups": 10,
+    "checks": 52195,
+    "failures": 0,
+    "matching_hashes": 121
+  },
+  "sim_tests": {
+    "tests": 11,
+    "failures": 0
+  },
+  "native_gui_import_verified": false,
+  "hardware_used": false
+}

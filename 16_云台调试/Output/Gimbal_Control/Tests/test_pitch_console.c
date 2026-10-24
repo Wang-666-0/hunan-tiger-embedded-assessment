@@ -6,6 +6,7 @@
 #include "app_tasks.h"
 #include "app_console.h"
 #include "remote_input.h"
+#include <stdio.h>
 
 static RemoteInput_State receiver;
 static AppState application;
@@ -87,6 +88,7 @@ static void GravityConsoleTests(void)
 
 void test_run(void)
 {
+    char expected_pid[256], same_pid_command[64];
     uint32_t before, tick;
     float reference;
     PitchStep measurement;
@@ -94,12 +96,16 @@ void test_run(void)
     ConsoleReset(100U);
     CHECK(!PitchConsole_Handle("YAW STATUS", response, sizeof(response)));
     Command("PITCH STATUS", "COORD_CONFIRMED|0"); CHECK(!query_calls && !disable_calls && !enable_calls);
-    CHECK(strstr(response, "DM3507_CASCADE_V1F") && strstr(response, "MIN_DEG|-18|MAX_DEG|33"));
+    CHECK(strstr(response, "DM3507_FAST_OBSERVER_V2F") && strstr(response, "MIN_DEG|-18|MAX_DEG|33"));
     CHECK(strstr(response, "HARD_MIN_DEG|-19|HARD_MAX_DEG|34") && strstr(response, "SUPPORT_REQUIRED|1\r\n"));
-    Command("PITCH", "P|STATE|DM3507_CASCADE_V1F"); CHECK(strlen(response) < 300U);
+    Command("PITCH", "P|STATE|DM3507_FAST_OBSERVER_V2F"); CHECK(strlen(response) < 300U);
     Command("PITCH HELP", "P|HELP|READ|PITCH;PID;RESULT;STATUS");
     Command("PITCH ?", "PITCH_ONLY|COORD 1;GHORIZ");
-    Command("PITCH PID", "POS|18.2,0.44,0.04|VEL|0.0065,0.014,4e-06|KG|-0.13");
+    (void)snprintf(expected_pid, sizeof(expected_pid), "POS|%.6g,%.6g,%.6g|VEL|%.6g,%.6g,%.6g|KG|%.6g",
+        (double)APP_PITCH_POSITION_KP, (double)APP_PITCH_POSITION_KI, (double)APP_PITCH_POSITION_KD,
+        (double)APP_PITCH_SPEED_KP, (double)APP_PITCH_SPEED_KI, (double)APP_PITCH_SPEED_KD,
+        (double)APP_PITCH_GRAVITY_KG_NM);
+    Command("PITCH PID", expected_pid);
     Command("PITCH BAD", "UNKNOWN_COMMAND|USE|PITCH HELP");
     CHECK(!query_calls && !enable_calls && !disable_calls && !torque_calls && !stop_calls && !rearm_calls);
     Command("PITCH READY", "COORD_UNCONFIRMED"); CHECK(!query_calls);
@@ -133,13 +139,17 @@ void test_run(void)
     Command("PITCH STEP 1", "P|ERROR|"); Command("PITCH STEP 30", "P|OK|STEP_STARTED|");
     Command("PITCH STEP -30", "STEP_OUTSIDE_MECHANICAL_RANGE");
     Command("PITCH RESULT", "STATE|RUNNING"); CHECK(strstr(response, "RESP_LIMIT_MS|300"));
-    Command("PITCH PKP 18.2", "P|OK|PARAMETER"); PitchBackend_GetStep(&measurement);
+    CHECK(strstr(response, "|BAND02|0.2|") && strstr(response, "|TIME_LIMIT_MS|300|OS_LIMIT_DEG|0.2|SSE_LIMIT_DEG|0.2|"));
+    CHECK(strstr(response, "|ASSESSMENT|FINAL_SETTLE|") && !strstr(response, "PASS05"));
+    (void)snprintf(same_pid_command, sizeof(same_pid_command), "PITCH PKP %.9g", (double)APP_PITCH_POSITION_KP);
+    Command(same_pid_command, "P|OK|PARAMETER"); PitchBackend_GetStep(&measurement);
     CHECK(measurement.phase == PITCH_STEP_RUNNING);
     Command("PITCH PKP 13", "P|OK|PARAMETER"); PitchBackend_GetStep(&measurement); Read();
     CHECK(measurement.phase == PITCH_STEP_ABORTED && state.controller.target_deg == 30.0f);
     CHECK(PitchConsole_Poll(response, sizeof(response)) && strstr(response, "REASON|PID_CHANGE"));
     CHECK(!PitchConsole_Poll(response, sizeof(response)));
     Command("PITCH TARGET 0", "P|OK|TARGET|0.000");
+    Read(); CHECK(state.controller.target_deg == 0.0f && !state.controller.shape.active);
     Command("PITCH PID", "POS|13,"); Command("PITCH VMAX 90", "OUTPUT_LIMITS_DISABLED");
     before = state.controller.cascade.revision;
     Command("PITCH POS 12 0.2", "P|ERROR|"); Command("PITCH POS 12 0.2 0.02 9", "P|ERROR|");
@@ -183,5 +193,83 @@ void test_run(void)
     Command("PITCH GUARD", "REASON|UART"); CHECK(strstr(response, "NOW_REASON|0"));
     CHECK(application.logic.stop_trace.id == 1U);
     test_stage = 5U; GravityConsoleTests();
+    test_stage = 6U;
+    ConsoleReset(5000U); application.logic.stop_trace.id = 1U;
+    application.logic.stop_trace.source = APP_STOP_SOURCE_FEEDER;
+    Command("PITCH GUARD", "SOURCE|FEEDER");
+    CHECK(!query_calls && !enable_calls && !disable_calls && !torque_calls && !stop_calls && !rearm_calls);
+    application.logic.stop_trace.source = 255U;
+    Command("PITCH GUARD", "SOURCE|UNKNOWN");
+    CHECK(!query_calls && !enable_calls && !disable_calls && !torque_calls && !stop_calls && !rearm_calls);
+    test_stage = 7U;
+    ConsoleReset(8000U);
+    Command("PITCH SHAPE", "P|SHAPE|MS|0|VEL_FF|0|ACTIVE|0");
+    CHECK(strstr(response, "T0|STEP_ACCEPTED|ASSESSMENT|FINAL_GOAL"));
+    CHECK(!query_calls && !enable_calls && !disable_calls && !torque_calls);
+    Command("PITCH SHAPE 180", "P|OK|SHAPE|MS|180");
+    Command("PITCH SHAPEV 0.3", "P|OK|SHAPEV|0.3");
+    Command("PITCH SHAPEV", "P|SHAPEV|0.3");
+    Command("PITCH SHAPE 99", "P|ERROR|"); Command("PITCH SHAPE 251", "P|ERROR|");
+    Command("PITCH SHAPE 200.5", "P|ERROR|"); Command("PITCH SHAPE 200 extra", "P|ERROR|");
+    Command("PITCH SHAPE nan", "P|ERROR|"); Command("PITCH SHAPE inf", "P|ERROR|");
+    Command("PITCH SHAPEV -0.1", "P|ERROR|"); Command("PITCH SHAPEV 1.1", "P|ERROR|");
+    Command("PITCH SHAPEV nan", "P|ERROR|"); Command("PITCH SHAPEV 0.2 extra", "P|ERROR|");
+    diagnostic_mode = 1U;
+    Command("PITCH SHAPE 200", "P|ERROR|"); Command("PITCH SHAPEV 0.2", "P|ERROR|");
+    diagnostic_mode = 0U;
+    Command("PITCH BRAKE", "P|BRAKE|MODE|TERMINAL_AND_RETURN|ENABLED|1");
+    Command("PITCH BRAKE OFF", "P|OK|BRAKE|OFF");
+    Command("PITCH BRAKE ON", "P|OK|BRAKE|ON");
+    Activate(9000U); Receiver(9044U, 2000U); application.logic.safety.operator_armed = 1U;
+    CHECK(PitchBackend_StartStep(30.0f));
+    Command("PITCH SHAPE 180", "P|ERROR|"); Command("PITCH SHAPEV 0.3", "P|ERROR|");
+    Command("PITCH SHAPE 200", "P|OK|SHAPE|MS|200"); Command("PITCH SHAPEV 0.2", "P|OK|SHAPEV|0.2");
+    Command("PITCH RESULT", "SHAPE_MS|200|SHAPEV|0.2");
+    Command("PITCH SHAPE", "ACTIVE|1|REF_DEG|");
+    Command("PITCH FF", "SHAPE_ACTIVE|1|REF_DEG|");
+    Command("PITCH TARGET 30", "P|OK|TARGET|30.000");
+    PitchBackend_GetStep(&measurement); CHECK(measurement.phase == PITCH_STEP_RUNNING && measurement.start_ms == 9044U);
+    Command("PITCH HOME", "P|ERROR|HOME_REQUIRES_ARMED_ACTIVE_IDLE_PROFILE_AND_STATIONARY");
+    for (tick = 9046U; tick <= 9284U; tick += 2U) {
+        CanFrame frame;
+        float u = (float)(tick - 9044U) / 200.0f;
+        float angle = u >= 1.0f ? 30.0f : 30.0f * u * u * u * (10.0f + u * (-15.0f + 6.0f * u));
+        frame = Feedback(tick, 1U, angle, 0.0f);
+        now_ms = tick; CHECK(PitchBackend_OnFrame(&frame)); Receiver(tick, 2000U); Apply(tick, 1U);
+    }
+    Command("PITCH SHAPE", "ACTIVE|0|REF_DEG|30|REF_DPS|0");
+    Command("PITCH BRAKE", "LAND_SEEN|1|LAND_MS|");
+    CHECK(strstr(response, "VI_START_NM|") && strstr(response, "LAND_OUT_NM|") && strstr(response, "DIP_DEG|"));
+    CHECK(strstr(response, "V_FILTER_MS|2|A_FILTER_MS|20|"));
+    CHECK(strstr(response, "DIRECT_STEP_DEFAULT|1\r\n") && strlen(response) < sizeof(response) - 1U);
+    Command("PITCH SHAPE 180", "P|ERROR|"); /* Full five-second measurement still owns the settings. */
+    Command("PITCH HOME", "P|OK|HOME");
+    before = state.controller.cascade.revision;
+    Command("PITCH BRAKE ON", "P|OK|BRAKE|ON"); Read();
+    CHECK(state.controller.cascade.revision == before && state.controller.shape.active);
+    PitchBackend_GetStep(&measurement);
+    CHECK(measurement.reason == PITCH_STEP_TARGET_CHANGE && measurement.shape_ms == 200U);
+    CHECK(measurement.shape_velocity_gain == 0.2f && measurement.target_deg == 30.0f && measurement.start_ms == 9044U);
+    test_stage = 8U;
+    Activate(10000U); Receiver(10044U, 2000U); application.logic.safety.operator_armed = 1U;
+    CHECK(PitchBackend_SetShape(0U, 0.0f));
+    Command("PITCH BRAKE", "MODE|TERMINAL_AND_RETURN|ENABLED|1");
+    CHECK(strstr(response, "WINDOW_DEG|4|GAIN|0.002|MAX_NM|0.12"));
+    CHECK(strstr(response, "RETURN_MS|250|RETURN_GAIN|0.01|RETURN_MAX_NM|0.3"));
+    CHECK(strstr(response, "PEAK_NM|0|RETURN_PEAK_NM|0|N|0|RETURN_N|0"));
+    Command("PITCH BRAKE bad", "P|ERROR|"); Command("PITCH BRAKE ON extra", "P|ERROR|");
+    diagnostic_mode = 1U; Command("PITCH BRAKE OFF", "P|ERROR|"); diagnostic_mode = 0U;
+    Command("PITCH STEP", "P|OK|STEP_STARTED");
+    Apply(10046U, 1U); Receiver(10046U, 2000U);
+    CHECK(!state.controller.shape.active && state.controller.shape.position_deg == 30.0f);
+    CHECK(state.controller.cascade.target_velocity_dps > 300.0f && state.controller.brake.tracking);
+    Command("PITCH BRAKE OFF", "P|ERROR|BRAKE|USE_ON_OFF|FINISH_STEP_FIRST");
+    Command("PITCH BRAKE ON", "P|OK|BRAKE|ON");
+    Command("PITCH RESULT", "SHAPE_MS|0|SHAPEV|0|TERMINAL_BRAKE|1");
+    PitchBackend_GetStep(&measurement);
+    CHECK(measurement.start_ms == 10044U && measurement.target_deg == 30.0f && measurement.pitch_brake_enabled);
+    PitchBackend_Stop();
+    Command("PITCH BRAKE OFF", "P|OK|BRAKE|OFF"); Read();
+    CHECK(!state.controller.brake.enabled && !state.controller.brake.tracking && state.controller.brake.torque_nm == 0.0f);
     test_done = 1U;
 }

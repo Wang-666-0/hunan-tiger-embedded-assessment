@@ -1,0 +1,306 @@
+[
+  {
+    "Path": "D:\\VOFA+\\x64\\plugins\\widgets\\RQILPJ.json",
+    "Hash": "F0759B78DA2D1CBE008FC4812F79F597F98D9AC43E81FDC57128A8C539C76477"
+  },
+  {
+    "Path": "D:\\VOFA+\\x64\\plugins\\widgets\\zPnXxb.json",
+    "Hash": "F0759B78DA2D1CBE008FC4812F79F597F98D9AC43E81FDC57128A8C539C76477"
+  },
+  {
+    "Path": "D:\\VOFA+\\x64\\plugins\\widgets\\bound_bt\\bound_bt.qml",
+    "Hash": "304C321A6BDCF8F1872ED40D4804353F2AC483B523AD92488F9FFAF81791E1F9"
+  },
+  {
+    "Path": "D:\\VOFA+\\x64\\plugins\\widgets\\circular_gauge\\circular_gauge.qml",
+    "Hash": "CB1D6568E3529E54AA135A22F8537315533E595740E4BA2095EDF5638DC55B43"
+  },
+  {
+    "Path": "D:\\VOFA+\\x64\\plugins\\widgets\\circular_gauge\\images\\needle.svg",
+    "Hash": "346EFD157D904251BFFC8BB639655189C1AECD79B050584A48A3FAB87E3CA51E"
+  },
+  {
+    "Path": "D:\\VOFA+\\x64\\plugins\\widgets\\cube\\Arrow.qml",
+    "Hash": "79A272AA0C63C39CB215510FA2624ADD9D9F1A355CD750E282D17017D85F754D"
+  },
+  {
+    "Path": "D:\\VOFA+\\x64\\plugins\\widgets\\cube\\cube.qml",
+    "Hash": "9CD4BCC2D7B8B81EA18DB40B19969E4C80D169AB5A9586DC87E23EC9C0E0958F"
+  },
+  {
+    "Path": "D:\\VOFA+\\x64\\plugins\\widgets\\cube\\cube.stl",
+    "Hash": "D6C1199DBEAD977AFC260719A8888C48986F4E0C62604A952348214AFA7B40E2"
+  },
+  {
+    "Path": "D:\\VOFA+\\x64\\plugins\\widgets\\cube\\Mesh.qml",
+    "Hash": "398AB41597AB195559D987791BE65DC6598D4136CF0F7EB94597D9D0077CBF81"
+  },
+  {
+    "Path": "D:\\VOFA+\\x64\\plugins\\widgets\\ExtraButtonDelay\\ExtraButtonDelay.qml",
+    "Hash": "1FEBA7E47DC61F3F42680CC07E9AB847BCCEB8CB43FFA3A3B37E2F01E5E967AE"
+  },
+  {
+    "Path": "D:\\VOFA+\\x64\\plugins\\widgets\\ExtraButtonToggle\\ExtraButtonToggle.qml",
+    "Hash": "9B0112E64CEF53B97E58DD93EE538FE1E8BA8EF8BA5DC27EB4A73E39A3618A4A"
+  },
+  {
+    "Path": "D:\\VOFA+\\x64\\plugins\\widgets\\ExtraDial\\ExtraDial.qml",
+    "Hash": "3FD2FE0D4C86D18B50E34A23C534D13EE5E64E28FF0E0B93FF83A9BE49118B40"
+  },
+  {
+    "Path": "D:\\VOFA+\\x64\\plugins\\widgets\\gauge\\gauge.qml",
+    "Hash": "CA65F04B67189EFEA6F07C6A749F16660A25030C5940628F0B937DCD3D587B6D"
+  },
+  {
+    "Path": "D:\\VOFA+\\x64\\plugins\\widgets\\image\\image.qml",
+    "Hash": "56FD9956DA5B397A77BBBF93A342CD856BC192B2A12E21CBC03B19B67CED3BB0"
+  },
+  {
+    "Path": "D:\\VOFA+\\x64\\plugins\\widgets\\image\\effects\\Effect.qml",
+    "Hash": "624C6C196D1481DEF698785E3C7BEA331EFAE4E2D13CCB4032D378FC095098B8"
+  },
+  {
+    "Path": "D:\\VOFA+\\x64\\plugins\\widgets\\image\\effects\\EffectBillboard.qml",
+    "Hash": "918F55BC47FEA9CA7F032C964F2A560AC9F40C1DE2695320368C67F67CC6BC46"
+  },
+  {
+    "Path": "D:\\VOFA+\\x64\\plugins\\widgets\\image\\effects\\EffectBlackAndWhite.qml",
+    "Hash": "64F29F69F10C7571E192BB74A246F9E8017A5226FF7E9F0D8C197C5E9F77B581"
+  },
+  {
+    "Path": "D:\\VOFA+\\x64\\plugins\\widgets\\image\\effects\\EffectEmboss.qml",
+    "Hash": "6D615AFA41617803426673CFD6AD78131D75D88205C6878954EAC408D2FD23DB"
+  },
+  {
+    "Path": "D:\\VOFA+\\x64\\plugins\\widgets\\image\\effects\\EffectGaussianBlur.qml",
+    "Hash": "A5EDC5563BDE2D0E2EC53B652347BD7A3F75FE065C6988DD2B4011C4F3693F42"
+  },
+  {
+    "Path": "D:\\VOFA+\\x64\\plugins\\widgets\\image\\effects\\EffectGlow.qml",
+    "Hash": "C8BCD8C49C42EB076D0629E20CD856B753EEFE5D51E79BB318AAC0B405E49200"
+  },
+  {
+    "Path": "D:\\VOFA+\\x64\\plugins\\widgets\\image\\effects\\EffectIsolate.qml",
+    "Hash": "1A6635AC7AC973FCE751258D9C133FAF8080A530C7DC87AC91D859B0B1763D0B"
+  },
+  {
+    "Path": "D:\\VOFA+\\x64\\plugins\\widgets\\image\\effects\\EffectPassThrough.qml.default",
+    "Hash": "135317EF0D3FEDAB8B20AD33B8DB2355DF51D547AFCA664E8F5683D1E0539AA7"
+  },
+  {
+    "Path": "D:\\VOFA+\\x64\\plugins\\widgets\\image\\effects\\EffectPassThrough.qml.defaultc",
+    "Hash": "8BBAC8A1598922034D175FFFB6EE0F3700BFE5873A51ADC2DD47F748EA72BC6C"
+  },
+  {
+    "Path": "D:\\VOFA+\\x64\\plugins\\widgets\\image\\effects\\EffectPixelate.qml",
+    "Hash": "A89F291A1EC6C2655497BD23E2C2172DAF40E94BB6F3437A6CF421F05AB50D4C"
+  },
+  {
+    "Path": "D:\\VOFA+\\x64\\plugins\\widgets\\image\\effects\\EffectPosterize.qml",
+    "Hash": "08F5564F78F29DD922935D9796D691CB9AFE963635FF446788DFD60627EFAABC"
+  },
+  {
+    "Path": "D:\\VOFA+\\x64\\plugins\\widgets\\image\\effects\\EffectSepia.qml",
+    "Hash": "AA3D087C5E013F19BF1E6B20D1FE512B38A3145CBF997B6E64CC263FCDF3DF9F"
+  },
+  {
+    "Path": "D:\\VOFA+\\x64\\plugins\\widgets\\image\\effects\\EffectSharpen.qml",
+    "Hash": "3AF022F05DA950B6BC2C6B3FD458BB0630BA011BBAC2E3A2073ED9B451E3B7C3"
+  },
+  {
+    "Path": "D:\\VOFA+\\x64\\plugins\\widgets\\image\\effects\\EffectShockwave.qml",
+    "Hash": "9B26B3450103EE8221C9FBDE96C33C8CF796FBA1730616D9CEDFECACD24285F1"
+  },
+  {
+    "Path": "D:\\VOFA+\\x64\\plugins\\widgets\\image\\effects\\EffectSobelEdgeDetection1.qml",
+    "Hash": "224CCD541CF10824F8C66A647F363D7916E1F40671F57886486858C1085E0B38"
+  },
+  {
+    "Path": "D:\\VOFA+\\x64\\plugins\\widgets\\image\\effects\\EffectTiltShift.qml",
+    "Hash": "B7BB60305CBD0778B2CEFBC7F39FD5404BE1C502251B44DB6DBCF31B828B4552"
+  },
+  {
+    "Path": "D:\\VOFA+\\x64\\plugins\\widgets\\image\\effects\\EffectToon.qml",
+    "Hash": "0B92DF0FD1E67EAF75B352CF6D26F001E9258D5C15BE22C42F6A0247286BFB23"
+  },
+  {
+    "Path": "D:\\VOFA+\\x64\\plugins\\widgets\\image\\effects\\EffectVignette.qml",
+    "Hash": "940924E023D2CE7AACD6D6963A51D61A471E0565F40BB12343F4A507592D4C7A"
+  },
+  {
+    "Path": "D:\\VOFA+\\x64\\plugins\\widgets\\image\\effects\\EffectWarhol.qml",
+    "Hash": "413AFA9363A3D3085A3F9D3650C6425FAD877E5AF1715728C49AA324A655DC5E"
+  },
+  {
+    "Path": "D:\\VOFA+\\x64\\plugins\\widgets\\image\\effects\\EffectWobble.qml",
+    "Hash": "1721FDAFDD27213096EEB1842FD6B6C11AE77D27376F94D4347FD3EA794EB725"
+  },
+  {
+    "Path": "D:\\VOFA+\\x64\\plugins\\widgets\\image\\shaders\\billboard.fsh",
+    "Hash": "BB752A0BF17A9E494151BE6975C0258AB714A10390904DB9B7134EF7E57A84C1"
+  },
+  {
+    "Path": "D:\\VOFA+\\x64\\plugins\\widgets\\image\\shaders\\blackandwhite.fsh",
+    "Hash": "C6F00C8D4F8533561D8C84BFB7DC7A2831FDD4B037AADE3CE809594895906767"
+  },
+  {
+    "Path": "D:\\VOFA+\\x64\\plugins\\widgets\\image\\shaders\\emboss.fsh",
+    "Hash": "D725B1F99F1B451E40EA6C93E9111B16D54A379C5DDED824827CDF8443C7DD84"
+  },
+  {
+    "Path": "D:\\VOFA+\\x64\\plugins\\widgets\\image\\shaders\\gaussianblur_h.fsh",
+    "Hash": "2EA9D7EC51DFDD9BD8FAF138336AE5859F0E5C10B042434B5CAAA6584CD91614"
+  },
+  {
+    "Path": "D:\\VOFA+\\x64\\plugins\\widgets\\image\\shaders\\gaussianblur_v.fsh",
+    "Hash": "0EE55FCB64ED114BA98C6585E90ECF03A2FFE61D39A8726C082DB80FC4FFB6A4"
+  },
+  {
+    "Path": "D:\\VOFA+\\x64\\plugins\\widgets\\image\\shaders\\glow.fsh",
+    "Hash": "B0957BF2ABC8DCE6E9FDCB9E19759515E488C889887561C8B513683D49DFB3D9"
+  },
+  {
+    "Path": "D:\\VOFA+\\x64\\plugins\\widgets\\image\\shaders\\isolate.fsh",
+    "Hash": "A0908B4B96855973F0DB897CCFC80AE2154F36DE3AD61F70D3CE6889D8F2A4EE"
+  },
+  {
+    "Path": "D:\\VOFA+\\x64\\plugins\\widgets\\image\\shaders\\magnify.fsh",
+    "Hash": "0CD4655C058C8B51A6B201F65A4BFCE04F2B29DF4FFBA7F699A06D088242274B"
+  },
+  {
+    "Path": "D:\\VOFA+\\x64\\plugins\\widgets\\image\\shaders\\pagecurl.fsh",
+    "Hash": "A2AB8630B813A2C8C26DABEFA96819AAD9EF245C79B874E88299CDE19BDB2A23"
+  },
+  {
+    "Path": "D:\\VOFA+\\x64\\plugins\\widgets\\image\\shaders\\pixelate.fsh",
+    "Hash": "0417D5DEBAE933A88A234A1D45F8218A9F879CBA55DE56CECBAAB055023CC831"
+  },
+  {
+    "Path": "D:\\VOFA+\\x64\\plugins\\widgets\\image\\shaders\\posterize.fsh",
+    "Hash": "95DCBC9020822D41BB80B0C6A40A9B09966BD877474D17F7B1CB6D1D66A0DC9C"
+  },
+  {
+    "Path": "D:\\VOFA+\\x64\\plugins\\widgets\\image\\shaders\\selectionpanel.fsh",
+    "Hash": "E734FE93111F0F08FBC52B19AA088A1E6EE327A40BAB5A43A8EAD9BF5C8EBA6F"
+  },
+  {
+    "Path": "D:\\VOFA+\\x64\\plugins\\widgets\\image\\shaders\\sepia.fsh",
+    "Hash": "B42189F43AE61C5385240ABD58CC692A7443F40FBDBF79D39C659A3FECEEEFB5"
+  },
+  {
+    "Path": "D:\\VOFA+\\x64\\plugins\\widgets\\image\\shaders\\sharpen.fsh",
+    "Hash": "9C75FEC5EBF35F3A4C851C176E13CD36490001C249158B48CE5BB4A3AC0FE79A"
+  },
+  {
+    "Path": "D:\\VOFA+\\x64\\plugins\\widgets\\image\\shaders\\shockwave.fsh",
+    "Hash": "2416A32C5F8189EDF8EB0908EDE08F00A3EBDF77AB312C351EADC0C9204206D1"
+  },
+  {
+    "Path": "D:\\VOFA+\\x64\\plugins\\widgets\\image\\shaders\\sobeledgedetection1.fsh",
+    "Hash": "31A68DB1ECEDE0A4C9D25766C6D21776E267F09D74DDD3CC0B334D931FF51274"
+  },
+  {
+    "Path": "D:\\VOFA+\\x64\\plugins\\widgets\\image\\shaders\\tiltshift.fsh",
+    "Hash": "C932BA1D626FF7639BE45A98219BE52D13C327749B3ADCE809164B1688C27ED2"
+  },
+  {
+    "Path": "D:\\VOFA+\\x64\\plugins\\widgets\\image\\shaders\\toon.fsh",
+    "Hash": "2210C2CA5404DCDAF6E50C392F4A54AFE7C36BF00E4E35EEF5F14928097C44A4"
+  },
+  {
+    "Path": "D:\\VOFA+\\x64\\plugins\\widgets\\image\\shaders\\vignette.fsh",
+    "Hash": "8AB63D2B6A8DBDCC28D6F34EBB6C7D2F9C610F0E039FD2A7F5B837A6196E9B36"
+  },
+  {
+    "Path": "D:\\VOFA+\\x64\\plugins\\widgets\\image\\shaders\\warhol.fsh",
+    "Hash": "7097F53BCCF3B54D45AE4A01B1AE1D3DCF4963DA37CBAE0F22E31C6C1DCB0EB5"
+  },
+  {
+    "Path": "D:\\VOFA+\\x64\\plugins\\widgets\\image\\shaders\\wobble.fsh",
+    "Hash": "6F7237450BBF8EA01801DD66B050256E4E8B10EAA1659BC0F6DE69C486F35E83"
+  },
+  {
+    "Path": "D:\\VOFA+\\x64\\plugins\\widgets\\Library\\Extras\\DelayButtonStyle.qml",
+    "Hash": "0DE561969F656A519D6896C99066D8741C41CA8650EA3A5539C292F3A28A50B3"
+  },
+  {
+    "Path": "D:\\VOFA+\\x64\\plugins\\widgets\\Library\\Extras\\Dial.qml",
+    "Hash": "3AFEFF80A4DE408366BAA3C959043DDF9F948471C940936EED8DDDD6F354A89A"
+  },
+  {
+    "Path": "D:\\VOFA+\\x64\\plugins\\widgets\\Library\\Extras\\DialStyle.qml",
+    "Hash": "7154198ABED06152731CB696C2602825E59646E8DFF92C9492BBED32E21A53C5"
+  },
+  {
+    "Path": "D:\\VOFA+\\x64\\plugins\\widgets\\Library\\Extras\\ToggleButtonStyle.qml",
+    "Hash": "02F4DF0E0B8A12700B7A5C843D972302568CBE053F702813ED94B4C1C76F077B"
+  },
+  {
+    "Path": "D:\\VOFA+\\x64\\plugins\\widgets\\Library\\Material\\Dial.qml",
+    "Hash": "D69076668F28CF781EF14D79027034DF8B59BD4DF4CEACE07C28CE3A2879EB47"
+  },
+  {
+    "Path": "D:\\VOFA+\\x64\\plugins\\widgets\\Library\\Material\\Joystick.qml",
+    "Hash": "4EDC6774E20B3F008B9338353AE73CFA47F5A654378A6B6E5A26D3E3CC564303"
+  },
+  {
+    "Path": "D:\\VOFA+\\x64\\plugins\\widgets\\Library\\Material\\SliderHandle.qml",
+    "Hash": "8EA4B4B8B57F31994A66BBDD6657A437926CC73EFBC79BE718C4195370A6BF05"
+  },
+  {
+    "Path": "D:\\VOFA+\\x64\\plugins\\widgets\\Library\\Modules\\MyRipple.qml",
+    "Hash": "AD93C95DF22B34E3BD6C25D70882120421AA797B1CF51C32B5D7C0CBF8995EF1"
+  },
+  {
+    "Path": "D:\\VOFA+\\x64\\plugins\\widgets\\Library\\Modules\\MySlider.qml",
+    "Hash": "6504F52DCFB7D9F7F71798AE39747826A3377054EF8C6A49353D937D96601FC8"
+  },
+  {
+    "Path": "D:\\VOFA+\\x64\\plugins\\widgets\\light\\light.qml",
+    "Hash": "0263D701BAFC0BB617D6AE340794BB562C3DB03A64F40FB12E4D198DC8AE1DF1"
+  },
+  {
+    "Path": "D:\\VOFA+\\x64\\plugins\\widgets\\MaterialDial\\MaterialDial.qml",
+    "Hash": "3ACD2B6B2E5D9ECBDE14106E04E6EE0465F8E98E0FEF2892DD267E7C0935737B"
+  },
+  {
+    "Path": "D:\\VOFA+\\x64\\plugins\\widgets\\MaterialJoystick\\MaterialJoystick.qml",
+    "Hash": "D821D3034E63D0D85045698689B94B5FE987FEA2C9DD461E8407FE4B6FC0928D"
+  },
+  {
+    "Path": "D:\\VOFA+\\x64\\plugins\\widgets\\slider\\slider.qml",
+    "Hash": "A8E7DF99289B66C64D39122CFB2BFD1B74882AE299A2BC2353B0C67E5D5FA4D7"
+  },
+  {
+    "Path": "D:\\VOFA+\\x64\\plugins\\widgets\\translations\\English.qm",
+    "Hash": "9B2F17B2DDB24085010AD5F13EC43699532C30F298B7ABC5A90732DE192AA545"
+  },
+  {
+    "Path": "D:\\VOFA+\\x64\\plugins\\widgets\\translations\\TraditionalChinese.qm",
+    "Hash": "1F17007641FBDD5934695B463CFC9C016F80653CCF1145B89BED610DB6493956"
+  },
+  {
+    "Path": "C:\\Users\\Administrator\\AppData\\Local\\vofa+\\100\\context\\vofa+.cmds.json",
+    "Hash": "47B4FE42CE8888B28D495C65B4776DC4CB7BE5DED4EB5CF5DE52A2C711DBB1E8"
+  },
+  {
+    "Path": "C:\\Users\\Administrator\\AppData\\Local\\vofa+\\100\\context\\vofa+.config.json",
+    "Hash": "9E8326388FA3175FE9115767FB82E854924C2F9F782A42BBFE9A9CB93B5554B4"
+  },
+  {
+    "Path": "C:\\Users\\Administrator\\AppData\\Local\\vofa+\\100\\context\\vofa+.tabviews.json",
+    "Hash": "D7C24E5BDA5D043AECAE3E4B552F4BEFD5740C2F0F73A3D10A7841F01B57B6F1"
+  },
+  {
+    "Path": "C:\\Users\\Administrator\\AppData\\Local\\vofa+\\100\\rpttest\\vofa+.cmds.json",
+    "Hash": "47B4FE42CE8888B28D495C65B4776DC4CB7BE5DED4EB5CF5DE52A2C711DBB1E8"
+  },
+  {
+    "Path": "C:\\Users\\Administrator\\AppData\\Local\\vofa+\\100\\rpttest\\vofa+.config.json",
+    "Hash": "DB5207F40BF396397FDFBC94760FB6B35649038ED3F3BCF732E45DE67776B23A"
+  },
+  {
+    "Path": "C:\\Users\\Administrator\\AppData\\Local\\vofa+\\100\\rpttest\\vofa+.tabviews.json",
+    "Hash": "4EEFFFE841ECAECA1DB5A1A0CE36E5F16738C1F1E3FF3E3F01A7C596D3A7A7B1"
+  }
+]

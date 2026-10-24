@@ -1,0 +1,46 @@
+{
+  "action": "revert latest cross-axis step lock only",
+  "restored_files": [
+    "Output/Gimbal_Control/App/app_config.h",
+    "Output/Gimbal_Control/App/pitch_backend.c",
+    "Output/Gimbal_Control/App/pitch_backend.h",
+    "Output/Gimbal_Control/App/pitch_console.c",
+    "Output/Gimbal_Control/App/README.md",
+    "Output/Gimbal_Control/App/yaw_backend.c",
+    "Output/Gimbal_Control/App/yaw_backend.h",
+    "Output/Gimbal_Control/App/yaw_console.c",
+    "Output/Gimbal_Control/README.md",
+    "Output/Gimbal_Control/Tests/README.md",
+    "Output/Gimbal_Control/Tests/run_selftests.py",
+    "Output/Gimbal_Control/Tests/test_pitch_backend.c",
+    "Output/Gimbal_Control/Tests/test_pitch_console.c",
+    "Output/Gimbal_Control/Tests/test_yaw_cascade_unlimited_console.c",
+    "Output/Gimbal_Control/Tests/test_yaw_manual50.c",
+    "README.md"
+  ],
+  "archived_added_files": [
+    "Output/Gimbal_Control/Tests/test_gimbal_step_lock.c",
+    "01_学习笔记/双轴阶跃互锁与Pitch通道_20261020.md"
+  ],
+  "all_restored_files_byte_identical_to_before": true,
+  "yaw_pid_preserved": [
+    15.549,
+    0.734,
+    0.139,
+    0.00517,
+    0.0035,
+    7.4e-05
+  ],
+  "yaw_version": "GL60II_FIXED_PID_V2Q",
+  "pitch_version": "DM3507_CASCADE_V1G",
+  "vofa_configuration_changed": false,
+  "hardware_flashed": false,
+  "groups": 70,
+  "checks": 546821,
+  "failures": 0,
+  "all_finished_and_returned": true,
+  "test_source_hashes_match": true,
+  "compiler_errors": 0,
+  "compiler_warnings": 0,
+  "firmware_rebuilt": true
+}

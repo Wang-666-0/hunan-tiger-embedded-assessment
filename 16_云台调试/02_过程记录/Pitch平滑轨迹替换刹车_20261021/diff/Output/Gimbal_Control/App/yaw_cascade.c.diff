@@ -1,0 +1,32 @@
+--- before/Output/Gimbal_Control/App/yaw_cascade.c
++++ after/Output/Gimbal_Control/App/yaw_cascade.c
+@@ -101,7 +101,7 @@
+     loop->velocity_limited = 0U;
+ #endif
+     if (reference) {
+-        loop->target_velocity_dps += (1.0f + loop->position.kd) * reference->velocity_dps;
++        loop->target_velocity_dps += reference->velocity_dps;
+ #if YAW_CASCADE_OUTPUT_LIMITS_ENABLED
+         wanted = loop->target_velocity_dps;
+         loop->target_velocity_dps = clamp(wanted, -loop->velocity_limit_dps, loop->velocity_limit_dps);
+@@ -134,5 +134,19 @@
+                         uint32_t sequence, float torque_limit_nm, const YawCascadeFeedforward *ff,
+                         const YawCascadeReference *reference)
+ {
+-    return update(loop, error_deg, feedback_ms, sequence, torque_limit_nm, 0.0f, ff, reference);
++    YawCascadeReference legacy;
++    if (!reference) { return update(loop, error_deg, feedback_ms, sequence, torque_limit_nm, 0.0f, ff, 0); }
++    /* 保持旧Yaw跟踪接口的D前馈语义。 */
++    legacy = *reference;
++    legacy.velocity_dps *= 1.0f + loop->position.kd;
++    return update(loop, error_deg, feedback_ms, sequence, torque_limit_nm, 0.0f, ff, &legacy);
+ }
++float YawCascade_UpdateReference(YawCascade *loop, float error_deg, uint32_t feedback_ms,
++                        uint32_t sequence, float torque_limit_nm, float feedforward_nm,
++                        float velocity_ff_dps, uint8_t freeze_position_i)
++{
++    YawCascadeReference reference;
++    reference.velocity_dps = velocity_ff_dps;
++    reference.freeze_position_i = freeze_position_i;
++    return update(loop, error_deg, feedback_ms, sequence, torque_limit_nm, feedforward_nm, 0, &reference);
++}
