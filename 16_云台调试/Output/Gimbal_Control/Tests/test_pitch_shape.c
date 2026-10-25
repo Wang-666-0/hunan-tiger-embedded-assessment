@@ -79,24 +79,16 @@ static void curve_test(uint32_t base, float start, float target)
 
 static void cascade_reference_test(void)
 {
-    YawCascade direct, tracking, zero_ff, old_entry;
-    YawCascadeFeedforward ff;
-    YawCascadeReference reference;
-    float direct_torque, tracking_torque, old_torque;
+    YawCascade direct, zero_ff, old_entry;
+    float direct_torque, old_torque;
     uint32_t tick;
     YawCascade_Init(&direct);
     direct.position.kp = 2.0f; direct.position.ki = 0.0f; direct.position.kd = 0.5f;
     direct.speed.kp = 0.1f; direct.speed.ki = 0.0f; direct.speed.kd = 0.0f;
     direct.velocity_dps = 3.0f; direct.acceleration_dps2 = 0.0f;
-    tracking = direct;
-    ff.torque_nm = 0.2f; ff.limited = 0U;
-    reference.velocity_dps = 10.0f; reference.freeze_position_i = 1U;
     direct_torque = YawCascade_UpdateReference(&direct, 4.0f, 100U, 1U, 10.0f, 0.2f, 10.0f, 1U);
-    tracking_torque = YawCascade_UpdateTracking(&tracking, 4.0f, 100U, 1U, 10.0f, &ff, &reference);
     CHECK(near(direct.target_velocity_dps, 16.5f));
-    CHECK(near(tracking.target_velocity_dps, 21.5f));
-    CHECK(near(direct_torque, 1.55f) && near(tracking_torque, 2.05f));
-    CHECK(near(tracking.target_velocity_dps - direct.target_velocity_dps, 5.0f));
+    CHECK(near(direct_torque, 1.55f));
 
     YawCascade_Init(&zero_ff);
     zero_ff.position.kp = 2.0f; zero_ff.position.ki = 0.3f; zero_ff.position.kd = 0.5f;

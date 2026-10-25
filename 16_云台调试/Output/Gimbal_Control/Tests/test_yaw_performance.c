@@ -33,7 +33,7 @@ static void FastTrace(uint32_t base, float target)
                 t < 200U ? target * 5.0f : 0.0f);
         }
         Apply(base + 102U + t, 1U);
-        CHECK(state.active && !state.controller.faults && !state.controller.speed_limited);
+        CHECK(state.active && !state.controller.faults && !state.controller.cascade.velocity_limited);
         CHECK(last_torque <= GL60_TORQUE_MAX_NM && last_torque >= -GL60_TORQUE_MAX_NM);
     }
     YawBackend_GetStep(&result);
@@ -64,7 +64,7 @@ void test_run(void)
     PerformanceFeed(15072U, 0.2f, 64.36f); Apply(15072U, 1U);
     YawBackend_GetStep(&result);
     CHECK(state.active && result.phase == YAW_STEP_RUNNING && !state.controller.faults);
-    CHECK(result.peak_velocity_dps > 60.0f && !state.controller.speed_limited);
+    CHECK(result.peak_velocity_dps > 60.0f && !state.controller.cascade.velocity_limited);
     /* 后续温度故障发生前已经提交的0.10请求仍须留在报告，不能变成0。 */
     bad = Feedback(15082U, 1U, 60U, 30U); now_ms = 15082U;
     CHECK(YawBackend_OnFrame(&bad)); Read(); YawBackend_GetStep(&result);

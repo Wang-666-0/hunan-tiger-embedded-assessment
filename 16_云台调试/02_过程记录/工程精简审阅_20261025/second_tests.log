@@ -1,0 +1,16 @@
+{"name": "yaw_cascade_unlimited", "checks": 6168, "failures": 0, "first_failed_line": 0, "stage": 5, "finished": 1, "returned": true, "compile_defines": ["-DAPP_PITCH_ENABLED=0", "-DAPP_FEEDER_ENABLED=0", "-DAPP_FEEDER_STANDALONE_TEST_ENABLED=0", "-DAPP_CONSOLE_RX_DMA_ENABLED=0", "-DAPP_REMOTE_RX_DMA_ENABLED=0"]}
+{"name": "pitch_view_hold", "checks": 2658, "failures": 0, "first_failed_line": 0, "stage": 8, "finished": 1, "returned": true, "compile_defines": ["-DAPP_FEEDER_ENABLED=0", "-DAPP_FEEDER_STANDALONE_TEST_ENABLED=0", "-DAPP_CONSOLE_RX_DMA_ENABLED=0", "-DAPP_REMOTE_RX_DMA_ENABLED=0"]}
+Traceback (most recent call last):
+  File "D:\Project\27������ʽ������\16_��̨����\Output\Gimbal_Control\Tests\run_selftests.py", line 302, in <module>
+    sys.exit(main())
+             ^^^^^^
+  File "D:\Project\27������ʽ������\16_��̨����\Output\Gimbal_Control\Tests\run_selftests.py", line 260, in main
+    run([str(gcc), "-mcpu=cortex-m4", "-mthumb", "-mfloat-abi=soft", "-std=c99", "-O0", "-g"] + profile_flags + [
+  File "D:\Project\27������ʽ������\16_��̨����\Output\Gimbal_Control\Tests\run_selftests.py", line 17, in run
+    raise RuntimeError(result.stdout + result.stderr)
+RuntimeError: In file included from D:\Project\27������ʽ������\16_��̨����\Output\Gimbal_Control\Tests\test_pitch_telemetry.c:3:
+D:\Project\27������ʽ������\16_��̨����\Output\Gimbal_Control\Tests\test_app_console.c:31:27: error: 'other_uart' defined but not used [-Werror=unused-variable]
+   31 | static UART_HandleTypeDef other_uart = {2U, 0U};
+      |                           ^~~~~~~~~~
+cc1.exe: all warnings being treated as errors
+

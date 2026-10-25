@@ -9,6 +9,7 @@ volatile uint32_t test_checks, test_failures, test_failed_line, test_done, test_
 #define CHECK(x) do { ++test_checks; if (!(x)) { ++test_failures; \
     if (!test_failed_line) { test_failed_line = __LINE__; } } } while (0)
 CAN_HandleTypeDef hcan1 = {1U}, hcan2 = {2U};
+#include "bus_contention.h"
 typedef struct {
     CAN_TxHeaderTypeDef header;
     uint8_t data[8];
@@ -81,6 +82,7 @@ uint32_t HAL_GetTick(void) { return 100U; }
 
 static void CompleteAll(void)
 {
+    fixture_other[0] = fixture_other[1] = 0U;
     CAN_HandleTypeDef *handles[2] = {&hcan1, &hcan2};
     uint32_t index;
     for (index = 0U; index < 2U; ++index) {
@@ -114,7 +116,7 @@ void test_run(void)
     CanFrame arbitrary = {0};
     CanBusState state;
     CanBusDiagnostics diagnostic;
-    uint32_t before, feeder_box, wheel_box, diag_box, yaw_box, pitch_box, i, before_aborts;
+    uint32_t before, feeder_box, wheel_box, other_box, yaw_box, pitch_box, i, before_aborts;
     test_stage = 1U;
     CHECK(APP_FEEDER_ENABLED && APP_PITCH_ENABLED && APP_YAW_ENABLED);
     CHECK(APP_MOTOR_DRIVERS_IMPLEMENTED == 0U && APP_FEEDER_CURRENT_HARD_LIMIT == 3000);
@@ -152,20 +154,20 @@ void test_run(void)
     CHECK(CanBus_PitchTorque(1.0f) == HAL_OK); pitch_box = tx[sends - 1U].mailbox;
     CHECK(CanBus_FeederCurrent(800) == HAL_OK); feeder_box = tx[sends - 1U].mailbox;
     CHECK(CanBus_JogVescCurrent(70U, 500) == HAL_OK); wheel_box = tx[sends - 1U].mailbox;
-    CHECK(CanBus_ReadVesc(71U, 0U) == HAL_OK); diag_box = tx[sends - 1U].mailbox;
-    CHECK(feeder_box != wheel_box && wheel_box != diag_box && feeder_box != diag_box);
+    CHECK(Fixture_OtherTx(&hcan2) == HAL_OK); other_box = tx[sends - 1U].mailbox;
+    CHECK(feeder_box != wheel_box && wheel_box != other_box && feeder_box != other_box);
     abort_mask[0] = abort_mask[1] = 0U;
     CanBus_SetOutputPermission(0U);
     CHECK(abort_mask[0] == 0U && abort_mask[1] == wheel_box);
-    CHECK(pending[1] == (feeder_box | diag_box) && CanBus_FeederAllowed());
+    CHECK(pending[1] == (feeder_box | other_box) && CanBus_FeederAllowed());
     CHECK(CanBus_YawAllowed() && CanBus_PitchAllowed() && pending[0] == (yaw_box | pitch_box));
     abort_mask[1] = 0U; CanBus_SetFeederPermission(0U);
-    CHECK(abort_mask[1] == feeder_box && pending[1] == diag_box && !CanBus_FeederAllowed());
+    CHECK(abort_mask[1] == feeder_box && pending[1] == other_box && !CanBus_FeederAllowed());
     CHECK(CanBus_YawAllowed() && CanBus_PitchAllowed() && pending[0] == (yaw_box | pitch_box));
     CanBus_SetFeederPermission(1U); CHECK(CanBus_FeederCurrent(900) == HAL_OK);
     feeder_box = tx[sends - 1U].mailbox; abort_mask[0] = abort_mask[1] = 0U;
-    CanBus_CancelReads();
-    CHECK(abort_mask[0] == 0U && abort_mask[1] == diag_box && pending[1] == feeder_box);
+    Fixture_CancelOther();
+    CHECK(abort_mask[0] == 0U && abort_mask[1] == other_box && pending[1] == feeder_box);
     CHECK(CanBus_FeederAllowed() && CanBus_YawAllowed() && CanBus_PitchAllowed());
     CanBus_SetYawPermission(0U); CanBus_SetPitchPermission(0U);
     CHECK(pending[0] == 0U && pending[1] == feeder_box && CanBus_FeederAllowed());
@@ -175,7 +177,7 @@ void test_run(void)
     CanBus_SetOutputPermission(1U);
     CHECK(CanBus_JogVescCurrent(70U, 500) == HAL_OK);
     CHECK(CanBus_JogVescCurrent(71U, 500) == HAL_OK);
-    CHECK(CanBus_ReadVesc(70U, 0U) == HAL_OK && pending[1] == 7U);
+    CHECK(Fixture_OtherTx(&hcan2) == HAL_OK && pending[1] == 7U);
     before = sends;
     CHECK(CanBus_FeederCurrent(500) == HAL_BUSY && sends == before && CanBus_FeederAllowed());
     CHECK(CanBus_StopFeeder() == HAL_BUSY && sends == before && !CanBus_FeederAllowed());
@@ -185,7 +187,7 @@ void test_run(void)
     before = sends;
     CHECK(CanBus_FeederCurrent(200) == HAL_BUSY && sends == before && pending[1] == feeder_box);
     CHECK(CanBus_JogVescCurrent(70U, 500) == HAL_OK); wheel_box = tx[sends - 1U].mailbox;
-    CHECK(CanBus_ReadVesc(71U, 0U) == HAL_OK); diag_box = tx[sends - 1U].mailbox;
+    CHECK(Fixture_OtherTx(&hcan2) == HAL_OK); other_box = tx[sends - 1U].mailbox;
     keep_pending = 1U; before = sends; abort_mask[0] = abort_mask[1] = 0U;
     CanBus_SetFeederPermission(0U);
     CHECK(abort_mask[0] == 0U && abort_mask[1] == feeder_box && pending[1] == 7U);
@@ -193,7 +195,7 @@ void test_run(void)
     CHECK(sends == before && pending[1] == 7U && !CanBus_FeederAllowed()); CheckHealthy();
     keep_pending = 0U; abort_mask[1] = 0U;
     CHECK(CanBus_StopFeeder() == HAL_OK && sends == before + 1U);
-    CHECK(abort_mask[1] == feeder_box && pending[1] == (feeder_box | wheel_box | diag_box));
+    CHECK(abort_mask[1] == feeder_box && pending[1] == (feeder_box | wheel_box | other_box));
     CheckFeeder(sends - 1U, 0); CompleteAll();
     CHECK(CanBus_StopFeeder() == HAL_OK && !CanBus_FeederAllowed());
     CheckFeeder(sends - 1U, 0); CompleteAll();

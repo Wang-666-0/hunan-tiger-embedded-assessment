@@ -1,0 +1,22 @@
+[
+  "test_app_diagnostics.c",
+  "test_can_bus.c",
+  "test_dm_diag.c",
+  "test_dual_jog.c",
+  "test_flywheel_jog.c",
+  "test_flywheel_speed.c",
+  "test_legacy_remote.c",
+  "test_logic.c",
+  "test_motor_capture.py",
+  "test_motor_jog.c",
+  "test_speed_1000.c",
+  "test_speed_jog.c",
+  "test_vesc_diag.c",
+  "test_yaw_cascade.c",
+  "test_yaw_cascade_console.c",
+  "test_yaw_console.c",
+  "test_yaw_feedforward.c",
+  "test_yaw_feedforward_console.c",
+  "test_yaw_shape.c",
+  "test_yaw_shape_console.c"
+]

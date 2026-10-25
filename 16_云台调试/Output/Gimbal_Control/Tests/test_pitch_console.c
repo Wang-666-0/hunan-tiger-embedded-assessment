@@ -214,9 +214,7 @@ void test_run(void)
     Command("PITCH SHAPE nan", "P|ERROR|"); Command("PITCH SHAPE inf", "P|ERROR|");
     Command("PITCH SHAPEV -0.1", "P|ERROR|"); Command("PITCH SHAPEV 1.1", "P|ERROR|");
     Command("PITCH SHAPEV nan", "P|ERROR|"); Command("PITCH SHAPEV 0.2 extra", "P|ERROR|");
-    diagnostic_mode = 1U;
-    Command("PITCH SHAPE 200", "P|ERROR|"); Command("PITCH SHAPEV 0.2", "P|ERROR|");
-    diagnostic_mode = 0U;
+    /* Device DIAG mode was archived; active-motion guards remain below. */
     Command("PITCH BRAKE", "P|BRAKE|MODE|TERMINAL_AND_RETURN|ENABLED|1");
     Command("PITCH BRAKE OFF", "P|OK|BRAKE|OFF");
     Command("PITCH BRAKE ON", "P|OK|BRAKE|ON");
@@ -264,7 +262,6 @@ void test_run(void)
     CHECK(strstr(response, "RETURN_MS|250|RETURN_GAIN|0.01|RETURN_MAX_NM|0.3"));
     CHECK(strstr(response, "PEAK_NM|0|RETURN_PEAK_NM|0|N|0|RETURN_N|0"));
     Command("PITCH BRAKE bad", "P|ERROR|"); Command("PITCH BRAKE ON extra", "P|ERROR|");
-    diagnostic_mode = 1U; Command("PITCH BRAKE OFF", "P|ERROR|"); diagnostic_mode = 0U;
     Command("PITCH STEP", "P|OK|STEP_STARTED");
     Apply(10046U, 1U); Receiver(10046U, 2000U);
     CHECK(!state.controller.shape.active && state.controller.shape.position_deg == 30.0f);

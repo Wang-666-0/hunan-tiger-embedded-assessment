@@ -12,7 +12,9 @@ $mdkRoot = Join-Path $projectRoot 'MDK-ARM'
 $projectName = 'Gimbal_Control'
 [xml]$keilProject = Get-Content -LiteralPath (Join-Path $mdkRoot ($projectName + '.uvprojx')) -Raw
 $target = $keilProject.Project.Targets.Target
-$sources = @($target.Groups.Group.Files.File | ForEach-Object { [string]$_.FilePath })
+$sources = @($target.Groups.Group.Files.File |
+    Where-Object { [int]$_.FileType -in 1, 2 } |
+    ForEach-Object { [string]$_.FilePath })
 $includes = @(([string]$target.TargetOption.TargetArmAds.Cads.VariousControls.IncludePath).Split(';'))
 if ($sources.Count -lt 40) { throw '工程源文件列表不完整，请检查 App 分组。' }
 foreach ($source in $sources) {
@@ -58,7 +60,7 @@ $options = @{
         CXX_FLAGS = '--diag_suppress=1 --diag_suppress=1295'
         C_FLAGS = '--diag_suppress=1 --diag_suppress=1295'
         'c99-mode' = $true; 'one-elf-section-per-function' = $true
-        optimization = 'level-3'; warnings = 'all-warnings'
+        optimization = 'level-0'; warnings = 'all-warnings'
     }
     global = @{
         'output-debug-info' = 'enable'; 'use-microLIB' = $false

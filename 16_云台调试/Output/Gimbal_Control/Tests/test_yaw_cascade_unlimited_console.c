@@ -33,7 +33,7 @@ void test_run(void)
     Command(t, "YAW STATUS", "|PROTOCOL_NM|10.000|OUTPUT_LIMITS|0|");
     CHECK(strstr(response, "|VREF_MAX_DPS|0.0|") && strstr(response, "|SPEED_GUARD|0|"));
     Command(t, "YAW PID", "|VMAX_DPS|0.0|OUTPUT_LIMITS|0");
-    Command(t, "YAW VMAX 180", "Y|ERROR|OUTPUT_LIMITS_DISABLED");
+    Command(t, "YAW VMAX 180", "Y|ERROR|UNKNOWN_COMMAND");
     CHECK(!state.controller.cascade.velocity_limit_dps && !state.active);
 
     test_stage = 2;

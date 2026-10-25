@@ -1,0 +1,114 @@
+{"name": "feeder_standalone", "checks": 6889, "failures": 0, "first_failed_line": 0, "stage": 6, "finished": 1, "returned": true, "compile_defines": ["-DAPP_FEEDER_ENABLED=1", "-DAPP_CONSOLE_RX_DMA_ENABLED=0", "-DAPP_REMOTE_RX_DMA_ENABLED=0"]}
+{"name": "feeder_standalone_can", "checks": 78, "failures": 0, "first_failed_line": 0, "stage": 1, "finished": 1, "returned": true, "compile_defines": ["-DAPP_FEEDER_ENABLED=1", "-DAPP_CONSOLE_RX_DMA_ENABLED=0", "-DAPP_REMOTE_RX_DMA_ENABLED=0"]}
+{"name": "pitch_controller", "checks": 418, "failures": 0, "first_failed_line": 0, "stage": 9, "finished": 1, "returned": true, "compile_defines": ["-DAPP_FEEDER_ENABLED=0", "-DAPP_FEEDER_STANDALONE_TEST_ENABLED=0", "-DAPP_CONSOLE_RX_DMA_ENABLED=0", "-DAPP_REMOTE_RX_DMA_ENABLED=0"]}
+Traceback (most recent call last):
+  File "D:\Project\27������ʽ������\16_��̨����\Output\Gimbal_Control\Tests\run_selftests.py", line 302, in <module>
+    sys.exit(main())
+             ^^^^^^
+  File "D:\Project\27������ʽ������\16_��̨����\Output\Gimbal_Control\Tests\run_selftests.py", line 260, in main
+    run([str(gcc), "-mcpu=cortex-m4", "-mthumb", "-mfloat-abi=soft", "-std=c99", "-O0", "-g"] + profile_flags + [
+  File "D:\Project\27������ʽ������\16_��̨����\Output\Gimbal_Control\Tests\run_selftests.py", line 17, in run
+    raise RuntimeError(result.stdout + result.stderr)
+RuntimeError: In file included from D:\Project\27������ʽ������\16_��̨����\Output\Gimbal_Control\Tests\test_yaw_cascade_unlimited.c:2:
+D:\Project\27������ʽ������\16_��̨����\Output\Gimbal_Control\Tests\test_yaw_controller.c: In function 'limited_controller_fixture_not_run':
+D:\Project\27������ʽ������\16_��̨����\Output\Gimbal_Control\Tests\test_yaw_controller.c:52:19: error: 'YawController' has no member named 'pid'
+   52 |     CHECK(near(yaw.pid.kp, 1.0f, 0.0001f) && yaw.pid.ki == 0.0f);
+      |                   ^
+D:\Project\27������ʽ������\16_��̨����\Output\Gimbal_Control\Tests\test_yaw_controller.c:5:47: note: in definition of macro 'CHECK'
+    5 | #define CHECK(expr) do { ++test_checks; if (!(expr)) { ++test_failures; \
+      |                                               ^~~~
+D:\Project\27������ʽ������\16_��̨����\Output\Gimbal_Control\Tests\test_yaw_controller.c:52:49: error: 'YawController' has no member named 'pid'
+   52 |     CHECK(near(yaw.pid.kp, 1.0f, 0.0001f) && yaw.pid.ki == 0.0f);
+      |                                                 ^
+D:\Project\27������ʽ������\16_��̨����\Output\Gimbal_Control\Tests\test_yaw_controller.c:5:47: note: in definition of macro 'CHECK'
+    5 | #define CHECK(expr) do { ++test_checks; if (!(expr)) { ++test_failures; \
+      |                                               ^~~~
+D:\Project\27������ʽ������\16_��̨����\Output\Gimbal_Control\Tests\test_yaw_controller.c:53:19: error: 'YawController' has no member named 'pid'
+   53 |     CHECK(near(yaw.pid.kd, 0.015f, 0.0001f));
+      |                   ^
+D:\Project\27������ʽ������\16_��̨����\Output\Gimbal_Control\Tests\test_yaw_controller.c:5:47: note: in definition of macro 'CHECK'
+    5 | #define CHECK(expr) do { ++test_checks; if (!(expr)) { ++test_failures; \
+      |                                               ^~~~
+D:\Project\27������ʽ������\16_��̨����\Output\Gimbal_Control\Tests\test_yaw_controller.c:61:11: error: implicit declaration of function 'YawController_SetPid'; did you mean 'YawController_Stop'? [-Wimplicit-function-declaration]
+   61 |     CHECK(YawController_SetPid(&yaw, 2.0f, 1.0f, 0.0f));
+      |           ^~~~~~~~~~~~~~~~~~~~
+D:\Project\27������ʽ������\16_��̨����\Output\Gimbal_Control\Tests\test_yaw_controller.c:5:47: note: in definition of macro 'CHECK'
+    5 | #define CHECK(expr) do { ++test_checks; if (!(expr)) { ++test_failures; \
+      |                                               ^~~~
+D:\Project\27������ʽ������\16_��̨����\Output\Gimbal_Control\Tests\test_yaw_controller.c:75:16: error: 'YawController' has no member named 'pid'
+   75 |     saved = yaw.pid.kp;
+      |                ^
+D:\Project\27������ʽ������\16_��̨����\Output\Gimbal_Control\Tests\test_yaw_controller.c:77:14: error: 'YawController' has no member named 'pid'
+   77 |     CHECK(yaw.pid.kp == saved);
+      |              ^
+D:\Project\27������ʽ������\16_��̨����\Output\Gimbal_Control\Tests\test_yaw_controller.c:5:47: note: in definition of macro 'CHECK'
+    5 | #define CHECK(expr) do { ++test_checks; if (!(expr)) { ++test_failures; \
+      |                                               ^~~~
+D:\Project\27������ʽ������\16_��̨����\Output\Gimbal_Control\Tests\test_yaw_controller.c:87:29: error: 'YawController' has no member named 'integral'
+   87 |     CHECK(!yaw.active && yaw.integral == 0.0f);
+      |                             ^
+D:\Project\27������ʽ������\16_��̨����\Output\Gimbal_Control\Tests\test_yaw_controller.c:5:47: note: in definition of macro 'CHECK'
+    5 | #define CHECK(expr) do { ++test_checks; if (!(expr)) { ++test_failures; \
+      |                                               ^~~~
+D:\Project\27������ʽ������\16_��̨����\Output\Gimbal_Control\Tests\test_yaw_controller.c:111:54: error: 'YawController' has no member named 'integral'
+  111 |     CHECK(!yaw.active && yaw.torque_nm == 0.0f && yaw.integral == 0.0f);
+      |                                                      ^
+D:\Project\27������ʽ������\16_��̨����\Output\Gimbal_Control\Tests\test_yaw_controller.c:5:47: note: in definition of macro 'CHECK'
+    5 | #define CHECK(expr) do { ++test_checks; if (!(expr)) { ++test_failures; \
+      |                                               ^~~~
+D:\Project\27������ʽ������\16_��̨����\Output\Gimbal_Control\Tests\test_yaw_controller.c:183:14: error: 'YawController' has no member named 'integral'
+  183 |     CHECK(yaw.integral > 0.0f);
+      |              ^
+D:\Project\27������ʽ������\16_��̨����\Output\Gimbal_Control\Tests\test_yaw_controller.c:5:47: note: in definition of macro 'CHECK'
+    5 | #define CHECK(expr) do { ++test_checks; if (!(expr)) { ++test_failures; \
+      |                                               ^~~~
+D:\Project\27������ʽ������\16_��̨����\Output\Gimbal_Control\Tests\test_yaw_controller.c:184:19: error: 'YawController' has no member named 'integral'
+  184 |     integral = yaw.integral;
+      |                   ^
+D:\Project\27������ʽ������\16_��̨����\Output\Gimbal_Control\Tests\test_yaw_controller.c:188:18: error: 'YawController' has no member named 'integral'
+  188 |         CHECK(yaw.integral == integral);
+      |                  ^
+D:\Project\27������ʽ������\16_��̨����\Output\Gimbal_Control\Tests\test_yaw_controller.c:5:47: note: in definition of macro 'CHECK'
+    5 | #define CHECK(expr) do { ++test_checks; if (!(expr)) { ++test_failures; \
+      |                                               ^~~~
+D:\Project\27������ʽ������\16_��̨����\Output\Gimbal_Control\Tests\test_yaw_controller.c:198:18: error: 'YawController' has no member named 'integral'
+  198 |         CHECK(yaw.integral == 0.0f); /* �������᲻�ϻ��ۡ� */
+      |                  ^
+D:\Project\27������ʽ������\16_��̨����\Output\Gimbal_Control\Tests\test_yaw_controller.c:5:47: note: in definition of macro 'CHECK'
+    5 | #define CHECK(expr) do { ++test_checks; if (!(expr)) { ++test_failures; \
+      |                                               ^~~~
+D:\Project\27������ʽ������\16_��̨����\Output\Gimbal_Control\Tests\test_yaw_controller.c:287:28: error: 'YawController' has no member named 'integral'
+  287 |     CHECK(yaw.active && yaw.integral == 0.0f && yaw.faults == 0U);
+      |                            ^
+D:\Project\27������ʽ������\16_��̨����\Output\Gimbal_Control\Tests\test_yaw_controller.c:5:47: note: in definition of macro 'CHECK'
+    5 | #define CHECK(expr) do { ++test_checks; if (!(expr)) { ++test_failures; \
+      |                                               ^~~~
+D:\Project\27������ʽ������\16_��̨����\Output\Gimbal_Control\Tests\test_yaw_controller.c:309:14: error: 'YawController' has no member named 'speed_limited'
+  309 |     CHECK(yaw.speed_limited && torque < 0.0f && torque >= -YAW_CONTROLLER_TORQUE_LIMIT_NM && yaw.faults == 0U);
+      |              ^
+D:\Project\27������ʽ������\16_��̨����\Output\Gimbal_Control\Tests\test_yaw_controller.c:5:47: note: in definition of macro 'CHECK'
+    5 | #define CHECK(expr) do { ++test_checks; if (!(expr)) { ++test_failures; \
+      |                                               ^~~~
+D:\Project\27������ʽ������\16_��̨����\Output\Gimbal_Control\Tests\test_yaw_controller.c:310:61: error: 'YawController' has no member named 'integral'
+  310 |     CHECK(YawController_SetPid(&yaw, 0.0f, 0.2f, 0.0f)); yaw.integral = 0.1f;
+      |                                                             ^
+D:\Project\27������ʽ������\16_��̨����\Output\Gimbal_Control\Tests\test_yaw_controller.c:313:14: error: 'YawController' has no member named 'integral'
+  313 |     CHECK(yaw.integral == 0.1f);
+      |              ^
+D:\Project\27������ʽ������\16_��̨����\Output\Gimbal_Control\Tests\test_yaw_controller.c:5:47: note: in definition of macro 'CHECK'
+    5 | #define CHECK(expr) do { ++test_checks; if (!(expr)) { ++test_failures; \
+      |                                               ^~~~
+D:\Project\27������ʽ������\16_��̨����\Output\Gimbal_Control\Tests\test_yaw_controller.c:317:14: error: 'YawController' has no member named 'speed_limited'
+  317 |     CHECK(yaw.speed_limited && torque > 0.0f && torque <= YAW_CONTROLLER_TORQUE_LIMIT_NM && yaw.faults == 0U);
+      |              ^
+D:\Project\27������ʽ������\16_��̨����\Output\Gimbal_Control\Tests\test_yaw_controller.c:5:47: note: in definition of macro 'CHECK'
+    5 | #define CHECK(expr) do { ++test_checks; if (!(expr)) { ++test_failures; \
+      |                                               ^~~~
+D:\Project\27������ʽ������\16_��̨����\Output\Gimbal_Control\Tests\test_yaw_cascade_unlimited.c: In function 'test_run':
+D:\Project\27������ʽ������\16_��̨����\Output\Gimbal_Control\Tests\test_yaw_cascade_unlimited.c:43:12: error: implicit declaration of function 'YawCascade_SetVelocityLimit' [-Wimplicit-function-declaration]
+   43 |     CHECK(!YawCascade_SetVelocityLimit(&yaw.cascade, 180));
+      |            ^~~~~~~~~~~~~~~~~~~~~~~~~~~
+D:\Project\27������ʽ������\16_��̨����\Output\Gimbal_Control\Tests\test_yaw_controller.c:5:47: note: in definition of macro 'CHECK'
+    5 | #define CHECK(expr) do { ++test_checks; if (!(expr)) { ++test_failures; \
+      |                                               ^~~~
+

@@ -1,0 +1,94 @@
+[ INFO ] start building at 2026-10-25 15:06:27
+
+[ TOOL ] Product: ARM Compiler 5.06
+
+[ INFO ] file statistics (rebuild mode)
+
++---------+-----------+-----------+---------------+--------+
+| C Files | Cpp Files | Asm Files | Lib/Obj Files | Totals |
++---------+-----------+-----------+---------------+--------+
+| 46      | 0         | 1         | 0             | 47     |
++---------+-----------+-----------+---------------+--------+
+
+[ INFO ] start compiling (jobs: 16) ...
+
+>> [  2%] CC '../App/app_console.c'
+>> [  4%] CC '../Core/Src/can.c'
+>> [  6%] CC '../App/app_tasks.c'
+>> [  8%] CC '../App/can_bus.c'
+>> [ 10%] CC '../App/remote_input.c'
+>> [ 12%] CC '../App/pitch_controller.c'
+>> [ 14%] CC '../Core/Src/gpio.c'
+>> [ 17%] CC '../App/yaw_controller.c'
+>> [ 19%] CC '../Core/Src/stm32f4xx_hal_msp.c'
+>> [ 21%] CC '../Core/Src/main.c'
+>> [ 23%] CC '../App/app_diagnostics.c'
+>> [ 25%] CC '../App/feeder_controller.c'
+>> [ 27%] CC '../App/motor_backend.c'
+>> [ 29%] CC '../App/motor_console.c'
+>> [ 31%] CC '../Core/Src/freertos.c'
+>> [ 34%] CC '../Core/Src/stm32f4xx_hal_timebase_tim.c'
+>> [ 36%] CC '../Drivers/STM32F4xx_HAL_Driver/Src/stm32f4xx_hal.c'
+>> [ 38%] CC '../Core/Src/stm32f4xx_it.c'
+>> [ 40%] CC '../Drivers/STM32F4xx_HAL_Driver/Src/stm32f4xx_hal_dma_ex.c'
+>> [ 42%] CC '../Drivers/STM32F4xx_HAL_Driver/Src/stm32f4xx_hal_pwr_ex.c'
+>> [ 44%] CC '../Drivers/STM32F4xx_HAL_Driver/Src/stm32f4xx_hal_exti.c'
+>> [ 46%] CC '../Drivers/STM32F4xx_HAL_Driver/Src/stm32f4xx_hal_gpio.c'
+>> [ 48%] CC '../Drivers/STM32F4xx_HAL_Driver/Src/stm32f4xx_hal_flash.c'
+>> [ 51%] CC '../Drivers/STM32F4xx_HAL_Driver/Src/stm32f4xx_hal_tim.c'
+>> [ 53%] CC '../Drivers/STM32F4xx_HAL_Driver/Src/stm32f4xx_hal_dma.c'
+>> [ 55%] CC '../Drivers/STM32F4xx_HAL_Driver/Src/stm32f4xx_hal_rcc_ex.c'
+>> [ 57%] CC '../Drivers/STM32F4xx_HAL_Driver/Src/stm32f4xx_hal_can.c'
+>> [ 59%] CC '../Drivers/STM32F4xx_HAL_Driver/Src/stm32f4xx_hal_rcc.c'
+>> [ 61%] CC '../Drivers/STM32F4xx_HAL_Driver/Src/stm32f4xx_hal_pwr.c'
+>> [ 63%] CC '../Drivers/STM32F4xx_HAL_Driver/Src/stm32f4xx_hal_tim_ex.c'
+>> [ 65%] CC '../Drivers/STM32F4xx_HAL_Driver/Src/stm32f4xx_hal_flash_ex.c'
+>> [ 68%] CC '../Core/Src/usart.c'
+>> [ 70%] CC '../Drivers/STM32F4xx_HAL_Driver/Src/stm32f4xx_hal_flash_ramfunc.c'
+>> [ 72%] CC '../Drivers/STM32F4xx_HAL_Driver/Src/stm32f4xx_hal_cortex.c'
+>> [ 74%] CC '../Core/Src/system_stm32f4xx.c'
+>> [ 76%] CC '../Drivers/STM32F4xx_HAL_Driver/Src/stm32f4xx_hal_uart.c'
+>> [ 78%] CC '../Middlewares/Third_Party/FreeRTOS/Source/croutine.c'
+>> [ 80%] CC '../Middlewares/Third_Party/FreeRTOS/Source/event_groups.c'
+>> [ 82%] CC '../Middlewares/Third_Party/FreeRTOS/Source/list.c'
+>> [ 85%] CC '../Middlewares/Third_Party/FreeRTOS/Source/portable/MemMang/heap_4.c'
+>> [ 87%] CC '../Middlewares/Third_Party/FreeRTOS/Source/CMSIS_RTOS_V2/cmsis_os2.c'
+>> [ 89%] CC '../Middlewares/Third_Party/FreeRTOS/Source/queue.c'
+>> [ 91%] CC '../Middlewares/Third_Party/FreeRTOS/Source/stream_buffer.c'
+>> [ 93%] AS 'startup_stm32f405xx.s'
+>> [ 95%] CC '../Middlewares/Third_Party/FreeRTOS/Source/portable/RVDS/ARM_CM4F/port.c'
+>> [ 97%] CC '../Middlewares/Third_Party/FreeRTOS/Source/tasks.c'
+>> [100%] CC '../Middlewares/Third_Party/FreeRTOS/Source/timers.c'
+
+[ INFO ] start linking ...
+
+Program Size: Code=125956 RO-data=15224 RW-data=928 ZI-data=36328  
+
+Total RO  Size (Code + RO Data)               141180 ( 137.87kB)
+Total RW  Size (RW Data + ZI Data)             37256 (  36.38kB)
+Total ROM Size (Code + RO Data + RW Data)     141416 ( 138.10kB)
+
+Total Memory Usage:
+
+  RAM: [######              ] 28.4%     36.4KB/128.0KB
+  ROM: [#####               ] 27.0%     138.1KB/512.0KB
+
+Section Memory Usage:
+
+  LR_IROM1 (0x08000000): [#####               ] 27.1%     138.8KB/512.0KB
+    - ER_IROM1 (0x08000000): [#####               ] 26.9%     137.9KB/512.0KB
+    - RW_IRAM1 (0x20000000): [######              ] 32.5%     36.4KB/112.0KB
+    - RW_IRAM2 (0x2001C000): [                    ] 0.0%      0B/16.0KB
+
+[ INFO ] start outputting files ...
+
+>> output hex file		[done]
+
+file path: "build/Gimbal_Control/Gimbal_Control.hex"
+
+>> output s19 file		[done]
+
+file path: "build/Gimbal_Control/Gimbal_Control.s19"
+
+[ DONE ] build successfully !, elapsed time 0:0:5
+

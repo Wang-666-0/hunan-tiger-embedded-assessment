@@ -1,0 +1,13 @@
+{
+  "groups": 13,
+  "checks": 178199,
+  "failures": 0,
+  "source_hashes_verified": 129,
+  "feeder_math_unchanged": true,
+  "existing_parameter_macros_unchanged": true,
+  "hex_sha256": "a318a2cefa012408e3b52d196f92300efc47db3c982d8756bcfc0ff3ded362e0",
+  "rom_bytes": 141416,
+  "ram_bytes": 37256,
+  "build": "original EIDE AC5 O0, 46C + 1ASM, no compiler warnings",
+  "hardware_tested": false
+}

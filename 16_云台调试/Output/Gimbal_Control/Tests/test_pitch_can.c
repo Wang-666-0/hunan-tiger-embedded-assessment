@@ -1,7 +1,6 @@
 #include "can_bus.h"
 #include "app_config.h"
 #include "app_fault.h"
-#include "dm_diag.h"
 #include "queue.h"
 #include <string.h>
 
@@ -9,6 +8,7 @@ volatile uint32_t test_checks, test_failures, test_failed_line, test_done, test_
 #define CHECK(x) do { ++test_checks; if (!(x)) { ++test_failures; \
     if (!test_failed_line) { test_failed_line = __LINE__; } } } while (0)
 CAN_HandleTypeDef hcan1 = {1U}, hcan2 = {2U};
+#include "bus_contention.h"
 typedef struct {
     CAN_TxHeaderTypeDef header;
     uint8_t data[8];
@@ -88,6 +88,7 @@ uint32_t HAL_GetTick(void) { return 100U; }
 static float FloatBits(uint32_t raw) { float out; memcpy(&out, &raw, sizeof(out)); return out; }
 static void CompleteAll(void)
 {
+    fixture_other[0] = fixture_other[1] = 0U;
     CAN_HandleTypeDef *handles[2] = {&hcan1, &hcan2};
     uint32_t index;
     for (index = 0U; index < 2U; ++index) {
@@ -120,7 +121,7 @@ void test_run(void)
     CanFrame arbitrary = {0};
     CanBusState state;
     CanBusDiagnostics diagnostics;
-    uint32_t before, pitch_box, yaw_box, diag_box, i;
+    uint32_t before, pitch_box, yaw_box, other_box, i;
     test_stage = 1U;
     CHECK(APP_PITCH_ENABLED && APP_YAW_ENABLED && APP_MOTOR_DRIVERS_IMPLEMENTED == 0U);
     CanBus_SetPitchPermission(1U);
@@ -165,15 +166,15 @@ void test_run(void)
     CanBus_SetYawPermission(1U);
     CHECK(CanBus_YawEnable() == HAL_OK); yaw_box = tx[sends - 1U].mailbox;
     CHECK(CanBus_PitchTorque(1.0f) == HAL_OK); pitch_box = tx[sends - 1U].mailbox;
-    CHECK(CanBus_ReadDm(DM_DIAG_RID_MASTER_ID) == HAL_OK); diag_box = tx[sends - 1U].mailbox;
-    CHECK(yaw_box != pitch_box && pitch_box != diag_box && CanBus_PitchTxPending() == pitch_box);
+    CHECK(Fixture_OtherTx(&hcan1) == HAL_OK); other_box = tx[sends - 1U].mailbox;
+    CHECK(yaw_box != pitch_box && pitch_box != other_box && CanBus_PitchTxPending() == pitch_box);
     CHECK(CanBus_YawTxPending() == yaw_box);
     before = sends;
     CHECK(CanBus_PitchTorque(1.0f) == HAL_BUSY && sends == before);
     CanBus_GetState(&state); CHECK(state.fault_epoch == 0U && CanBus_PitchAllowed() && CanBus_YawAllowed());
     abort_mask[0] = abort_mask[1] = 0U;
-    CanBus_CancelReads();
-    CHECK(abort_mask[0] == diag_box && abort_mask[1] == 0U);
+    Fixture_CancelOther();
+    CHECK(abort_mask[0] == other_box && abort_mask[1] == 0U);
     CHECK(pending[0] == (pitch_box | yaw_box) && CanBus_PitchAllowed() && CanBus_YawAllowed());
     keep_pending = 1U; abort_mask[0] = 0U; before = sends;
     CHECK(CanBus_PitchDisable(1U) == HAL_BUSY && sends == before);
@@ -186,14 +187,14 @@ void test_run(void)
     CHECK(CanBus_YawTxPending() == yaw_box);
     CanBus_SetPitchPermission(1U);
     CHECK(CanBus_PitchReadFeedback() == HAL_OK); pitch_box = tx[sends - 1U].mailbox;
-    CHECK(CanBus_ReadDm(DM_DIAG_RID_MASTER_ID) == HAL_OK); diag_box = tx[sends - 1U].mailbox;
+    CHECK(Fixture_OtherTx(&hcan1) == HAL_OK); other_box = tx[sends - 1U].mailbox;
     abort_mask[0] = 0U;
     CanBus_SetYawPermission(0U);
     CHECK(abort_mask[0] == yaw_box && CanBus_PitchTxPending() == pitch_box && CanBus_PitchAllowed());
-    CHECK(pending[0] == (pitch_box | diag_box));
+    CHECK(pending[0] == (pitch_box | other_box));
     abort_mask[0] = 0U; CanBus_SetPitchPermission(0U);
-    CHECK(abort_mask[0] == pitch_box && pending[0] == diag_box);
-    CanBus_CancelReads(); CompleteAll();
+    CHECK(abort_mask[0] == pitch_box && pending[0] == other_box);
+    Fixture_CancelOther(); CompleteAll();
 
     test_stage = 3U;
     /* 旧完成/取消IRQ迟到，邮箱已经被新CC占用：不可丢失新Pitch归属。 */
@@ -211,14 +212,14 @@ void test_run(void)
     CanBus_SetPitchPermission(1U); CanBus_SetYawPermission(1U);
     CHECK(CanBus_PitchTorque(1.0f) == HAL_OK); pitch_box = tx[sends - 1U].mailbox;
     CHECK(CanBus_YawEnable() == HAL_OK); yaw_box = tx[sends - 1U].mailbox;
-    CHECK(CanBus_ReadVesc(70U, 0U) == HAL_OK);
-    diag_box = tx[sends - 1U].mailbox;
+    CHECK(Fixture_OtherTx(&hcan2) == HAL_OK);
+    other_box = tx[sends - 1U].mailbox;
     CanBus_SetOutputPermission(1U);
     CHECK(CanBus_JogVescCurrent(70U, 500) == HAL_OK);
     abort_mask[0] = abort_mask[1] = 0U;
     CanBus_SetOutputPermission(0U);
     CHECK(abort_mask[0] == 0U && pending[0] == (pitch_box | yaw_box));
-    CHECK(pending[1] == diag_box && CanBus_PitchAllowed() && CanBus_YawAllowed());
+    CHECK(pending[1] == other_box && CanBus_PitchAllowed() && CanBus_YawAllowed());
     CHECK(CanBus_StopFlywheels() == HAL_OK);
     CHECK(abort_mask[0] == 0U && CanBus_PitchTxPending() == pitch_box && CanBus_YawTxPending() == yaw_box);
     CHECK(CanBus_KeepFlywheelsStopped() == HAL_BUSY);

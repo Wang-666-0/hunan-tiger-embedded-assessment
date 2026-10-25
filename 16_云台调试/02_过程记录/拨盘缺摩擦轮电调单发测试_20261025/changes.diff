@@ -1,0 +1,348 @@
+diff --git "a/16_\344\272\221\345\217\260\350\260\203\350\257\225/Output/Gimbal_Control/App/README.md" "b/16_\344\272\221\345\217\260\350\260\203\350\257\225/Output/Gimbal_Control/App/README.md"
+index 441ded4..af5e41f 100644
+--- "a/16_\344\272\221\345\217\260\350\260\203\350\257\225/Output/Gimbal_Control/App/README.md"
++++ "b/16_\344\272\221\345\217\260\350\260\203\350\257\225/Output/Gimbal_Control/App/README.md"
+@@ -1,5 +1,16 @@
+ # App 代码导航
+ 
++## 缺摩擦轮电调时测试拨盘（2026-10-25）
++
++`app_config.h` 的 `APP_FEEDER_STANDALONE_TEST_ENABLED` 当前为 **1**。这是拨盘独立测试固件：不等待两侧 VESC 在线/稳速，摩擦轮自动准备、点动选择及 CAN 动力许可关闭。拨盘仍使用原 PID、40°步距、单发减速、50ms 连发节拍、2ms 控制和全部自身保护。`WHEELS_READY` 继续报告真实状态，缺电调时为 0。
++
++1. 使用原 VS Code 工程编译烧录。CH5 OFF、CH6 OFF、CH8 中档释放，摇杆回中，等待原云台和拨盘安全准备完成。若拨盘未准备好，在此状态下发 `FEEDER READY`，确认 `OK`、`ARMED=1`、`ZERO=1`、`FAULT=0`。原云台准备要求仍保留。
++2. 发 `FEEDER MODE`，确认 `FEEDER_ONLY`、`WHEEL_OUTPUT|DISABLED`、`CONTINUOUS|1`。发 `FEEDER ANGLE VIEW`，VOFA 绘制 I0 实际角度、I1 目标角度，原来的反号显示不变。
++3. CH5 切中档正常模式；CH6 中档单发、高档连发。选好模式后，CH8 先中档释放，再扣动到高档。单发每次只推进 40°，长按不重复；连发保持扣动，每 50ms 再推进 40°，释放后收完已接受的尾步即停止。中途切换单发/连发后要重新释放一次。CH5 下拨云台阶跃模式不执行拨盘运动。
++4. 单发也可在 CH6 中档且 CH8 释放时发 `FEEDER SINGLE`。`FEEDER RESULT` 查看真实完成用时、超调、拒绝和故障计数，`FEEDER CHECK` 查故障证据。反馈丢失、堵转、过流、CAN 故障、遥控失联、CH8 锁定仍停机，不排队补发。
++
++电调装回后，把 `APP_FEEDER_STANDALONE_TEST_ENABLED` 改为 **0**，重新编译烧录，恢复原摩擦轮控制及双轮稳速 500ms 互锁。此开关只在编译时生效，`FEEDER MODE` 是只读查询。
++
+ App 的实现已从 32 个 C 文件整理为 **10 个 C 文件**。原头文件继续保留公开类型和函数接口，避免其他模块、Core 回调或现有测试改用另一套 API。每个 `.c`、`.h` 文件开头均注明职责、主要函数、调用关系和维护约束。
+ 
+ ## 去哪里改代码
+@@ -13,7 +24,7 @@ App 的实现已从 32 个 C 文件整理为 **10 个 C 文件**。原头文件
+ | `app_diagnostics.c` | 只读设备查询、VESC 分片与诊断会话 | `AppDiagnostics_*`、`DmDiag_*`、`VescDiag_*` |
+ | `remote_input.c` | iBUS、遥控映射、安全管理、目标与发射节拍 | `RemoteInput_Poll`、`RemoteMapper_Map`、`SafetyManager_Step`、`TargetManager_Step` |
+ | `motor_backend.c` | 左右摩擦轮、速度 PI、点动及停机确认 | `MotorBackend_Apply`、`FlywheelJog_*`、`FlywheelSpeed_*` |
+-| `feeder_controller.c` | 拨盘位置/速度控制、单发/连发及执行后端 | `Feeder_Update`、`FeederBackend_Apply` |
++| `feeder_controller.c` | 拨盘位置/速度控制、单发/连发及执行后端 | `Feeder_Run`、`FeederBackend_Apply` |
+ | `yaw_controller.c` | Yaw、两轴共用串级 PID、共用阶跃统计和 Yaw 后端 | `YawCascade_*`、`YawController_Update`、`YawStep_*`、`YawBackend_Apply` |
+ | `pitch_controller.c` | Pitch、重力补偿、制动、归位、锁轴和实测适配 | `PitchController_Update`、`PitchController_ReturnTo`、`PitchBackend_Apply` |
+ 
+diff --git "a/16_\344\272\221\345\217\260\350\260\203\350\257\225/Output/Gimbal_Control/App/app_config.h" "b/16_\344\272\221\345\217\260\350\260\203\350\257\225/Output/Gimbal_Control/App/app_config.h"
+index 8519087..c848d84 100644
+--- "a/16_\344\272\221\345\217\260\350\260\203\350\257\225/Output/Gimbal_Control/App/app_config.h"
++++ "b/16_\344\272\221\345\217\260\350\260\203\350\257\225/Output/Gimbal_Control/App/app_config.h"
+@@ -201,7 +201,19 @@
+ #ifndef APP_FEEDER_ENABLED
+ #define APP_FEEDER_ENABLED (APP_REMOTE_PROFILE_ASSESSMENT && APP_YAW_ENABLED && APP_PITCH_ENABLED)
+ #endif
+-#define APP_FEEDER_VERSION "C610_SINGLE_BRAKE_V1J"
++/* 拨盘独立调试：1=不依赖两侧摩擦轮，且禁止摩擦轮动力输出。
++ * CH5 中档正常模式，CH6 中档单发/高档连发，CH8 释放后扣动。
++ * 连发每50ms推进一发40度。电调装回后改为0重新编译，恢复双轮稳速互锁。
++ * 不改变拨盘 PID、40度步距或反馈/堵转/电流/遥控保护。 */
++#ifndef APP_FEEDER_STANDALONE_TEST_ENABLED
++#define APP_FEEDER_STANDALONE_TEST_ENABLED 1U
++#endif
++#define APP_FEEDER_STANDALONE_TEST_ACTIVE \
++    (APP_FEEDER_ENABLED && APP_REMOTE_PROFILE_ASSESSMENT && APP_FEEDER_STANDALONE_TEST_ENABLED)
++#if APP_FEEDER_STANDALONE_TEST_ENABLED != 0 && APP_FEEDER_STANDALONE_TEST_ENABLED != 1
++#error APP_FEEDER_STANDALONE_TEST_ENABLED_must_be_0_or_1
++#endif
++#define APP_FEEDER_VERSION "C610_STANDALONE_V2T"
+ #define APP_FEEDER_CURRENT_HARD_LIMIT 3000
+ #define APP_FEEDER_COMMAND_PERIOD_MS 2U
+ 
+diff --git "a/16_\344\272\221\345\217\260\350\260\203\350\257\225/Output/Gimbal_Control/App/app_tasks.c" "b/16_\344\272\221\345\217\260\350\260\203\350\257\225/Output/Gimbal_Control/App/app_tasks.c"
+index 47444e3..8cad178 100644
+--- "a/16_\344\272\221\345\217\260\350\260\203\350\257\225/Output/Gimbal_Control/App/app_tasks.c"
++++ "b/16_\344\272\221\345\217\260\350\260\203\350\257\225/Output/Gimbal_Control/App/app_tasks.c"
+@@ -38,6 +38,11 @@ void AppLogic_CombineActuatorHealth(SafetyInput *input, const AppAxisHealth *yaw
+     const AppAxisHealth *axes[2] = { yaw, pitch };
+     uint32_t i;
+     if (!input) { return; }
++#if APP_FEEDER_STANDALONE_TEST_ACTIVE
++    /* 独立拨盘测试时摩擦轮不参与动力许可；已请求的云台轴仍逐项检查。
++     * 不把缺失电调的在线/稳速状态伪装为正常。 */
++    wheels_wanted = 0U;
++#endif
+     for (i = 0U; i < 2U; ++i) {
+         const AppAxisHealth *axis = axes[i];
+         if (!axis || !axis->requested) { continue; }
+diff --git "a/16_\344\272\221\345\217\260\350\260\203\350\257\225/Output/Gimbal_Control/App/can_bus.c" "b/16_\344\272\221\345\217\260\350\260\203\350\257\225/Output/Gimbal_Control/App/can_bus.c"
+index 6d8567f..9b06e93 100644
+--- "a/16_\344\272\221\345\217\260\350\260\203\350\257\225/Output/Gimbal_Control/App/can_bus.c"
++++ "b/16_\344\272\221\345\217\260\350\260\203\350\257\225/Output/Gimbal_Control/App/can_bus.c"
+@@ -412,7 +412,8 @@ void CanBus_SetOutputPermission(uint8_t allowed)
+     uint8_t previous;
+     taskENTER_CRITICAL();
+     previous = output_permission;
+-    output_permission = allowed && (APP_MOTOR_DRIVERS_IMPLEMENTED || APP_FLYWHEEL_JOG_ENABLED) &&
++    output_permission = allowed && !APP_FEEDER_STANDALONE_TEST_ACTIVE &&
++        (APP_MOTOR_DRIVERS_IMPLEMENTED || APP_FLYWHEEL_JOG_ENABLED) &&
+         state.started && !HasCanFault();
+     if (previous && !output_permission) {
+         /* 撤权与取消旧请求同处临界区，禁止非零帧穿插入邮箱。 */
+diff --git "a/16_\344\272\221\345\217\260\350\260\203\350\257\225/Output/Gimbal_Control/App/feeder_backend.h" "b/16_\344\272\221\345\217\260\350\260\203\350\257\225/Output/Gimbal_Control/App/feeder_backend.h"
+index a1f9f7e..7036068 100644
+--- "a/16_\344\272\221\345\217\260\350\260\203\350\257\225/Output/Gimbal_Control/App/feeder_backend.h"
++++ "b/16_\344\272\221\345\217\260\350\260\203\350\257\225/Output/Gimbal_Control/App/feeder_backend.h"
+@@ -26,7 +26,10 @@ void FeederBackend_Apply(const TargetRequest *request, uint8_t output_allowed,
+ void FeederBackend_GetState(FeederBackendState *state);
+ uint8_t FeederBackend_TakeRearmRequest(void);
+ /* Preparation/configuration only in fresh neutral CH5 OFF / CH6 OFF / CH8 release.
+- * ARM never moves. SINGLE additionally needs armed normal mode and real wheel readiness.
++ * ARM never moves. SINGLE needs armed normal mode; independent feeder test
++ * requires CH6 middle instead of wheel readiness and forbids wheel output.
++ * CH6 high enables continuous feed in this mode; normal builds retain real
++ * two-wheel readiness for both modes (see app_config.h).
+  * Once accepted, finish that step on a speed dip; loss of permission/health still stops. */
+ uint8_t FeederBackend_SetConfig(const FeederConfig *config);
+ uint8_t FeederBackend_Clear(void);
+diff --git "a/16_\344\272\221\345\217\260\350\260\203\350\257\225/Output/Gimbal_Control/App/feeder_controller.c" "b/16_\344\272\221\345\217\260\350\260\203\350\257\225/Output/Gimbal_Control/App/feeder_controller.c"
+index 09c1371..57c6288 100644
+--- "a/16_\344\272\221\345\217\260\350\260\203\350\257\225/Output/Gimbal_Control/App/feeder_controller.c"
++++ "b/16_\344\272\221\345\217\260\350\260\203\350\257\225/Output/Gimbal_Control/App/feeder_controller.c"
+@@ -5,11 +5,12 @@
+  * 职责：累计编码器角度，生成单发/连发目标，计算位置/速度控制及保护。
+  * 主要函数：
+  *   - Feeder_Init / SetConfig：加载 app_config.h 默认参数或显式配置。
+- *   - Feeder_OnFrame / Update：累计位置，计算输出并检查堵转、超时。
+- *   - FeederBackend_Apply：执行单发/连发、摩擦轮互锁和停机流程。
++ *   - Feeder_OnFrame / Feeder_Run：累计位置，计算输出并检查堵转、超时。
++ *   - FeederBackend_Apply：执行单发/连发、正常双轮互锁或显式独立测试、停机。
+  *   - FeederBackend_GetState：向控制台提供目标角度及实际角度。
+  * 调用关系：TargetManager 发射请求 → FeederBackend → Feeder 控制器 → CAN 电流命令。
+  * 维护约束：连发每 APP_FIRE_INTERVAL_MS 推进目标；PID 仍随高速控制任务更新。
++ * 独立测试：APP_FEEDER_STANDALONE_TEST_ENABLED=1 时仅拨盘运行，摩擦轮输出禁用。
+  * 参数入口：app_config.h；对外声明仍在原头文件中。
+  */
+ 
+@@ -487,7 +488,8 @@ static uint8_t RemoteGuard(uint8_t off)
+             !app.logic.safety.operator_armed &&
+             !app.logic.safety.output_allowed && !CanBus_FeederAllowed();
+     }
+-    return command.arm == RC_HIGH && command.trigger == RC_LOW && command.friction_on &&
++    return command.arm == RC_HIGH && command.trigger == RC_LOW &&
++        (APP_FEEDER_STANDALONE_TEST_ACTIVE ? command.fire_mode == FIRE_SINGLE : command.friction_on) &&
+         app.logic.safety.operator_armed && app.logic.safety.output_allowed;
+ }
+ 
+@@ -626,7 +628,8 @@ uint8_t FeederBackend_Single(void)
+     MotorHealth wheels;
+     taskENTER_CRITICAL(); MotorBackend_GetHealth(&wheels);
+     if (state.armed && !state.stop_pending && !single_pending && !state.controller.busy &&
+-        Fresh() && !state.controller.faults && wheels.flywheels_ready && RemoteGuard(0U)) {
++        Fresh() && !state.controller.faults &&
++        (APP_FEEDER_STANDALONE_TEST_ACTIVE || wheels.flywheels_ready) && RemoteGuard(0U)) {
+         single_pending = 1U; single_ms = HAL_GetTick(); result = 1U;
+     }
+     taskEXIT_CRITICAL(); return result;
+@@ -636,16 +639,20 @@ void FeederBackend_Apply(const TargetRequest *request, uint8_t output_allowed,
+                          uint8_t wheels_ready, uint8_t diagnostic)
+ {
+     uint32_t now, accepted, completed, aborted, faults;
+-    uint8_t eligible, allowed, event, was_busy, console_single;
++    uint8_t eligible, allowed, event, was_busy, console_single, shot_ready;
+     int16_t current;
+     HAL_StatusTypeDef result;
+     taskENTER_CRITICAL(); now = HAL_GetTick();
+     was_busy = state.controller.busy; faults = state.controller.faults;
+     eligible = request && output_allowed && !diagnostic && request->gimbal_mode == GIMBAL_MANUAL &&
+-        request->friction_requested;
++        (APP_FEEDER_STANDALONE_TEST_ACTIVE ?
++            (request->fire_mode == FIRE_SINGLE || request->fire_mode == FIRE_CONTINUOUS) : request->friction_requested);
++    /* 独立拨盘测试不使用摩擦轮稳速门禁；真实 wheels_ready 遥测保持原值。
++     * allowed、拨盘反馈、故障、零点、会话及 CAN 保护均按原流程执行。 */
++    shot_ready = APP_FEEDER_STANDALONE_TEST_ACTIVE || wheels_ready;
+     /* Speed readiness authorizes a new shot, not a half-shot abort. Actual
+      * wheel feedback loss/fault still revokes the shared output permission. */
+-    allowed = state.armed && eligible && (wheels_ready || was_busy) && !state.stop_pending;
++    allowed = state.armed && eligible && (shot_ready || was_busy) && !state.stop_pending;
+     console_single = single_pending;
+     event = request && request->shot_event;
+     if (single_pending) {
+@@ -656,7 +663,7 @@ void FeederBackend_Apply(const TargetRequest *request, uint8_t output_allowed,
+     if (event) { event_sequence++; }
+     accepted = state.controller.accepted; completed = state.controller.completed;
+     aborted = state.controller.aborted;
+-    current = Feeder_Run(&state.controller, now, allowed, wheels_ready, event, event_sequence,
++    current = Feeder_Run(&state.controller, now, allowed, shot_ready, event, event_sequence,
+                         request && request->continuous_fire && !console_single);
+     if (state.controller.accepted != accepted) {
+         if (!console_single && request && request->fire_mode == FIRE_CONTINUOUS) { state.continuous_accepted++; }
+diff --git "a/16_\344\272\221\345\217\260\350\260\203\350\257\225/Output/Gimbal_Control/App/feeder_controller.h" "b/16_\344\272\221\345\217\260\350\260\203\350\257\225/Output/Gimbal_Control/App/feeder_controller.h"
+index 1726003..ba4cfcf 100644
+--- "a/16_\344\272\221\345\217\260\350\260\203\350\257\225/Output/Gimbal_Control/App/feeder_controller.h"
++++ "b/16_\344\272\221\345\217\260\350\260\203\350\257\225/Output/Gimbal_Control/App/feeder_controller.h"
+@@ -105,7 +105,9 @@ uint8_t Feeder_SetConfig(FeederController *controller, const FeederConfig *confi
+ uint8_t Feeder_OnFrame(FeederController *controller, const CanFrame *frame,
+                       uint32_t now_ms, uint32_t bus_epoch);
+ /* Return the C610 raw command for CAN2 0x1FF bytes 0/1. Requests are one-shot
+- * sequence events, never a queue. Real wheel readiness gates each new shot;
++ * sequence events, never a queue. wheels_ready is the backend's shot gate:
++ * real two-wheel readiness normally; explicit independent feeder test when
++ * wheel output is disabled by app_config.h. Controller protections stay active.
+  * an accepted shot may finish while wheel speed recovers. allowed is still
+  * required on every tick, including fresh feedback and all remote interlocks. */
+ int16_t Feeder_Step(FeederController *controller, uint32_t now_ms,
+diff --git "a/16_\344\272\221\345\217\260\350\260\203\350\257\225/Output/Gimbal_Control/App/motor_backend.c" "b/16_\344\272\221\345\217\260\350\260\203\350\257\225/Output/Gimbal_Control/App/motor_backend.c"
+index 16b27d6..8077d23 100644
+--- "a/16_\344\272\221\345\217\260\350\260\203\350\257\225/Output/Gimbal_Control/App/motor_backend.c"
++++ "b/16_\344\272\221\345\217\260\350\260\203\350\257\225/Output/Gimbal_Control/App/motor_backend.c"
+@@ -633,9 +633,12 @@ static uint32_t wheel_stable_since[2], wheel_sample_ms[2];
+ static uint8_t wheel_stable_mask;
+ #endif
+ #if APP_REMOTE_PROFILE_ASSESSMENT
+-static uint8_t remote_primed, have_prepare_sequence;
++static uint8_t remote_primed;
++#if !APP_FEEDER_STANDALONE_TEST_ACTIVE
++static uint8_t have_prepare_sequence;
+ static uint32_t prepare_sequence;
+ #endif
++#endif
+ 
+ void MotorBackend_Init(void)
+ {
+@@ -648,8 +651,11 @@ void MotorBackend_Init(void)
+     memset(wheel_sample_ms, 0, sizeof(wheel_sample_ms)); wheel_stable_mask = 0U;
+ #endif
+ #if APP_REMOTE_PROFILE_ASSESSMENT
+-    remote_primed = have_prepare_sequence = 0U;
++    remote_primed = 0U;
++#if !APP_FEEDER_STANDALONE_TEST_ACTIVE
++    have_prepare_sequence = 0U;
+     prepare_sequence = 0U;
++#endif
+ #endif
+     taskEXIT_CRITICAL();
+ }
+@@ -763,7 +769,7 @@ void MotorBackend_Stop(void)
+ uint8_t MotorBackend_PrepareRemote(const RemoteFrame *remote,
+     uint32_t barrier_ms, uint8_t barrier_valid)
+ {
+-#if APP_REMOTE_PROFILE_ASSESSMENT
++#if APP_REMOTE_PROFILE_ASSESSMENT && !APP_FEEDER_STANDALONE_TEST_ACTIVE
+     RemoteCommand command;
+     uint32_t now = HAL_GetTick();
+     uint8_t result = 0U;
+@@ -799,6 +805,8 @@ uint8_t MotorBackend_SelectJog(FlywheelJogSelection selection)
+ {
+     CanBusState bus;
+     uint8_t accepted = 0U;
++    /* 独立拨盘测试也禁止串口点动重新选中摩擦轮。OFF 保持可用。 */
++    if (APP_FEEDER_STANDALONE_TEST_ACTIVE && selection != FLYWHEEL_JOG_OFF) { return 0U; }
+     taskENTER_CRITICAL();
+     CanBus_GetState(&bus);
+     if (selection == FLYWHEEL_JOG_OFF) {
+@@ -838,7 +846,8 @@ uint8_t MotorBackend_Apply(const TargetRequest *request, uint8_t output_allowed)
+     taskENTER_CRITICAL();
+     now = HAL_GetTick(); CanBus_GetState(&bus); was_active = jog.active;
+ #if APP_REMOTE_PROFILE_ASSESSMENT
+-    wanted = request->friction_requested && request->gimbal_mode == GIMBAL_MANUAL;
++    wanted = !APP_FEEDER_STANDALONE_TEST_ACTIVE && request->friction_requested &&
++        request->gimbal_mode == GIMBAL_MANUAL;
+     ordinary_off = output_allowed && !wanted;
+     output_allowed = output_allowed && wanted && !stop_pending;
+     if (!output_allowed) {
+diff --git "a/16_\344\272\221\345\217\260\350\260\203\350\257\225/Output/Gimbal_Control/App/motor_console.c" "b/16_\344\272\221\345\217\260\350\260\203\350\257\225/Output/Gimbal_Control/App/motor_console.c"
+index 0ed39d4..5dcbcea 100644
+--- "a/16_\344\272\221\345\217\260\350\260\203\350\257\225/Output/Gimbal_Control/App/motor_console.c"
++++ "b/16_\344\272\221\345\217\260\350\260\203\350\257\225/Output/Gimbal_Control/App/motor_console.c"
+@@ -1274,9 +1274,20 @@ uint8_t FeederConsole_Handle(const char *line, char *out, size_t capacity)
+     FeederBackendState state;
+     FeederConfig config;
+     if (strncmp(line, "FEEDER", 6U) != 0 || (line[6] && line[6] != ' ')) { return 0U; }
++    if (!strcmp(line, "FEEDER MODE")) {
++        (void)snprintf(out, capacity,
++            "F|MODE|%s|STANDALONE_TEST|%u|WHEEL_OUTPUT|%s|REQUIRE_WHEELS_READY|%u|CONTINUOUS|1|CH5|MIDDLE_NORMAL|CH6|MIDDLE_SINGLE_HIGH_CONTINUOUS|CH8|RELEASE_THEN_PULL|PID_CHANGED|0|CONFIG|APP_FEEDER_STANDALONE_TEST_ENABLED\r\n",
++            APP_FEEDER_STANDALONE_TEST_ACTIVE ? "FEEDER_ONLY" : "NORMAL",
++            (unsigned)APP_FEEDER_STANDALONE_TEST_ACTIVE,
++            APP_FEEDER_STANDALONE_TEST_ACTIVE ? "DISABLED" : "NORMAL_GUARDS",
++            (unsigned)!APP_FEEDER_STANDALONE_TEST_ACTIVE);
++        return 1U;
++    }
+     if (!strcmp(line, "FEEDER HELP")) {
+         (void)snprintf(out, capacity,
+-            "F|HELP|READ|FEEDER INFO;STATUS;RESULT;PID;VIEW;ANGLE VIEW;SPEED VIEW;CHECK|ANGLE_I|0_ACTUAL_1_TARGET_SHAFT_DEG|REQUEST_MS|50|CONTROL_MS|2|CHECK|FIRST_JUMP_SINCE_CLEAR|SAFE_OFF|AUTO_PREPARE_OR_READY;OFF;CLEAR;ZERO;ARM|ACTION|SINGLE_REQUIRES_NORMAL_AND_REAL_WHEELS_READY|TUNE|PKP;VKP;VKI;RPM;CONT_RPM;PHASE_MS;BRAKE_KP;SINGLE_DECEL;LIMIT;TOL;SETTLE;TIMEOUT;STEP;DIR;GEAR;CAL|BOOT|CAL1_DIR-1_GEAR35.68_SAFE_OFF_AUTO_ZERO_ARM|SHAFT|40DEG_CLOCKWISE_FROM_TOP|RAM_TUNING|1\r\n"); return 1U;
++            "F|HELP|READ|FEEDER MODE;INFO;STATUS;RESULT;PID;VIEW;ANGLE VIEW;SPEED VIEW;CHECK|ANGLE_I|0_ACTUAL_1_TARGET_SHAFT_DEG|REQUEST_MS|50|CONTROL_MS|2|CHECK|FIRST_JUMP_SINCE_CLEAR|SAFE_OFF|AUTO_PREPARE_OR_READY;OFF;CLEAR;ZERO;ARM|ACTION|%s|TUNE|PKP;VKP;VKI;RPM;CONT_RPM;PHASE_MS;BRAKE_KP;SINGLE_DECEL;LIMIT;TOL;SETTLE;TIMEOUT;STEP;DIR;GEAR;CAL|BOOT|CAL1_DIR-1_GEAR35.68_SAFE_OFF_AUTO_ZERO_ARM|SHAFT|40DEG_CLOCKWISE_FROM_TOP|RAM_TUNING|1\r\n",
++            APP_FEEDER_STANDALONE_TEST_ACTIVE ? "FEEDER_ONLY_CH6_MIDDLE_SINGLE_HIGH_CONTINUOUS_NO_WHEEL_OUTPUT" :
++                "SINGLE_REQUIRES_NORMAL_AND_REAL_WHEELS_READY"); return 1U;
+     }
+     if (!strcmp(line, "FEEDER RESULT")) { Result(out, capacity); return 1U; }
+     if (!strcmp(line, "FEEDER CHECK")) { Check(out, capacity); return 1U; }
+diff --git "a/16_\344\272\221\345\217\260\350\260\203\350\257\225/Output/Gimbal_Control/App/remote_input.c" "b/16_\344\272\221\345\217\260\350\260\203\350\257\225/Output/Gimbal_Control/App/remote_input.c"
+index bb0a505..62d4640 100644
+--- "a/16_\344\272\221\345\217\260\350\260\203\350\257\225/Output/Gimbal_Control/App/remote_input.c"
++++ "b/16_\344\272\221\345\217\260\350\260\203\350\257\225/Output/Gimbal_Control/App/remote_input.c"
+@@ -424,6 +424,7 @@ static void AssessmentStep(TargetManager *manager, const RemoteCommand *command,
+     uint8_t new_frame, uint8_t operator_armed, uint8_t flywheels_ready, uint32_t now_ms)
+ {
+     TargetRequest *request = &manager->request;
++    uint8_t feed_requested;
+     request->shot_event = request->step_event = request->step_return_event = request->continuous_fire = 0U;
+     if (!operator_armed || !command->valid || !command->failsafe_ok) { Cancel(manager); return; }
+     if (command->gimbal_mode != manager->last_gimbal_mode) {
+@@ -483,13 +484,21 @@ static void AssessmentStep(TargetManager *manager, const RemoteCommand *command,
+     request->yaw_rate_dps = command->yaw_rate_dps;
+     request->pitch_rate_dps = command->pitch_rate_dps;
+     if (new_frame && command->wheel_switch == RC_LOW) { manager->wheel_off_seen = 1U; }
++#if APP_FEEDER_STANDALONE_TEST_ACTIVE
++    /* CH6 中档单发/高档连发；摩擦轮始终为零请求。
++     * 仍需本轮解锁后的 CH6 OFF，以及选好模式后的新鲜 CH8 释放/扣动。 */
++    feed_requested = manager->wheel_off_seen && command->friction_on;
++    (void)flywheels_ready;
++#else
+     request->friction_requested = manager->wheel_off_seen && command->friction_on;
++    feed_requested = request->friction_requested && flywheels_ready;
++#endif
+     request->flywheel_rpm = request->friction_requested ? APP_FLYWHEEL_TARGET_RPM : 0.0f;
+     if (command->fire_mode != manager->last_fire_mode) {
+         manager->trigger_low_seen = manager->firing = 0U;
+         manager->last_fire_mode = command->fire_mode;
+     }
+-    if (!request->friction_requested || !flywheels_ready || command->fire_mode == FIRE_SAFE) {
++    if (!feed_requested || command->fire_mode == FIRE_SAFE) {
+         manager->trigger_low_seen = manager->firing = 0U;
+         return;
+     }
+diff --git "a/16_\344\272\221\345\217\260\350\260\203\350\257\225/Output/Gimbal_Control/App/target_manager.h" "b/16_\344\272\221\345\217\260\350\260\203\350\257\225/Output/Gimbal_Control/App/target_manager.h"
+index c3a7064..b17aceb 100644
+--- "a/16_\344\272\221\345\217\260\350\260\203\350\257\225/Output/Gimbal_Control/App/target_manager.h"
++++ "b/16_\344\272\221\345\217\260\350\260\203\350\257\225/Output/Gimbal_Control/App/target_manager.h"
+@@ -37,7 +37,8 @@ void TargetManager_Init(TargetManager *manager);
+ /* 控制集成层仅在对应后端确实接受本次遥控阶跃后调用；拒绝事件不改变此轴。 */
+ void TargetManager_RecordAcceptedTestAxis(TargetManager *manager, GimbalMode axis);
+ /* 事件只在本周期有效；序号用于记录次数，不是待执行队列。
+- * flywheels_ready必须来自正式驱动反馈，基础版恒为0。 */
++ * flywheels_ready 必须来自正式反馈。显式独立拨盘测试不使用该门禁，
++ * 但始终保持 friction_requested=0，单发/连发仍按原释放/触发锁存，见 app_config.h。 */
+ void TargetManager_Step(TargetManager *manager, const RemoteCommand *command,
+     uint8_t new_frame, uint8_t operator_armed, uint8_t flywheels_ready, uint32_t now_ms);
+ #endif
+diff --git "a/16_\344\272\221\345\217\260\350\260\203\350\257\225/Output/Gimbal_Control/Tests/run_selftests.py" "b/16_\344\272\221\345\217\260\350\260\203\350\257\225/Output/Gimbal_Control/Tests/run_selftests.py"
+index d8c22f4..a3d22c8 100644
+--- "a/16_\344\272\221\345\217\260\350\260\203\350\257\225/Output/Gimbal_Control/Tests/run_selftests.py"
++++ "b/16_\344\272\221\345\217\260\350\260\203\350\257\225/Output/Gimbal_Control/Tests/run_selftests.py"
+@@ -190,6 +190,11 @@ def main():
+         "feeder_controller", "feeder_backend", "feeder_console", "remote_mapper", "target_manager", "app_logic", "safety_manager")]
+     groups["pitch_remote_dma"] = [root / "test_remote_input_dma.c"] + [app / (n + ".c") for n in (
+         "remote_input", "ibus", "app_logic", "remote_mapper", "safety_manager", "target_manager")]
++    groups["feeder_standalone"] = [root / "test_feeder_standalone.c"] + [app / (n + ".c") for n in (
++        "feeder_controller", "feeder_backend", "feeder_console", "remote_mapper", "target_manager",
++        "app_logic", "safety_manager", "motor_backend", "flywheel_jog", "flywheel_speed")]
++    groups["feeder_standalone_can"] = [root / "test_feeder_standalone_can.c"] + [app / (n + ".c") for n in (
++        "can_bus", "dm3507", "gl60_ii", "can_frame", "dm_diag", "vesc_diag")]
+     for sources in groups.values():
+         if app / "yaw_controller.c" in sources and app / "yaw_cascade.c" not in sources:
+             sources.append(app / "yaw_cascade.c")
+@@ -244,6 +249,9 @@ def main():
+         # Historical console fixtures mock only their original actuator APIs.
+         # Feeder groups exercise the production three-actuator build explicitly.
+         profile_flags += ["-DAPP_FEEDER_ENABLED=" + ("1" if name.startswith("feeder_") else "0")]
++        # 原有组继续验证完整双摩擦轮配置；拨盘独立测试专组直接使用生产默认值。
++        if not name.startswith("feeder_standalone"):
++            profile_flags += ["-DAPP_FEEDER_STANDALONE_TEST_ENABLED=0"]
+         if name in ("yaw_shape", "yaw_shape_console", "yaw_feedforward", "yaw_feedforward_console"):
+             profile_flags += ["-DAPP_YAW_EXPERIMENTAL_TRACKING=1"]
+         if name.endswith("_guarded"):

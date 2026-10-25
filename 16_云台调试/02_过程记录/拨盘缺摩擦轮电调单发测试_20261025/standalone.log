@@ -1,0 +1,3 @@
+{"name": "feeder_standalone", "checks": 6889, "failures": 0, "first_failed_line": 0, "stage": 6, "finished": 1, "returned": true, "compile_defines": ["-DAPP_FEEDER_ENABLED=1", "-DAPP_CONSOLE_RX_DMA_ENABLED=0", "-DAPP_REMOTE_RX_DMA_ENABLED=0"]}
+{"name": "feeder_standalone_can", "checks": 78, "failures": 0, "first_failed_line": 0, "stage": 1, "finished": 1, "returned": true, "compile_defines": ["-DAPP_FEEDER_ENABLED=1", "-DAPP_CONSOLE_RX_DMA_ENABLED=0", "-DAPP_REMOTE_RX_DMA_ENABLED=0"]}
+Report: D:\Project\27电软正式批考核\16_云台调试\Output\Gimbal_Control\Tests\selftest_results_selected.json

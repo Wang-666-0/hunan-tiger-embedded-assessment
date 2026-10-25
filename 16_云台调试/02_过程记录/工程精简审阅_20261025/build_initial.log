@@ -1,0 +1,94 @@
+[ INFO ] start building at 2026-10-25 15:57:36
+
+[ TOOL ] Product: ARM Compiler 5.06
+
+[ INFO ] file statistics (rebuild mode)
+
++---------+-----------+-----------+---------------+--------+
+| C Files | Cpp Files | Asm Files | Lib/Obj Files | Totals |
++---------+-----------+-----------+---------------+--------+
+| 65      | 0         | 1         | 0             | 66     |
++---------+-----------+-----------+---------------+--------+
+
+[ INFO ] start compiling (jobs: 16) ...
+
+>> [  1%] CC '../Core/Src/freertos.c'
+>> [  3%] CC '../Core/Src/can.c'
+>> [  4%] CC '../Core/Src/stm32f4xx_it.c'
+>> [  6%] CC '../Core/Src/stm32f4xx_hal_timebase_tim.c'
+>> [  7%] CC '../Core/Src/stm32f4xx_hal_msp.c'
+>> [  9%] CC '../Core/Src/gpio.c'
+>> [ 10%] CC '../Core/Src/main.c'
+>> [ 12%] CC '../Core/Src/usart.c'
+>> [ 13%] CC '../Drivers/STM32F4xx_HAL_Driver/Src/stm32f4xx_hal.c'
+>> [ 15%] CC '../Drivers/STM32F4xx_HAL_Driver/Src/stm32f4xx_hal_can.c'
+>> [ 16%] CC '../Drivers/STM32F4xx_HAL_Driver/Src/stm32f4xx_hal_exti.c'
+>> [ 18%] CC '../Drivers/STM32F4xx_HAL_Driver/Src/stm32f4xx_hal_flash.c'
+>> [ 19%] CC '../Core/Src/system_stm32f4xx.c'
+>> [ 21%] CC '../Drivers/STM32F4xx_HAL_Driver/Src/stm32f4xx_hal_flash_ramfunc.c'
+>> [ 22%] CC '../Drivers/STM32F4xx_HAL_Driver/Src/stm32f4xx_hal_flash_ex.c'
+>> [ 24%] CC '../Drivers/STM32F4xx_HAL_Driver/Src/stm32f4xx_hal_dma_ex.c'
+>> [ 25%] CC '../Drivers/STM32F4xx_HAL_Driver/Src/stm32f4xx_hal_gpio.c'
+>> [ 27%] CC '../Drivers/STM32F4xx_HAL_Driver/Src/stm32f4xx_hal_pwr_ex.c'
+>> [ 28%] CC '../Drivers/STM32F4xx_HAL_Driver/Src/stm32f4xx_hal_pwr.c'
+>> [ 30%] CC '../Drivers/STM32F4xx_HAL_Driver/Src/stm32f4xx_hal_rcc.c'
+>> [ 31%] CC '../Drivers/STM32F4xx_HAL_Driver/Src/stm32f4xx_hal_rcc_ex.c'
+>> [ 33%] CC '../Middlewares/Third_Party/FreeRTOS/Source/event_groups.c'
+>> [ 34%] CC '../Middlewares/Third_Party/FreeRTOS/Source/list.c'
+>> [ 36%] CC '../Drivers/STM32F4xx_HAL_Driver/Src/stm32f4xx_hal_tim_ex.c'
+>> [ 37%] CC '../Middlewares/Third_Party/FreeRTOS/Source/portable/MemMang/heap_4.c'
+>> [ 39%] CC '../Drivers/STM32F4xx_HAL_Driver/Src/stm32f4xx_hal_uart.c'
+>> [ 40%] CC '../Drivers/STM32F4xx_HAL_Driver/Src/stm32f4xx_hal_tim.c'
+>> [ 42%] CC '../Drivers/STM32F4xx_HAL_Driver/Src/stm32f4xx_hal_cortex.c'
+>> [ 43%] CC '../Middlewares/Third_Party/FreeRTOS/Source/queue.c'
+>> [ 45%] CC '../Middlewares/Third_Party/FreeRTOS/Source/CMSIS_RTOS_V2/cmsis_os2.c'
+>> [ 46%] CC '../Middlewares/Third_Party/FreeRTOS/Source/stream_buffer.c'
+>> [ 48%] CC '../Drivers/STM32F4xx_HAL_Driver/Src/stm32f4xx_hal_dma.c'
+>> [ 50%] CC '../Middlewares/Third_Party/FreeRTOS/Source/timers.c'
+>> [ 51%] CC '../Middlewares/Third_Party/FreeRTOS/Source/tasks.c'
+>> [ 53%] AS 'startup_stm32f405xx.s'
+>> [ 54%] CC '../App/console/feeder_console.c'
+>> [ 56%] CC '../Middlewares/Third_Party/FreeRTOS/Source/portable/RVDS/ARM_CM4F/port.c'
+>> [ 57%] CC '../App/control/pitch_step.c'
+>> [ 59%] CC '../App/console/app_console.c'
+>> [ 60%] CC '../App/drivers/can_frame.c'
+>> [ 62%] CC '../App/console/yaw_console.c'
+>> [ 63%] CC '../Middlewares/Third_Party/FreeRTOS/Source/croutine.c'
+>> [ 65%] CC '../App/drivers/dm3507.c'
+>> [ 66%] CC '../App/drivers/ibus.c'
+>> [ 68%] CC '../App/drivers/can_bus.c'
+>> [ 69%] CC '../App/motors/flywheel_speed.c'
+>> [ 71%] CC '../App/console/pitch_console.c'
+>> [ 72%] CC '../App/motors/feeder_controller.c'
+>> [ 74%] CC '../App/drivers/remote_input.c'
+>> [ 75%] CC '../App/control/yaw_step.c'
+>> [ 77%] CC '../App/control/yaw_cascade.c'
+>> [ 78%] CC '../App/motors/yaw_controller.c'
+>> [ 80%] CC '../App/motors/pitch_controller.c'
+>> [ 81%] CC '../App/motors/feeder_backend.c'
+>> [ 83%] CC '../App/drivers/gl60_ii.c'
+>> [ 84%] CC '../App/motors/flywheel_jog.c'
+>> [ 86%] CC '../App/motors/yaw_backend.c'
+".\..\App\motors\yaw_backend.c", line 519: [31;22mError: [0m #136: struct "<unnamed>"  has no field "integral"
+              state.controller.integral = 0.0f;
+[35;22m                               ^[0m
+".\..\App\motors\yaw_backend.c", line 658: [31;22mError: [0m #136: struct "<unnamed>"  has no field "speed_limited"
+                  state.controller.speed_limited;
+[35;22m                                   ^[0m
+.\..\App\motors\yaw_backend.c: 0 warnings, 2 errors
+>> [ 87%] CC '../App/motors/motor_backend.c'
+>> [ 89%] CC '../App/system/app_logic.c'
+>> [ 90%] CC '../App/motors/pitch_backend.c'
+>> [ 92%] CC '../App/system/remote_mapper.c'
+>> [ 93%] CC '../App/system/safety_manager.c'
+>> [ 95%] CC '../App/system/app_fault.c'
+>> [ 96%] CC '../App/system/target_manager.c'
+>> [ 98%] CC '../App/system/app_tasks.c'
+>> [100%] CC '../App/system/gimbal_startup.c'
+
+ ERROR  compilation failed at : "d:\Project\27电软正式批考核\16_云台调试\Output\Gimbal_Control\App\motors\yaw_backend.c", exit code: 1
+command: 
+  "C:\Users\Administrator\.eide\tools\armcc_v5_cracked\bin\armcc.exe" -c --apcs=interwork -I. -I../App -I../Core/Inc -I../Drivers/STM32F4xx_HAL_Driver/Inc -I../Drivers/STM32F4xx_HAL_Driver/Inc/Legacy -I../Middlewares/Third_Party/FreeRTOS/Source/include -I../Middlewares/Third_Party/FreeRTOS/Source/CMSIS_RTOS_V2 -I../Middlewares/Third_Party/FreeRTOS/Source/portable/RVDS/ARM_CM4F -I../Drivers/CMSIS/Device/ST/STM32F4xx/Include -I../Drivers/CMSIS/Include -I.cmsis/include -IRTE/_Gimbal_Control -I../App/system -I../App/drivers -I../App/control -I../App/motors -I../App/console -D"USE_HAL_DRIVER" -D"STM32F405xx" --cpu Cortex-M4.fp --li --c99 -O0 --split_sections --diag_suppress=1 --diag_suppress=1295 -g -o .\build\Gimbal_Control\.obj\__\App\motors\yaw_backend.o --no_depend_system_headers --depend .\build\Gimbal_Control\.obj\__\App\motors\yaw_backend.d .\..\App\motors\yaw_backend.c
+
+ ERROR  build failed !, elapsed time 0:0:4
+

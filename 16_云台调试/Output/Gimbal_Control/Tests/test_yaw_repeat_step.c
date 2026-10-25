@@ -24,7 +24,7 @@ void test_run(void)
     char expected[96], default_pid[128];
     test_stage = 1U;
     ConsoleZeroActivate(2000U); Control(2068U, 2U); at = 2068U;
-    CHECK(!APP_YAW_EXPERIMENTAL_TRACKING);
+    CHECK(YAW_CONTROLLER_CASCADE_ENABLED && !YAW_CASCADE_OUTPUT_LIMITS_ENABLED);
     (void)snprintf(default_pid, sizeof(default_pid), "POS|%.4f,%.4f,%.4f|VEL|%.6f,%.6f,%.6f",
         (double)APP_YAW_POSITION_KP, (double)APP_YAW_POSITION_KI, (double)APP_YAW_POSITION_KD,
         (double)APP_YAW_SPEED_KP, (double)APP_YAW_SPEED_KI, (double)APP_YAW_SPEED_KD);

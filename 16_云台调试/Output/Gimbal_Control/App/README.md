@@ -1,61 +1,58 @@
-# App 代码导航
+# App 维护导航
 
-App 的实现已从 32 个 C 文件整理为 **10 个 C 文件**。原头文件继续保留公开类型和函数接口，避免其他模块、Core 回调或现有测试改用另一套 API。每个 `.c`、`.h` 文件开头均注明职责、主要函数、调用关系和维护约束。
+当前按职责分为五组；上电参数与常量统一在 `app_config.h`。每个实现直接参与编译，对应头文件放在同一目录。每个函数体的 `{` 前有中文功能说明；每个 C 文件头列出全部函数、文件级变量及其用途。
 
-## 去哪里改代码
-
-| 实现文件 | 内容 | 常用入口 |
+| 目录 | 内容 | 从哪里开始 |
 | --- | --- | --- |
-| `app_tasks.c` | RTOS 任务、应用逻辑、双轴启动、致命故障 | `AppTasks_Create`、`AppLogic_Step`、`GimbalStartup_Update` |
-| `app_console.c` | USART1 收发、总命令分发、VOFA 视图和遥测 | `AppConsole_Poll`、`HandleLine`、`PublishTelemetry` |
-| `motor_console.c` | Yaw、Pitch、拨盘各自的串口命令和报告 | `YawConsole_Handle`、`PitchConsole_Handle`、`FeederConsole_Handle` |
-| `can_bus.c` | 双 CAN、通用帧、GL60 II 和 DM3507 协议 | `CanBus_*`、`Gl60_*`、`Dm3507_*` |
-| `app_diagnostics.c` | 只读设备查询、VESC 分片与诊断会话 | `AppDiagnostics_*`、`DmDiag_*`、`VescDiag_*` |
-| `remote_input.c` | iBUS、遥控映射、安全管理、目标与发射节拍 | `RemoteInput_Poll`、`RemoteMapper_Map`、`SafetyManager_Step`、`TargetManager_Step` |
-| `motor_backend.c` | 左右摩擦轮、速度 PI、点动及停机确认 | `MotorBackend_Apply`、`FlywheelJog_*`、`FlywheelSpeed_*` |
-| `feeder_controller.c` | 拨盘位置/速度控制、单发/连发及执行后端 | `Feeder_Update`、`FeederBackend_Apply` |
-| `yaw_controller.c` | Yaw、两轴共用串级 PID、共用阶跃统计和 Yaw 后端 | `YawCascade_*`、`YawController_Update`、`YawStep_*`、`YawBackend_Apply` |
-| `pitch_controller.c` | Pitch、重力补偿、制动、归位、锁轴和实测适配 | `PitchController_Update`、`PitchController_ReturnTo`、`PitchBackend_Apply` |
+| system | 任务、启动、遥控业务和安全状态机 | app_tasks → app_logic → safety_manager / target_manager |
+| drivers | CAN、UART4/iBUS 和电机协议 | can_bus、remote_input、ibus、gl60_ii、dm3507 |
+| control | 两轴共用 PID 和真实阶跃统计 | yaw_cascade、yaw_step、pitch_step |
+| motors | 各电机控制器与执行后端 | yaw / pitch / feeder 的 controller、backend；flywheel_speed / flywheel_jog / motor_backend |
+| console | 系统/电机命令、VOFA 和显示演示 | app_console 分发给 yaw_console、pitch_console、feeder_console |
 
-实现文件内用中文分区注明每一段职责。`APP_SECTION_BEGIN/END` 注释是测试定位边界，不能只删除其中一端；正常固件直接编译这 10 个 C 文件，不包含其他 `.c` 文件，也不需要生成源码。
+## 运行链
 
-## 参数统一入口
+`main → freertos → AppTasks_Create` 创建遥控、CAN、控制和控制台任务。遥控有效帧经通道映射、安全判定、目标管理后，由各 Backend 执行。控制器负责算法，Backend 负责使能/停止、反馈时效、请求接管和 CAN 提交。
 
-**参数及常量宏统一定义在 `app_config.h`**，其他头文件只保留防重复包含宏。既有的 150 个分散宏已迁入，并将拨盘初始化参数、保留单环默认值、串口缓冲等原先写在函数中的默认值改为同值宏。
+`YawCascade` 与 `YawStep` 是共用接口：Pitch 也依赖它们。名称继续兼容现用 API，实际实现已放入 control。控制器状态按电机分别保存。
 
-| 要修改的内容 | 在 `app_config.h` 中搜索 |
-| --- | --- |
-| Yaw 双环 PID | `APP_YAW_POSITION_`、`APP_YAW_SPEED_` |
-| Pitch 双环 PID | `APP_PITCH_POSITION_`、`APP_PITCH_SPEED_` |
-| 重力与制动 | `APP_PITCH_GRAVITY_`、`BRAKE` |
-| 拨盘每发角度、减速比、方向、单发/连发 | `APP_FEEDER_` |
-| 摩擦轮目标、极对数、电流和速度环 | `APP_FLYWHEEL_` |
-| 遥控通道、死区、档位 | `RC_` |
-| 任务周期、栈和优先级 | `PERIOD_MS`、`STACK_WORDS`、`PRIORITY` |
-| 机械边界、反馈超时 | `CONTROLLER_`、`TIMEOUT_MS` |
-| 真实阶跃判据 | `YAW_STEP_`、`PITCH_STEP_` |
-| 带标记的演示显示 | `DISPLAY` |
+## 修改参数
 
-单位写在名称后缀或行尾注释中。`MS` 是毫秒，`DEG` 是度，`DPS` 是度/秒，`NM` 是牛·米；ERPM 和机械 RPM 分开，C610 电流原始值不等于 mA。协议帧长度、寄存器编号、编码端点及故障位也集中保存，但应按协议维护。
+打开 `app_config.h`，按分区或名称搜索：
 
-修改宏后需重新编译和烧录；串口运行时设置仍只更新原先的 RAM 状态。带 `#ifndef` 的构建开关继续允许测试或原工程的 `-D` 参数覆盖，不能随意去掉这些包装。算法内的 0/1、数学系数和状态枚举不全部参数化，避免把程序语义误当调参项。
+- Yaw：`APP_YAW_POSITION_` / `APP_YAW_SPEED_`。
+- Pitch：`APP_PITCH_POSITION_` / `APP_PITCH_SPEED_`、`GRAVITY`、`BRAKE`。
+- 拨盘：`APP_FEEDER_`；每发 40°，连发每 50 ms 推进目标，控制周期 2 ms。
+- 摩擦轮：`APP_FLYWHEEL_`；保留现用速度 PI、电流上限、反馈/温度/超速保护。
+- 通信/调度：`PERIOD_MS`、`BAUDRATE`、`STACK_WORDS`、`PRIORITY`；遥控通道为 `RC_`。
 
-## 调用链和约束
+MS=毫秒，DEG=度，DPS=度/秒，NM=牛·米。ERPM 和机械 RPM 不同；C610 电流原始值也不是 mA。编译默认值在重新烧录后生效，串口调参只改变本次 RAM 会话。
 
-`main → freertos → AppTasks_Create` 创建遥控、CAN 接收、控制、控制台四个任务。遥控输入先形成有效帧，再依次进入通道映射、安全判定及目标管理；控制任务调用各 Backend，Backend 经过会话、健康和许可检查后才调用控制器并提交 CAN 命令。
+## 当前拨盘独立测试
 
-- 控制周期仍为 2 ms，遥控轮询 2 ms，控制台和波形调度 5 ms；没有调整任务优先级、PID 数值或滤波参数。
-- Yaw 力矩提交仍为 10 ms，Pitch 和拨盘仍为 2 ms。减少文件数本身不会改变这些节拍。
-- Pitch 仍使用 `YawCascade` 共用数学接口和 `YawStep` 统计核心。它们放在 `yaw_controller.c`，不能因名称含 Yaw 就当作 Pitch 无关代码删除。
-- 安全判定、许可和输出提交仍在原临界区。重构没有取消故障撤权、停机、重新解锁或反馈超时检查。
-- 归位可中断当前动作，普通正式阶跃保留原门禁；CH7 上拨是“当前目标减 30°”，`YAW HOME` / `PITCH HOME` 才是绝对回零。
-- VIEW 的另一轴保持逻辑、串口命令、组名、通道顺序和测试判据保持原样。
-- 演示数据继续有独立组名、实测角度和状态标记；不得用于物理闭环或替代真实成绩。
+`APP_FEEDER_STANDALONE_TEST_ENABLED=1`：摩擦轮动力输出关闭，拨盘单发/连发不等待两侧 VESC 就绪；真实摩擦轮状态继续原样报告。电调装回后改为 0，重新编译，恢复正常双轮稳速互锁。
 
-## 编译和验证
+1. CH5/CH6 置 OFF，CH8 释放、摇杆回中，等待云台/拨盘原安全准备完成；必要时发送 `FEEDER READY`。
+2. CH5 中档正常模式，CH6 中档单发或高档连发；选择模式后，CH8 先释放再扣动。
+3. 连发保持扣动，松开后按原逻辑完成已接受的尾步；不会排队补发。
+4. `FEEDER MODE` 查配置，`FEEDER ANGLE VIEW` 看实际/目标角度 I0/I1；反号显示保留。`FEEDER RESULT`、`FEEDER CHECK` 查真实结果和故障。
 
-原 `MDK-ARM/Gimbal_Control.code-workspace` 及 `.eide/eide.yml` 已指向这 10 个文件，Keil `.uvprojx` 也已同步。继续使用原 VS Code 工程编译、烧录，不要重新添加已合并的旧 C 文件。
+## 现用命令与显示
 
-测试夹具仍按逻辑边界提供 HAL/RTOS 模拟。`Tests/source_layout.py` 从当前正式文件的分区读取所需代码，`Tests/app_source_map.json` 记录对应关系；测试报告哈希追踪完整的正式文件。完整固件构建则验证这 10 个文件合并编译后的链接。
+`YAW VIEW` 锁定 Pitch；`PITCH VIEW` 锁定 Yaw。`WHEEL VIEW`、`FEEDER ANGLE VIEW`、`FEEDER SPEED VIEW` 和各电机调参/状态/成绩命令保留。`GIMBAL VIEW FREE` 释放视图锁定。CH7 上拨仍为当前轴目标回退 30°；绝对回零使用 `YAW HOME` / `PITCH HOME`。
 
-整理前备份、前后回归、预处理语句等价检查和编译证据见 `../../../02_过程记录/App十模块整理_20261025/`。硬件阶跃性能和实机时序仍需要烧录后确认。
+现有显示演示放在 console：`YAW SIM ON/OFF`、`PITCH SIM ON/OFF`，带独立演示组名、真实角度和状态标记。控制器与 RESULT 只读取真实反馈。保留当前 VOFA 通道位置；Yaw 旧实验参数所在列保持固定/停用值。
+
+## 已归档的功能
+
+旧遥控映射、摩擦轮定时低功率/开环观察、Yaw 单环和实验轨迹/加速度前馈已从正式实现清理。初期 `DIAG ON/OFF`、通用 `STATUS`、`READ DM`、`READ VESC` 和被动 CAN 抓包已移除。当前 `YAW/PITCH STATUS`、`BUS`、`GUARD`、`CHECK` 等运行信息查询保留。
+
+PID 数值、重力与刹车参数、运行保护、归位、锁轴、单发/连发和各真实成绩判据维持原配置。Pitch 可选 SHAPE 与回退详细快照保留。
+
+## 编译、测试与维护
+
+继续打开原 `MDK-ARM/Gimbal_Control.code-workspace`，使用 EIDE 编译、烧录；EIDE 与 Keil 已按五个目录同步源文件和包含路径。辅助构建脚本与 VS Code 均使用原 AC5/O0 配置。普通构建直接编译真实文件。
+
+离线测试通过 `Tests/runtime_groups.json` 直接选择正式源文件，不再抽取大文件中的注释分区。修改后运行相应组，并按变更影响进行整机编译。文件开头说明作用和入口，函数旁说明单位、状态约束与原因；历史调参过程集中归档。
+
+本轮完整备份、旧用例、审阅与验证记录位于工程根目录的 `02_过程记录/工程精简审阅_20261025/`。本轮不连接串口、不烧录。

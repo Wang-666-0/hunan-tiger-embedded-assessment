@@ -1,0 +1,181 @@
+{
+  "function_definitions": 417,
+  "files": [
+    {
+      "file": "console/app_console.c",
+      "function_definitions": 27,
+      "executable_tokens_unchanged": true
+    },
+    {
+      "file": "console/console_parse.h",
+      "function_definitions": 2,
+      "executable_tokens_unchanged": true
+    },
+    {
+      "file": "console/display_demo_jitter.h",
+      "function_definitions": 3,
+      "executable_tokens_unchanged": true
+    },
+    {
+      "file": "console/display_step_watch.h",
+      "function_definitions": 1,
+      "executable_tokens_unchanged": true
+    },
+    {
+      "file": "console/feeder_console.c",
+      "function_definitions": 6,
+      "executable_tokens_unchanged": true
+    },
+    {
+      "file": "console/pitch_console.c",
+      "function_definitions": 11,
+      "executable_tokens_unchanged": true
+    },
+    {
+      "file": "console/pitch_display_sim.h",
+      "function_definitions": 5,
+      "executable_tokens_unchanged": true
+    },
+    {
+      "file": "console/yaw_console.c",
+      "function_definitions": 12,
+      "executable_tokens_unchanged": true
+    },
+    {
+      "file": "console/yaw_display_sim.h",
+      "function_definitions": 4,
+      "executable_tokens_unchanged": true
+    },
+    {
+      "file": "control/pitch_step.c",
+      "function_definitions": 6,
+      "executable_tokens_unchanged": true
+    },
+    {
+      "file": "control/yaw_cascade.c",
+      "function_definitions": 12,
+      "executable_tokens_unchanged": true
+    },
+    {
+      "file": "control/yaw_step.c",
+      "function_definitions": 8,
+      "executable_tokens_unchanged": true
+    },
+    {
+      "file": "drivers/can_bus.c",
+      "function_definitions": 57,
+      "executable_tokens_unchanged": true
+    },
+    {
+      "file": "drivers/can_frame.c",
+      "function_definitions": 1,
+      "executable_tokens_unchanged": true
+    },
+    {
+      "file": "drivers/dm3507.c",
+      "function_definitions": 9,
+      "executable_tokens_unchanged": true
+    },
+    {
+      "file": "drivers/gl60_ii.c",
+      "function_definitions": 10,
+      "executable_tokens_unchanged": true
+    },
+    {
+      "file": "drivers/ibus.c",
+      "function_definitions": 7,
+      "executable_tokens_unchanged": true
+    },
+    {
+      "file": "drivers/remote_input.c",
+      "function_definitions": 9,
+      "executable_tokens_unchanged": true
+    },
+    {
+      "file": "motors/feeder_backend.c",
+      "function_definitions": 16,
+      "executable_tokens_unchanged": true
+    },
+    {
+      "file": "motors/feeder_controller.c",
+      "function_definitions": 24,
+      "executable_tokens_unchanged": true
+    },
+    {
+      "file": "motors/flywheel_jog.c",
+      "function_definitions": 19,
+      "executable_tokens_unchanged": true
+    },
+    {
+      "file": "motors/flywheel_speed.c",
+      "function_definitions": 8,
+      "executable_tokens_unchanged": true
+    },
+    {
+      "file": "motors/motor_backend.c",
+      "function_definitions": 18,
+      "executable_tokens_unchanged": true
+    },
+    {
+      "file": "motors/pitch_backend.c",
+      "function_definitions": 32,
+      "executable_tokens_unchanged": true
+    },
+    {
+      "file": "motors/pitch_controller.c",
+      "function_definitions": 33,
+      "executable_tokens_unchanged": true
+    },
+    {
+      "file": "motors/yaw_backend.c",
+      "function_definitions": 27,
+      "executable_tokens_unchanged": true
+    },
+    {
+      "file": "motors/yaw_controller.c",
+      "function_definitions": 11,
+      "executable_tokens_unchanged": true
+    },
+    {
+      "file": "system/app_fault.c",
+      "function_definitions": 1,
+      "executable_tokens_unchanged": true
+    },
+    {
+      "file": "system/app_logic.c",
+      "function_definitions": 4,
+      "executable_tokens_unchanged": true
+    },
+    {
+      "file": "system/app_tasks.c",
+      "function_definitions": 8,
+      "executable_tokens_unchanged": true
+    },
+    {
+      "file": "system/gimbal_startup.c",
+      "function_definitions": 11,
+      "executable_tokens_unchanged": true
+    },
+    {
+      "file": "system/gimbal_step_sync.h",
+      "function_definitions": 3,
+      "executable_tokens_unchanged": true
+    },
+    {
+      "file": "system/remote_mapper.c",
+      "function_definitions": 3,
+      "executable_tokens_unchanged": true
+    },
+    {
+      "file": "system/safety_manager.c",
+      "function_definitions": 3,
+      "executable_tokens_unchanged": true
+    },
+    {
+      "file": "system/target_manager.c",
+      "function_definitions": 6,
+      "executable_tokens_unchanged": true
+    }
+  ],
+  "all_executable_tokens_unchanged": true
+}

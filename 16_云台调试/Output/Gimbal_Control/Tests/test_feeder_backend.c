@@ -190,7 +190,7 @@ void test_run(void)
     CHECK(!FeederBackend_SetConfig(&config));
     Console("FEEDER OFF", 1U); LogicApply(107U, 1U); CHECK(!state.armed);
     config = state.controller.config; config.pos_kp = 6.0f;
-    diagnostic = 1U; CHECK(!FeederBackend_SetConfig(&config)); diagnostic = 0U;
+    /* Console DIAG mode was retired; explicit Apply inhibit is still tested below. */
     remote.fault_epoch = 1U; CHECK(!FeederBackend_SetConfig(&config)); remote.fault_epoch = 0U;
     console_epoch = 1U; CHECK(!FeederBackend_SetConfig(&config)); console_epoch = 0U;
     now_ms = remote.received_ms + REMOTE_TIMEOUT_MS; CHECK(!FeederBackend_SetConfig(&config));

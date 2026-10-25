@@ -77,17 +77,52 @@ virtualFolder:
       folders: []
     - name: App
       files:
-        - path: ../App/app_tasks.c
-        - path: ../App/app_console.c
-        - path: ../App/motor_console.c
-        - path: ../App/can_bus.c
-        - path: ../App/app_diagnostics.c
-        - path: ../App/remote_input.c
-        - path: ../App/motor_backend.c
-        - path: ../App/feeder_controller.c
-        - path: ../App/yaw_controller.c
-        - path: ../App/pitch_controller.c
-      folders: []
+        - path: ../App/app_config.h
+      folders:
+        - name: system
+          files:
+            - path: ../App/system/app_fault.c
+            - path: ../App/system/app_logic.c
+            - path: ../App/system/app_tasks.c
+            - path: ../App/system/gimbal_startup.c
+            - path: ../App/system/remote_mapper.c
+            - path: ../App/system/safety_manager.c
+            - path: ../App/system/target_manager.c
+          folders: []
+        - name: drivers
+          files:
+            - path: ../App/drivers/can_bus.c
+            - path: ../App/drivers/can_frame.c
+            - path: ../App/drivers/dm3507.c
+            - path: ../App/drivers/gl60_ii.c
+            - path: ../App/drivers/ibus.c
+            - path: ../App/drivers/remote_input.c
+          folders: []
+        - name: control
+          files:
+            - path: ../App/control/pitch_step.c
+            - path: ../App/control/yaw_cascade.c
+            - path: ../App/control/yaw_step.c
+          folders: []
+        - name: motors
+          files:
+            - path: ../App/motors/feeder_backend.c
+            - path: ../App/motors/feeder_controller.c
+            - path: ../App/motors/flywheel_jog.c
+            - path: ../App/motors/flywheel_speed.c
+            - path: ../App/motors/motor_backend.c
+            - path: ../App/motors/pitch_backend.c
+            - path: ../App/motors/pitch_controller.c
+            - path: ../App/motors/yaw_backend.c
+            - path: ../App/motors/yaw_controller.c
+          folders: []
+        - name: console
+          files:
+            - path: ../App/console/app_console.c
+            - path: ../App/console/feeder_console.c
+            - path: ../App/console/pitch_console.c
+            - path: ../App/console/yaw_console.c
+          folders: []
 dependenceList: []
 outDir: build
 miscInfo:
@@ -101,6 +136,11 @@ targets:
       incList:
         - .
         - ../App
+        - ../App/system
+        - ../App/drivers
+        - ../App/control
+        - ../App/motors
+        - ../App/console
         - ../Core/Inc
         - ../Drivers/STM32F4xx_HAL_Driver/Inc
         - ../Drivers/STM32F4xx_HAL_Driver/Inc/Legacy

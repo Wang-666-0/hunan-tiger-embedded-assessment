@@ -40,7 +40,7 @@ void test_run(void)
     CHECK(YawController_SetTarget(&yaw, 30));
     CHECK(near(YawController_Update(&yaw, 0, 120, 1), APP_YAW_POSITION_KP * 30.0f * APP_YAW_SPEED_KP, 0.000001f));
     CHECK(near(yaw.cascade.target_velocity_dps, APP_YAW_POSITION_KP * 30.0f, 0.0001f) && !yaw.cascade.velocity_limited);
-    CHECK(!YawCascade_SetVelocityLimit(&yaw.cascade, 180));
+    CHECK(yaw.cascade.velocity_limit_dps == 0.0f);
     /* 截图增益：首次510deg/s、2.448协议Nm，不再被180/.10截断。 */
     CHECK(YawCascade_SetPid(&yaw.cascade, 'P', 17, 1.25f, 0));
     CHECK(YawCascade_SetPid(&yaw.cascade, 'V', 0.0048f, 0.013f, 0));

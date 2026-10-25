@@ -1,0 +1,342 @@
+{
+  "date": "2026-10-25",
+  "kind": "READ_ONLY_REVIEW",
+  "firmware_source_changed_by_this_review": false,
+  "firmware_built_by_this_review": false,
+  "flashed": false,
+  "app_c_files": 10,
+  "app_h_files": 39,
+  "app_c_lines": 9625,
+  "existing_link_map": {
+    "path": "D:\\Project\\27电软正式批考核\\16_云台调试\\Output\\Gimbal_Control\\MDK-ARM\\build\\Gimbal_Control\\Gimbal_Control.map",
+    "sha256": "7e30ea78a1ffee9f802697e260f9f5bb629404234f6f7500e944916f778ddb9a",
+    "objects": {
+      "app_console.o": {
+        "code": 14222,
+        "inc_data": 2938,
+        "ro_data": 5055,
+        "rw_data": 144,
+        "zi_data": 1392,
+        "debug": 732036
+      },
+      "motor_console.o": {
+        "code": 20890,
+        "inc_data": 5308,
+        "ro_data": 9022,
+        "rw_data": 324,
+        "zi_data": 0,
+        "debug": 39559
+      },
+      "app_diagnostics.o": {
+        "code": 2264,
+        "inc_data": 220,
+        "ro_data": 20,
+        "rw_data": 33,
+        "zi_data": 2504,
+        "debug": 15467
+      }
+    }
+  },
+  "files": [
+    {
+      "path": "D:\\Project\\27电软正式批考核\\16_云台调试\\Output\\Gimbal_Control\\App\\app_config.h",
+      "lines": 581,
+      "bytes": 26445,
+      "sha256": "5f53ab6a3a5c3fa5d517013fc7c7ecb4504b4b67b6d3dcb2b9349f10716a4cdb"
+    },
+    {
+      "path": "D:\\Project\\27电软正式批考核\\16_云台调试\\Output\\Gimbal_Control\\App\\app_console.c",
+      "lines": 1135,
+      "bytes": 56234,
+      "sha256": "5f401303e79e0fcfb726a75225f0d3d3e62d7c378ef73d02cdca269cda15bc9d"
+    },
+    {
+      "path": "D:\\Project\\27电软正式批考核\\16_云台调试\\Output\\Gimbal_Control\\App\\app_console.h",
+      "lines": 20,
+      "bytes": 857,
+      "sha256": "d2a0021aa3e8eee6ff966d8b3bd8db2e78b6d7b65751f3350aec813f24b85a5c"
+    },
+    {
+      "path": "D:\\Project\\27电软正式批考核\\16_云台调试\\Output\\Gimbal_Control\\App\\app_diagnostics.c",
+      "lines": 393,
+      "bytes": 15517,
+      "sha256": "7da8f2f12e4817ab484500614630ecf3b7120af091de154eaadd44aa5ca9ed60"
+    },
+    {
+      "path": "D:\\Project\\27电软正式批考核\\16_云台调试\\Output\\Gimbal_Control\\App\\app_diagnostics.h",
+      "lines": 39,
+      "bytes": 1621,
+      "sha256": "8257cfb58dc90932e77e31cc5e47705fcece2747beb091af13d762523b65a22b"
+    },
+    {
+      "path": "D:\\Project\\27电软正式批考核\\16_云台调试\\Output\\Gimbal_Control\\App\\app_fault.h",
+      "lines": 17,
+      "bytes": 654,
+      "sha256": "17a9e9c349a6462414a1fa034502e313b44330d4e988a777ea4882c5ac6aa5da"
+    },
+    {
+      "path": "D:\\Project\\27电软正式批考核\\16_云台调试\\Output\\Gimbal_Control\\App\\app_logic.h",
+      "lines": 47,
+      "bytes": 2320,
+      "sha256": "11e5802752e8ff78e990c0abe450dd666f641d18c5998784ff0c62144b34b18c"
+    },
+    {
+      "path": "D:\\Project\\27电软正式批考核\\16_云台调试\\Output\\Gimbal_Control\\App\\app_tasks.c",
+      "lines": 648,
+      "bytes": 27612,
+      "sha256": "74499a8f025a8dde8d65a7c1f72ce0f6bfd9268075f42deeb13baaf155601520"
+    },
+    {
+      "path": "D:\\Project\\27电软正式批考核\\16_云台调试\\Output\\Gimbal_Control\\App\\app_tasks.h",
+      "lines": 26,
+      "bytes": 999,
+      "sha256": "7fb55c693d08a80871da7219c64dcb79c0eb7f09323a0900cc828c62bf373aab"
+    },
+    {
+      "path": "D:\\Project\\27电软正式批考核\\16_云台调试\\Output\\Gimbal_Control\\App\\can_bus.c",
+      "lines": 1083,
+      "bytes": 38443,
+      "sha256": "4b067577f3d90e651d9cc75e5634ae3638a8b349c7ac92c8234e00b988b986aa"
+    },
+    {
+      "path": "D:\\Project\\27电软正式批考核\\16_云台调试\\Output\\Gimbal_Control\\App\\can_bus.h",
+      "lines": 94,
+      "bytes": 5125,
+      "sha256": "5de483a88aa87db5356ecb6cd590d47fabc22fade877f871e18883c40aac39ad"
+    },
+    {
+      "path": "D:\\Project\\27电软正式批考核\\16_云台调试\\Output\\Gimbal_Control\\App\\can_frame.h",
+      "lines": 19,
+      "bytes": 695,
+      "sha256": "dc7da0d621d597332c938b7e0180f4b16ac1ae009375da1ddd18d6a75c0263e9"
+    },
+    {
+      "path": "D:\\Project\\27电软正式批考核\\16_云台调试\\Output\\Gimbal_Control\\App\\console_parse.h",
+      "lines": 40,
+      "bytes": 1279,
+      "sha256": "aaf537c2b1beda44f96da51f1df6aa135aa3cbcf01a97206530473acf6a35c8b"
+    },
+    {
+      "path": "D:\\Project\\27电软正式批考核\\16_云台调试\\Output\\Gimbal_Control\\App\\display_demo_jitter.h",
+      "lines": 56,
+      "bytes": 2600,
+      "sha256": "1bdafae8355315b5854191a3c41ffca56d5587995a8a654a5c6b46b681791691"
+    },
+    {
+      "path": "D:\\Project\\27电软正式批考核\\16_云台调试\\Output\\Gimbal_Control\\App\\display_step_watch.h",
+      "lines": 53,
+      "bytes": 2523,
+      "sha256": "507c75700d368c2ee2054a44d670f43c2e0d4246b68eebc7fa4c799dc7042667"
+    },
+    {
+      "path": "D:\\Project\\27电软正式批考核\\16_云台调试\\Output\\Gimbal_Control\\App\\dm3507.h",
+      "lines": 33,
+      "bytes": 1486,
+      "sha256": "d6e5a861ba88c912af1bfef273d9684c352a5e0e8eb96cd150d69965189694b7"
+    },
+    {
+      "path": "D:\\Project\\27电软正式批考核\\16_云台调试\\Output\\Gimbal_Control\\App\\dm_diag.h",
+      "lines": 27,
+      "bytes": 1022,
+      "sha256": "7f2e5297c412d4f0e99949ac6ece156439f385e0480b5a914f53b656a77b9152"
+    },
+    {
+      "path": "D:\\Project\\27电软正式批考核\\16_云台调试\\Output\\Gimbal_Control\\App\\feeder_backend.h",
+      "lines": 43,
+      "bytes": 2196,
+      "sha256": "22f87774c717b9796cf2892a2031e6efaa7fa73940d37ea1de04bee8f805da6b"
+    },
+    {
+      "path": "D:\\Project\\27电软正式批考核\\16_云台调试\\Output\\Gimbal_Control\\App\\feeder_console.h",
+      "lines": 17,
+      "bytes": 752,
+      "sha256": "ca8983a025e94301a48621f6b8df90204970404e6a3d4d026722e0db9a24e21a"
+    },
+    {
+      "path": "D:\\Project\\27电软正式批考核\\16_云台调试\\Output\\Gimbal_Control\\App\\feeder_controller.c",
+      "lines": 709,
+      "bytes": 35176,
+      "sha256": "a2408945c0d2e152a64139f2b5b39d4bf8b2582ed5e93cb9339d221c83b09d9a"
+    },
+    {
+      "path": "D:\\Project\\27电软正式批考核\\16_云台调试\\Output\\Gimbal_Control\\App\\feeder_controller.h",
+      "lines": 132,
+      "bytes": 6365,
+      "sha256": "aee564f847ba130ddc2dc324588df8c7627f58c5b9faa4229fa7b64e1007090f"
+    },
+    {
+      "path": "D:\\Project\\27电软正式批考核\\16_云台调试\\Output\\Gimbal_Control\\App\\flywheel_jog.h",
+      "lines": 122,
+      "bytes": 6519,
+      "sha256": "8944cd2624cd5fe82515c6ec3e4d6b48067782d48586659d7d401d44f607fa04"
+    },
+    {
+      "path": "D:\\Project\\27电软正式批考核\\16_云台调试\\Output\\Gimbal_Control\\App\\flywheel_speed.h",
+      "lines": 42,
+      "bytes": 2533,
+      "sha256": "353d1a9dc2667d5745c9934d513c6030ec92ebe08a4f10b69c0bb0da4a51747f"
+    },
+    {
+      "path": "D:\\Project\\27电软正式批考核\\16_云台调试\\Output\\Gimbal_Control\\App\\gimbal_startup.h",
+      "lines": 37,
+      "bytes": 1738,
+      "sha256": "631c4da60be0573338afdcd2730ab82338558a34e76f7fdb93158bcb942a6ae5"
+    },
+    {
+      "path": "D:\\Project\\27电软正式批考核\\16_云台调试\\Output\\Gimbal_Control\\App\\gimbal_step_sync.h",
+      "lines": 54,
+      "bytes": 2421,
+      "sha256": "43068fa3fa8438eb322e32440633b175ce7fc0c63717e5c27dfa7cc9005ec69d"
+    },
+    {
+      "path": "D:\\Project\\27电软正式批考核\\16_云台调试\\Output\\Gimbal_Control\\App\\gl60_ii.h",
+      "lines": 45,
+      "bytes": 2081,
+      "sha256": "adbcd46cd1c855c80fd18a85d49c0e3ccfd67194117f56c387bd100303b3697a"
+    },
+    {
+      "path": "D:\\Project\\27电软正式批考核\\16_云台调试\\Output\\Gimbal_Control\\App\\ibus.h",
+      "lines": 84,
+      "bytes": 3072,
+      "sha256": "89236b03230c56a2682b467ddd00bc6a7b6a1852f563ee8159a4613d20b1de33"
+    },
+    {
+      "path": "D:\\Project\\27电软正式批考核\\16_云台调试\\Output\\Gimbal_Control\\App\\motor_backend.c",
+      "lines": 927,
+      "bytes": 39949,
+      "sha256": "a4aee512e09eaf0edc5111497ffa525fb3ce4d1f6d8838d0ba8e4b50d624e26f"
+    },
+    {
+      "path": "D:\\Project\\27电软正式批考核\\16_云台调试\\Output\\Gimbal_Control\\App\\motor_backend.h",
+      "lines": 42,
+      "bytes": 1897,
+      "sha256": "eddf97c2b6da0537c1c3dad8e497cc75c43942eafc75080109bfee63039855d3"
+    },
+    {
+      "path": "D:\\Project\\27电软正式批考核\\16_云台调试\\Output\\Gimbal_Control\\App\\motor_console.c",
+      "lines": 1387,
+      "bytes": 81992,
+      "sha256": "3fee9907510c06c119e222115110d28352e0c1acd3c0cdcee0533359b9aecc13"
+    },
+    {
+      "path": "D:\\Project\\27电软正式批考核\\16_云台调试\\Output\\Gimbal_Control\\App\\pitch_backend.h",
+      "lines": 72,
+      "bytes": 3727,
+      "sha256": "e865c6e3cba65c2a1c1dc21cb7eece472f6e7ec8ae40244b8668bc5669f878d1"
+    },
+    {
+      "path": "D:\\Project\\27电软正式批考核\\16_云台调试\\Output\\Gimbal_Control\\App\\pitch_console.h",
+      "lines": 18,
+      "bytes": 764,
+      "sha256": "50728905ce4b9754c52ffa5cb5a3855cdb1097f81f0ecaeaf1404714d2a547ee"
+    },
+    {
+      "path": "D:\\Project\\27电软正式批考核\\16_云台调试\\Output\\Gimbal_Control\\App\\pitch_controller.c",
+      "lines": 1132,
+      "bytes": 56747,
+      "sha256": "d68c58e8049dbc7e2090114da986f8ade302f167c67ea26ce8f75e06e3ea7ba7"
+    },
+    {
+      "path": "D:\\Project\\27电软正式批考核\\16_云台调试\\Output\\Gimbal_Control\\App\\pitch_controller.h",
+      "lines": 100,
+      "bytes": 5652,
+      "sha256": "d1ec4489665e23df5fd29901560c7a7d0c2b0475bbf820e5d20596a96c0cece9"
+    },
+    {
+      "path": "D:\\Project\\27电软正式批考核\\16_云台调试\\Output\\Gimbal_Control\\App\\pitch_display_sim.h",
+      "lines": 164,
+      "bytes": 7446,
+      "sha256": "05d5be63b291afc0b2fdabc618e98eeb1cb03f768b10e84c952d35b418555116"
+    },
+    {
+      "path": "D:\\Project\\27电软正式批考核\\16_云台调试\\Output\\Gimbal_Control\\App\\pitch_step.h",
+      "lines": 24,
+      "bytes": 1173,
+      "sha256": "040234ab42ffaf3d4dd5fa0bbb21230f6326946fd9208c56c39ae4da1816e0b8"
+    },
+    {
+      "path": "D:\\Project\\27电软正式批考核\\16_云台调试\\Output\\Gimbal_Control\\App\\README.md",
+      "lines": 72,
+      "bytes": 7395,
+      "sha256": "cef5a9b01042a5b1e9896251ebc378e5b982f43d7ef25d0824951dc6613d0c4b"
+    },
+    {
+      "path": "D:\\Project\\27电软正式批考核\\16_云台调试\\Output\\Gimbal_Control\\App\\remote_input.c",
+      "lines": 762,
+      "bytes": 30606,
+      "sha256": "0f265e54c766b38e62aa29e30efd7eedbd1079fbc150eef91055b904bac8c625"
+    },
+    {
+      "path": "D:\\Project\\27电软正式批考核\\16_云台调试\\Output\\Gimbal_Control\\App\\remote_input.h",
+      "lines": 29,
+      "bytes": 1197,
+      "sha256": "bc7f61372f654403eea8c3ec96fd6d6d6c76a818dfccc8965cba7db8c3b76203"
+    },
+    {
+      "path": "D:\\Project\\27电软正式批考核\\16_云台调试\\Output\\Gimbal_Control\\App\\remote_mapper.h",
+      "lines": 40,
+      "bytes": 1593,
+      "sha256": "3081a6e662c0d951de9b5d288feebb5ab44f8398b83c4020deec0dc86b47bd7f"
+    },
+    {
+      "path": "D:\\Project\\27电软正式批考核\\16_云台调试\\Output\\Gimbal_Control\\App\\safety_manager.h",
+      "lines": 39,
+      "bytes": 1612,
+      "sha256": "186be7dc03fa7af18c1fbc0e674602e9b30e1704b993af2fa1119bda5cec604c"
+    },
+    {
+      "path": "D:\\Project\\27电软正式批考核\\16_云台调试\\Output\\Gimbal_Control\\App\\target_manager.h",
+      "lines": 44,
+      "bytes": 2096,
+      "sha256": "3187b48bf62ec576e37b26660851dd56ef43839c0615cdd1a95c20501dfce3cd"
+    },
+    {
+      "path": "D:\\Project\\27电软正式批考核\\16_云台调试\\Output\\Gimbal_Control\\App\\vesc_diag.h",
+      "lines": 35,
+      "bytes": 1462,
+      "sha256": "6753a0d0969cf4db3f521f6ea456d97f057db66221c5dfec53f54864aa500fa1"
+    },
+    {
+      "path": "D:\\Project\\27电软正式批考核\\16_云台调试\\Output\\Gimbal_Control\\App\\yaw_backend.h",
+      "lines": 107,
+      "bytes": 5373,
+      "sha256": "e590f8d24d16171ada1353f538be04e8657a319b8946f371d7e86a600f75b8ae"
+    },
+    {
+      "path": "D:\\Project\\27电软正式批考核\\16_云台调试\\Output\\Gimbal_Control\\App\\yaw_cascade.h",
+      "lines": 60,
+      "bytes": 3449,
+      "sha256": "f5a9b9a0dbc86204a22553838e4e9be0aafba9fc761d990bb662105856c23874"
+    },
+    {
+      "path": "D:\\Project\\27电软正式批考核\\16_云台调试\\Output\\Gimbal_Control\\App\\yaw_console.h",
+      "lines": 21,
+      "bytes": 1050,
+      "sha256": "298c7af027b7b08e8cf1609a98e64cbb0468c16ec2fd93d12c576dee302a3c28"
+    },
+    {
+      "path": "D:\\Project\\27电软正式批考核\\16_云台调试\\Output\\Gimbal_Control\\App\\yaw_controller.c",
+      "lines": 1449,
+      "bytes": 69829,
+      "sha256": "e45f89aa5dd9400bfd4b661047afd184a582001f3c92fd6cac4f3127e6d743ad"
+    },
+    {
+      "path": "D:\\Project\\27电软正式批考核\\16_云台调试\\Output\\Gimbal_Control\\App\\yaw_controller.h",
+      "lines": 89,
+      "bytes": 4660,
+      "sha256": "1dde38d14ed830ed4b982a44ab6114bd35372c784b1cf9ea1abc33dfdcff0ffc"
+    },
+    {
+      "path": "D:\\Project\\27电软正式批考核\\16_云台调试\\Output\\Gimbal_Control\\App\\yaw_display_sim.h",
+      "lines": 123,
+      "bytes": 5910,
+      "sha256": "1b6eb0dce4ed6bb47bf11246337a2092f5bf0f5748bc3aff03f02e65a5f738f1"
+    },
+    {
+      "path": "D:\\Project\\27电软正式批考核\\16_云台调试\\Output\\Gimbal_Control\\App\\yaw_step.h",
+      "lines": 58,
+      "bytes": 3287,
+      "sha256": "267196de2b54d48c811dd4e06fb8ffa2f0018040af6f1dbd37b914de7ac1b873"
+    }
+  ]
+}

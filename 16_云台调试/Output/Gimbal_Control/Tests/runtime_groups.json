@@ -1,0 +1,391 @@
+{
+  "feeder_controller": [
+    "Tests/test_feeder_controller.c",
+    "App/motors/feeder_controller.c"
+  ],
+  "feeder_single": [
+    "Tests/test_feeder_single.c",
+    "App/motors/feeder_controller.c"
+  ],
+  "feeder_cadence": [
+    "Tests/test_feeder_cadence.c",
+    "App/system/target_manager.c"
+  ],
+  "feeder_can": [
+    "Tests/test_feeder_can.c",
+    "App/drivers/can_bus.c",
+    "App/drivers/dm3507.c",
+    "App/drivers/gl60_ii.c",
+    "App/drivers/can_frame.c"
+  ],
+  "feeder_backend": [
+    "Tests/test_feeder_backend.c",
+    "App/motors/feeder_controller.c",
+    "App/motors/feeder_backend.c",
+    "App/console/feeder_console.c",
+    "App/system/remote_mapper.c",
+    "App/system/target_manager.c",
+    "App/system/app_logic.c",
+    "App/system/safety_manager.c"
+  ],
+  "feeder_stream": [
+    "Tests/test_feeder_stream.c",
+    "App/motors/feeder_controller.c",
+    "App/motors/feeder_backend.c",
+    "App/console/feeder_console.c",
+    "App/system/remote_mapper.c",
+    "App/system/target_manager.c",
+    "App/system/app_logic.c",
+    "App/system/safety_manager.c"
+  ],
+  "feeder_wheels": [
+    "Tests/test_feeder_wheels.c",
+    "App/motors/motor_backend.c",
+    "App/motors/flywheel_jog.c",
+    "App/motors/flywheel_speed.c",
+    "App/system/remote_mapper.c",
+    "App/system/target_manager.c",
+    "App/system/app_logic.c",
+    "App/system/safety_manager.c"
+  ],
+  "ibus": [
+    "Tests/test_ibus.c",
+    "App/drivers/ibus.c"
+  ],
+  "speed_6000": [
+    "Tests/test_speed_6000.c",
+    "App/motors/flywheel_speed.c"
+  ],
+  "assessment_remote": [
+    "Tests/test_assessment_remote.c",
+    "App/system/app_logic.c",
+    "App/system/remote_mapper.c",
+    "App/system/safety_manager.c",
+    "App/system/target_manager.c"
+  ],
+  "assessment_wheels": [
+    "Tests/test_assessment_wheels.c",
+    "App/system/app_logic.c",
+    "App/system/remote_mapper.c",
+    "App/system/safety_manager.c",
+    "App/system/target_manager.c",
+    "App/motors/motor_backend.c",
+    "App/motors/flywheel_jog.c",
+    "App/motors/flywheel_speed.c"
+  ],
+  "yaw_protocol": [
+    "Tests/test_gl60_ii.c",
+    "App/drivers/gl60_ii.c",
+    "App/drivers/can_frame.c"
+  ],
+  "yaw_step": [
+    "Tests/test_yaw_step.c",
+    "App/control/yaw_step.c"
+  ],
+  "yaw_performance": [
+    "Tests/test_yaw_performance.c",
+    "App/motors/yaw_backend.c",
+    "App/motors/yaw_controller.c",
+    "App/control/yaw_step.c",
+    "App/drivers/gl60_ii.c",
+    "App/drivers/can_frame.c",
+    "App/control/yaw_cascade.c"
+  ],
+  "yaw_telemetry": [
+    "Tests/test_yaw_telemetry.c",
+    "App/console/app_console.c",
+    "App/drivers/can_frame.c"
+  ],
+  "yaw_cascade_unlimited": [
+    "Tests/test_yaw_cascade_unlimited.c",
+    "App/motors/yaw_controller.c",
+    "App/control/yaw_cascade.c"
+  ],
+  "yaw_repeat_step": [
+    "Tests/test_yaw_repeat_step.c",
+    "App/console/yaw_console.c",
+    "App/motors/yaw_backend.c",
+    "App/motors/yaw_controller.c",
+    "App/control/yaw_step.c",
+    "App/drivers/gl60_ii.c",
+    "App/drivers/can_frame.c",
+    "App/system/remote_mapper.c",
+    "App/system/app_logic.c",
+    "App/system/safety_manager.c",
+    "App/system/target_manager.c",
+    "App/control/yaw_cascade.c"
+  ],
+  "yaw_step_assessment": [
+    "Tests/test_yaw_step_assessment.c",
+    "App/control/yaw_step.c"
+  ],
+  "yaw_cascade_unlimited_console": [
+    "Tests/test_yaw_cascade_unlimited_console.c",
+    "App/console/yaw_console.c",
+    "App/motors/yaw_backend.c",
+    "App/motors/yaw_controller.c",
+    "App/control/yaw_step.c",
+    "App/drivers/gl60_ii.c",
+    "App/drivers/can_frame.c",
+    "App/system/remote_mapper.c",
+    "App/system/app_logic.c",
+    "App/system/safety_manager.c",
+    "App/system/target_manager.c",
+    "App/control/yaw_cascade.c"
+  ],
+  "yaw_manual50": [
+    "Tests/test_yaw_manual50.c",
+    "App/console/yaw_console.c",
+    "App/motors/yaw_backend.c",
+    "App/motors/yaw_controller.c",
+    "App/control/yaw_step.c",
+    "App/drivers/gl60_ii.c",
+    "App/drivers/can_frame.c",
+    "App/system/remote_mapper.c",
+    "App/system/app_logic.c",
+    "App/system/safety_manager.c",
+    "App/system/target_manager.c",
+    "App/control/yaw_cascade.c"
+  ],
+  "yaw_can_unlimited": [
+    "Tests/test_yaw_can_unlimited.c",
+    "App/drivers/can_bus.c",
+    "App/drivers/gl60_ii.c",
+    "App/drivers/can_frame.c"
+  ],
+  "pitch_protocol": [
+    "Tests/test_pitch_protocol.c",
+    "App/drivers/dm3507.c",
+    "App/drivers/can_frame.c"
+  ],
+  "pitch_controller": [
+    "Tests/test_pitch_controller.c",
+    "App/motors/pitch_controller.c",
+    "App/control/yaw_cascade.c"
+  ],
+  "pitch_observer": [
+    "Tests/test_pitch_observer.c",
+    "App/motors/pitch_controller.c",
+    "App/control/yaw_cascade.c"
+  ],
+  "pitch_gravity": [
+    "Tests/test_pitch_gravity.c",
+    "App/motors/pitch_controller.c",
+    "App/control/yaw_cascade.c"
+  ],
+  "pitch_shape": [
+    "Tests/test_pitch_shape.c",
+    "App/motors/pitch_controller.c",
+    "App/control/yaw_cascade.c"
+  ],
+  "pitch_terminal_brake": [
+    "Tests/test_pitch_terminal_brake.c",
+    "App/motors/pitch_controller.c",
+    "App/control/yaw_cascade.c"
+  ],
+  "pitch_step": [
+    "Tests/test_pitch_step.c",
+    "App/control/pitch_step.c",
+    "App/control/yaw_step.c"
+  ],
+  "pitch_backend": [
+    "Tests/test_pitch_backend.c",
+    "App/motors/pitch_backend.c",
+    "App/motors/pitch_controller.c",
+    "App/control/pitch_step.c",
+    "App/drivers/dm3507.c",
+    "App/control/yaw_cascade.c",
+    "App/control/yaw_step.c",
+    "App/drivers/can_frame.c"
+  ],
+  "pitch_gimbal_startup": [
+    "Tests/test_gimbal_startup.c",
+    "App/system/gimbal_startup.c",
+    "App/console/yaw_console.c",
+    "App/console/pitch_console.c",
+    "App/motors/yaw_backend.c",
+    "App/motors/yaw_controller.c",
+    "App/control/yaw_step.c",
+    "App/control/yaw_cascade.c",
+    "App/drivers/gl60_ii.c",
+    "App/motors/pitch_backend.c",
+    "App/motors/pitch_controller.c",
+    "App/control/pitch_step.c",
+    "App/drivers/dm3507.c",
+    "App/drivers/can_frame.c",
+    "App/system/app_logic.c",
+    "App/system/remote_mapper.c",
+    "App/system/safety_manager.c",
+    "App/system/target_manager.c"
+  ],
+  "pitch_test_hold": [
+    "Tests/test_gimbal_test_hold.c",
+    "App/system/gimbal_startup.c",
+    "App/console/yaw_console.c",
+    "App/console/pitch_console.c",
+    "App/motors/yaw_backend.c",
+    "App/motors/yaw_controller.c",
+    "App/control/yaw_step.c",
+    "App/control/yaw_cascade.c",
+    "App/drivers/gl60_ii.c",
+    "App/motors/pitch_backend.c",
+    "App/motors/pitch_controller.c",
+    "App/control/pitch_step.c",
+    "App/drivers/dm3507.c",
+    "App/drivers/can_frame.c",
+    "App/system/app_logic.c",
+    "App/system/remote_mapper.c",
+    "App/system/safety_manager.c",
+    "App/system/target_manager.c"
+  ],
+  "pitch_view_hold": [
+    "Tests/test_gimbal_view_hold.c",
+    "App/system/gimbal_startup.c",
+    "App/console/yaw_console.c",
+    "App/console/pitch_console.c",
+    "App/motors/yaw_backend.c",
+    "App/motors/yaw_controller.c",
+    "App/control/yaw_step.c",
+    "App/control/yaw_cascade.c",
+    "App/drivers/gl60_ii.c",
+    "App/motors/pitch_backend.c",
+    "App/motors/pitch_controller.c",
+    "App/control/pitch_step.c",
+    "App/drivers/dm3507.c",
+    "App/drivers/can_frame.c",
+    "App/system/app_logic.c",
+    "App/system/remote_mapper.c",
+    "App/system/safety_manager.c",
+    "App/system/target_manager.c"
+  ],
+  "pitch_manual90": [
+    "Tests/test_pitch_manual90.c",
+    "App/motors/pitch_backend.c",
+    "App/motors/pitch_controller.c",
+    "App/control/pitch_step.c",
+    "App/drivers/dm3507.c",
+    "App/control/yaw_cascade.c",
+    "App/control/yaw_step.c",
+    "App/drivers/can_frame.c",
+    "App/system/app_logic.c",
+    "App/system/remote_mapper.c",
+    "App/system/safety_manager.c",
+    "App/system/target_manager.c"
+  ],
+  "pitch_console": [
+    "Tests/test_pitch_console.c",
+    "App/console/pitch_console.c",
+    "App/motors/pitch_backend.c",
+    "App/motors/pitch_controller.c",
+    "App/control/pitch_step.c",
+    "App/drivers/dm3507.c",
+    "App/control/yaw_cascade.c",
+    "App/control/yaw_step.c",
+    "App/drivers/can_frame.c",
+    "App/system/remote_mapper.c"
+  ],
+  "pitch_can": [
+    "Tests/test_pitch_can.c",
+    "App/drivers/can_bus.c",
+    "App/drivers/dm3507.c",
+    "App/drivers/gl60_ii.c",
+    "App/drivers/can_frame.c"
+  ],
+  "pitch_remote": [
+    "Tests/test_pitch_remote.c",
+    "App/system/app_logic.c",
+    "App/system/remote_mapper.c",
+    "App/system/safety_manager.c",
+    "App/system/target_manager.c"
+  ],
+  "pitch_integration": [
+    "Tests/test_pitch_integration.c",
+    "App/system/app_logic.c",
+    "App/system/remote_mapper.c",
+    "App/system/safety_manager.c",
+    "App/system/target_manager.c"
+  ],
+  "pitch_telemetry": [
+    "Tests/test_pitch_telemetry.c",
+    "App/console/app_console.c",
+    "App/drivers/can_frame.c"
+  ],
+  "pitch_console_dma": [
+    "Tests/test_pitch_console_dma.c",
+    "App/console/app_console.c",
+    "App/drivers/can_frame.c"
+  ],
+  "pitch_dual_uart_dma": [
+    "Tests/test_pitch_console_dma.c",
+    "App/console/app_console.c",
+    "App/drivers/can_frame.c"
+  ],
+  "pitch_display_sim": [
+    "Tests/test_pitch_display_sim.c"
+  ],
+  "pitch_view_stiffness": [
+    "Tests/test_pitch_view_stiffness.c",
+    "App/motors/pitch_controller.c",
+    "App/control/yaw_cascade.c"
+  ],
+  "yaw_display_sim": [
+    "Tests/test_yaw_display_sim.c"
+  ],
+  "yaw_display_telemetry": [
+    "Tests/test_yaw_display_telemetry.c",
+    "App/console/app_console.c",
+    "App/drivers/can_frame.c"
+  ],
+  "pitch_display_bidirectional": [
+    "Tests/test_pitch_display_bidirectional.c"
+  ],
+  "pitch_yaw_display_telemetry": [
+    "Tests/test_yaw_display_telemetry.c",
+    "App/console/app_console.c",
+    "App/drivers/can_frame.c"
+  ],
+  "feeder_speed_view": [
+    "Tests/test_feeder_speed_view.c",
+    "App/console/app_console.c",
+    "App/drivers/can_frame.c"
+  ],
+  "feeder_speed_telemetry": [
+    "Tests/test_feeder_speed_telemetry.c",
+    "App/motors/feeder_controller.c",
+    "App/motors/feeder_backend.c",
+    "App/console/feeder_console.c",
+    "App/system/remote_mapper.c",
+    "App/system/target_manager.c",
+    "App/system/app_logic.c",
+    "App/system/safety_manager.c"
+  ],
+  "pitch_remote_dma": [
+    "Tests/test_remote_input_dma.c",
+    "App/drivers/remote_input.c",
+    "App/drivers/ibus.c",
+    "App/system/app_logic.c",
+    "App/system/remote_mapper.c",
+    "App/system/safety_manager.c",
+    "App/system/target_manager.c"
+  ],
+  "feeder_standalone": [
+    "Tests/test_feeder_standalone.c",
+    "App/motors/feeder_controller.c",
+    "App/motors/feeder_backend.c",
+    "App/console/feeder_console.c",
+    "App/system/remote_mapper.c",
+    "App/system/target_manager.c",
+    "App/system/app_logic.c",
+    "App/system/safety_manager.c",
+    "App/motors/motor_backend.c",
+    "App/motors/flywheel_jog.c",
+    "App/motors/flywheel_speed.c"
+  ],
+  "feeder_standalone_can": [
+    "Tests/test_feeder_standalone_can.c",
+    "App/drivers/can_bus.c",
+    "App/drivers/dm3507.c",
+    "App/drivers/gl60_ii.c",
+    "App/drivers/can_frame.c"
+  ]
+}
