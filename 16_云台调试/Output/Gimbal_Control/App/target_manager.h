@@ -9,7 +9,7 @@ typedef struct {
     GimbalMode gimbal_mode;
     uint8_t friction_requested, shot_event, step_event;
     GimbalMode step_axis;
-    uint8_t step_return_event, wheel_reset_allowed;
+    uint8_t step_return_event, wheel_reset_allowed; /* CH7 up: relative -30, not HOME. */
     uint8_t continuous_fire; /* Live qualified hold, cleared on release/guard failure. */
 } TargetRequest;
 
@@ -21,7 +21,7 @@ typedef struct {
     uint8_t trigger_low_seen, step_center_seen, firing;
     uint8_t wheel_off_seen;
     RcSwitch last_step_switch;
-    GimbalMode last_test_axis; /* 后端真正接受的阶跃轴；初始Yaw，仅用于回中回参考。 */
+    GimbalMode last_test_axis; /* 后端真正接受的阶跃轴；初始Yaw，选轴杆居中时用于CH7上拨后退。 */
 } TargetManager;
 
 void TargetManager_Init(TargetManager *manager);

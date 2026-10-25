@@ -1,0 +1,23 @@
+{
+  "recorded_at": "2026-10-24T21:37:27+08:00",
+  "groups": 6,
+  "checks": 173725,
+  "failures": 0,
+  "source_input_count": 121,
+  "source_hashes_match": true,
+  "app_only_changed": "yaw_display_sim.h: four duration values -20ms",
+  "unchanged_app_count": 70,
+  "durations_ms": [
+    185,
+    205,
+    225,
+    245
+  ],
+  "pitch_unchanged": true,
+  "pid_and_actual_control_unchanged": true,
+  "hex_path": "D:\\Project\\27电软正式批考核\\16_云台调试\\Output\\Gimbal_Control\\MDK-ARM\\build\\Gimbal_Control\\Gimbal_Control.hex",
+  "hex_sha256": "8106b215d4459c98f847fec7d4d764454d37b691614f70f15f2fde64a7654f8f",
+  "build": "original EIDE AC5/O0 full 69 source rebuild",
+  "flashed": false,
+  "hardware_tested": false
+}

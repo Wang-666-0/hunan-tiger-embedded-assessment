@@ -1,0 +1,74 @@
+{
+  "recorded_at": "2026-10-24T21:23:41+08:00",
+  "groups": 10,
+  "checks": 308864,
+  "failures": 0,
+  "source_input_count": 121,
+  "source_hashes_match": true,
+  "app_config_bytes_unchanged": true,
+  "pid_unchanged": {
+    "APP_PITCH_POSITION_KP": "11.500f",
+    "APP_PITCH_POSITION_KI": "24.775f",
+    "APP_PITCH_POSITION_KD": "0.002f",
+    "APP_PITCH_SPEED_KP": "0.00408f",
+    "APP_PITCH_SPEED_KI": "0.0005f",
+    "APP_PITCH_SPEED_KD": "0.000001f",
+    "APP_YAW_POSITION_KP": "13.768f",
+    "APP_YAW_POSITION_KI": "3.214f",
+    "APP_YAW_POSITION_KD": "0.139f",
+    "APP_YAW_SPEED_KP": "0.00504f",
+    "APP_YAW_SPEED_KI": "0.0008f",
+    "APP_YAW_SPEED_KD": "0.000074f"
+  },
+  "changed_files": [
+    "App/app_console.c",
+    "App/pitch_display_sim.h",
+    "App/yaw_display_sim.h",
+    "MDK-ARM/SIM操作说明.md",
+    "README.md",
+    "Tests/README.md",
+    "Tests/test_feeder_speed_view.c",
+    "Tests/test_pitch_display_sim.c",
+    "Tests/test_yaw_display_sim.c",
+    "Tests/test_yaw_display_telemetry.c",
+    "App/display_demo_jitter.h"
+  ],
+  "changed_existing_app": [
+    "Output/Gimbal_Control/App/app_console.c",
+    "Output/Gimbal_Control/App/pitch_display_sim.h",
+    "Output/Gimbal_Control/App/yaw_display_sim.h"
+  ],
+  "new_app": [
+    "App/display_demo_jitter.h"
+  ],
+  "unchanged_existing_app_count": 67,
+  "firmware": {
+    "Gimbal_Control.hex": {
+      "path": "D:\\Project\\27电软正式批考核\\16_云台调试\\Output\\Gimbal_Control\\MDK-ARM\\build\\Gimbal_Control\\Gimbal_Control.hex",
+      "size_bytes": 401035,
+      "sha256": "d059891de5d30a4ea32f95ee60f987294f3d787bd1b56fe1d5a25b0c6cbf9336"
+    },
+    "Gimbal_Control.axf": {
+      "path": "D:\\Project\\27电软正式批考核\\16_云台调试\\Output\\Gimbal_Control\\MDK-ARM\\build\\Gimbal_Control\\Gimbal_Control.axf",
+      "size_bytes": 1644940,
+      "sha256": "d83d4fc11fdc11dcda8e9a240828839319ac4553b5350082be78a77e91a5a915"
+    }
+  },
+  "compiler": "original EIDE AC5/O0, ARM Compiler 5.06, 68C+1ASM",
+  "rom_bytes": 142560,
+  "ram_bytes": 37072,
+  "flashed": false,
+  "hardware_tested": false,
+  "behavior": {
+    "pitch_display_version": 7,
+    "both_hold_style": "BOUNDED_IRREGULAR",
+    "both_hold_version": 1,
+    "hold_max_deg": 0.15,
+    "hold_ms_unchanged": 1000,
+    "recovery_ms_unchanged": 500,
+    "persistent_on_unchanged": true,
+    "pair_then_real_unchanged": true,
+    "original_rise_styles_unchanged": true,
+    "measurement_results_real": true
+  }
+}

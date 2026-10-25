@@ -85,6 +85,8 @@ uint8_t PitchController_SetPid(PitchController *pitch, char which, float kp, flo
 uint8_t PitchController_SetTarget(PitchController *pitch, float degrees);
 /* SHAPE=0直接目标+末段阻尼；可选轨迹按静止到静止处理。同目标不重启，不清积分。 */
 uint8_t PitchController_StartMove(PitchController *pitch, float degrees, uint32_t now_ms);
+/* Immediate return target; may interrupt an active plan without resetting PID. */
+uint8_t PitchController_ReturnTo(PitchController *pitch, float degrees, uint32_t now_ms);
 /* duration=0关闭规划，或100..250ms；速度参考权重0..1。 */
 uint8_t PitchController_SetShape(PitchController *pitch, uint32_t duration_ms, float velocity_gain);
 /* OFF立即撤去附加力矩；ON在下一次离散目标运动生效，不清积分。 */
@@ -98,4 +100,7 @@ void PitchController_Stop(PitchController *pitch);
 /* 新CAN位置差分按Pitch独立2ms滤速/20ms滤加速度，无新CAN不推进积分/估计。
  * 手动rate限幅仅CH2映射，阶跃无速度业务限幅。 */
 float PitchController_Update(PitchController *pitch, float rate_dps, uint32_t now_ms, uint8_t allowed);
+/* Fixed-target hold with the original PID, observer, gravity and protections.
+ * This entry never temporarily edits or scales the user's loop gains. */
+float PitchController_UpdateViewHold(PitchController *pitch, uint32_t now_ms, uint8_t allowed);
 #endif

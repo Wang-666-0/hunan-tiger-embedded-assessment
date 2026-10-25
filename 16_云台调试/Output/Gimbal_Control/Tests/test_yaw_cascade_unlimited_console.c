@@ -1,11 +1,16 @@
 #define YAW_CASCADE_CONSOLE_TEST 1
 #include "test_yaw_console_backend.c"
+#include <stdio.h>
+#include <math.h>
 
 void test_run(void)
 {
     uint32_t t;
     YawStep saved, result;
-    char report[1024];
+    char report[1024], default_pid[128];
+    (void)snprintf(default_pid, sizeof(default_pid), "Y|PID|POS|%.4f,%.4f,%.4f|VEL|%.6f,%.6f,%.6f",
+        (double)APP_YAW_POSITION_KP, (double)APP_YAW_POSITION_KI, (double)APP_YAW_POSITION_KD,
+        (double)APP_YAW_SPEED_KP, (double)APP_YAW_SPEED_KI, (double)APP_YAW_SPEED_KD);
     test_stage = 1;
     CHECK(!YAW_CASCADE_OUTPUT_LIMITS_ENABLED);
     ConsoleReset(1000); Control(1000, 0);
@@ -15,10 +20,10 @@ void test_run(void)
     Command(1000, "YAW ?", "VIEW|YAW VIEW");
     Command(1000, "YAW BAD", "UNKNOWN_COMMAND|USE|YAW HELP");
     CHECK(!enable_calls && !disable_calls && !torque_calls && !clear_calls && !stop_calls);
-    Command(1000, "YAW PID", "Y|PID|POS|15.5490,0.7340,0.1390|VEL|0.005170,0.003500,0.000074");
+    Command(1000, "YAW PID", default_pid);
     Command(1002, "YAW READY", "Y|BUSY|READY");
     Command(1002, "YAW", "Y|STATE|"); Command(1002, "YAW HELP", "Y|HELP|");
-    Command(1002, "YAW PID", "Y|PID|POS|15.5490");
+    Command(1002, "YAW PID", default_pid);
     for (t = 1004; t < 1200; t += 2) {
         if (t % 10 == 6) { pending = 0; Feed(t, clear_calls ? 0 : 13); }
         Control(t, 0);
@@ -36,8 +41,8 @@ void test_run(void)
     YawBackend_GetStep(&result);
     CHECK(result.cascade && !result.output_limits && result.vmax_dps == 0);
     Control(3076, 2); Control(3078, 2); Control(3080, 2); Control(3082, 2);
-    CHECK(last_torque > 2.40f && last_torque < 2.46f);
-    CHECK(state.controller.cascade.target_velocity_dps > 466 && state.active && !state.controller.faults);
+    CHECK(fabsf(last_torque - APP_YAW_POSITION_KP * 30.0f * APP_YAW_SPEED_KP) < 0.02f);
+    CHECK(state.controller.cascade.target_velocity_dps > APP_YAW_POSITION_KP * 30.0f - 1.0f && state.active && !state.controller.faults);
     Command(3082, "YAW POS 17 1.25 0", "Y|OK|POS");
     Command(3082, "YAW VEL 0.0048 0.013 0", "Y|OK|VEL");
     YawBackend_GetStep(&result);
@@ -63,13 +68,15 @@ void test_run(void)
     CHECK(state.active && state.step_hold && state.controller.target_deg == 30);
     CHECK(YawConsole_Poll(report, sizeof(report)));
     CHECK(strstr(report, "|RESP_MS|200|") && strstr(report, "|OS_DEG|0.000000|") && strstr(report, "|SSE_VALID|1|PASS|1|"));
-    CHECK(strstr(report, "|PKP|15.5490|PKI|0.7340|PKD|0.1390|") != 0);
-    CHECK(strstr(report, "|VKP|0.005170|VKI|0.003500|VKD|0.000074|") != 0);
+    (void)snprintf(default_pid, sizeof(default_pid), "|PKP|%.4f|PKI|%.4f|PKD|%.4f|",
+        (double)APP_YAW_POSITION_KP, (double)APP_YAW_POSITION_KI, (double)APP_YAW_POSITION_KD);
+    CHECK(strstr(report, default_pid) != 0);
+    CHECK(strstr(report, "|VKP|0.005040|VKI|0.000800|VKD|0.000074|") != 0);
     CHECK(strstr(report, "|VREF_MAX_DPS|0.0|VFILTER_MS|10|OUTPUT_LIMITS|0|BAND02|0.2|"));
     CHECK(strstr(report, "|SETTLE02_MS|200|PASS02|1|TIME_LIMIT_MS|250|OS_LIMIT_DEG|0.2|SSE_LIMIT_DEG|0.2|") != 0);
     CHECK(strstr(report, "|ASSESSMENT|FINAL_SETTLE|") && !strstr(report, "PASS05"));
     Command(10072, "YAW VKI 0.006", "Y|OK|PARAMETER");
-    Command(10072, "YAW RESULT", "|VKI|0.003500|");
+    Command(10072, "YAW RESULT", "|VKI|0.000800|");
     YawBackend_GetStep(&result); CHECK(result.phase == YAW_STEP_DONE && result.response_ms == saved.response_ms);
     Command(10072, "YAW OFF", "Y|OK|OFF");
     CHECK(!state.active && !state.requested && !permission && !state.controller.cascade.speed_i);
@@ -84,7 +91,10 @@ void test_run(void)
     Command(12000, "YAW PID", "Y|PID|POS|9.5000,0.2000,0.0200|VEL|0.002900,0.006000,0.000000");
     CHECK(!state.active && !state.requested && !state.zero_set && !enable_calls && !torque_calls);
     ConsoleReset(13000); Read();
-    Command(13000, "YAW PID", "Y|PID|POS|15.5490,0.7340,0.1390|VEL|0.005170,0.003500,0.000074");
+    (void)snprintf(default_pid, sizeof(default_pid), "Y|PID|POS|%.4f,%.4f,%.4f|VEL|%.6f,%.6f,%.6f",
+        (double)APP_YAW_POSITION_KP, (double)APP_YAW_POSITION_KI, (double)APP_YAW_POSITION_KD,
+        (double)APP_YAW_SPEED_KP, (double)APP_YAW_SPEED_KI, (double)APP_YAW_SPEED_KD);
+    Command(13000, "YAW PID", default_pid);
     CHECK(!state.active && !state.requested && !state.zero_set && !enable_calls && !torque_calls);
     CHECK(!state.controller.cascade.speed_i && !state.controller.cascade.position_i);
     test_done = 1;

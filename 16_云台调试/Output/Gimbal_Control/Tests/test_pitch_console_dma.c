@@ -25,8 +25,9 @@ void test_run(void)
     char full[129];
     test_stage = 1U;
     CHECK(APP_CONSOLE_RX_DMA_ENABLED && APP_PITCH_ENABLED && APP_YAW_ENABLED && APP_CONSOLE_BAUDRATE == 921600U);
-    AppConsole_CreateQueue(); AppConsole_Start();
-    CHECK(dma_rearms == 1U && rearms == 0U && rx_data);
+    AppConsole_CreateQueue(); AppConsole_Start(); clear_output();
+    Burst("YAW SIM OFF\r\nPITCH SIM OFF\r\n"); AppConsole_Poll(); clear_output();
+    CHECK(dma_rearms == 2U && rearms == 0U && rx_data);
     HAL_UART_RxCpltCallback(&huart4); HAL_UART_ErrorCallback(&huart4);
     CHECK(remote_rx == 1U && remote_errors == 1U);
 #if APP_REMOTE_RX_DMA_ENABLED
@@ -38,7 +39,7 @@ void test_run(void)
     CHECK(pitch_commands == 0U);
     HAL_UARTEx_RxEventCallback(&huart1, 15U); AppConsole_Poll();
     CHECK(pitch_commands == 1U && strstr(output, "P|MOCK\r\n") && AppConsole_GetFaultEpoch() == 0U);
-    CHECK(dma_rearms == 2U && rearms == 0U);
+    CHECK(dma_rearms == 3U && rearms == 0U);
     clear_output(); Burst("PITCH COORD "); AppConsole_Poll();
     CHECK(pitch_commands == 1U);
     Burst("1\r\n"); AppConsole_Poll(); CHECK(pitch_commands == 2U);
@@ -74,8 +75,8 @@ void test_run(void)
     test_stage = 4U;
     clear_output(); Burst("TELEM OFF\r\nPITCH VIEW\r\n"); AppConsole_Poll();
     CHECK(strstr(output, "C|OK|TELEM|OFF") && strstr(output, "GROUP|pitch|COLS|65"));
-    now += 100U; clear_output(); AppConsole_Poll(); CHECK(!output_length);
-    before = pitch_commands;
+    now += 100U; clear_output(); AppConsole_Poll(); CHECK(strncmp(output, "pitch:", 6U) == 0);
+    clear_output(); before = pitch_commands;
     Burst("PITCH PID\r\n"); AppConsole_Poll(); CHECK(pitch_commands == before + 1U && strstr(output, "P|MOCK"));
     clear_output(); Burst("TELEM ON\r\nYAW VIEW\r\n"); AppConsole_Poll();
     CHECK(strstr(output, "C|OK|TELEM|ON") && strstr(output, "Y|VIEW|YAW|GROUP|gimbal"));

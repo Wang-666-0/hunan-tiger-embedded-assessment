@@ -1,92 +1,122 @@
 #define YAW_CASCADE_CONSOLE_TEST 1
 #include "test_yaw_console_backend.c"
+#include <math.h>
+#include <stdio.h>
 
+/* Synthetic feedback verifies command semantics/guards, not motor dynamics. */
 static void Drive(uint32_t start, uint32_t duration, float from, float to)
 {
     uint32_t dt;
-    for (dt = 2; dt <= duration; dt += 2) {
-        if (dt % 10 == 0) {
-            float f = dt < 600 ? (float)dt / 600 : 1.0f;
-            FeedDegrees(start + dt, from + (to - from) * f, dt % 20 ? 13.99f : -13.99f);
+    for (dt = 2U; dt <= duration; dt += 2U) {
+        if (dt % 10U == 0U) {
+            float f = dt < 200U ? (float)dt / 200.0f : 1.0f;
+            FeedDegrees(start + dt, from + (to - from) * f, dt % 20U ? 13.99f : -13.99f);
         }
-        Control(start + dt, 2);
+        Control(start + dt, 2U);
     }
 }
-
 void test_run(void)
 {
-    YawStep snap;
+    uint32_t move, at, id;
+    float from, target = 0.0f, delta;
+    YawStep snap, prior;
     YawRemoteStepEvent event;
-    uint32_t cycle, t, start, id;
-    test_stage = 1;
+    char expected[96], default_pid[128];
+    test_stage = 1U;
+    ConsoleZeroActivate(2000U); Control(2068U, 2U); at = 2068U;
     CHECK(!APP_YAW_EXPERIMENTAL_TRACKING);
-    ConsoleReset(1000);
-    Command(1000, "YAW PID", "POS|15.5490,0.7340,0.1390|VEL|0.005170,0.003500,0.000074");
-    Command(1000, "YAW SHAPE 80", "Y|ERROR|REMOVED|SHAPE");
-    Command(1000, "YAW SHAPEV 0.15", "Y|ERROR|REMOVED|SHAPEV");
-    Command(1000, "YAW FF ON", "Y|ERROR|REMOVED|FF");
-    Command(1000, "YAW FKA 0.000002", "Y|ERROR|REMOVED|FKA");
-    CHECK(!enable_calls && !torque_calls);
-
-    test_stage = 2;
-    ConsoleZeroActivate(2000); Control(2068, 2);
-    /* CH7 may be confirmed before the direction is chosen; no event is lost. */
-    receiver.channels[RC_STEP_CHANNEL] = 2000; Control(2070, 2);
-    CHECK(!request.step_event);
-    receiver.channels[RC_STEP_YAW_CHANNEL] = 2000; Control(2072, 2);
-    CHECK(request.step_event && state.controller.target_deg == 30);
-    YawBackend_GetStep(&snap); CHECK(snap.phase == YAW_STEP_RUNNING && snap.id == 1);
-    CHECK(!snap.shape_ms && !snap.shape_velocity_gain && !snap.ff_enabled);
-    CHECK(YawBackend_TakeRemoteStepEvent(&event) && event.result == 1 && !event.blocks);
-    start = snap.start_ms;
-
-    /* Three full cycles, real command/backend path, no re-zero or READY. */
-    for (cycle = 0; cycle < 3; ++cycle) {
-        id = cycle + 1;
-        for (t = 2; t <= 5000; t += 2) {
-            if (t % 10 == 0) { FeedDegrees(start + t, t < 200 ? 30.0f * t / 200 : 30, 13.99f); }
-            Control(start + t, 2);
-            if (t == 200) {
-                receiver.channels[RC_STEP_CHANNEL] = 1500; Control(start + t, 2);
-                receiver.channels[RC_STEP_CHANNEL] = 2000; Control(start + t, 2);
-                CHECK(YawBackend_TakeRemoteStepEvent(&event) && event.result == 3);
-                CHECK(event.blocks & YAW_STEP_BLOCK_WINDOW);
-                Command(start + t, "YAW STEP CHECK", "WHY|WAIT_5S_WINDOW");
-            }
+    (void)snprintf(default_pid, sizeof(default_pid), "POS|%.4f,%.4f,%.4f|VEL|%.6f,%.6f,%.6f",
+        (double)APP_YAW_POSITION_KP, (double)APP_YAW_POSITION_KI, (double)APP_YAW_POSITION_KD,
+        (double)APP_YAW_SPEED_KP, (double)APP_YAW_SPEED_KI, (double)APP_YAW_SPEED_KD);
+    Command(at, "YAW PID", default_pid);
+    /* Five positive steps, ten negative, then five positive: no count cap,
+     * no HOME/READY, no five-second pause. Exercise serial and RC paths. */
+    test_stage = 2U;
+    for (move = 0U; move < 20U; ++move) {
+        from = target; delta = move < 5U || move >= 15U ? 30.0f : -30.0f; target += delta;
+        if (move & 1U) {
+            receiver.channels[RC_STEP_YAW_CHANNEL] = delta > 0 ? 2000U : 1000U;
+            receiver.channels[RC_STEP_CHANNEL] = 1500U; Control(at + 2U, 2U);
+            receiver.channels[RC_STEP_CHANNEL] = 2000U; Control(at + 4U, 2U);
+            CHECK(!request.step_return_event);
+            CHECK(YawBackend_TakeRemoteStepEvent(&event) && event.result == 1U && !event.blocks);
+            CHECK(event.target_deg == target);
+            at += 4U;
+            receiver.channels[RC_STEP_CHANNEL] = receiver.channels[RC_STEP_YAW_CHANNEL] = 1500U;
+        } else {
+            (void)snprintf(expected, sizeof(expected), "STEP_STARTED|TARGET|%.1f|DELTA|%.1f|MODE|RELATIVE", (double)target, (double)delta);
+            Command(at, delta > 0 ? "YAW STEP 30" : "YAW STEP -30", expected);
         }
-        YawBackend_GetStep(&snap); CHECK(snap.phase == YAW_STEP_DONE && snap.id == id && snap.pass);
-        CHECK(YawBackend_GetStepId() == snap.id);
-        /* Holding CH7 high after DONE must not replay the rejected request. */
-        Drive(start + 5000, 100, 30, 30);
-        YawBackend_GetStep(&snap); CHECK(snap.id == id && state.controller.target_deg == 30);
-        Command(start + 5100, "YAW STEP CHECK", "WHY|SEND_HOME_FIRST");
-        receiver.channels[RC_STEP_CHANNEL] = 1000; Control(start + 5102, 2);
-        CHECK(state.controller.target_deg == 0);
-        Drive(start + 5102, 800, 30, 0);
-        Read(); CHECK(!state.controller.stationary_samples); /* Raw speed alone is noisy. */
-        CHECK(!state.step_blocks && state.step_still_ms >= 20);
-        Command(start + 5902, "YAW STEP CHECK", "READY|1|WHY|READY");
-        if (cycle < 2) {
-            receiver.channels[RC_STEP_CHANNEL] = 1500; Control(start + 5904, 2);
-            receiver.channels[RC_STEP_CHANNEL] = 2000; Control(start + 5906, 2);
-            YawBackend_GetStep(&snap);
-            CHECK(snap.phase == YAW_STEP_RUNNING && snap.id == id + 1);
-            CHECK(YawBackend_GetStepId() == snap.id);
-            start = snap.start_ms;
+        YawBackend_GetStep(&snap); id = snap.id;
+        CHECK(id == move + 1U && snap.phase == YAW_STEP_RUNNING && snap.target_deg == target);
+        CHECK(fabsf(snap.start_deg - from) < 0.02f && fabsf(snap.span_deg - 30.0f) < 0.02f);
+        CHECK(!snap.shape_ms && !snap.ff_enabled && state.controller.target_deg == target);
+        CHECK(!YawBackend_StartStep(delta)); /* Never stack steps while still moving. */
+        if (move) {
+            CHECK(YawBackend_TakeStepReport(&prior));
+            CHECK(prior.id == id - 1U && prior.phase == YAW_STEP_ABORTED);
+            CHECK(prior.reason == YAW_STEP_TARGET_CHANGE && !prior.pass && !prior.sse_valid);
+        }
+        /* A held confirm switch must not repeat the accepted move. */
+        if (move & 1U) { receiver.channels[RC_STEP_CHANNEL] = 2000U; }
+        Drive(at, 400U, from, target); at += 400U;
+        receiver.channels[RC_STEP_CHANNEL] = 1500U; Control(at + 2U, 2U); at += 2U;
+        YawBackend_GetStep(&snap);
+        CHECK(state.active && !state.controller.faults && permission && snap.id == id);
+        CHECK(!state.step_blocks && snap.phase == YAW_STEP_RUNNING && snap.elapsed_ms < 5000U);
+        if (move == 4U || move == 14U) {
+            CHECK(YawBackend_StepBlocks(delta) & YAW_STEP_BLOCK_TARGET_LIMIT);
+            Command(at, delta > 0 ? "YAW STEP" : "YAW STEP -30", "WHY|TARGET_LIMIT");
+            CHECK(state.controller.target_deg == target && YawBackend_GetStepId() == id);
+            CHECK(!YawBackend_StepBlocks(-delta));
         }
     }
-
-    test_stage = 3;
-    now_ms = start + 5904;
-    FeedDegrees(now_ms, 0, 70); Control(now_ms, 2);
+    test_stage = 3U;
+    Command(at, "YAW PID", default_pid);
+    CHECK(target == 0.0f && YawBackend_GetStepId() == 20U);
+    YawBackend_SetViewLock(1U); CHECK(!YawBackend_StartStep(30.0f));
+    CHECK(YawBackend_StepBlocks(30.0f) & YAW_STEP_BLOCK_VIEW);
+    YawBackend_SetViewLock(0U);
+    FeedDegrees(at + 10U, 0.0f, 70.0f); Control(at + 10U, 2U);
+    CHECK(YawBackend_StepBlocks(30.0f) & YAW_STEP_BLOCK_MOVING);
+    CHECK(!YawBackend_StartStep(30.0f));
+    Control(at + 12U, 0U); CHECK(!state.active && !permission && !YawBackend_StartStep(30.0f));
+    /* Original actual feedback hard limit still stops output on either side. */
+    test_stage = 4U;
+    for (move = 0U; move < 2U; ++move) {
+        ConsoleZeroActivate(30000U + move * 2000U); at = 30066U + move * 2000U;
+        Control(at + 2U, 2U);
+        Drive(at + 2U, 400U, 0.0f, move ? -161.0f : 161.0f);
+        CHECK(!state.active && !permission && (state.controller.faults & YAW_CONTROLLER_FAULT_LIMIT));
+    }
+    test_stage = 5U;
+    ConsoleZeroActivate(40000U); Control(40068U, 2U);
+    CHECK(YawBackend_StartStep(30.0f));
+    FeedDegrees(40078U, 5.0f, 100.0f); Control(40078U, 2U);
+    CHECK(state.step_blocks & YAW_STEP_BLOCK_POSITION);
     CHECK(state.step_blocks & YAW_STEP_BLOCK_MOVING);
-    CHECK(!YawBackend_StartStep(30));
-    FeedDegrees(now_ms + 10, 0.15f, 0); Control(now_ms + 10, 2);
-    CHECK(state.step_blocks & (YAW_STEP_BLOCK_MOVING | YAW_STEP_BLOCK_STILL));
-    CHECK(!YawBackend_StartStep(30));
+    receiver.channels[RC_STEP_YAW_CHANNEL] = 1500U;
+    receiver.channels[RC_STEP_CHANNEL] = 1500U; Control(40080U, 2U);
+    receiver.channels[RC_STEP_CHANNEL] = 1000U; Control(40082U, 2U);
+    CHECK(request.step_return_event && request.step_delta_deg == -30.0f);
+    CHECK(YawBackend_TakeRemoteStepEvent(&event) && event.result == 2U && event.target_deg == 0.0f);
+    CHECK(state.controller.target_deg == 0.0f && state.active && !state.controller.faults);
     YawBackend_GetStep(&snap);
-    CHECK(snap.id == id && YawBackend_GetStepId() == snap.id);
-    Control(now_ms + 12, 0);
-    CHECK(!state.active && !permission && (state.step_blocks & YAW_STEP_BLOCK_INACTIVE));
-    test_done = 1;
+    CHECK(snap.id == 1U && snap.phase == YAW_STEP_ABORTED && snap.reason == YAW_STEP_TARGET_CHANGE && !snap.pass);
+    Drive(40082U, 400U, 5.0f, 0.0f);
+    CHECK(state.controller.target_deg == 0.0f && !YawBackend_TakeRemoteStepEvent(&event));
+    Command(40482U, "YAW PID", default_pid);
+    /* Travel limit and other-axis view lock still reject a return. */
+    CHECK(YawBackend_SetParameter('T', -150.0f));
+    receiver.channels[RC_STEP_CHANNEL] = 1500U; Control(40484U, 2U);
+    receiver.channels[RC_STEP_CHANNEL] = 1000U; Control(40486U, 2U);
+    CHECK(YawBackend_TakeRemoteStepEvent(&event) && event.result == 3U);
+    CHECK(event.blocks & YAW_STEP_BLOCK_TARGET_LIMIT);
+    CHECK(state.controller.target_deg == -150.0f);
+    CHECK(YawBackend_SetParameter('T', 0.0f));
+    YawBackend_SetViewLock(1U);
+    receiver.channels[RC_STEP_CHANNEL] = 1500U; Control(40488U, 2U);
+    receiver.channels[RC_STEP_CHANNEL] = 1000U; Control(40490U, 2U);
+    CHECK(YawBackend_TakeRemoteStepEvent(&event) && event.result == 3U && (event.blocks & YAW_STEP_BLOCK_VIEW));
+    test_done = 1U;
 }

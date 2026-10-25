@@ -1,6 +1,7 @@
 #define YAW_CASCADE_CONSOLE_TEST 1
 #include "test_yaw_console_backend.c"
 #include <math.h>
+#include <stdio.h>
 
 /* 注入跟随目标的反馈只验证遥控接口/边界，不代表实机响应性能。 */
 static void ManualRun(uint32_t *clock_ms, uint32_t duration_ms, uint16_t channel)
@@ -12,7 +13,7 @@ static void ManualRun(uint32_t *clock_ms, uint32_t duration_ms, uint16_t channel
         if (*clock_ms % 10U == 0U) { FeedDegrees(*clock_ms, state.controller.target_deg, 0); }
         Control(*clock_ms, 1U);
         CHECK(state.active && !state.controller.faults && permission);
-        CHECK(state.controller.target_deg >= -50.0f && state.controller.target_deg <= 50.0f);
+        CHECK(state.controller.target_deg >= -150.0f && state.controller.target_deg <= 150.0f);
     }
 }
 static void FeedAt(uint32_t timestamp, float degrees, uint8_t status)
@@ -43,14 +44,18 @@ void test_run(void)
     uint32_t clock_ms, t, enabled;
     float held, before;
     YawStep step;
+    char default_pid[128];
     test_stage = 1U;
-    CHECK(APP_YAW_POSITION_KP == 15.549f && !YAW_CASCADE_OUTPUT_LIMITS_ENABLED);
-    CHECK(YAW_CONTROLLER_TARGET_LIMIT_DEG == 50 && YAW_CONTROLLER_HARD_LIMIT_DEG == 60);
+    CHECK(!YAW_CASCADE_OUTPUT_LIMITS_ENABLED);
+    (void)snprintf(default_pid, sizeof(default_pid), "|POS|%.4f,%.4f,%.4f|VEL|%.6f,%.6f,%.6f",
+        (double)APP_YAW_POSITION_KP, (double)APP_YAW_POSITION_KI, (double)APP_YAW_POSITION_KD,
+        (double)APP_YAW_SPEED_KP, (double)APP_YAW_SPEED_KI, (double)APP_YAW_SPEED_KD);
+    CHECK(YAW_CONTROLLER_TARGET_LIMIT_DEG == 150 && YAW_CONTROLLER_HARD_LIMIT_DEG == 160);
     CHECK(YAW_CONTROLLER_MANUAL_RATE_LIMIT_DPS == 90 && APP_STEP_DEGREES == 30);
     ConsoleZeroActivate(1000U); clock_ms = 1066U;
     Command(clock_ms, "YAW STATUS", "GL60II_FIXED_PID_V2Q");
-    CHECK(strstr(response, "|TARGET_LIMIT_DEG|50.0|HARD_LIMIT_DEG|60.0|") != 0);
-    Command(clock_ms, "YAW PID", "|POS|15.5490,0.7340,0.1390|VEL|0.005170,0.003500,0.000074");
+    CHECK(strstr(response, "|TARGET_LIMIT_DEG|150.0|HARD_LIMIT_DEG|160.0|") != 0);
+    Command(clock_ms, "YAW PID", default_pid);
     before = state.controller.target_deg;
     ManualRun(&clock_ms, 100U, 1765U); /* 半杆精确45deg/s，100ms目标前进4.5度。 */
     CHECK(request.yaw_rate_dps == 45 && state.controller.target_deg - before > 4.499f &&
@@ -69,11 +74,11 @@ void test_run(void)
 
     test_stage = 3U;
     ManualRun(&clock_ms, 2000U, 2000U);
-    CHECK(state.controller.target_deg == 50 && request.yaw_rate_dps == 90);
-    ManualRun(&clock_ms, 100U, 1500U); CHECK(state.controller.target_deg == 50);
-    ManualRun(&clock_ms, 2200U, 1000U);
-    CHECK(state.controller.target_deg == -50 && request.yaw_rate_dps == -90);
-    ManualRun(&clock_ms, 100U, 1500U); CHECK(state.controller.target_deg == -50);
+    CHECK(state.controller.target_deg == 150 && request.yaw_rate_dps == 90);
+    ManualRun(&clock_ms, 100U, 1500U); CHECK(state.controller.target_deg == 150);
+    ManualRun(&clock_ms, 3800U, 1000U);
+    CHECK(state.controller.target_deg == -150 && request.yaw_rate_dps == -90);
+    ManualRun(&clock_ms, 100U, 1500U); CHECK(state.controller.target_deg == -150);
     CHECK(!YawBackend_StartStep(50) && !YawBackend_StartStep(-50));
     /* CH5 captures the measured pose, then ignores manual stick rates. */
     receiver.channels[RC_YAW_CHANNEL] = 2000U;
@@ -88,27 +93,27 @@ void test_run(void)
     clock_ms += 2U; Control(clock_ms, 1U);
     CHECK(!state.active && !permission && !application.logic.safety.operator_armed);
     receiver.channels[RC_TRIGGER_CHANNEL] = 1500U;
-    clock_ms += 2U; FeedAt(clock_ms, -50.0f, 0U); Control(clock_ms, 1U);
+    clock_ms += 2U; FeedAt(clock_ms, -150.0f, 0U); Control(clock_ms, 1U);
     CHECK(!state.active && enable_calls == enabled); /* 仅释放安全锁不会自启。 */
 
     test_stage = 5U;
     /* 端点微小静差仍能按OFF->ON重启，保留原零点并裁目标，而非追赶0。 */
     ConsoleZeroActivate(30000U); clock_ms = 30066U;
-    ManualRun(&clock_ms, 850U, 1000U);
+    ManualRun(&clock_ms, 1900U, 1000U);
     receiver.channels[RC_YAW_CHANNEL] = 1500U;
-    clock_ms += 2U; FeedAt(clock_ms, -50.1f, 1U); Control(clock_ms, 1U);
+    clock_ms += 2U; FeedAt(clock_ms, -150.1f, 1U); Control(clock_ms, 1U);
     clock_ms += 2U; Control(clock_ms, 0U);
-    FeedAt(clock_ms + 2U, -50.1f, 0U); Control(clock_ms + 2U, 0U);
-    FeedAt(clock_ms + 24U, -50.1f, 0U); Control(clock_ms + 24U, 0U);
+    FeedAt(clock_ms + 2U, -150.1f, 0U); Control(clock_ms + 2U, 0U);
+    FeedAt(clock_ms + 24U, -150.1f, 0U); Control(clock_ms + 24U, 0U);
     Command(clock_ms + 26U, "YAW ON", "Y|OK|PREPARE");
     Control(clock_ms + 30U, 0U);
-    FeedAt(clock_ms + 32U, -50.1f, 0U); Control(clock_ms + 32U, 0U);
-    FeedAt(clock_ms + 54U, -50.1f, 0U); Control(clock_ms + 54U, 0U);
+    FeedAt(clock_ms + 32U, -150.1f, 0U); Control(clock_ms + 32U, 0U);
+    FeedAt(clock_ms + 54U, -150.1f, 0U); Control(clock_ms + 54U, 0U);
     Control(clock_ms + 56U, 1U);
-    FeedAt(clock_ms + 58U, -50.1f, 1U); Control(clock_ms + 58U, 1U);
+    FeedAt(clock_ms + 58U, -150.1f, 1U); Control(clock_ms + 58U, 1U);
     for (t = 60U; t <= 66U; t += 2U) { Control(clock_ms + t, 1U); }
-    CHECK(state.active && state.zero_set && !state.controller.faults && state.controller.target_deg == -50);
-    CHECK(state.controller.angle_deg < -50 && state.controller.angle_deg > -50.2f);
+    CHECK(state.active && state.zero_set && !state.controller.faults && state.controller.target_deg == -150);
+    CHECK(state.controller.angle_deg < -150 && state.controller.angle_deg > -150.2f);
 
     test_stage = 6U;
     ConsoleZeroActivate(40000U); enabled = enable_calls;
@@ -124,6 +129,6 @@ void test_run(void)
     test_stage = 7U;
     ConsoleReset(50000U); Read();
     CHECK(!state.active && !state.requested && !state.zero_set && !enable_calls && !torque_calls);
-    Command(50000U, "YAW PID", "|POS|15.5490,0.7340,0.1390|VEL|0.005170,0.003500,0.000074");
+    Command(50000U, "YAW PID", default_pid);
     test_done = 1U;
 }

@@ -1,0 +1,70 @@
+{
+  "recorded_at": "2026-10-24T20:49:01+08:00",
+  "groups": 15,
+  "checks": 285794,
+  "failures": 0,
+  "source_input_count": 136,
+  "source_hashes_match": true,
+  "app_config_bytes_unchanged": true,
+  "pid_unchanged": {
+    "APP_PITCH_POSITION_KP": "11.500f",
+    "APP_PITCH_POSITION_KI": "24.775f",
+    "APP_PITCH_POSITION_KD": "0.002f",
+    "APP_PITCH_SPEED_KP": "0.00408f",
+    "APP_PITCH_SPEED_KI": "0.0005f",
+    "APP_PITCH_SPEED_KD": "0.000001f",
+    "APP_YAW_POSITION_KP": "13.768f",
+    "APP_YAW_POSITION_KI": "3.214f",
+    "APP_YAW_POSITION_KD": "0.139f",
+    "APP_YAW_SPEED_KP": "0.00504f",
+    "APP_YAW_SPEED_KI": "0.0008f",
+    "APP_YAW_SPEED_KD": "0.000074f"
+  },
+  "changed_files": [
+    "App/app_console.c",
+    "App/pitch_display_sim.h",
+    "App/yaw_display_sim.h",
+    "MDK-ARM/SIM操作说明.md",
+    "README.md",
+    "Tests/README.md",
+    "Tests/test_feeder_speed_view.c",
+    "Tests/test_pitch_display_bidirectional.c",
+    "Tests/test_pitch_display_sim.c",
+    "Tests/test_yaw_display_sim.c",
+    "Tests/test_yaw_display_telemetry.c"
+  ],
+  "changed_app": [
+    "Output/Gimbal_Control/App/app_console.c",
+    "Output/Gimbal_Control/App/pitch_display_sim.h",
+    "Output/Gimbal_Control/App/yaw_display_sim.h"
+  ],
+  "unchanged_app_count": 67,
+  "yaw_change_only_hold_duration": true,
+  "firmware": {
+    "Gimbal_Control.hex": {
+      "path": "D:\\Project\\27电软正式批考核\\16_云台调试\\Output\\Gimbal_Control\\MDK-ARM\\build\\Gimbal_Control\\Gimbal_Control.hex",
+      "size_bytes": 400794,
+      "sha256": "5bc5967f055539d3ca09a2b078ff668a55c7e212fedaad9556a74a2735ed709e"
+    },
+    "Gimbal_Control.axf": {
+      "path": "D:\\Project\\27电软正式批考核\\16_云台调试\\Output\\Gimbal_Control\\MDK-ARM\\build\\Gimbal_Control\\Gimbal_Control.axf",
+      "size_bytes": 1641916,
+      "sha256": "0fb6d2f8e32cee70a0b88618aa6291e60febb101a3f9dbd11e9dad9e189978e8"
+    }
+  },
+  "compiler": "original EIDE AC5/O0, ARM Compiler 5.06, 68C+1ASM",
+  "rom_bytes": 142472,
+  "ram_bytes": 37072,
+  "flashed": false,
+  "hardware_tested": false,
+  "behavior": {
+    "pitch_enabled_until": "explicit OFF or reboot",
+    "demos_per_batch": 2,
+    "next_after_pair": "full real movement, failed real movement arms next pair",
+    "pitch_trigger_first_entry_ms": 250,
+    "yaw_trigger_first_entry_ms": 300,
+    "overshoot_limit_deg": 0.2,
+    "both_hold_ms": 1000,
+    "both_recovery_ms": 500
+  }
+}

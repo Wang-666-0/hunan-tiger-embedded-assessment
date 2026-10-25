@@ -1,0 +1,17 @@
+const fs=require('node:fs');
+const crypto=require('node:crypto');
+const original=fs.readFileSync(process.argv[2]);
+const b=Buffer.from(original);
+const pe=b.readUInt32LE(0x3c);
+if(b.toString('ascii',pe,pe+4)!=='PE\0\0')throw Error('Invalid PE');
+const opt=pe+24;
+if(b.readUInt16LE(opt)!==0x20b)throw Error('Expected PE32+');
+const offset=opt+72;
+const before=Number(b.readBigUInt64LE(offset));
+const reserve=16*1024*1024;
+b.writeBigUInt64LE(BigInt(reserve),offset);
+const changes=[];
+for(let i=0;i<b.length;i++)if(b[i]!==original[i])changes.push({offset:i,from:original[i],to:b[i]});
+if(changes.some(c=>c.offset<offset||c.offset>=offset+8))throw Error('Unexpected changes');
+fs.writeFileSync(process.argv[3],b);
+console.log(JSON.stringify({before,after:reserve,changes,sha256:crypto.createHash('sha256').update(b).digest('hex')}));

@@ -1,0 +1,266 @@
+[     0.000] debug qml: screenWidth: 2560
+[     0.001] debug qml: screenHeight: 1600
+[     0.002] debug qml: dpi: 189.02325581395348
+[     2.186] debug default: "D:/VOFA+/x64/plugins/widgets"
+[     2.191] debug default: "D:/VOFA+/x64/plugins/widgets"
+[     2.193] debug default: "D:/VOFA+/x64/plugins/widgets"
+[     2.194] debug default: "D:/VOFA+/x64/plugins/widgets"
+[     2.196] debug default: "D:/VOFA+/x64/plugins/widgets"
+[     2.198] debug default: "D:/VOFA+/x64/plugins/widgets"
+[     2.199] debug default: "D:/VOFA+/x64/plugins/widgets"
+[     2.201] debug default: "D:/VOFA+/x64/plugins/widgets"
+[     2.201] debug default: "D:/VOFA+/x64/plugins/widgets"
+[     2.202] debug default: "D:/VOFA+/x64/plugins/widgets"
+[     2.202] debug default: "D:/VOFA+/x64/plugins/widgets"
+[     2.203] debug default: "D:/VOFA+/x64/plugins/widgets"
+[     2.203] debug default: "D:/VOFA+/x64/plugins/widgets"
+[     2.344] debug default: "D:/VOFA+/x64/plugins/widgets"
+[     2.618] debug default: "D:/VOFA+/x64/plugins/widgets"
+[     2.828] debug default: "D:/VOFA+/x64/plugins/widgets"
+[     3.062] debug default: "D:/VOFA+/x64/plugins/widgets"
+[     3.275] debug default: "D:/VOFA+/x64/plugins/widgets"
+[     3.547] debug default: "D:/VOFA+/x64/plugins/widgets"
+[     3.751] debug default: "D:/VOFA+/x64/plugins/widgets"
+[     4.004] debug default: "D:/VOFA+/x64/plugins/widgets"
+[     4.286] debug default: "D:/VOFA+/x64/plugins/widgets"
+[     4.508] debug default: "D:/VOFA+/x64/plugins/widgets"
+[     4.600] debug default: "D:/VOFA+/x64/plugins/widgets"
+[     6.000] debug default: "D:/VOFA+/x64/plugins/widgets"
+[     6.227] debug default: "D:/VOFA+/x64/plugins/widgets"
+[     6.463] debug default: "D:/VOFA+/x64/plugins/widgets"
+[     6.675] debug default: "D:/VOFA+/x64/plugins/widgets"
+[     6.907] debug default: "D:/VOFA+/x64/plugins/widgets"
+[     7.000] debug default: "D:/VOFA+/x64/plugins/widgets"
+[     7.205] debug default: "D:/VOFA+/x64/plugins/widgets"
+[     7.416] debug default: "D:/VOFA+/x64/plugins/widgets"
+[     7.794] debug default: "D:/VOFA+/x64/plugins/widgets"
+[     8.011] debug default: "D:/VOFA+/x64/plugins/widgets"
+[     8.369] debug default: "D:/VOFA+/x64/plugins/widgets"
+[     8.600] debug default: "D:/VOFA+/x64/plugins/widgets"
+[    10.558] debug default: "D:/VOFA+/x64/plugins/widgets"
+[    12.149] debug default: "D:/VOFA+/x64/plugins/widgets"
+[   221.477] debug default: DebugWayInterface::initialization
+[   221.477] debug default: databits:  8
+[   221.477] debug default: stopbits:  1
+[   221.477] debug default: parity:  "None"
+[   221.477] debug default: flow_control:  "None"
+[   221.477] debug default: name: "COM12"
+[   221.477] debug default: baud: 921600
+[   221.485] debug default: port: "COM12" ,baud: "921600"
+[   221.485] debug default: isopen: true
+[   221.486] debug default: break: false
+[   221.492] debug default: dtr: false
+[   221.498] debug default: rts: false
+[   221.498] debug default: this_ptr->io_looping_ true
+[   248.193] debug default: io_loop
+[   248.193] debug default: DebugWayInterface::deinitialization
+[   250.971] debug default: DebugWayInterface::initialization
+[   250.972] debug default: databits:  8
+[   250.972] debug default: stopbits:  1
+[   250.972] debug default: parity:  "None"
+[   250.972] debug default: flow_control:  "None"
+[   250.973] debug default: name: "COM12"
+[   250.973] debug default: baud: 921600
+[   250.980] debug default: port: "COM12" ,baud: "921600"
+[   250.980] debug default: isopen: true
+[   250.980] debug default: break: false
+[   250.987] debug default: dtr: false
+[   250.993] debug default: rts: false
+[   250.993] debug default: this_ptr->io_looping_ true
+[   330.727] debug default: io_loop
+[   330.727] debug default: DebugWayInterface::deinitialization
+[   338.555] debug default: DebugWayInterface::initialization
+[   338.562] debug default: databits:  8
+[   338.562] debug default: stopbits:  1
+[   338.563] debug default: parity:  "None"
+[   338.563] debug default: flow_control:  "None"
+[   338.563] debug default: name: "COM12"
+[   338.563] debug default: baud: 921600
+[   338.570] debug default: port: "COM12" ,baud: "921600"
+[   338.570] debug default: isopen: true
+[   338.571] debug default: break: false
+[   338.577] debug default: dtr: false
+[   338.583] debug default: rts: false
+[   338.583] debug default: this_ptr->io_looping_ true
+[   356.121] debug default: io_loop
+[   356.122] debug default: DebugWayInterface::deinitialization
+[   380.128] debug default: DebugWayInterface::initialization
+[   380.129] debug default: databits:  8
+[   380.129] debug default: stopbits:  1
+[   380.129] debug default: parity:  "None"
+[   380.129] debug default: flow_control:  "None"
+[   380.130] debug default: name: "COM12"
+[   380.130] debug default: baud: 921600
+[   380.137] debug default: port: "COM12" ,baud: "921600"
+[   380.138] debug default: isopen: true
+[   380.138] debug default: break: false
+[   380.144] debug default: dtr: false
+[   380.150] debug default: rts: false
+[   380.151] debug default: this_ptr->io_looping_ true
+[   584.678] debug default: io_loop
+[   584.679] debug default: DebugWayInterface::deinitialization
+[   594.251] debug default: DebugWayInterface::initialization
+[   594.251] debug default: databits:  8
+[   594.251] debug default: stopbits:  1
+[   594.252] debug default: parity:  "None"
+[   594.252] debug default: flow_control:  "None"
+[   594.252] debug default: name: "COM12"
+[   594.252] debug default: baud: 921600
+[   594.259] debug default: port: "COM12" ,baud: "921600"
+[   594.259] debug default: isopen: true
+[   594.259] debug default: break: false
+[   594.266] debug default: dtr: false
+[   594.272] debug default: rts: false
+[   594.272] debug default: this_ptr->io_looping_ true
+[   601.589] debug default: io_loop
+[   601.590] debug default: DebugWayInterface::deinitialization
+[   614.512] debug default: DebugWayInterface::initialization
+[   614.512] debug default: databits:  8
+[   614.512] debug default: stopbits:  1
+[   614.513] debug default: parity:  "None"
+[   614.513] debug default: flow_control:  "None"
+[   614.513] debug default: name: "COM12"
+[   614.513] debug default: baud: 921600
+[   614.520] debug default: port: "COM12" ,baud: "921600"
+[   614.521] debug default: isopen: true
+[   614.521] debug default: break: false
+[   614.527] debug default: dtr: false
+[   614.533] debug default: rts: false
+[   614.534] debug default: this_ptr->io_looping_ true
+[   647.492] debug default: io_loop
+[   647.493] debug default: DebugWayInterface::deinitialization
+[   665.293] debug default: DebugWayInterface::initialization
+[   665.294] debug default: databits:  8
+[   665.294] debug default: stopbits:  1
+[   665.294] debug default: parity:  "None"
+[   665.294] debug default: flow_control:  "None"
+[   665.294] debug default: name: "COM12"
+[   665.294] debug default: baud: 921600
+[   665.302] debug default: port: "COM12" ,baud: "921600"
+[   665.302] debug default: isopen: true
+[   665.302] debug default: break: false
+[   665.309] debug default: dtr: false
+[   665.315] debug default: rts: false
+[   665.315] debug default: this_ptr->io_looping_ true
+[   683.648] debug default: io_loop
+[   683.648] debug default: DebugWayInterface::deinitialization
+[   690.696] debug default: DebugWayInterface::initialization
+[   690.697] debug default: databits:  8
+[   690.697] debug default: stopbits:  1
+[   690.697] debug default: parity:  "None"
+[   690.697] debug default: flow_control:  "None"
+[   690.698] debug default: name: "COM12"
+[   690.698] debug default: baud: 921600
+[   690.705] debug default: port: "COM12" ,baud: "921600"
+[   690.705] debug default: isopen: true
+[   690.705] debug default: break: false
+[   690.711] debug default: dtr: false
+[   690.717] debug default: rts: false
+[   690.718] debug default: this_ptr->io_looping_ true
+[   718.962] debug default: io_loop
+[   718.962] debug default: DebugWayInterface::deinitialization
+[   756.261] debug default: DebugWayInterface::initialization
+[   756.262] debug default: databits:  8
+[   756.262] debug default: stopbits:  1
+[   756.262] debug default: parity:  "None"
+[   756.262] debug default: flow_control:  "None"
+[   756.262] debug default: name: "COM12"
+[   756.263] debug default: baud: 921600
+[   756.270] debug default: port: "COM12" ,baud: "921600"
+[   756.270] debug default: isopen: true
+[   756.271] debug default: break: false
+[   756.277] debug default: dtr: false
+[   756.283] debug default: rts: false
+[   756.283] debug default: this_ptr->io_looping_ true
+[   763.735] debug default: io_loop
+[   763.735] debug default: DebugWayInterface::deinitialization
+[   770.489] debug default: DebugWayInterface::initialization
+[   770.490] debug default: databits:  8
+[   770.490] debug default: stopbits:  1
+[   770.490] debug default: parity:  "None"
+[   770.490] debug default: flow_control:  "None"
+[   770.491] debug default: name: "COM12"
+[   770.491] debug default: baud: 921600
+[   770.497] debug default: port: "COM12" ,baud: "921600"
+[   770.497] debug default: isopen: true
+[   770.497] debug default: break: false
+[   770.503] debug default: dtr: false
+[   770.509] debug default: rts: false
+[   770.510] debug default: this_ptr->io_looping_ true
+[   778.859] debug default: io_loop
+[   778.859] debug default: DebugWayInterface::deinitialization
+[   786.085] debug default: DebugWayInterface::initialization
+[   786.086] debug default: databits:  8
+[   786.086] debug default: stopbits:  1
+[   786.086] debug default: parity:  "None"
+[   786.086] debug default: flow_control:  "None"
+[   786.087] debug default: name: "COM12"
+[   786.087] debug default: baud: 921600
+[   786.094] debug default: port: "COM12" ,baud: "921600"
+[   786.094] debug default: isopen: true
+[   786.094] debug default: break: false
+[   786.101] debug default: dtr: false
+[   786.107] debug default: rts: false
+[   786.107] debug default: this_ptr->io_looping_ true
+[   859.645] debug default: io_loop
+[   859.645] debug default: DebugWayInterface::deinitialization
+[   882.498] debug default: DebugWayInterface::initialization
+[   882.499] debug default: databits:  8
+[   882.499] debug default: stopbits:  1
+[   882.499] debug default: parity:  "None"
+[   882.499] debug default: flow_control:  "None"
+[   882.500] debug default: name: "COM12"
+[   882.500] debug default: baud: 921600
+[   882.507] debug default: port: "COM12" ,baud: "921600"
+[   882.507] debug default: isopen: true
+[   882.507] debug default: break: false
+[   882.513] debug default: dtr: false
+[   882.519] debug default: rts: false
+[   882.520] debug default: this_ptr->io_looping_ true
+[   891.790] debug default: io_loop
+[   891.791] debug default: DebugWayInterface::deinitialization
+[   903.409] debug default: DebugWayInterface::initialization
+[   903.410] debug default: databits:  8
+[   903.410] debug default: stopbits:  1
+[   903.410] debug default: parity:  "None"
+[   903.410] debug default: flow_control:  "None"
+[   903.410] debug default: name: "COM12"
+[   903.411] debug default: baud: 921600
+[   903.418] debug default: port: "COM12" ,baud: "921600"
+[   903.418] debug default: isopen: true
+[   903.418] debug default: break: false
+[   903.425] debug default: dtr: false
+[   903.431] debug default: rts: false
+[   903.431] debug default: this_ptr->io_looping_ true
+[   918.251] debug default: io_loop
+[   918.251] debug default: DebugWayInterface::deinitialization
+[  1020.729] debug default: DebugWayInterface::initialization
+[  1020.730] debug default: databits:  8
+[  1020.730] debug default: stopbits:  1
+[  1020.730] debug default: parity:  "None"
+[  1020.730] debug default: flow_control:  "None"
+[  1020.731] debug default: name: "COM12"
+[  1020.731] debug default: baud: 921600
+[  1020.738] debug default: port: "COM12" ,baud: "921600"
+[  1020.738] debug default: isopen: true
+[  1020.739] debug default: break: false
+[  1020.745] debug default: dtr: false
+[  1020.751] debug default: rts: false
+[  1020.751] debug default: this_ptr->io_looping_ true
+[  1030.542] debug default: io_loop
+[  1030.542] debug default: DebugWayInterface::deinitialization
+[  1328.747] debug default: DebugWayInterface::initialization
+[  1328.747] debug default: databits:  8
+[  1328.747] debug default: stopbits:  1
+[  1328.747] debug default: parity:  "None"
+[  1328.748] debug default: flow_control:  "None"
+[  1328.748] debug default: name: "COM12"
+[  1328.748] debug default: baud: 921600
+[  1328.755] debug default: port: "COM12" ,baud: "921600"
+[  1328.755] debug default: isopen: true
+[  1328.756] debug default: break: false
+[  1328.762] debug default: dtr: false
+[  1328.768] debug default: rts: false
+[  1328.768] debug default: this_ptr->io_looping_ true
+[  1584.148] debug default: io_loop
+[  1584.149] debug default: DebugWayInterface::deinitialization

@@ -174,6 +174,12 @@ def main():
         "app_console", "can_frame", "dm_diag", "vesc_diag")]
     groups["pitch_dual_uart_dma"] = groups["pitch_console_dma"]
     groups["pitch_display_sim"] = [root / "test_pitch_display_sim.c"]
+    groups["pitch_view_stiffness"] = [root / "test_pitch_view_stiffness.c", app / "pitch_controller.c", app / "yaw_cascade.c"]
+    groups["yaw_display_sim"] = [root / "test_yaw_display_sim.c"]
+    groups["yaw_display_telemetry"] = [root / "test_yaw_display_telemetry.c"] + [app / (n + ".c") for n in (
+        "app_console", "can_frame", "dm_diag", "vesc_diag")]
+    groups["pitch_display_bidirectional"] = [root / "test_pitch_display_bidirectional.c"]
+    groups["pitch_yaw_display_telemetry"] = groups["yaw_display_telemetry"].copy()
     groups["feeder_speed_view"] = [root / "test_feeder_speed_view.c"] + [app / (n + ".c") for n in (
         "app_console", "can_frame", "dm_diag", "vesc_diag")]
     groups["feeder_speed_telemetry"] = [root / "test_feeder_speed_telemetry.c"] + [app / (n + ".c") for n in (

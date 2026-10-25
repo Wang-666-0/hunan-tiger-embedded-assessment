@@ -67,6 +67,8 @@ static void StopWithReason(PitchStopReason reason)
     PitchController_Stop(&state.controller);
     state.requested = state.active = state.enabling = state.step_hold = 0U;
     state.view_hold_pending = state.view_locked;
+    state.view_prepare_pending = 0U;
+    state.view_hold_suspended = state.view_locked;
     last_mode = GIMBAL_MANUAL;
     if (had_session && !state.stop_pending) {
         ++state.stop_id; state.stopped_ms = HAL_GetTick(); state.stop_reason = reason;
@@ -193,17 +195,19 @@ uint8_t PitchBackend_SetLoopParameter(char loop, char parameter, float value)
     taskEXIT_CRITICAL(); return accepted;
 }
 
-uint8_t PitchBackend_SetTarget(float degrees)
+static uint8_t SetTarget(float degrees, uint8_t returning)
 {
     uint8_t accepted = 0U;
     uint32_t now;
     float previous;
     taskENTER_CRITICAL();
     now = HAL_GetTick();
-    if (!state.view_locked && state.active && state.requested && state.zero_set && Online(now) &&
+    if (!state.view_locked && state.active && state.requested && state.zero_set &&
+        !state.enabling && !state.stop_pending && Online(now) &&
         state.feedback.status == 1U && !state.controller.faults && CanBus_PitchAllowed()) {
         previous = state.controller.target_deg;
-        accepted = PitchController_StartMove(&state.controller, degrees, now);
+        accepted = returning ? PitchController_ReturnTo(&state.controller, degrees, now) :
+            PitchController_StartMove(&state.controller, degrees, now);
         if (accepted) {
             if (previous != degrees) { PitchStep_Abort(&step, now, PITCH_STEP_TARGET_CHANGE, 0U); }
             state.step_hold = 1U;
@@ -211,6 +215,8 @@ uint8_t PitchBackend_SetTarget(float degrees)
     }
     taskEXIT_CRITICAL(); return accepted;
 }
+uint8_t PitchBackend_SetTarget(float degrees) { return SetTarget(degrees, 0U); }
+uint8_t PitchBackend_ReturnTo(float degrees) { return SetTarget(degrees, 1U); }
 
 uint8_t PitchBackend_SetGravityGain(float kg_nm)
 {
@@ -335,15 +341,38 @@ uint8_t PitchBackend_TakeRearmRequest(void)
 static void Notice(const TargetRequest *request, uint8_t result)
 {
     remote_event.sequence = request->step_sequence;
-    remote_event.target_deg = request->step_return_event ? 0.0f : request->step_delta_deg;
+    remote_event.target_deg = result == 1U || result == 2U ? state.controller.target_deg :
+        (request->step_return_event ? state.controller.target_deg + request->step_delta_deg : request->step_delta_deg);
     remote_event.result = result; remote_pending = 1U;
+}
+
+static uint8_t StationarySupport(void)
+{
+    const PitchController *pitch = &state.controller;
+    return (uint8_t)(fabsf(pitch->target_deg - pitch->angle_deg) <= PITCH_STEP_BAND_DEG &&
+        fabsf(pitch->velocity_dps) <= PITCH_CONTROLLER_STATIONARY_SPEED_DPS &&
+        fabsf(pitch->cascade.velocity_dps) <= PITCH_CONTROLLER_STATIONARY_SPEED_DPS &&
+        pitch->stationary_samples >= 2U &&
+        pitch->last_feedback_ms - pitch->stationary_started_ms >= PITCH_CONTROLLER_STATIONARY_HOLD_MS);
+}
+
+static void TransferPositionSupport(void)
+{
+    float next = state.controller.cascade.speed_i +
+        state.controller.cascade.speed.kp * state.controller.cascade.position_i;
+    if (next > PITCH_CONTROLLER_TORQUE_LIMIT_NM) { next = PITCH_CONTROLLER_TORQUE_LIMIT_NM; }
+    else if (next < -PITCH_CONTROLLER_TORQUE_LIMIT_NM) { next = -PITCH_CONTROLLER_TORQUE_LIMIT_NM; }
+    state.controller.cascade.speed_i = next;
+    state.controller.cascade.position_i = 0.0f;
 }
 
 uint8_t PitchBackend_HoldCurrent(void)
 {
     uint8_t accepted = 0U;
+    uint8_t carry_support;
     float target;
     taskENTER_CRITICAL();
+    carry_support = StationarySupport();
     target = state.controller.angle_deg;
     if (target > PITCH_CONTROLLER_TARGET_MAX_DEG &&
         target <= PITCH_CONTROLLER_TARGET_MAX_DEG + PITCH_STEP_BAND_DEG) {
@@ -358,9 +387,16 @@ uint8_t PitchBackend_HoldCurrent(void)
         if (state.view_locked && !state.view_hold_pending) { accepted = 1U; }
         else if (PitchController_SetTarget(&state.controller, target)) {
             PitchStep_Abort(&step, HAL_GetTick(), PITCH_STEP_MANUAL, 0U);
-            state.controller.cascade.position_i = 0.0f;
-            /* speed_i and gravity calibration continue supporting the load. */
-            state.step_hold = 1U; state.view_hold_pending = 0U; accepted = 1U;
+            if (state.view_locked) {
+                /* Only a settled near-target outer I is treated as load
+                 * support. Motion I must not become a persistent torque bias
+                 * after cancelling that movement and latching a new pose. */
+                if (carry_support) { TransferPositionSupport(); }
+                else { state.controller.cascade.position_i = 0.0f; }
+                state.view_hold_deg = target;
+            } else { state.controller.cascade.position_i = 0.0f; }
+            /* Gravity and existing inner load compensation remain active. */
+            state.step_hold = 1U; state.view_hold_pending = state.view_prepare_pending = 0U; accepted = 1U;
         }
     }
     taskEXIT_CRITICAL(); return accepted;
@@ -370,8 +406,27 @@ void PitchBackend_SetViewLock(uint8_t locked)
 {
     taskENTER_CRITICAL(); locked = (uint8_t)(locked != 0U);
     if (state.view_locked != locked) {
+        if (!locked && state.active && !state.view_hold_pending && !state.controller.faults) {
+            if (StationarySupport()) { TransferPositionSupport(); }
+            else { state.controller.cascade.position_i = 0.0f; }
+        }
         state.view_locked = state.view_hold_pending = locked;
+        state.view_prepare_pending = locked;
+        state.view_hold_suspended = 0U;
         if (!locked) { state.step_hold = 0U; }
+    }
+    taskEXIT_CRITICAL();
+}
+
+void PitchBackend_PrepareViewHold(void)
+{
+    taskENTER_CRITICAL();
+    if (!state.active && !state.enabling) {
+        state.view_prepare_pending = 1U;
+        state.view_hold_suspended = 0U;
+        /* Refresh stopped-motor feedback through the existing read-only CC
+         * path, rather than waiting forever on an expired last frame. */
+        state.monitoring = 1U;
     }
     taskEXIT_CRITICAL();
 }
@@ -390,6 +445,25 @@ void PitchBackend_Apply(const TargetRequest *request, uint8_t allowed, uint8_t d
     if ((state.active || state.enabling) && !Online(now)) {
         state.controller.faults |= PITCH_CONTROLLER_FAULT_FEEDBACK;
         StopWithReason(PITCH_STOP_FEEDBACK); rearm_request = 1U;
+    }
+    /* Selected view is durable intent, unlike V3's one-shot ticket which READY
+     * could clear permanently. A stop made while permission is still live
+     * suspends reconciliation. Observe blocked output (normal global STOP/OFF
+     * and rearm path), or receive a fresh VIEW, before joining again. */
+    if (!allowed) { state.view_hold_suspended = 0U; }
+    if (state.view_locked && state.view_hold_pending && !state.requested &&
+        !state.active && !state.enabling && !state.view_hold_suspended) {
+        state.view_prepare_pending = 1U; state.monitoring = 1U;
+    }
+    /* Reuse Request + original FC/new status1 handshake. Existing reference,
+     * calibration, faults, fresh feedback and global permission remain gates. */
+    if (state.view_locked && state.view_hold_pending && !state.view_hold_suspended &&
+        !state.requested && allowed && !diagnostic && request &&
+        state.coord_confirmed && state.zero_set && state.controller.have_reference &&
+        !state.active && !state.enabling && !state.stop_pending && !state.controller.faults &&
+        Online(now) && state.feedback.status == 0U &&
+        (state.controller.gravity_kg_nm == 0.0f || state.controller.gravity_calibrated)) {
+        if (PitchBackend_Request(1U)) { state.view_prepare_pending = 0U; }
     }
     wanted = (uint8_t)(APP_PITCH_ENABLED && state.requested && state.coord_confirmed &&
         state.zero_set && allowed && !diagnostic && request && Online(now) &&
@@ -474,7 +548,7 @@ void PitchBackend_Apply(const TargetRequest *request, uint8_t allowed, uint8_t d
     if (event) {
         if (request->gimbal_mode != GIMBAL_TEST) { Notice(request, 3U); }
         else if (request->step_return_event) {
-            Notice(request, PitchBackend_SetTarget(0.0f) ? 2U : 3U);
+            Notice(request, PitchBackend_ReturnTo(state.controller.target_deg + request->step_delta_deg) ? 2U : 3U);
         } else if (PitchBackend_StartStep(request->step_delta_deg)) {
             Notice(request, 1U);
         } else { Notice(request, 3U); }
@@ -483,8 +557,19 @@ void PitchBackend_Apply(const TargetRequest *request, uint8_t allowed, uint8_t d
         PitchStep_Abort(&step, now, PITCH_STEP_MANUAL, 0U);
         StopWithReason(PITCH_STOP_MANUAL_OVERRIDE); rearm_request = 1U; taskEXIT_CRITICAL(); return;
     }
-    (void)PitchController_Update(&state.controller,
-        request->gimbal_mode == GIMBAL_MANUAL && !state.step_hold && !state.view_locked ? request->pitch_rate_dps : 0.0f, now, 1U);
+    if (state.view_locked) {
+        /* The latched target is independent of disturbed feedback. Never
+         * capture again until unlock/rearm; leave all original safety gates. */
+        if ((state.controller.target_deg != state.view_hold_deg || state.controller.shape.active ||
+             state.controller.brake.tracking) && !PitchController_SetTarget(&state.controller, state.view_hold_deg)) {
+            StopWithReason(PITCH_STOP_START_LIMIT); rearm_request = 1U; taskEXIT_CRITICAL(); return;
+        }
+        state.step_hold = 1U;
+        (void)PitchController_UpdateViewHold(&state.controller, now, 1U);
+    } else {
+        (void)PitchController_Update(&state.controller,
+            request->gimbal_mode == GIMBAL_MANUAL && !state.step_hold ? request->pitch_rate_dps : 0.0f, now, 1U);
+    }
     if (state.controller.faults) {
         StopWithReason(PITCH_STOP_CONTROL_FAULT); rearm_request = 1U; taskEXIT_CRITICAL(); return;
     }

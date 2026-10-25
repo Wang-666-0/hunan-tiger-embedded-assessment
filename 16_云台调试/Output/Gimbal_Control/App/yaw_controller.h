@@ -10,14 +10,14 @@
 #define YAW_CONTROLLER_CASCADE_ENABLED 1U
 #endif
 
-/* 手动目标±50度，相对本次软件零点；阶跃入口仍只接受±30度。
- * 保留原10度反馈越界余量，避免原40度门限阻断手动正常范围。
- * #ifndef仅供明确的历史离线用例覆盖。 */
+/* Confirmed mechanical travel: +/-160 degrees relative to software zero.
+ * Keep a 10-degree margin: targets +/-150, hard feedback guard +/-160.
+ * Each STEP adds +/-30; no movement-count limit. */
 #ifndef YAW_CONTROLLER_TARGET_LIMIT_DEG
-#define YAW_CONTROLLER_TARGET_LIMIT_DEG 50.0f
+#define YAW_CONTROLLER_TARGET_LIMIT_DEG 150.0f
 #endif
 #ifndef YAW_CONTROLLER_HARD_LIMIT_DEG
-#define YAW_CONTROLLER_HARD_LIMIT_DEG 60.0f
+#define YAW_CONTROLLER_HARD_LIMIT_DEG 160.0f
 #endif
 /* V2B生产仅裁到MIT协议端点；0.10只保留历史单环/V2A对照。 */
 #if YAW_CONTROLLER_CASCADE_ENABLED && !YAW_CASCADE_OUTPUT_LIMITS_ENABLED
@@ -46,7 +46,7 @@
 #define YAW_CONTROLLER_OFF_SPEED_LIMIT_DPS 360.0f
 #define YAW_CONTROLLER_OFF_JUMP_MARGIN_DEG 3.0f
 #ifndef YAW_CONTROLLER_OFF_ANGLE_LIMIT_DEG
-#define YAW_CONTROLLER_OFF_ANGLE_LIMIT_DEG 65.0f
+#define YAW_CONTROLLER_OFF_ANGLE_LIMIT_DEG 160.0f
 #endif
 #define YAW_CONTROLLER_STATIONARY_SPEED_DPS 6.0f
 #define YAW_CONTROLLER_FEEDBACK_TIMEOUT_MS 100U

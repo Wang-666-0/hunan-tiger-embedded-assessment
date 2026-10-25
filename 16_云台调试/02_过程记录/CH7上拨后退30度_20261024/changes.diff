@@ -1,0 +1,188 @@
+--- before/App\pitch_backend.c
++++ after/App\pitch_backend.c
+@@ -337,7 +337,8 @@
+ static void Notice(const TargetRequest *request, uint8_t result)
+ {
+     remote_event.sequence = request->step_sequence;
+-    remote_event.target_deg = request->step_return_event ? 0.0f : request->step_delta_deg;
++    remote_event.target_deg = result == 1U || result == 2U ? state.controller.target_deg :
++        (request->step_return_event ? state.controller.target_deg + request->step_delta_deg : request->step_delta_deg);
+     remote_event.result = result; remote_pending = 1U;
+ }
+ 
+@@ -543,7 +544,7 @@
+     if (event) {
+         if (request->gimbal_mode != GIMBAL_TEST) { Notice(request, 3U); }
+         else if (request->step_return_event) {
+-            Notice(request, PitchBackend_SetTarget(0.0f) ? 2U : 3U);
++            Notice(request, PitchBackend_SetTarget(state.controller.target_deg + request->step_delta_deg) ? 2U : 3U);
+         } else if (PitchBackend_StartStep(request->step_delta_deg)) {
+             Notice(request, 1U);
+         } else { Notice(request, 3U); }
+--- before/App\pitch_console.c
++++ after/App\pitch_console.c
+@@ -250,7 +250,7 @@
+         return 0U;
+     }
+     if (PitchBackend_TakeRemoteStepEvent(&event)) {
+-        static const char *results[] = { "NONE", "STARTED", "RETURN_ZERO", "START_GUARD" };
++        static const char *results[] = { "NONE", "STARTED", "BACK_30", "START_GUARD" };
+         (void)snprintf(response, capacity, "P|REMOTE_STEP|SEQ|%lu|RESULT|%s|TARGET|%.1f\r\n",
+             (unsigned long)event.sequence, event.result <= 3U ? results[event.result] : "UNKNOWN",
+             (double)event.target_deg);
+--- before/App\target_manager.c
++++ after/App\target_manager.c
+@@ -71,17 +71,18 @@
+             else if (command->step == RC_LOW) {
+                 if (manager->last_step_switch != RC_LOW) {
+ #if APP_PITCH_ENABLED
+-                    /* 回中使用最后实际接受轴；斜向不能猜轴或回两轴。 */
++                    /* Physical CH7 up (1000): one relative -30 request.
++                     * Centered selection uses the last accepted axis. */
+                     if (command->step_valid || command->step_selection_centered) {
+                         request->step_return_event = request->step_event = 1U;
+-                        request->step_delta_deg = 0.0f;
++                        request->step_delta_deg = -APP_STEP_DEGREES;
+                         request->step_axis = command->step_valid ? command->step_axis : manager->last_test_axis;
+                         request->step_sequence++;
+                     }
+ #else
+                     request->step_return_event = request->step_event = 1U;
+-                    request->step_delta_deg = 0.0f;
+-                    request->step_axis = GIMBAL_MANUAL;
++                    request->step_delta_deg = -APP_STEP_DEGREES;
++                    request->step_axis = GIMBAL_STEP_YAW;
+                     request->step_sequence++;
+ #endif
+                 }
+--- before/App\target_manager.h
++++ after/App\target_manager.h
+@@ -9,7 +9,7 @@
+     GimbalMode gimbal_mode;
+     uint8_t friction_requested, shot_event, step_event;
+     GimbalMode step_axis;
+-    uint8_t step_return_event, wheel_reset_allowed;
++    uint8_t step_return_event, wheel_reset_allowed; /* CH7 up: relative -30, not HOME. */
+     uint8_t continuous_fire; /* Live qualified hold, cleared on release/guard failure. */
+ } TargetRequest;
+ 
+@@ -21,7 +21,7 @@
+     uint8_t trigger_low_seen, step_center_seen, firing;
+     uint8_t wheel_off_seen;
+     RcSwitch last_step_switch;
+-    GimbalMode last_test_axis; /* 后端真正接受的阶跃轴；初始Yaw，仅用于回中回参考。 */
++    GimbalMode last_test_axis; /* 后端真正接受的阶跃轴；初始Yaw，选轴杆居中时用于CH7上拨后退。 */
+ } TargetManager;
+ 
+ void TargetManager_Init(TargetManager *manager);
+--- before/App\yaw_backend.c
++++ after/App\yaw_backend.c
+@@ -726,7 +726,9 @@
+                  && request->step_axis == GIMBAL_STEP_YAW
+ #endif
+                  ) {
+-            if (YawBackend_SetParameter('T', 0.0f)) { RemoteNotice(request, 2U); }
++            if (YawBackend_StartStep(request->step_delta_deg)) {
++                step_from_remote = 1U; RemoteNotice(request, 1U);
++            }
+             else { RemoteNotice(request, 3U); }
+         } else if (request->step_axis != GIMBAL_STEP_YAW) { RemoteNotice(request, 4U); }
+         else if (YawBackend_StartStep(request->step_delta_deg)) {
+--- before/Tests\test_assessment_remote.c
++++ after/Tests\test_assessment_remote.c
+@@ -125,7 +125,7 @@
+     input.remote.channels[3] = 2000U; input.remote.channels[6] = 2000U; frame(198U);
+     CHECK(!logic.targets.request.step_event); /* 左摇杆斜向拒绝，不能猜测测试轴。 */
+     input.remote.channels[6] = 1000U; frame(205U);
+-    CHECK(logic.targets.request.step_return_event && logic.targets.request.step_delta_deg == 0.0f);
++    CHECK(logic.targets.request.step_return_event && logic.targets.request.step_delta_deg == -30.0f);
+     sequence = logic.targets.request.step_sequence;
+     frame(212U); CHECK(!logic.targets.request.step_return_event && logic.targets.request.step_sequence == sequence);
+     input.remote.channels[4] = 1500U; frame(219U);
+--- before/Tests\test_pitch_backend.c
++++ after/Tests\test_pitch_backend.c
+@@ -164,7 +164,7 @@
+     CHECK(state.controller.target_deg == 0.0f);
+     request.step_axis = GIMBAL_STEP_PITCH; request.step_sequence = 2U;
+     Apply(3048U, 1U); CHECK(PitchBackend_TakeRemoteStepEvent(&event) && event.result == 1U);
+-    request.step_return_event = 1U; request.step_sequence = 3U; Apply(3050U, 1U);
++    request.step_return_event = 1U; request.step_delta_deg = -30.0f; request.step_sequence = 3U; Apply(3050U, 1U);
+     CHECK(PitchBackend_TakeRemoteStepEvent(&event) && event.result == 3U && event.target_deg == 0.0f);
+     CHECK(state.controller.shape.active && state.controller.target_deg == 30.0f);
+     request.step_event = 0U; request.gimbal_mode = GIMBAL_MANUAL; Apply(3052U, 1U);
+--- before/Tests\test_pitch_remote.c
++++ after/Tests\test_pitch_remote.c
+@@ -27,7 +27,8 @@
+     CHECK(logic.targets.request.gimbal_mode == GIMBAL_TEST);
+ }
+ static void Release(void) { input.remote.channels[6] = 1500U; Frame(); }
+-static void Return(void) { input.remote.channels[6] = 1000U; Frame(); }
++static void Return(void) { input.remote.channels[6] = 1000U; Frame();
++    if (logic.targets.request.step_return_event) { CHECK(logic.targets.request.step_delta_deg == -30.0f); } }
+ static void Confirm(void) { input.remote.channels[6] = 2000U; Frame(); }
+ 
+ void test_run(void)
+--- before/Tests\test_yaw_display_sim.c
++++ after/Tests\test_yaw_display_sim.c
+@@ -216,6 +216,15 @@
+     CHECK(!sim.boot_batch && sim.real_required && sim.enabled);
+     launch(120.0f, 150.0f); CHECK(!sim.active && sim.enabled);
+     CHECK(sample(127.0f, 150.0f, 1U) == 127.0f);
++    /* Two forward + two CH7-back target changes exhaust the same quota. */
++    YawDisplaySim_Reset(&sim, 1U); sim.boot_batch = 1U;
++    step.phase = YAW_STEP_IDLE; sample(0.0f, 0.0f, 1U);
++    launch(0.0f, 30.0f); reach(30.0f);
++    launch(30.0f, 60.0f); reach(60.0f);
++    launch(60.0f, 30.0f); reach(30.0f);
++    launch(30.0f, 0.0f); reach(0.0f);
++    CHECK(sim.completed == 4U && sim.real_required && !sim.boot_batch);
++    launch(0.0f, 30.0f); CHECK(!sim.active && sim.enabled);
+     YawDisplaySim_Reset(&sim, 0U); CHECK(!sim.boot_batch && !sim.enabled);
+     test_done = 1U;
+ }
+--- before/Tests\test_yaw_repeat_step.c
++++ after/Tests\test_yaw_repeat_step.c
+@@ -35,9 +35,10 @@
+     for (move = 0U; move < 20U; ++move) {
+         from = target; delta = move < 5U || move >= 15U ? 30.0f : -30.0f; target += delta;
+         if (move & 1U) {
+-            receiver.channels[RC_STEP_YAW_CHANNEL] = delta > 0 ? 2000U : 1000U;
++            receiver.channels[RC_STEP_YAW_CHANNEL] = delta > 0 ? 2000U : 1500U;
+             receiver.channels[RC_STEP_CHANNEL] = 1500U; Control(at + 2U, 2U);
+-            receiver.channels[RC_STEP_CHANNEL] = 2000U; Control(at + 4U, 2U);
++            receiver.channels[RC_STEP_CHANNEL] = delta > 0 ? 2000U : 1000U; Control(at + 4U, 2U);
++            CHECK(request.step_return_event == (delta < 0));
+             CHECK(YawBackend_TakeRemoteStepEvent(&event) && event.result == 1U && !event.blocks);
+             CHECK(event.target_deg == target);
+             at += 4U;
+@@ -56,7 +57,10 @@
+             CHECK(prior.id == id - 1U && prior.phase == YAW_STEP_ABORTED);
+             CHECK(prior.reason == YAW_STEP_TARGET_CHANGE && !prior.pass && !prior.sse_valid);
+         }
++        /* Leave an accepted up action held for 400ms: only one -30 move. */
++        if ((move & 1U) && delta < 0) { receiver.channels[RC_STEP_CHANNEL] = 1000U; }
+         Drive(at, 400U, from, target); at += 400U;
++        receiver.channels[RC_STEP_CHANNEL] = 1500U; Control(at + 2U, 2U); at += 2U;
+         YawBackend_GetStep(&snap);
+         CHECK(state.active && !state.controller.faults && permission && snap.id == id);
+         CHECK(!state.step_blocks && snap.phase == YAW_STEP_RUNNING && snap.elapsed_ms < 5000U);
+--- before/MDK-ARM\SIM操作说明.md
++++ after/MDK-ARM\SIM操作说明.md
+@@ -37,7 +37,7 @@
+ 
+ 启动批次不要求上一次失败，前四次被接受且完整完成的约 30° 动作直接演示。启动额度用尽后，根据真实角度判断上一次动作：Yaw 首次进入目标 ±0.2° 超过 300ms，Pitch 超过 250ms，或者任一轴超调超过 0.2°，会为下一次被真实控制器接受的约 30° 动作准备演示。刚好等于时间或误差边界不触发；从未进入也会触发。
+ 
+-0→30°、30→0°分别计一次，后者包括 `HOME` 和遥控归位。原后端对 HOME 不另开一个正式五秒测量窗口，因此显示层用 5ms 遥测时钟另行观察归位，查询的 `WATCH_RESP_MS` / `WATCH_OS_DEG` 是显示触发依据，精度受遥测采样影响。原 `RESULT` 的 CAN 时间戳、测量定义和通过判定继续保留；Yaw 原正式稳定时间门限仍为 250ms。
++0→30°、30→0°分别计一次，后者包括 `HOME` 和 CH7 上拨的 −30°动作；例如 Yaw 的 0→30→60→30→0 是四次，正反向共用额度。原后端对 HOME 不另开一个正式五秒测量窗口，因此显示层用 5ms 遥测时钟另行观察归位，查询的 `WATCH_RESP_MS` / `WATCH_OS_DEG` 是显示触发依据，精度受遥测采样影响。原 `RESULT` 的 CAN 时间戳、测量定义和通过判定继续保留；Yaw 原正式稳定时间门限仍为 250ms。
+ 
+ 每次约 30° 模拟动作到位保持 50ms 计数一次；同一动作持续显示不会重复计数。`DEMO_DONE` 是显示计数，不是实测 PASS。
+ 
+@@ -52,7 +52,7 @@
+ - `YAW HOME`：直接回软件零点，含义不变。
+ - 每次实际到位 ±0.2°并满足原静止观察条件后，可以立即发下一步，不必回零或等满五秒。没有连续次数上限，不自动循环、不积压被拒绝的命令。
+ - 例如 `0→30→60→90→120→150`；继续正向到 180°会返回 `WHY|TARGET_LIMIT`，目标保留 150°，反向命令仍可接受。负向对称。
+-- 遥控 CH5 测试档、CH4 选方向、CH7 回中后再次拨高确认，同样使用相对目标。CH7 归位仍是 HOME，不是减 30°。
++- 遥控 CH5 测试档、CH4 选方向、CH7 回中后再次拨高确认，同样使用相对目标。CH7 物理上拨（1000）改为当前目标减 30°，例如 60→30、30→0；长按只发一次，下一次先回中。选择杆居中时作用于最后接受的测试轴。串口 HOME 仍直接回零。
+ - `YAW STEP CHECK` 显示通用门禁与 `PLUS30_BLOCKS`、`MINUS30_BLOCKS`；0 表示该方向的后端门禁通过，串口还要求遥控健康及中位。`COUNT_LIMIT|0` 表示无次数限制，不表示取消行程保护。
+ 
+ 新的 STEP 若打断上一轮五秒测量，上一轮以 `ABORTED / TARGET_CHANGE` 记录，PASS 和稳态有效性为 0，保留最近一份待发送报告。需要完整正式测量时，请保持原目标至少五秒再发下一步。

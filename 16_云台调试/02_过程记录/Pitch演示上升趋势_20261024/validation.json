@@ -1,0 +1,65 @@
+{
+  "recorded_at": "2026-10-24T20:56:00+08:00",
+  "groups": 10,
+  "checks": 279179,
+  "failures": 0,
+  "source_input_count": 120,
+  "source_hashes_match": true,
+  "app_config_bytes_unchanged": true,
+  "pid_unchanged": {
+    "APP_PITCH_POSITION_KP": "11.500f",
+    "APP_PITCH_POSITION_KI": "24.775f",
+    "APP_PITCH_POSITION_KD": "0.002f",
+    "APP_PITCH_SPEED_KP": "0.00408f",
+    "APP_PITCH_SPEED_KI": "0.0005f",
+    "APP_PITCH_SPEED_KD": "0.000001f",
+    "APP_YAW_POSITION_KP": "13.768f",
+    "APP_YAW_POSITION_KI": "3.214f",
+    "APP_YAW_POSITION_KD": "0.139f",
+    "APP_YAW_SPEED_KP": "0.00504f",
+    "APP_YAW_SPEED_KI": "0.0008f",
+    "APP_YAW_SPEED_KD": "0.000074f"
+  },
+  "changed_files": [
+    "App/app_console.c",
+    "App/pitch_display_sim.h",
+    "MDK-ARM/SIM操作说明.md",
+    "README.md",
+    "Tests/README.md",
+    "Tests/test_feeder_speed_view.c",
+    "Tests/test_pitch_display_sim.c"
+  ],
+  "changed_app": [
+    "Output/Gimbal_Control/App/app_console.c",
+    "Output/Gimbal_Control/App/pitch_display_sim.h"
+  ],
+  "unchanged_app_count": 68,
+  "firmware": {
+    "Gimbal_Control.hex": {
+      "path": "D:\\Project\\27电软正式批考核\\16_云台调试\\Output\\Gimbal_Control\\MDK-ARM\\build\\Gimbal_Control\\Gimbal_Control.hex",
+      "size_bytes": 402017,
+      "sha256": "91d561fd8004d3cb13f958b3d7faa88e806aebaf0ddd505c70a86f36818aaacf"
+    },
+    "Gimbal_Control.axf": {
+      "path": "D:\\Project\\27电软正式批考核\\16_云台调试\\Output\\Gimbal_Control\\MDK-ARM\\build\\Gimbal_Control\\Gimbal_Control.axf",
+      "size_bytes": 1643584,
+      "sha256": "f1fd19544d9e16141a154e9ea77ec36fce7250423ce1d1fae97d9b4dce9984e8"
+    }
+  },
+  "compiler": "original EIDE AC5/O0, ARM Compiler 5.06, 68C+1ASM",
+  "rom_bytes": 142908,
+  "ram_bytes": 37072,
+  "flashed": false,
+  "hardware_tested": false,
+  "behavior": {
+    "pitch_display_version": 6,
+    "rise_style": "KICK_RAMP_TAPER",
+    "shape": "short initial lift and shoulder, sustained climb, tapered arrival; reverse mirrored",
+    "profiles": 4,
+    "hold_ms_unchanged": 1000,
+    "recovery_ms_unchanged": 500,
+    "persistent_on_unchanged": true,
+    "pair_then_real_unchanged": true,
+    "raw_real_angle_i": 65
+  }
+}

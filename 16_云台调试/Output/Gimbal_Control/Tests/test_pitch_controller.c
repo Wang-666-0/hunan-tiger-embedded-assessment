@@ -36,7 +36,7 @@ void test_run(void)
     CHECK(!PitchController_CaptureReference(0) && !PitchController_SetFeedbackDivisor(0, 1U));
     CHECK(!PitchController_SetTarget(0, 30.0f) && PitchController_Update(0, 0.0f, 0U, 1U) == 0.0f);
     PitchController_Init(&pitch); CHECK(!pitch.have_reference && pitch.feedback_divisor == 1U);
-    CHECK(pitch.cascade.position.kp == 10.678f && pitch.cascade.speed.kp == 0.00406f);
+    CHECK(pitch.cascade.position.kp == APP_PITCH_POSITION_KP && pitch.cascade.speed.kp == APP_PITCH_SPEED_KP);
     sample(100U, 170.0f, 0.0f, 0U); CHECK(!pitch.have_reference && !pitch.faults);
     CHECK(!PitchController_CaptureReference(&pitch) && !PitchController_SetTarget(&pitch, 30.0f));
     sample(110U, 170.0f, 0.0f, 0U); CHECK(!PitchController_CaptureReference(&pitch));

@@ -1,0 +1,62 @@
+{
+  "recorded_at": "2026-10-24T19:59:21+08:00",
+  "test_groups": 19,
+  "checks": 275453,
+  "failures": 0,
+  "verified_input_hashes": 139,
+  "build": {
+    "compiler": "ARM Compiler 5.06",
+    "optimization": "O0",
+    "sources": 69,
+    "rom_bytes": 141836,
+    "ram_bytes": 37056,
+    "success": true
+  },
+  "version": "VIEW_AXIS_HOLD_V5",
+  "original_pid_values_unchanged": true,
+  "original_pid_values": {
+    "APP_PITCH_POSITION_KP": "11.500f",
+    "APP_PITCH_POSITION_KI": "24.775f",
+    "APP_PITCH_POSITION_KD": "0.002f",
+    "APP_PITCH_SPEED_KP": "0.00408f",
+    "APP_PITCH_SPEED_KI": "0.0005f",
+    "APP_PITCH_SPEED_KD": "0.000001f",
+    "APP_YAW_POSITION_KP": "13.768f",
+    "APP_YAW_POSITION_KI": "3.214f",
+    "APP_YAW_POSITION_KD": "0.139f",
+    "APP_YAW_SPEED_KP": "0.00504f",
+    "APP_YAW_SPEED_KI": "0.0008f",
+    "APP_YAW_SPEED_KD": "0.000074f"
+  },
+  "hidden_gain_multiplication_removed": true,
+  "hold_output_equivalent_to_original_pid": true,
+  "stationary_near_target_support_transfer_only": true,
+  "motion_integral_not_transferred": true,
+  "v4_session_recovery_preserved": true,
+  "stops_limits_and_gravity_preserved": true,
+  "simulation_code_unchanged_this_turn": true,
+  "hardware_verified": false,
+  "flashed": false,
+  "artifacts": {
+    "Gimbal_Control.hex": {
+      "path": "D:\\Project\\27电软正式批考核\\16_云台调试\\Output\\Gimbal_Control\\MDK-ARM\\build\\Gimbal_Control\\Gimbal_Control.hex",
+      "bytes": 399002,
+      "sha256": "9561b12df7fb090ce5f216644dd72de9b1e8faa8d49299ef190303ff71038ca5"
+    },
+    "Gimbal_Control.axf": {
+      "path": "D:\\Project\\27电软正式批考核\\16_云台调试\\Output\\Gimbal_Control\\MDK-ARM\\build\\Gimbal_Control\\Gimbal_Control.axf",
+      "bytes": 1639360,
+      "sha256": "a78929d3773849345dba5a05b8e18e37923f5cf0a3b2951b6847a5d680749b6d"
+    },
+    "compiler.log": {
+      "path": "D:\\Project\\27电软正式批考核\\16_云台调试\\Output\\Gimbal_Control\\MDK-ARM\\build\\Gimbal_Control\\compiler.log",
+      "bytes": 326,
+      "sha256": "a9e6207d49365a367a123c5b78d73c38c2b410432ba8b2554858880d4c2cb1ac"
+    },
+    "builder.params": {
+      "path": "D:\\Project\\27电软正式批考核\\16_云台调试\\Output\\Gimbal_Control\\MDK-ARM\\build\\Gimbal_Control\\builder.params",
+      "bytes": 7427,
+      "sha256": "48a0192ecc4705e07c12f04876aa689963c3a463a27a3304fe2d6a4e59252715"
+    }
+  }
+}

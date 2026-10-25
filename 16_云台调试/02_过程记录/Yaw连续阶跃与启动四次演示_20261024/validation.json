@@ -1,0 +1,16 @@
+{
+  "tests_passed": true,
+  "groups": 14,
+  "checks": 330036,
+  "failures": 0,
+  "build": "ARM Compiler 5.06, original EIDE configuration, rebuild successful",
+  "hex": "D:\\Project\\27电软正式批考核\\16_云台调试\\Output\\Gimbal_Control\\MDK-ARM\\build\\Gimbal_Control\\Gimbal_Control.hex",
+  "hex_sha256": "b5269a67babf4c04a5500b056d3e903c98d2c5537f92d9f70b088245d5431ee4",
+  "pid_config_unchanged": true,
+  "hardware_connected": false,
+  "flashed": false,
+  "yaw_target_limit_deg": 150,
+  "yaw_hard_limit_deg": 160,
+  "demo_batch_size": 4,
+  "boot_demo_enabled": true
+}

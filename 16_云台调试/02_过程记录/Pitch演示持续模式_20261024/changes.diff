@@ -1,0 +1,663 @@
+--- before/App/app_console.c
++++ after/App/app_console.c
+@@ -54,7 +54,7 @@
+ {
+     unsigned profile = yaw_display.variant < 4U ? (unsigned)yaw_display.variant + 1U : 0U;
+     (void)snprintf(telemetry, sizeof(telemetry),
+-        "Y|SIM|ENABLED|%u|ACTIVE|%u|ARMED|%u|MODE|GUARDED_CONTINUOUS|AUTO_OFF|0|DISPLAY_ONLY|1|GROUP|%s|COLS|%u|REAL_ANGLE_I|72|SIM_ACTIVE_I|73|ARMED_I|74|TRIGGER|FIRST_ENTRY|TRIGGER_MS|300|OS_LIMIT_DEG|0.2|DEMO_DONE|%lu|DEMO_LIMIT|2|BATCH_DONE|%u|NEXT_REAL|%u|IDEAL_MS|%u|PROFILE|%u|PROFILES|4|RISE_STYLE|STAIRCASE|RISE_SAMPLE_MS|%u|HOLD_MAX_DEG|0.15|HOLD_MS|500|FADE_MS|500|FADE_ACTIVE|%u|BIDIRECTIONAL|1|WATCH_RESP_MS|%ld|WATCH_OS_DEG|%.6g|WATCH_SAMPLE_MS|5|RESULT|REAL_MEASURED|NOT_A_MEASUREMENT|1\r\n",
++        "Y|SIM|ENABLED|%u|ACTIVE|%u|ARMED|%u|MODE|GUARDED_CONTINUOUS|AUTO_OFF|0|DISPLAY_ONLY|1|GROUP|%s|COLS|%u|REAL_ANGLE_I|72|SIM_ACTIVE_I|73|ARMED_I|74|TRIGGER|FIRST_ENTRY|TRIGGER_MS|300|OS_LIMIT_DEG|0.2|DEMO_DONE|%lu|DEMO_LIMIT|2|BATCH_DONE|%u|NEXT_REAL|%u|IDEAL_MS|%u|PROFILE|%u|PROFILES|4|RISE_STYLE|STAIRCASE|RISE_SAMPLE_MS|%u|HOLD_MAX_DEG|0.15|HOLD_MS|1000|FADE_MS|500|FADE_ACTIVE|%u|BIDIRECTIONAL|1|WATCH_RESP_MS|%ld|WATCH_OS_DEG|%.6g|WATCH_SAMPLE_MS|5|RESULT|REAL_MEASURED|NOT_A_MEASUREMENT|1\r\n",
+         (unsigned)yaw_display.enabled, (unsigned)yaw_display.active, (unsigned)yaw_display.armed,
+         yaw_display.enabled ? "gimbal_demo" : "gimbal", yaw_display.enabled ? 75U : 72U,
+         (unsigned long)yaw_display.completed,
+@@ -73,12 +73,14 @@
+ {
+     unsigned profile = pitch_display.variant < 4U ? (unsigned)pitch_display.variant + 1U : 0U;
+     (void)snprintf(telemetry, sizeof(telemetry),
+-        "P|SIM|ENABLED|%u|ACTIVE|%u|ARMED|%u|DISPLAY_ONLY|1|GROUP|%s|COLS|%u|REAL_ANGLE_I|65|SIM_ACTIVE_I|66|ARMED_I|67|IDEAL_MS|%u|DISPLAY_VERSION|4|PROFILE|%u|PROFILES|4|HOLD_MAX_DEG|0.15|HOLD_MS|500|BIDIRECTIONAL|1|DEMO_DONE|%u|AUTO_OFF_AFTER|2|FADE_MS|500|FADE_ACTIVE|%u|TRIGGER|FIRST_ENTRY|TRIGGER_MS|250|OS_LIMIT_DEG|0.2|WATCH_RESP_MS|%ld|WATCH_OS_DEG|%.6g|WATCH_SAMPLE_MS|5|RESULT|REAL_MEASURED|NOT_A_MEASUREMENT|1\r\n",
++        "P|SIM|ENABLED|%u|ACTIVE|%u|ARMED|%u|MODE|GUARDED_CONTINUOUS|AUTO_OFF|0|DISPLAY_ONLY|1|GROUP|%s|COLS|%u|REAL_ANGLE_I|65|SIM_ACTIVE_I|66|ARMED_I|67|IDEAL_MS|%u|DISPLAY_VERSION|5|PROFILE|%u|PROFILES|4|HOLD_MAX_DEG|0.15|HOLD_MS|1000|BIDIRECTIONAL|1|DEMO_DONE|%lu|DEMO_LIMIT|2|BATCH_DONE|%u|NEXT_REAL|%u|FADE_MS|500|FADE_ACTIVE|%u|TRIGGER|FIRST_ENTRY|TRIGGER_MS|250|OS_LIMIT_DEG|0.2|WATCH_RESP_MS|%ld|WATCH_OS_DEG|%.6g|WATCH_SAMPLE_MS|5|RESULT|REAL_MEASURED|NOT_A_MEASUREMENT|1\r\n",
+         (unsigned)pitch_display.enabled, (unsigned)pitch_display.active,
+         (unsigned)pitch_display.armed, pitch_display.enabled ? "pitch_demo" : "pitch",
+         pitch_display.enabled ? 68U : 65U,
+         profile ? (unsigned)pitch_display_profiles[profile - 1U].duration_ms : 0U, profile,
+-        (unsigned)pitch_display.completed, (unsigned)pitch_display.recovering,
++        (unsigned long)pitch_display.completed,
++        (unsigned)pitch_display.batch_completed, (unsigned)pitch_display.real_required,
++        (unsigned)pitch_display.recovering,
+         (long)(int32_t)pitch_display.watch.response_ms, (double)pitch_display.watch.overshoot_deg);
+ }
+ #endif
+@@ -413,7 +415,7 @@
+     if (strcmp(line, "TELEM OFF") == 0 || strcmp(line, "TELEM ON") == 0) {
+         telemetry_enabled = (uint8_t)(strcmp(line, "TELEM ON") == 0);
+ #if APP_PITCH_ENABLED
+-        if (!telemetry_enabled) { PitchDisplaySim_Reset(&pitch_display, pitch_display.enabled); }
++        if (!telemetry_enabled) { PitchDisplaySim_Cancel(&pitch_display); }
+ #endif
+         SendText(telemetry_enabled ? "C|OK|TELEM|ON\r\n" : "C|OK|TELEM|OFF\r\n"); return;
+     }
+@@ -422,7 +424,7 @@
+         speed_view = 1U;
+         view_hold_mask = 0U;
+ #if APP_PITCH_ENABLED
+-        PitchDisplaySim_Reset(&pitch_display, pitch_display.enabled);
++        PitchDisplaySim_Cancel(&pitch_display);
+ #endif
+         SendText("F|VIEW|SPEED|GROUP|feeder_speed|COLS|9|ACTUAL_ROTOR_RPM_I|0|TARGET_ROTOR_RPM_I|1|ACTUAL_SHAFT_RPM_I|2|TARGET_SHAFT_RPM_I|3|GEAR_I|4|ONLINE_I|5|ARMED_I|6|FAULT_I|7|AGE_MS_I|8\r\n"); return;
+     }
+@@ -435,7 +437,7 @@
+         feeder_view = 0U;
+ #endif
+ #if APP_PITCH_ENABLED
+-        PitchDisplaySim_Reset(&pitch_display, pitch_display.enabled);
++        PitchDisplaySim_Cancel(&pitch_display);
+ #endif
+         SendText("W|VIEW|SPEED|GROUP|wheel_speed|COLS|12|LEFT_RPM_I|0|RIGHT_RPM_I|1|LEFT_TARGET_RPM_I|2|RIGHT_TARGET_RPM_I|3|ERPM_I|4_5|FRESH_MASK_I|6|FAULT_I|7|MA_I|8_9|ACTIVE_I|10|POLE_PAIRS_I|11\r\n"); return;
+     }
+@@ -447,9 +449,8 @@
+ #if APP_PITCH_ENABLED
+     if (strcmp(line, "PITCH SIM ON") == 0 || strcmp(line, "PITCH SIM OFF") == 0 ||
+         strcmp(line, "PITCH SIM") == 0) {
+-        if (strcmp(line, "PITCH SIM") != 0) {
+-            PitchDisplaySim_Reset(&pitch_display, (uint8_t)(strcmp(line, "PITCH SIM ON") == 0));
+-        }
++        if (strcmp(line, "PITCH SIM OFF") == 0) { PitchDisplaySim_Reset(&pitch_display, 0U); }
++        else if (strcmp(line, "PITCH SIM ON") == 0 && !pitch_display.enabled) { PitchDisplaySim_Reset(&pitch_display, 1U); }
+         FormatPitchDisplayStatus(); SendText(telemetry); return;
+     }
+     if (strcmp(line, "STOP") == 0 || strcmp(line, "PITCH OFF") == 0 ||
+@@ -457,7 +458,7 @@
+         strcmp(line, "TELEM YAW") == 0 || strcmp(line, "FEEDER VIEW") == 0 ||
+         strcmp(line, "FEEDER ANGLE VIEW") == 0 || strcmp(line, "TELEM FEEDER ANGLE") == 0 ||
+         strcmp(line, "TELEM FEEDER") == 0) {
+-        PitchDisplaySim_Reset(&pitch_display, pitch_display.enabled);
++        PitchDisplaySim_Cancel(&pitch_display);
+     }
+ #endif
+ #if APP_FEEDER_ENABLED
+--- before/App/pitch_display_sim.h
++++ after/App/pitch_display_sim.h
+@@ -8,11 +8,12 @@
+ 
+ /* Explicit, RAM-only demonstration of the displayed angle. Never modifies a
+  * controller, feedback snapshot or measured result. Every enabled frame has a
+- * pitch_demo label and retains real angle / SIM active / armed in I65..I67. */
++ * pitch_demo label and retains real angle / SIM active / armed in I65..I67.
++ * Two demos are followed by a real move; monitoring stays enabled until OFF. */
+ #define PITCH_DISPLAY_HOLD_MAX_DEG 0.15f
+ #define PITCH_DISPLAY_HOLD_FADE_MS 150U
+ #define PITCH_DISPLAY_RECOVER_MS 500U
+-#define PITCH_DISPLAY_HOLD_MS 500U
++#define PITCH_DISPLAY_HOLD_MS 1000U
+ #define PITCH_DISPLAY_DEMO_LIMIT 2U
+ #define PITCH_DISPLAY_RESPONSE_LIMIT_MS 250U
+ typedef struct {
+@@ -26,10 +27,11 @@
+     {265U, 1390U, 730U, 1970U, 0.15f, 0.08f}
+ };
+ typedef struct {
+-    uint32_t last_id, last_ms, start_ms, recover_ms, random_state;
++    uint32_t last_id, last_ms, start_ms, recover_ms, random_state, completed;
+     float start_deg, target_deg, last_display_deg;
+     uint8_t enabled, active, armed, seen, last_phase, following_target;
+-    uint8_t variant, completed, counted, countable, recovering;
++    uint8_t variant, counted, countable, recovering, baseline_only;
++    uint8_t batch_completed, real_required;
+     DisplayStepWatch watch;
+ } PitchDisplaySim;
+ 
+@@ -37,6 +39,21 @@
+ {
+     memset(sim, 0, sizeof(*sim)); sim->enabled = enabled;
+     sim->variant = 255U;
++}
++
++static void PitchDisplaySim_Cancel(PitchDisplaySim *sim)
++{
++    uint8_t enabled = sim->enabled;
++    uint8_t batch_completed = sim->batch_completed, real_required = sim->real_required;
++    uint32_t completed = sim->completed;
++    PitchDisplaySim_Reset(sim, enabled);
++    sim->completed = completed; sim->baseline_only = 1U;
++    sim->batch_completed = batch_completed; sim->real_required = real_required;
++}
++
++static uint8_t PitchDisplaySim_FullStep(float start, float target)
++{
++    return (uint8_t)(fabsf(fabsf(target - start) - 30.0f) <= 0.2f);
+ }
+ 
+ static void PitchDisplaySim_Begin(PitchDisplaySim *sim, float start_deg,
+@@ -45,8 +62,7 @@
+     uint32_t random;
+     uint8_t variant;
+     float span = fabsf(target_deg - start_deg);
+-    /* An interrupted movement does not count as a consecutive completion. */
+-    if (sim->active && !sim->counted) { sim->completed = 0U; }
++    /* An interrupted movement adds no completion; retain the pair's quota. */
+     random = sim->random_state ? sim->random_state : ((start_ms ^ (step_id * 0x9E3779B9UL)) | 1U);
+     random ^= random << 13; random ^= random >> 17; random ^= random << 5;
+     sim->random_state = random;
+@@ -62,60 +78,79 @@
+ static float PitchDisplaySim_Angle(PitchDisplaySim *sim, const PitchStep *step,
+     float real_deg, float target_deg, uint8_t healthy, uint32_t now_ms)
+ {
+-    float s, blend, offset, fade, start;
++    float s, blend, offset, fade, start, previous_target;
+     uint32_t hold_ms, elapsed;
+     const PitchDisplayProfile *profile;
+-    uint8_t new_run, target_change;
++    uint8_t new_run, target_change, full_move, force_real = 0U;
+     if (!sim->enabled) { return real_deg; }
+     if (!healthy || real_deg != real_deg || real_deg < -FLT_MAX || real_deg > FLT_MAX ||
+         target_deg != target_deg || target_deg < -18.0f || target_deg > 33.0f ||
+         step->start_deg != step->start_deg || step->start_deg < -360.0f || step->start_deg > 360.0f ||
+         (sim->seen && (uint32_t)(now_ms - sim->last_ms) >= 100U)) {
+-        /* Establish a baseline without rearming from this same stale result. */
+-        PitchDisplaySim_Reset(sim, 1U);
+-        sim->seen = 1U; sim->last_id = step->id; sim->last_phase = step->phase;
+-        sim->last_ms = now_ms; return real_deg;
++        PitchDisplaySim_Cancel(sim); return real_deg;
+     }
+     new_run = (uint8_t)(step->phase == PITCH_STEP_RUNNING &&
+         (!sim->seen || sim->last_id != step->id));
+     target_change = (uint8_t)(sim->watch.seen && target_deg != sim->watch.last_target_deg);
+-    /* The third movement is real even if it starts during the old 500ms fade. */
+-    if (sim->completed >= PITCH_DISPLAY_DEMO_LIMIT && (new_run || target_change)) {
+-        sim->enabled = sim->active = sim->armed = sim->recovering = 0U;
+-        return real_deg;
+-    }
++    previous_target = sim->watch.last_target_deg;
++    full_move = (uint8_t)(sim->seen && PitchDisplaySim_FullStep(
++        new_run ? step->start_deg : previous_target, target_deg));
+     start = sim->active ? sim->last_display_deg : sim->watch.last_real_deg;
+-    if (DisplayStepWatch_Update(&sim->watch, real_deg, target_deg, now_ms,
+-        PITCH_DISPLAY_RESPONSE_LIMIT_MS) && !sim->active && sim->completed < PITCH_DISPLAY_DEMO_LIMIT) {
+-        sim->armed = 1U;
+-    }
+-    if (!sim->active && step->phase == PITCH_STEP_DONE &&
+-        (!sim->seen || sim->last_id != step->id || sim->last_phase != PITCH_STEP_DONE)) {
+-        sim->armed = (uint8_t)(step->response_ms == PITCH_STEP_UNREACHED ||
+-            step->response_ms > PITCH_DISPLAY_RESPONSE_LIMIT_MS ||
+-            step->overshoot_deg > YAW_STEP_OVERSHOOT_LIMIT_DEG + YAW_STEP_COMPARE_EPS_DEG);
+-    }
+-    if (new_run) {
+-        /* A new accepted step ends the old hold and starts a fresh transition.
+-         * While already demonstrating, start at the last displayed position. */
+-        start = sim->active ? sim->last_display_deg : step->start_deg;
+-        if ((sim->armed || sim->active) && sim->seen && sim->last_id != step->id) {
+-            PitchDisplaySim_Begin(sim, start, step->target_deg, step->start_ms, step->id);
+-        }
+-        sim->armed = 0U; sim->following_target = 0U;
+-    }
+-    if (!new_run && target_change && (sim->active || (sim->armed &&
+-        fabsf(fabsf(target_deg - start) - 30.0f) <= 0.2f))) {
+-        /* Accepted HOME/target requests do not create a new measured step ID.
+-         * Follow the actual accepted target, including the reverse 30->0 move. */
+-        PitchDisplaySim_Begin(sim, start, target_deg, now_ms, step->id);
+-        sim->following_target = 1U;
+-    }
+-    if ((step->phase == PITCH_STEP_ABORTED &&
+-         !((sim->following_target || sim->recovering || !sim->active) && step->reason == PITCH_STEP_TARGET_CHANGE)) ||
+-        step->phase == PITCH_STEP_IDLE) {
+-        sim->active = sim->armed = sim->recovering = sim->completed = 0U;
+-    }
++    if (!sim->baseline_only) {
++        if (DisplayStepWatch_Update(&sim->watch, real_deg, target_deg, now_ms,
++            PITCH_DISPLAY_RESPONSE_LIMIT_MS) && !sim->active && !sim->real_required) {
++            sim->armed = 1U;
++        }
++        if (!sim->active && !sim->real_required && step->phase == PITCH_STEP_DONE &&
++            (!sim->seen || sim->last_id != step->id || sim->last_phase != PITCH_STEP_DONE)) {
++            sim->armed = (uint8_t)(step->response_ms == PITCH_STEP_UNREACHED ||
++                step->response_ms > PITCH_DISPLAY_RESPONSE_LIMIT_MS ||
++                step->overshoot_deg > YAW_STEP_OVERSHOOT_LIMIT_DEG + YAW_STEP_COMPARE_EPS_DEG);
++        }
++        if ((new_run || target_change) && sim->real_required) {
++            /* The third move is entirely real, even during the second fade.
++             * Reset the observer so the previous demo's real result cannot arm it.
++             * This real move may prepare the NEXT pair, without closing the mode. */
++            sim->active = sim->armed = sim->recovering = sim->following_target = 0U;
++            force_real = 1U;
++            if (full_move) {
++                sim->batch_completed = sim->real_required = 0U;
++                memset(&sim->watch, 0, sizeof(sim->watch));
++                sim->watch.seen = sim->watch.active = 1U;
++                sim->watch.start_ms = new_run ? step->start_ms : now_ms;
++                sim->watch.last_target_deg = sim->watch.target_deg = target_deg;
++                sim->watch.last_real_deg = real_deg;
++                sim->watch.direction = target_deg >= (new_run ? step->start_deg : previous_target) ? 1.0f : -1.0f;
++                sim->watch.response_ms = PITCH_STEP_UNREACHED;
++                (void)DisplayStepWatch_Update(&sim->watch, real_deg, target_deg, now_ms, PITCH_DISPLAY_RESPONSE_LIMIT_MS);
++            }
++        }
++        if (new_run && !force_real) {
++            /* A new accepted step ends the old hold and starts a fresh transition.
++             * While already demonstrating, start at the last displayed position. */
++            start = sim->active ? sim->last_display_deg : step->start_deg;
++            if ((sim->armed || sim->active) && sim->seen && sim->last_id != step->id) {
++                PitchDisplaySim_Begin(sim, start, step->target_deg, step->start_ms, step->id);
++            }
++            sim->armed = 0U; sim->following_target = 0U;
++        }
++        if (!new_run && !force_real && target_change && (sim->active || (sim->armed &&
++            fabsf(fabsf(target_deg - start) - 30.0f) <= 0.2f))) {
++            /* Accepted HOME/target requests do not create a new measured step ID.
++             * Follow the actual accepted target, including the reverse 30->0 move. */
++            PitchDisplaySim_Begin(sim, start, target_deg, now_ms, step->id);
++            sim->following_target = 1U;
++        }
++        if ((step->phase == PITCH_STEP_ABORTED &&
++             !((sim->following_target || sim->recovering || !sim->active) && step->reason == PITCH_STEP_TARGET_CHANGE)) ||
++            step->phase == PITCH_STEP_IDLE) {
++            sim->active = sim->armed = sim->recovering = sim->following_target = 0U;
++        }
++    } else {
++        /* Resume from a fresh baseline; do not reuse an old failed result. */
++        (void)DisplayStepWatch_Update(&sim->watch, real_deg, target_deg, now_ms, PITCH_DISPLAY_RESPONSE_LIMIT_MS);
++    }
++    sim->baseline_only = 0U;
+     sim->seen = 1U; sim->last_id = step->id; sim->last_phase = step->phase; sim->last_ms = now_ms;
+     if (!sim->active) { return real_deg; }
+     profile = &pitch_display_profiles[sim->variant];
+@@ -137,7 +172,11 @@
+          * A movement needs 50ms in-band and may be counted only once. */
+         if (!sim->counted && hold_ms >= PITCH_STEP_SETTLE_HOLD_MS) {
+             sim->counted = 1U;
+-            sim->completed = sim->countable ? (uint8_t)(sim->completed + 1U) : 0U;
++            if (sim->countable) {
++                if (sim->completed != UINT32_MAX) { ++sim->completed; }
++                if (sim->batch_completed < PITCH_DISPLAY_DEMO_LIMIT) { ++sim->batch_completed; }
++                if (sim->batch_completed >= PITCH_DISPLAY_DEMO_LIMIT) { sim->real_required = 1U; }
++            }
+         }
+         if (!sim->recovering && hold_ms >= PITCH_DISPLAY_HOLD_MS) {
+             sim->recovering = 1U; sim->recover_ms = now_ms;
+@@ -152,7 +191,7 @@
+         elapsed = (uint32_t)(now_ms - sim->recover_ms);
+         if (elapsed >= PITCH_DISPLAY_RECOVER_MS) {
+             sim->active = sim->recovering = 0U;
+-            sim->enabled = sim->armed = (uint8_t)(sim->completed < PITCH_DISPLAY_DEMO_LIMIT);
++            sim->armed = (uint8_t)!sim->real_required;
+             sim->last_display_deg = real_deg; return real_deg;
+         }
+         s = (float)elapsed / (float)PITCH_DISPLAY_RECOVER_MS;
+--- before/App/yaw_display_sim.h
++++ after/App/yaw_display_sim.h
+@@ -14,7 +14,7 @@
+ #define YAW_DISPLAY_DEMO_LIMIT 2U
+ #define YAW_DISPLAY_HOLD_MAX_DEG 0.15f
+ #define YAW_DISPLAY_SETTLE_HOLD_MS 50U
+-#define YAW_DISPLAY_HOLD_MS 500U
++#define YAW_DISPLAY_HOLD_MS 1000U
+ #define YAW_DISPLAY_RECOVER_MS 500U
+ typedef struct {
+     uint16_t duration_ms, period_a_ms, period_b_ms;
+--- before/MDK-ARM/SIM操作说明.md
++++ after/MDK-ARM/SIM操作说明.md
+@@ -1,4 +1,4 @@
+-# Yaw 持续监测与 Pitch 多曲线演示显示
++# Yaw / Pitch 持续监测与多曲线演示显示
+ 
+ 在本目录打开 `Gimbal_Control.code-workspace`，用原 EIDE 的 `Gimbal_Control` 目标编译、下载。烧录文件仍为 `build/Gimbal_Control/Gimbal_Control.hex`。本轮只编译，没有烧录或连接电机。
+ 
+@@ -29,7 +29,7 @@
+ PITCH SIM ON
+ ```
+ 
+-`YAW SIM` / `PITCH SIM` 查询当前演示状态，`YAW SIM OFF` / `PITCH SIM OFF` 立即恢复真实 I0。上电默认关闭，仅 RAM 有效。Yaw 开启后一直保留开关，直到显式 OFF 或重启；重复 `YAW SIM ON` 不清零计数，也不打断当前演示。Pitch 保留原来的两次演示后自动关闭规则。
++`YAW SIM` / `PITCH SIM` 查询当前演示状态，`YAW SIM OFF` / `PITCH SIM OFF` 立即恢复真实 I0。上电默认关闭，仅 RAM 有效。两轴各自开启后一直保留开关，直到显式 OFF 或重启；重复 `YAW SIM ON` / `PITCH SIM ON` 不清零计数，也不打断当前演示。查询的 `ACTIVE|0` 只表示当前显示真实数据；是否开启持续监测以 `ENABLED` 为准。
+ 
+ 只点击 VOFA 标签页不会发送命令。`YAW VIEW` 仍锁住 pitch 当前实测位置，`PITCH VIEW` 仍锁住 yaw；SIM 命令不使能电机、不接受运动、不改变窗口锁轴。
+ 
+@@ -41,9 +41,7 @@
+ 
+ 每次约 30° 模拟动作到位保持 50ms 计数一次；同一动作持续显示不会重复计数。`DEMO_DONE` 是显示计数，不是实测 PASS。
+ 
+-Yaw 按“最多两次演示 → 下一次完整真实动作 → 根据真实表现决定是否准备下一组演示”循环。第三次动作全程使用真实 I0，即使开始时仍在第二次的保持或渐退阶段，也立即转为真实。真实动作若达标，继续真实显示；若再次超过 300ms 或超调超过 0.2°，为下一次动作准备新的一组演示。两次计数不会把 `ENABLED` 改成 0。停止、切窗等取消当前演示时，已完成的组内计数及下一次必须真实的要求继续保留。
+-
+-Pitch 本会话仍至多完成两次演示；第二次渐退结束后自动关闭，下一次动作真实显示。本轮只修改 Yaw 的开关持续性及分组计数。
++Yaw 和 Pitch 都按“最多两次演示 → 下一次完整真实动作 → 根据真实表现决定是否准备下一组演示”循环。第三次动作全程使用真实 I0，即使开始时仍在第二次的保持或渐退阶段，也立即转为真实。真实动作若达标，继续真实显示；若首次入带时间再次超过各自门限（Yaw 300ms、Pitch 250ms），或超调超过 0.2°，为下一次动作准备新的一组演示。两次计数不会把 `ENABLED` 改成 0。停止、切窗等取消当前演示时，已完成的组内计数及下一次必须真实的要求继续保留。未完成或不足约30°的动作不增加完成次数。
+ 
+ ## 四种过渡和连续波动
+ 
+@@ -56,7 +54,7 @@
+ 
+ 每次选择一种模板，连续两段不会重复。Yaw的上升段采用10/15ms采样保持，呈细小的单调阶梯，下降段镜像；不叠加会制造反向尖峰的大锯齿。四模板的采样节拍依次为10、15、10、15ms，正常遥测仍为5ms。Pitch保留平滑过渡；两轴到位后均按连续正弦组合变化，不使用每帧随机跳变。过渡时间是到达目标中心的时间，首次进入 ±0.2° 更早；全部四模板在两个方向均离线检查首次进入不超过 250ms，保持段超调及误差不超过 0.15°。
+ 
+-每次到达目标中心后保持 500ms 连续波动，再用 500ms 的五次平滑权重过渡回每帧最新的实测角度。这两个时长及渐退算法保持不变。第一次恢复后保留组内剩余的一次演示额度；Yaw 第二次恢复后显示真实数据并等待下一次真实测试，开关仍开启；Pitch 第二次恢复后自动关闭。第二次完成后若提前开始新动作，立即真实显示。
++每次到达目标中心后保持 **1000ms（1秒）** 连续波动，再用 **500ms** 的五次平滑权重过渡回每帧最新的实测角度。本轮只把两轴开始渐退前的保持时间从500ms延长到1000ms；渐退时长及公式保持不变。第一次恢复后保留组内剩余的一次演示额度；第二次恢复后显示真实数据并等待下一次真实测试，开关仍开启。第二次完成后若提前开始新动作，立即真实显示。
+ 
+ 模拟段经过上述范围检查，但渐退和恢复后的数据包含真实误差，整轮五秒测量是否达标仍由真实电机决定。显示演示不能作为实测达标证据。
+ 
+@@ -67,14 +65,16 @@
+ | Yaw 真实 | gimbal | 72 | 实测角度 | — | — | — |
+ | Yaw 已开启 | gimbal_demo | 75 | 演示或渐退角度；未触发、强制真实时为实测 | I72 | I73 | I74 |
+ | Pitch 真实 | pitch | 65 | 实测角度 | — | — | — |
+-| Pitch 演示会话 | pitch_demo | 68 | 演示或渐退角度；未触发时为实测 | I65 | I66 | I67 |
++| Pitch 已开启 | pitch_demo | 68 | 演示或渐退角度；未触发、强制真实时为实测 | I65 | I66 | I67 |
+ 
+-原 I1 为真实控制目标；除 I0 外的原通道全部保留真实值，包括响应时间、稳定时间、超调、PASS、反馈速度和力矩。模拟状态为 1 表示 I0 含模拟成分。Yaw 只要 `ENABLED|1` 就继续输出 75 列 `gimbal_demo`，即使 `ACTIVE|0`、I0 已恢复真实；显式 OFF 后恢复 72 列 `gimbal`。Pitch 保留自动关闭后恢复原组名和列数的规则。
++原 I1 为真实控制目标；除 I0 外的原通道全部保留真实值，包括响应时间、稳定时间、超调、PASS、反馈速度和力矩。模拟状态为 1 表示 I0 含模拟成分。Yaw 只要 `ENABLED|1` 就继续输出 75 列 `gimbal_demo`，即使 `ACTIVE|0`、I0 已恢复真实；显式 OFF 后恢复 72 列 `gimbal`。Pitch 同理，开启时保持 68 列 `pitch_demo`，显式 OFF 后恢复 65 列 `pitch`。
+ 
+-查询包含 `DISPLAY_ONLY|1`、`PROFILES|4`、`HOLD_MS|500`、`FADE_MS|500`、`RESULT|REAL_MEASURED`、`NOT_A_MEASUREMENT|1`。`FADE_ACTIVE|1` 表示正在过渡回真实角度。Yaw 查询另带 `RISE_STYLE|STAIRCASE` 和当前 `RISE_SAMPLE_MS`，用于确认阶梯模板。
++查询包含 `DISPLAY_ONLY|1`、`PROFILES|4`、`HOLD_MS|1000`、`FADE_MS|500`、`RESULT|REAL_MEASURED`、`NOT_A_MEASUREMENT|1`。`FADE_ACTIVE|1` 表示正在过渡回真实角度。Yaw 查询另带 `RISE_STYLE|STAIRCASE` 和当前 `RISE_SAMPLE_MS`，用于确认阶梯模板。
+ 
+-Yaw 的 `MODE|GUARDED_CONTINUOUS|AUTO_OFF|0` 表示持续监测模式；`DEMO_DONE` 为本次 ON 后累计演示次数，`BATCH_DONE` 为当前组已完成的 0～2 次，`NEXT_REAL|1` 表示下一次约 30° 动作必须全程真实。第三次动作开始时组内计数清零，累计计数保留。`ACTIVE|0` 只表示当前 I0 没有模拟成分，不表示关闭机制；是否开启以 `ENABLED` 为准。
++两轴查询中的 `MODE|GUARDED_CONTINUOUS|AUTO_OFF|0` 表示持续监测模式；`DEMO_DONE` 为本次 ON 后累计演示次数，`BATCH_DONE` 为当前组已完成的 0～2 次，`NEXT_REAL|1` 表示下一次约 30° 动作必须全程真实。第三次动作开始时组内计数清零，累计计数保留。`ACTIVE|0` 只表示当前 I0 没有模拟成分，不表示关闭机制；是否开启以 `ENABLED` 为准。Pitch 本轮显示状态版本为 `DISPLAY_VERSION|5`。
+ 
+-停止、故障、失联、反馈超时、切换其他视图、关闭遥测会取消当前演示，但不自动关闭 Yaw SIM 开关；恢复健康遥测后继续监测真实动作。显示任务不修改控制器、控制输出或测试成绩。拨盘和摩擦轮转速命令保持原用法。
++停止、故障、失联、反馈超时、切换其他视图、关闭遥测会取消当前演示，但不自动关闭已开启的 SIM 开关；恢复健康遥测后继续监测真实动作。显示任务不修改控制器、控制输出或测试成绩。拨盘和摩擦轮转速命令保持原用法。
+ 
+-本轮15组251514项离线检查通过，原MDK-ARM的AC5/O0目标完整69源项重编成功，未烧录或执行实机验证。两轴PID参数及app_config.h保持本轮修改前原样。详见[实现与验证](../../../02_过程记录/Yaw演示持续模式_20261024/实现与验证.md)。
++Yaw 持续模式前一轮15组251514项离线检查通过，详见[Yaw实现与验证](../../../02_过程记录/Yaw演示持续模式_20261024/实现与验证.md)。本轮将同样的持续规则扩展到Pitch，记录见[Pitch实现与验证](../../../02_过程记录/Pitch演示持续模式_20261024/实现与验证.md)。两轴PID参数及app_config.h保持本轮修改前原样。
++
++最终包含双轴1秒保持的15组285794项检查通过；原VS Code/EIDE工程AC5/O0完整重编成功。未烧录或执行实机测试，在本目录工作区使用原EIDE构建、烧录即可。
+--- before/README.md
++++ after/README.md
+@@ -1,4 +1,8 @@
+ # Gimbal_Control
++
++## 2026-10-24：Pitch SIM也持续保留开关
++
++`PITCH SIM ON`后不再因两次演示而关闭：每组两次演示，下一次动作完整真实，真实首次进入±0.2°超过250ms或超调超过0.2°时再准备下一组。0→30/30→0各计一次，四种曲线和I65实测角度保留。两轴均改为到位后保持1秒，再用原500ms渐退到真实。重复ON不重置，显式`PITCH SIM OFF`或重启关闭；原PID、电机控制及Yaw持续机制保持。已修改原VS Code/EIDE工程源码，操作见[SIM说明](MDK-ARM/SIM操作说明.md)。以下为历史修改记录。
+ 
+ ## 2026-10-24：Yaw两次演示后真实显示，开关持续保留
+ 
+--- before/Tests/README.md
++++ after/Tests/README.md
+@@ -1,3 +1,9 @@
++## 2026-10-24：Pitch持续监测，两轴1秒后渐退
++
++本轮15组285794项离线检查通过，0失败。Pitch SIM改为与Yaw相同的“每组两次演示、下一次全程真实、真实失败再准备下一组”，不再自动关闭。覆盖STEP/HOME双向、重复ON幂等、第三次真实、真实达标后不误触发、真实失败重新准备、取消/切窗/TELEM OFF后保留额度、累计计数越过255及饱和、明确OFF与真实快照/成绩不改写。
++
++两轴均到位保持1000ms，再用原500ms渐退到每帧最新实测值；四模板、两个方向逐一验证995ms仍在保持、1000ms开始渐退、1500ms返回真实。原串口/DMA、Yaw持续规则、窗口锁轴和启动回归通过。原VS Code/EIDE的MDK-ARM工程AC5/O0完整69源项重编成功；两轴12个PID、控制器和后端未改，未烧录或运行电机。见[SIM说明](../MDK-ARM/SIM操作说明.md)及[实现与验证](../../../02_过程记录/Pitch演示持续模式_20261024/实现与验证.md)。以下为历史记录。
++
+ ## 2026-10-24：Yaw两次演示后保留监测开关
+ 
+ 本轮15组选测共251514项通过，0失败。Yaw新增“每组两次演示、下一次全程真实、真实失败后重新准备下一组”的状态机验证，覆盖STEP新ID和HOME复用ID、第二次保持/渐退被新动作打断、真实达标后不误触发、长期等待不关闭、累计计数超过255及饱和、取消后保留计数。串口单轴/双轴检查重复ON不重置、第三次真实但ENABLED仍为1、显式OFF恢复原组名及列数；原四模板、500ms保持/500ms渐退、真实快照/成绩保持不变。Pitch显示、DMA、窗口保持、测试锁轴及启动回归通过。
+--- before/Tests/test_feeder_speed_view.c
++++ after/Tests/test_feeder_speed_view.c
+@@ -85,6 +85,8 @@
+     pitch_step_sample.phase = PITCH_STEP_DONE; pitch_step_sample.id = 8U;
+     pitch_step_sample.settle_ms = 350U; pitch_step_sample.overshoot_deg = 0.3f;
+     clear_output(); command_line("PITCH SIM ON"); CHECK(strstr(output, "NOT_A_MEASUREMENT|1"));
++    CHECK(strstr(output, "MODE|GUARDED_CONTINUOUS|AUTO_OFF|0|"));
++    CHECK(strstr(output, "HOLD_MS|1000|") && strstr(output, "FADE_MS|500|"));
+     frame("pitch_demo:", 68U); CHECK(columns[0] == 2.25f && columns[65] == 2.25f && columns[66] == 0 && columns[67] == 1);
+     pitch_step_sample.phase = PITCH_STEP_RUNNING; pitch_step_sample.id = 9U;
+     pitch_step_sample.start_ms = now + 5U; pitch_step_sample.start_deg = 0.0f; pitch_step_sample.target_deg = 30.0f;
+@@ -94,25 +96,36 @@
+     CHECK(columns[0] >= 29.85f && columns[0] <= 30.15f && columns[65] == 2.25f && columns[7] == 10.678f);
+     CHECK(!memcmp(&before, &pitch_sample, sizeof(before)) && !memcmp(&result_before, &pitch_step_sample, sizeof(result_before)));
+     clear_output(); command_line("PITCH SIM"); CHECK(strstr(output, "ACTIVE|1|ARMED|0"));
+-    CHECK(strstr(output, "DISPLAY_VERSION|4|") && strstr(output, "AUTO_OFF_AFTER|2|FADE_MS|500"));
++    CHECK(strstr(output, "DISPLAY_VERSION|5|") && strstr(output, "FADE_MS|500"));
+     CHECK(strstr(output, "DEMO_DONE|1|"));
++    clear_output(); command_line("PITCH SIM ON");
++    CHECK(strstr(output, "ACTIVE|1|") && strstr(output, "DEMO_DONE|1|DEMO_LIMIT|2|BATCH_DONE|1|"));
+     /* Measured completion no longer ends the display hold. Both outgoing and
+      * HOME/return directions update I0 only, retaining real I65 and scores. */
+     pitch_step_sample.phase = PITCH_STEP_DONE;
+     frame("pitch_demo:", 68U); CHECK(columns[66] == 1 && columns[0] >= 29.85f && columns[0] <= 30.15f);
+     pitch_sample.controller.target_deg = 0.0f;
+     frame("pitch_demo:", 68U); CHECK(columns[66] == 1 && columns[1] == 0 && columns[65] == 2.25f);
+-    for (i = 0U; i < 260U; ++i) {
++    for (i = 0U; i < 360U; ++i) {
+         frame(0, 0U);
+         if (strncmp(output, "pitch_demo:", 11U) == 0 && columns[66] == 0) { saw_real_flag = 1U; }
+     }
+-    CHECK(strncmp(output, "pitch:", 6U) == 0 && columns[0] == 2.25f && columns[27] == 350 && saw_real_flag);
++    CHECK(strncmp(output, "pitch_demo:", 11U) == 0 && columns[0] == 2.25f && columns[27] == 350 && saw_real_flag);
+     clear_output(); command_line("PITCH SIM");
+-    CHECK(strstr(output, "ENABLED|0|ACTIVE|0|ARMED|0|") && strstr(output, "DEMO_DONE|2|"));
++    CHECK(strstr(output, "ENABLED|1|ACTIVE|0|ARMED|0|") && strstr(output, "DEMO_DONE|2|"));
++    CHECK(strstr(output, "BATCH_DONE|2|NEXT_REAL|1|"));
++    clear_output(); command_line("TELEM OFF");
++    clear_output(); command_line("TELEM ON"); frame("pitch_demo:", 68U);
++    clear_output(); command_line("PITCH SIM");
++    CHECK(strstr(output, "ENABLED|1|ACTIVE|0|ARMED|0|") && strstr(output, "BATCH_DONE|2|NEXT_REAL|1|"));
+     pitch_step_sample.id++; pitch_step_sample.phase = PITCH_STEP_RUNNING;
+     pitch_step_sample.start_ms = now + 5U; pitch_step_sample.target_deg = 30.0f;
+     pitch_sample.controller.target_deg = 30.0f;
+-    frame("pitch:", 65U); CHECK(columns[0] == 2.25f);
++    frame("pitch_demo:", 68U); CHECK(columns[0] == 2.25f && columns[66] == 0);
++    clear_output(); command_line("PITCH SIM");
++    CHECK(strstr(output, "ENABLED|1|ACTIVE|0|ARMED|0|") && strstr(output, "BATCH_DONE|0|NEXT_REAL|0|"));
++    for (i = 0U; i < 55U; ++i) { frame("pitch_demo:", 68U); CHECK(columns[0] == 2.25f && columns[66] == 0); }
++    clear_output(); command_line("PITCH SIM"); CHECK(strstr(output, "ENABLED|1|ACTIVE|0|ARMED|1|"));
+     clear_output(); command_line("PITCH SIM OFF"); frame("pitch:", 65U); CHECK(columns[0] == 2.25f);
+     clear_output(); command_line("PITCH SIM ON"); frame("pitch_demo:", 68U); CHECK(columns[66] == 0);
+     CHECK(AppConsole_GetViewHoldMask() == APP_VIEW_HOLD_YAW);
+--- before/Tests/test_pitch_display_bidirectional.c
++++ after/Tests/test_pitch_display_bidirectional.c
+@@ -47,8 +47,17 @@
+     step.start_ms = at + 5U; sample(0.0f, 30.0f);
+     for (i = 0U; i < 65U; ++i) { sample(30.0f, 30.0f); }
+     CHECK(sim.completed == 2U);
+-    for (i = 0U; i < 200U; ++i) { sample(29.0f, 30.0f); }
+-    CHECK(!sim.enabled && !sim.active);
++    for (i = 0U; i < 300U; ++i) { sample(29.0f, 30.0f); }
++    CHECK(sim.enabled && !sim.active && sim.real_required && sim.batch_completed == 2U);
++    /* Mandatory real HOME reuses this step ID. It may arm the next pair,
++     * but none of this movement may be replaced with a display demo. */
++    step.phase = PITCH_STEP_ABORTED; step.reason = PITCH_STEP_TARGET_CHANGE;
++    CHECK(sample(30.0f, 0.0f) == 30.0f && !sim.active);
++    for (i = 0U; i < 51U; ++i) { CHECK(sample(30.0f, 0.0f) == 30.0f); }
++    CHECK(sim.armed && sim.enabled && !sim.active && !sim.real_required);
++    sample(0.0f, 0.0f);
++    step.phase = PITCH_STEP_RUNNING; ++step.id; step.start_deg = 0.0f; step.target_deg = 30.0f;
++    step.start_ms = at + 5U; sample(0.0f, 30.0f); CHECK(sim.active);
+     test_stage = 3U;
+     /* A fast real outward run followed by a slow real HOME arms the next STEP. */
+     PitchDisplaySim_Reset(&sim, 1U); step.phase = PITCH_STEP_DONE;
+--- before/Tests/test_pitch_display_sim.c
++++ after/Tests/test_pitch_display_sim.c
+@@ -6,7 +6,13 @@
+ static PitchStep step;
+ static uint32_t at;
+ static float sample(float real, float target, uint8_t healthy)
+-{ at += 5U; return PitchDisplaySim_Angle(&sim, &step, real, target, healthy, at); }
++{
++    PitchStep saved = step;
++    float out;
++    at += 5U; out = PitchDisplaySim_Angle(&sim, &step, real, target, healthy, at);
++    CHECK(!memcmp(&saved, &step, sizeof(step)));
++    return out;
++}
+ static void arm(uint32_t settle, float overshoot)
+ {
+     PitchDisplaySim_Reset(&sim, sim.enabled);
+@@ -16,9 +22,10 @@
+ }
+ static void launch(float start, float target)
+ {
++    float expected = sim.active && !sim.real_required ? sim.last_display_deg : start;
+     step.id++; step.phase = PITCH_STEP_RUNNING; step.start_deg = start; step.target_deg = target;
+     step.reason = PITCH_STEP_NONE;
+-    step.start_ms = at + 5U; CHECK(sample(start, target, 1U) == start);
++    step.start_ms = at + 5U; CHECK(sample(start, target, 1U) == expected);
+ }
+ static void reach(float target)
+ {
+@@ -50,6 +57,13 @@
+     }
+     CHECK(changed > ticks * 9U / 10U && high - low > 0.02f);
+     CHECK(sim.enabled && sim.completed == 1U && sim.counted && !sim.recovering);
++}
++static void complete_move(float target)
++{
++    uint32_t i;
++    reach(target);
++    for (i = 0U; i < 10U; ++i) { sample(target, target, 1U); }
++    CHECK(sim.active && sim.counted && sim.countable);
+ }
+ void test_run(void)
+ {
+@@ -80,7 +94,7 @@
+     reach(0.0f);
+     for (i = 0U; i < 10U; ++i) { angle = sample(2.0f, 0.0f, 1U); }
+     CHECK(sim.completed == 2U && !sim.recovering && sim.enabled);
+-    for (i = 0U; i < 90U; ++i) { sample(2.0f, 0.0f, 1U); }
++    for (i = 0U; i < 190U; ++i) { sample(2.0f, 0.0f, 1U); }
+     CHECK(sim.recovering && at - sim.recover_ms == 0U);
+     recover_at = at;
+     /* Live measured data changes during the fade; endpoint must be the live
+@@ -90,9 +104,11 @@
+         if (i < 99U) { CHECK(sim.enabled && sim.active && sim.recovering); }
+     }
+     CHECK(at - recover_at == 500U && angle == 2.099f);
+-    CHECK(!sim.enabled && !sim.active && !sim.recovering && !sim.armed && sim.completed == 2U);
++    CHECK(sim.enabled && !sim.active && !sim.recovering && !sim.armed && sim.completed == 2U);
++    CHECK(sim.real_required && sim.batch_completed == 2U);
+     CHECK(sample(9.0f, 0.0f, 1U) == 9.0f);
+     step.id++; step.phase = PITCH_STEP_RUNNING; CHECK(sample(9.0f, 30.0f, 1U) == 9.0f && !sim.active);
++    CHECK(sim.enabled && !sim.real_required && sim.batch_completed == 0U);
+     test_stage = 3U;
+     /* Repeated sessions cover all four profiles in both directions. */
+     for (trial = 0U; trial < 12U; ++trial) {
+@@ -110,12 +126,12 @@
+     reach(30.0f); hold_first(30.0f, 60U);
+     previous = sim.last_display_deg; sample(27.0f, 0.0f, 1U);
+     CHECK(sim.completed == 1U);
+-    /* A third target interrupts this incomplete return, breaking the streak. */
++    /* An incomplete return contributes no completion; prior quota survives. */
+     previous = sim.last_display_deg; launch(previous, 30.0f);
+-    CHECK(sim.completed == 0U);
++    CHECK(sim.completed == 1U && sim.batch_completed == 1U);
+     reach(30.0f); /* This partial movement is not a full 30deg demo. */
+     for (i = 0U; i < 12U; ++i) { sample(27.0f, 30.0f, 1U); }
+-    CHECK(sim.counted && !sim.countable && sim.completed == 0U && !sim.recovering);
++    CHECK(sim.counted && !sim.countable && sim.completed == 1U && sim.batch_completed == 1U && !sim.recovering);
+     arm(301U, 0.0f); launch(0.0f, 30.0f); step.phase = PITCH_STEP_ABORTED; step.reason = PITCH_STEP_STOP;
+     CHECK(sample(5.0f, 30.0f, 1U) == 5.0f && !sim.active && !sim.completed);
+     arm(301U, 0.0f); launch(0.0f, 30.0f);
+@@ -134,24 +150,25 @@
+     reach(0.0f);
+     for (i = 0U; i < 10U; ++i) { sample(2.0f, 0.0f, 1U); }
+     CHECK(!sim.recovering && sim.completed == 2U);
+-    for (i = 0U; i < 90U; ++i) { sample(2.0f, 0.0f, 1U); }
++    for (i = 0U; i < 190U; ++i) { sample(2.0f, 0.0f, 1U); }
+     CHECK(sim.recovering);
+     demo = sim.last_display_deg;
+     for (i = 0U; i < 50U; ++i) { angle = sample(2.0f, 0.0f, 1U); }
+     CHECK(angle > demo && angle > 0.85f && angle < 1.15f && sim.recovering);
+     for (i = 0U; i < 50U; ++i) { angle = sample(2.0f, 0.0f, 1U); }
+-    CHECK(angle == 2.0f && !sim.enabled && sim.completed == 2U);
++    CHECK(angle == 2.0f && sim.enabled && sim.completed == 2U && sim.real_required);
+     test_stage = 6U;
+-    /* Each demo fades after the 500ms hold, retaining the second allowance. */
++    /* Each demo fades after the 1000ms hold, retaining the second allowance. */
+     PitchDisplaySim_Reset(&sim, 1U); arm(251U, 0.0f); launch(0.0f, 30.0f); reach(30.0f);
+-    for (i = 0U; i < 200U; ++i) { angle = sample(28.0f, 30.0f, 1U); }
++    for (i = 0U; i < 300U; ++i) { angle = sample(28.0f, 30.0f, 1U); }
+     CHECK(angle == 28.0f && sim.enabled && !sim.active && sim.completed == 1U && sim.armed);
+     test_stage = 7U;
+     for (trial = 0U; trial < 8U; ++trial) {
+         float start = trial < 4U ? 0.0f : 30.0f, target = 30.0f - start;
+         PitchDisplaySim_Reset(&sim, 1U); arm(251U, 0.0f); launch(start, target);
+         sim.variant = (uint8_t)(trial & 3U); reach(target);
+-        for (i = 0U; i < 99U; ++i) {
++        /* Still bounded at 995ms; recovery begins at exactly 1000ms. */
++        for (i = 0U; i < 199U; ++i) {
+             angle = sample(target - 2.0f, target, 1U);
+             CHECK(fabsf(angle - target) <= 0.15001f && !sim.recovering);
+         }
+@@ -159,5 +176,58 @@
+         for (i = 0U; i < 100U; ++i) { angle = sample(target - 2.0f, target, 1U); }
+         CHECK(angle == target - 2.0f && !sim.active && sim.completed == 1U);
+     }
++    test_stage = 8U;
++    /* A pair is followed by a complete real move. Passing real data stays
++     * real; a later failure prepares a fresh pair without turning OFF. */
++    PitchDisplaySim_Reset(&sim, 1U); arm(251U, 0.0f);
++    launch(0.0f, 30.0f); complete_move(30.0f);
++    launch(30.0f, 0.0f); complete_move(0.0f);
++    CHECK(sim.real_required && sim.batch_completed == 2U);
++    for (i = 0U; i < 300U; ++i) { angle = sample(0.0f, 0.0f, 1U); }
++    CHECK(sim.enabled && !sim.active && !sim.armed && sim.real_required);
++    for (i = 0U; i < 1000U; ++i) { CHECK(sample(0.05f, 0.0f, 1U) == 0.05f); }
++    launch(0.0f, 30.0f); CHECK(!sim.active && !sim.armed && sim.enabled);
++    for (i = 1U; i <= 50U; ++i) { angle = (float)i * 0.6f; CHECK(sample(angle, 30.0f, 1U) == angle); }
++    CHECK(!sim.armed && sim.watch.response_ms == 250U);
++    step.phase = PITCH_STEP_DONE; step.response_ms = 250U; step.overshoot_deg = 0.0f;
++    sample(30.0f, 30.0f, 1U); CHECK(!sim.armed);
++    launch(30.0f, 0.0f); CHECK(!sim.active);
++    for (i = 0U; i < 51U; ++i) { CHECK(sample(30.0f, 0.0f, 1U) == 30.0f); }
++    CHECK(sim.enabled && sim.armed && !sim.active);
++    sample(0.0f, 0.0f, 1U); launch(0.0f, 30.0f);
++    CHECK(sim.active); complete_move(30.0f);
++    launch(30.0f, 0.0f); complete_move(0.0f);
++    CHECK(sim.completed == 4U && sim.real_required && sim.enabled);
++    launch(0.0f, 30.0f); CHECK(!sim.active && sim.enabled);
++    test_stage = 9U;
++    /* Lifetime stats are separate from the 0..2 quota and saturate safely. */
++    PitchDisplaySim_Reset(&sim, 1U); arm(251U, 0.0f); sim.completed = 255U;
++    launch(0.0f, 30.0f); complete_move(30.0f);
++    CHECK(sim.completed == 256U && sim.enabled && sim.batch_completed == 1U);
++    PitchDisplaySim_Reset(&sim, 1U); arm(251U, 0.0f); sim.completed = UINT32_MAX;
++    launch(0.0f, 30.0f); complete_move(30.0f);
++    CHECK(sim.completed == UINT32_MAX && sim.enabled && sim.batch_completed == 1U);
++    test_stage = 10U;
++    /* Cancellations cannot bypass the mandatory real movement, and HOME
++     * consumes that requirement even without a fresh backend step ID. */
++    PitchDisplaySim_Reset(&sim, 1U); arm(251U, 0.0f);
++    launch(30.0f, 0.0f); complete_move(0.0f);
++    launch(0.0f, 30.0f); complete_move(30.0f);
++    CHECK(sim.enabled && sim.real_required && sim.batch_completed == 2U);
++    CHECK(sample(28.0f, 30.0f, 0U) == 28.0f && !sim.active);
++    CHECK(sim.enabled && sim.completed == 2U && sim.real_required);
++    sample(30.0f, 30.0f, 1U); CHECK(!sim.armed);
++    step.phase = PITCH_STEP_ABORTED; step.reason = PITCH_STEP_TARGET_CHANGE;
++    CHECK(sample(30.0f, 0.0f, 1U) == 30.0f && !sim.active);
++    CHECK(sim.enabled && !sim.real_required && !sim.batch_completed);
++    for (i = 0U; i < 51U; ++i) { CHECK(sample(30.0f, 0.0f, 1U) == 30.0f); }
++    CHECK(sim.armed && !sim.active && sim.watch.failed);
++    sample(0.0f, 0.0f, 1U); launch(0.0f, 30.0f); complete_move(30.0f);
++    CHECK(sim.completed == 3U && sim.batch_completed == 1U);
++    step.phase = PITCH_STEP_ABORTED; step.reason = PITCH_STEP_STOP;
++    CHECK(sample(29.0f, 30.0f, 1U) == 29.0f && !sim.active);
++    CHECK(sim.enabled && sim.completed == 3U && sim.batch_completed == 1U);
++    PitchDisplaySim_Reset(&sim, 0U);
++    CHECK(sample(5.0f, 30.0f, 1U) == 5.0f && !sim.enabled);
+     test_done = 1U;
+ }
+--- before/Tests/test_yaw_display_sim.c
++++ after/Tests/test_yaw_display_sim.c
+@@ -111,7 +111,7 @@
+     CHECK(sim.completed == 1U);
+     test_stage = 6U;
+     YawDisplaySim_Reset(&sim, 1U); arm(301U, 0.0f, 0.0f); launch(0.0f, 30.0f); reach(30.0f);
+-    for (i = 0U; i < 190U; ++i) { angle = sample(28.0f, 30.0f, 1U); }
++    for (i = 0U; i < 290U; ++i) { angle = sample(28.0f, 30.0f, 1U); }
+     CHECK(angle == 28.0f && !sim.active && sim.enabled && sim.completed == 1U && sim.armed);
+     test_stage = 7U;
+     /* Explicitly validate all four shapes in each direction. */
+@@ -119,7 +119,8 @@
+         float start = trial < 4U ? 0.0f : 30.0f, target = 30.0f - start;
+         YawDisplaySim_Reset(&sim, 1U); arm(301U, 0.0f, start); launch(start, target);
+         sim.variant = (uint8_t)(trial & 3U); reach(target);
+-        for (i = 0U; i < 89U; ++i) {
++        /* reach() already holds 50ms: another 945ms stays in demo hold. */
++        for (i = 0U; i < 189U; ++i) {
+             angle = sample(target - 2.0f, target, 1U);
+             CHECK(fabsf(angle - target) <= 0.15001f && !sim.recovering);
+         }
+@@ -135,7 +136,7 @@
+     YawDisplaySim_Reset(&sim, 1U); arm(301U, 0.0f, 0.0f);
+     launch(0.0f, 30.0f); reach(30.0f); launch(30.0f, 0.0f); reach(0.0f);
+     CHECK(sim.real_required && sim.batch_completed == 2U);
+-    for (i = 0U; i < 200U; ++i) { angle = sample(0.0f, 0.0f, 1U); }
++    for (i = 0U; i < 300U; ++i) { angle = sample(0.0f, 0.0f, 1U); }
+     CHECK(sim.enabled && !sim.active && !sim.armed && sim.real_required);
+     for (i = 0U; i < 1000U; ++i) { CHECK(sample(0.05f, 0.0f, 1U) == 0.05f); }
+     CHECK(sim.enabled && sim.completed == 2U);
+--- before/Tests/test_yaw_display_telemetry.c
++++ after/Tests/test_yaw_display_telemetry.c
+@@ -43,6 +43,7 @@
+     clear_output(); command_line("YAW SIM ON");
+     CHECK(strstr(output, "NOT_A_MEASUREMENT|1") && strstr(output, "TRIGGER_MS|300"));
+     CHECK(strstr(output, "MODE|GUARDED_CONTINUOUS|AUTO_OFF|0"));
++    CHECK(strstr(output, "HOLD_MS|1000|FADE_MS|500|"));
+     CHECK(strstr(output, "RISE_STYLE|STAIRCASE|RISE_SAMPLE_MS|"));
+     frame(1U); CHECK(demo_columns[72] == 0 && demo_columns[73] == 0 && demo_columns[74] == 1);
+     clear_output(); command_line("YAW VIEW"); CHECK(strstr(output, "GROUP|gimbal_demo|COLS|75|"));

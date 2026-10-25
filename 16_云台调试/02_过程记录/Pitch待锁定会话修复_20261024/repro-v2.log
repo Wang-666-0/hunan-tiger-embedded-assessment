@@ -1,0 +1,2 @@
+{"name": "pitch_view_hold", "checks": 1352, "failures": 5, "first_failed_line": 122, "stage": 5, "finished": 1, "returned": true, "compile_defines": ["-DAPP_FEEDER_ENABLED=0", "-DAPP_CONSOLE_RX_DMA_ENABLED=0", "-DAPP_REMOTE_RX_DMA_ENABLED=0"]}
+Report: D:\Project\27电软正式批考核\16_云台调试\Output\Gimbal_Control\Tests\selftest_results_selected.json

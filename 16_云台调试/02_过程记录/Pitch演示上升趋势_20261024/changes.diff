@@ -1,0 +1,180 @@
+--- before/App/app_console.c
++++ after/App/app_console.c
+@@ -73,7 +73,7 @@
+ {
+     unsigned profile = pitch_display.variant < 4U ? (unsigned)pitch_display.variant + 1U : 0U;
+     (void)snprintf(telemetry, sizeof(telemetry),
+-        "P|SIM|ENABLED|%u|ACTIVE|%u|ARMED|%u|MODE|GUARDED_CONTINUOUS|AUTO_OFF|0|DISPLAY_ONLY|1|GROUP|%s|COLS|%u|REAL_ANGLE_I|65|SIM_ACTIVE_I|66|ARMED_I|67|IDEAL_MS|%u|DISPLAY_VERSION|5|PROFILE|%u|PROFILES|4|HOLD_MAX_DEG|0.15|HOLD_MS|1000|BIDIRECTIONAL|1|DEMO_DONE|%lu|DEMO_LIMIT|2|BATCH_DONE|%u|NEXT_REAL|%u|FADE_MS|500|FADE_ACTIVE|%u|TRIGGER|FIRST_ENTRY|TRIGGER_MS|250|OS_LIMIT_DEG|0.2|WATCH_RESP_MS|%ld|WATCH_OS_DEG|%.6g|WATCH_SAMPLE_MS|5|RESULT|REAL_MEASURED|NOT_A_MEASUREMENT|1\r\n",
++        "P|SIM|ENABLED|%u|ACTIVE|%u|ARMED|%u|MODE|GUARDED_CONTINUOUS|AUTO_OFF|0|DISPLAY_ONLY|1|GROUP|%s|COLS|%u|REAL_ANGLE_I|65|SIM_ACTIVE_I|66|ARMED_I|67|IDEAL_MS|%u|DISPLAY_VERSION|6|RISE_STYLE|KICK_RAMP_TAPER|PROFILE|%u|PROFILES|4|HOLD_MAX_DEG|0.15|HOLD_MS|1000|BIDIRECTIONAL|1|DEMO_DONE|%lu|DEMO_LIMIT|2|BATCH_DONE|%u|NEXT_REAL|%u|FADE_MS|500|FADE_ACTIVE|%u|TRIGGER|FIRST_ENTRY|TRIGGER_MS|250|OS_LIMIT_DEG|0.2|WATCH_RESP_MS|%ld|WATCH_OS_DEG|%.6g|WATCH_SAMPLE_MS|5|RESULT|REAL_MEASURED|NOT_A_MEASUREMENT|1\r\n",
+         (unsigned)pitch_display.enabled, (unsigned)pitch_display.active,
+         (unsigned)pitch_display.armed, pitch_display.enabled ? "pitch_demo" : "pitch",
+         pitch_display.enabled ? 68U : 65U,
+--- before/App/pitch_display_sim.h
++++ after/App/pitch_display_sim.h
+@@ -26,6 +26,50 @@
+     {245U, 970U, 610U, 2230U, 0.13f, -0.18f},
+     {265U, 1390U, 730U, 1970U, 0.15f, 0.08f}
+ };
++
++/* Labelled display demo only: a short initial lift/shoulder, sustained climb,
++ * then a gradual approach to the target, matching the requested visual trend.
++ * Normalized position and slopes form a monotone C1 cubic Hermite curve.
++ * This table never enters the physical controller or assessment. */
++typedef struct { float time, position, slope; } PitchDisplayRisePoint;
++static const PitchDisplayRisePoint pitch_display_rise_points[] = {
++    {0.00f, 0.000f, 0.00f},
++    {0.04f, 0.015f, 1.00f},
++    {0.08f, 0.170f, 0.55f},
++    {0.12f, 0.180f, 0.60f},
++    {0.20f, 0.310f, 1.60f},
++    {0.35f, 0.550f, 1.50f},
++    {0.50f, 0.760f, 1.20f},
++    {0.65f, 0.910f, 0.70f},
++    {0.80f, 0.980f, 0.20f},
++    {0.92f, 0.995f, 0.08f},
++    {1.00f, 1.000f, 0.00f}
++};
++
++static float PitchDisplaySim_Rise(float progress)
++{
++    unsigned i;
++    float span, s, s2, s3, position;
++    const PitchDisplayRisePoint *a, *b;
++    if (progress <= 0.0f) { return 0.0f; }
++    if (progress >= 1.0f) { return 1.0f; }
++    for (i = 1U; i < sizeof(pitch_display_rise_points) / sizeof(pitch_display_rise_points[0]); ++i) {
++        b = &pitch_display_rise_points[i];
++        if (progress > b->time) { continue; }
++        a = &pitch_display_rise_points[i - 1U];
++        span = b->time - a->time; s = (progress - a->time) / span;
++        s2 = s * s; s3 = s2 * s;
++        position = (2.0f * s3 - 3.0f * s2 + 1.0f) * a->position +
++            (s3 - 2.0f * s2 + s) * span * a->slope +
++            (-2.0f * s3 + 3.0f * s2) * b->position +
++            (s3 - s2) * span * b->slope;
++        if (position < a->position) { position = a->position; }
++        if (position > b->position) { position = b->position; }
++        return position;
++    }
++    return 1.0f;
++}
++
+ typedef struct {
+     uint32_t last_id, last_ms, start_ms, recover_ms, random_state, completed;
+     float start_deg, target_deg, last_display_deg;
+@@ -184,7 +228,7 @@
+     } else {
+         s = (float)elapsed / (float)profile->duration_ms;
+         s += profile->warp * s * (1.0f - s);
+-        blend = s * s * s * (10.0f + s * (-15.0f + 6.0f * s));
++        blend = PitchDisplaySim_Rise(s);
+         sim->last_display_deg = sim->start_deg + (sim->target_deg - sim->start_deg) * blend;
+     }
+     if (sim->recovering) {
+--- before/MDK-ARM/SIM操作说明.md
++++ after/MDK-ARM/SIM操作说明.md
+@@ -52,9 +52,13 @@
+ | 3 | 245ms | ±0.13° |
+ | 4 | 265ms | ±0.15° |
+ 
+-每次选择一种模板，连续两段不会重复。Yaw的上升段采用10/15ms采样保持，呈细小的单调阶梯，下降段镜像；不叠加会制造反向尖峰的大锯齿。四模板的采样节拍依次为10、15、10、15ms，正常遥测仍为5ms。Pitch保留平滑过渡；两轴到位后均按连续正弦组合变化，不使用每帧随机跳变。过渡时间是到达目标中心的时间，首次进入 ±0.2° 更早；全部四模板在两个方向均离线检查首次进入不超过 250ms，保持段超调及误差不超过 0.15°。
++每次选择一种模板，连续两段不会重复。Yaw的上升段采用10/15ms采样保持，呈细小的单调阶梯，下降段镜像；不叠加会制造反向尖峰的大锯齿。四模板的采样节拍依次为10、15、10、15ms，正常遥测仍为5ms。
+ 
+-每次到达目标中心后保持 **1000ms（1秒）** 连续波动，再用 **500ms** 的五次平滑权重过渡回每帧最新的实测角度。本轮只把两轴开始渐退前的保持时间从500ms延长到1000ms；渐退时长及公式保持不变。第一次恢复后保留组内剩余的一次演示额度；第二次恢复后显示真实数据并等待下一次真实测试，开关仍开启。第二次完成后若提前开始新动作，立即真实显示。
++Pitch按用户参考图改为“起步快速抬升一小段、短暂放缓、中段持续爬升、末端逐渐贴近目标”的走势：30°跨度起步抬升约5°，中段继续上行，接近30°时斜率连续减小。采用单调分段三次曲线连接，位置与斜率连续；四种模板保留各自的时长及节奏差异，30→0镜像下降。这是显示演示趋势近似，不是对图片的逐点测量复现，也不会修改实际电机运动。
++
++两轴到位后均按连续正弦组合变化，不使用每帧随机跳变。过渡时间是到达目标中心的时间，首次进入 ±0.2° 更早；全部四模板在两个方向均离线检查首次进入不超过 250ms，保持段超调及误差不超过 0.15°。
++
++每次到达目标中心后保持 **1000ms（1秒）** 连续波动，再用 **500ms** 的五次平滑权重过渡回每帧最新的实测角度。两轴的保持/渐退时长及公式继续保留。第一次恢复后保留组内剩余的一次演示额度；第二次恢复后显示真实数据并等待下一次真实测试，开关仍开启。第二次完成后若提前开始新动作，立即真实显示。
+ 
+ 模拟段经过上述范围检查，但渐退和恢复后的数据包含真实误差，整轮五秒测量是否达标仍由真实电机决定。显示演示不能作为实测达标证据。
+ 
+@@ -71,10 +75,10 @@
+ 
+ 查询包含 `DISPLAY_ONLY|1`、`PROFILES|4`、`HOLD_MS|1000`、`FADE_MS|500`、`RESULT|REAL_MEASURED`、`NOT_A_MEASUREMENT|1`。`FADE_ACTIVE|1` 表示正在过渡回真实角度。Yaw 查询另带 `RISE_STYLE|STAIRCASE` 和当前 `RISE_SAMPLE_MS`，用于确认阶梯模板。
+ 
+-两轴查询中的 `MODE|GUARDED_CONTINUOUS|AUTO_OFF|0` 表示持续监测模式；`DEMO_DONE` 为本次 ON 后累计演示次数，`BATCH_DONE` 为当前组已完成的 0～2 次，`NEXT_REAL|1` 表示下一次约 30° 动作必须全程真实。第三次动作开始时组内计数清零，累计计数保留。`ACTIVE|0` 只表示当前 I0 没有模拟成分，不表示关闭机制；是否开启以 `ENABLED` 为准。Pitch 本轮显示状态版本为 `DISPLAY_VERSION|5`。
++两轴查询中的 `MODE|GUARDED_CONTINUOUS|AUTO_OFF|0` 表示持续监测模式；`DEMO_DONE` 为本次 ON 后累计演示次数，`BATCH_DONE` 为当前组已完成的 0～2 次，`NEXT_REAL|1` 表示下一次约 30° 动作必须全程真实。第三次动作开始时组内计数清零，累计计数保留。`ACTIVE|0` 只表示当前 I0 没有模拟成分，不表示关闭机制；是否开启以 `ENABLED` 为准。Pitch 本轮显示状态版本为 `DISPLAY_VERSION|6`，`RISE_STYLE|KICK_RAMP_TAPER`表示参考图趋势的上升段。
+ 
+ 停止、故障、失联、反馈超时、切换其他视图、关闭遥测会取消当前演示，但不自动关闭已开启的 SIM 开关；恢复健康遥测后继续监测真实动作。显示任务不修改控制器、控制输出或测试成绩。拨盘和摩擦轮转速命令保持原用法。
+ 
+ Yaw 持续模式前一轮15组251514项离线检查通过，详见[Yaw实现与验证](../../../02_过程记录/Yaw演示持续模式_20261024/实现与验证.md)。本轮将同样的持续规则扩展到Pitch，记录见[Pitch实现与验证](../../../02_过程记录/Pitch演示持续模式_20261024/实现与验证.md)。两轴PID参数及app_config.h保持本轮修改前原样。
+ 
+-最终包含双轴1秒保持的15组285794项检查通过；原VS Code/EIDE工程AC5/O0完整重编成功。未烧录或执行实机测试，在本目录工作区使用原EIDE构建、烧录即可。
++此前包含双轴1秒保持的15组285794项检查通过。本轮Pitch参考图上升趋势10组279179项检查通过，原VS Code/EIDE工程AC5/O0完整重编成功。未烧录或执行实机测试，在本目录工作区使用原EIDE构建、烧录即可。见[本轮实现与验证](../../../02_过程记录/Pitch演示上升趋势_20261024/实现与验证.md)。
+--- before/README.md
++++ after/README.md
+@@ -1,4 +1,8 @@
+ # Gimbal_Control
++
++## 2026-10-24：Pitch演示上升趋势按参考图调整
++
++Pitch显示演示改成起步抬升约5°、短暂放缓、中段持续爬升、末端逐渐贴近30°；分段三次曲线保持位置和斜率连续，反方向镜像。四种时长/节奏、持续ON与两次后真实、到位1秒保持/500ms渐退保留。`PITCH SIM`可回读`DISPLAY_VERSION|6|RISE_STYLE|KICK_RAMP_TAPER`。只改演示上升段与状态标记，原PID、实际控制和真实成绩保留。原VS Code工作区及操作见[SIM说明](MDK-ARM/SIM操作说明.md)。以下为历史记录。
+ 
+ ## 2026-10-24：Pitch SIM也持续保留开关
+ 
+--- before/Tests/README.md
++++ after/Tests/README.md
+@@ -1,3 +1,9 @@
++## 2026-10-24：Pitch演示起步抬升、中段爬升、末端放缓
++
++本轮10组279179项离线检查通过，0失败。Pitch新增单调分段三次显示曲线，按参考图保留起步抬升与短暂放缓、中段持续上行、末段渐近目标。新增外部走势范围检查，逐一检查四种模板、两个方向实际显示样本的起步幅度、中段进度及末端进度；原单调性、首次进入±0.2°不超过250ms、保持/渐退、真实成绩只读及持续两次后真实规则继续通过。串口回读确认DISPLAY_VERSION6/RISE_STYLE KICK_RAMP_TAPER，原Yaw和DMA回归通过。
++
++原VS Code/EIDE MDK-ARM工程AC5/O0完整69源项重编成功。App仅Pitch显示模块和其状态文本发生变化；原PID、控制器、后端、测量及Yaw显示均保持本轮修改前内容。未烧录或执行硬件测试。详见[SIM说明](../MDK-ARM/SIM操作说明.md)及[实现与验证](../../../02_过程记录/Pitch演示上升趋势_20261024/实现与验证.md)。以下为历史记录。
++
+ ## 2026-10-24：Pitch持续监测，两轴1秒后渐退
+ 
+ 本轮15组285794项离线检查通过，0失败。Pitch SIM改为与Yaw相同的“每组两次演示、下一次全程真实、真实失败再准备下一组”，不再自动关闭。覆盖STEP/HOME双向、重复ON幂等、第三次真实、真实达标后不误触发、真实失败重新准备、取消/切窗/TELEM OFF后保留额度、累计计数越过255及饱和、明确OFF与真实快照/成绩不改写。
+--- before/Tests/test_feeder_speed_view.c
++++ after/Tests/test_feeder_speed_view.c
+@@ -96,7 +96,7 @@
+     CHECK(columns[0] >= 29.85f && columns[0] <= 30.15f && columns[65] == 2.25f && columns[7] == 10.678f);
+     CHECK(!memcmp(&before, &pitch_sample, sizeof(before)) && !memcmp(&result_before, &pitch_step_sample, sizeof(result_before)));
+     clear_output(); command_line("PITCH SIM"); CHECK(strstr(output, "ACTIVE|1|ARMED|0"));
+-    CHECK(strstr(output, "DISPLAY_VERSION|5|") && strstr(output, "FADE_MS|500"));
++    CHECK(strstr(output, "DISPLAY_VERSION|6|RISE_STYLE|KICK_RAMP_TAPER|") && strstr(output, "FADE_MS|500"));
+     CHECK(strstr(output, "DEMO_DONE|1|"));
+     clear_output(); command_line("PITCH SIM ON");
+     CHECK(strstr(output, "ACTIVE|1|") && strstr(output, "DEMO_DONE|1|DEMO_LIMIT|2|BATCH_DONE|1|"));
+--- before/Tests/test_pitch_display_sim.c
++++ after/Tests/test_pitch_display_sim.c
+@@ -229,5 +229,39 @@
+     CHECK(sim.enabled && sim.completed == 3U && sim.batch_completed == 1U);
+     PitchDisplaySim_Reset(&sim, 0U);
+     CHECK(sample(5.0f, 30.0f, 1U) == 5.0f && !sim.enabled);
++    test_stage = 11U;
++    /* Reference trend: visible initial lift, brief shoulder, sustained climb,
++     * and tapered arrival. Exercise actual displayed samples in both directions
++     * across every profile; do not read interpolation knots as expectations. */
++    for (trial = 0U; trial < 8U; ++trial) {
++        float start = trial < 4U ? 0.0f : 30.0f, target = 30.0f - start;
++        float fraction, progress;
++        uint32_t landmarks = 0U, ticks;
++        PitchDisplaySim_Reset(&sim, 1U); arm(251U, 0.0f); launch(start, target);
++        sim.variant = (uint8_t)(trial & 3U);
++        ticks = pitch_display_profiles[sim.variant].duration_ms / 5U;
++        previous = start;
++        for (i = 0U; i < ticks; ++i) {
++            angle = sample(target - 2.0f, target, 1U);
++            progress = (angle - start) / (target - start);
++            fraction = (float)(at - sim.start_ms) / (float)pitch_display_profiles[sim.variant].duration_ms;
++            CHECK(progress >= 0.0f && progress <= 1.0f);
++            CHECK(target > start ? angle >= previous : angle <= previous);
++            if (!(landmarks & 1U) && fraction >= 0.08f) {
++                CHECK(progress >= 0.08f && progress <= 0.23f); landmarks |= 1U;
++            }
++            if (!(landmarks & 2U) && fraction >= 0.12f) {
++                CHECK(progress >= 0.16f && progress <= 0.27f); landmarks |= 2U;
++            }
++            if (!(landmarks & 4U) && fraction >= 0.35f) {
++                CHECK(progress >= 0.45f && progress <= 0.65f); landmarks |= 4U;
++            }
++            if (!(landmarks & 8U) && fraction >= 0.80f) {
++                CHECK(progress >= 0.95f && progress <= 0.995f); landmarks |= 8U;
++            }
++            previous = angle;
++        }
++        CHECK(landmarks == 15U && sim.active && sim.last_display_deg == target);
++    }
+     test_done = 1U;
+ }

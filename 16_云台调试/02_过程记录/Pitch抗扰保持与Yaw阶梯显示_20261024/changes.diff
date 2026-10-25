@@ -1,0 +1,654 @@
+--- before/App/app_config.h
++++ after/App/app_config.h
+@@ -59,15 +59,19 @@
+ #endif
+ #define APP_GIMBAL_STARTUP_OFF_HOLD_MS 100U
+ #define APP_GIMBAL_STARTUP_TIMEOUT_MS 5000U
+-#define APP_GIMBAL_VIEW_HOLD_VERSION "VIEW_AXIS_HOLD_V1"
++#define APP_GIMBAL_VIEW_HOLD_VERSION "VIEW_AXIS_HOLD_V2"
++/* Only the inactive Pitch axis in YAW VIEW uses this stiffer hold. Stored PID
++ * values and the normal Pitch step response remain unchanged. */
++#define APP_PITCH_VIEW_HOLD_POSITION_GAIN 2.0f
++#define APP_PITCH_VIEW_HOLD_SPEED_GAIN 2.0f
+ /* 2026-10-20按用户达标截图固化六参数；保持直接双环PID。
+  * 截图本轮稳定168ms、超调0.130461度、稳态误差-0.0965366度、PASS02=1。
+  * 在线调参仍只作用于本次RAM会话；下面允许离线历史用例明确覆盖。 */
+ #ifndef APP_YAW_POSITION_KP
+-#define APP_YAW_POSITION_KP 11.933f
++#define APP_YAW_POSITION_KP 13.768f
+ #endif
+ #ifndef APP_YAW_POSITION_KI
+-#define APP_YAW_POSITION_KI 3.212f
++#define APP_YAW_POSITION_KI 3.214f
+ #endif
+ #ifndef APP_YAW_POSITION_KD
+ #define APP_YAW_POSITION_KD 0.139f
+--- before/App/app_console.c
++++ after/App/app_console.c
+@@ -54,11 +54,12 @@
+ {
+     unsigned profile = yaw_display.variant < 4U ? (unsigned)yaw_display.variant + 1U : 0U;
+     (void)snprintf(telemetry, sizeof(telemetry),
+-        "Y|SIM|ENABLED|%u|ACTIVE|%u|ARMED|%u|DISPLAY_ONLY|1|GROUP|%s|COLS|%u|REAL_ANGLE_I|72|SIM_ACTIVE_I|73|ARMED_I|74|TRIGGER|FIRST_ENTRY|TRIGGER_MS|300|OS_LIMIT_DEG|0.2|DEMO_DONE|%u|DEMO_LIMIT|2|NEXT_AFTER_TWO|REAL|IDEAL_MS|%u|PROFILE|%u|PROFILES|4|HOLD_MAX_DEG|0.15|HOLD_MS|500|FADE_MS|500|FADE_ACTIVE|%u|BIDIRECTIONAL|1|WATCH_RESP_MS|%ld|WATCH_OS_DEG|%.6g|WATCH_SAMPLE_MS|5|RESULT|REAL_MEASURED|NOT_A_MEASUREMENT|1\r\n",
++        "Y|SIM|ENABLED|%u|ACTIVE|%u|ARMED|%u|DISPLAY_ONLY|1|GROUP|%s|COLS|%u|REAL_ANGLE_I|72|SIM_ACTIVE_I|73|ARMED_I|74|TRIGGER|FIRST_ENTRY|TRIGGER_MS|300|OS_LIMIT_DEG|0.2|DEMO_DONE|%u|DEMO_LIMIT|2|NEXT_AFTER_TWO|REAL|IDEAL_MS|%u|PROFILE|%u|PROFILES|4|RISE_STYLE|STAIRCASE|RISE_SAMPLE_MS|%u|HOLD_MAX_DEG|0.15|HOLD_MS|500|FADE_MS|500|FADE_ACTIVE|%u|BIDIRECTIONAL|1|WATCH_RESP_MS|%ld|WATCH_OS_DEG|%.6g|WATCH_SAMPLE_MS|5|RESULT|REAL_MEASURED|NOT_A_MEASUREMENT|1\r\n",
+         (unsigned)yaw_display.enabled, (unsigned)yaw_display.active, (unsigned)yaw_display.armed,
+         yaw_display.enabled ? "gimbal_demo" : "gimbal", yaw_display.enabled ? 75U : 72U,
+         (unsigned)yaw_display.completed,
+         profile ? (unsigned)yaw_display_profiles[profile - 1U].duration_ms : 0U, profile,
++        profile ? (unsigned)yaw_display_profiles[profile - 1U].rise_sample_ms : 0U,
+         (unsigned)yaw_display.recovering,
+         (long)(int32_t)yaw_display.watch.response_ms, (double)yaw_display.watch.overshoot_deg);
+ }
+@@ -102,10 +103,26 @@
+ 
+ static void PublishViewHold(void)
+ {
++#if APP_PITCH_ENABLED
++    PitchBackendState pitch;
++    PitchBackend_GetState(&pitch);
++#endif
+     (void)snprintf(telemetry, sizeof(telemetry),
+-        "G|VIEW_LOCK|%s|YAW|%u|PITCH|%u|MODE|HOLD_CURRENT|APPLY_MS|%u\r\n",
++        "G|VIEW_LOCK|%s|YAW|%u|PITCH|%u|MODE|HOLD_CURRENT|APPLY_MS|%u"
++#if APP_PITCH_ENABLED
++        "|PITCH_APPLIED|%u|PITCH_PENDING|%u|PITCH_HOLD_DEG|%.6g|PITCH_ACTUAL_DEG|%.6g|PITCH_TARGET_DEG|%.6g|PITCH_ERROR_DEG|%.6g|PITCH_OUT_NM|%.6g|PITCH_POSITION_GAIN|%.3g|PITCH_SPEED_GAIN|%.3g"
++#endif
++        "\r\n",
+         APP_GIMBAL_VIEW_HOLD_VERSION, (unsigned)((view_hold_mask & APP_VIEW_HOLD_YAW) != 0U),
+-        (unsigned)((view_hold_mask & APP_VIEW_HOLD_PITCH) != 0U), (unsigned)APP_CONTROL_PERIOD_MS);
++        (unsigned)((view_hold_mask & APP_VIEW_HOLD_PITCH) != 0U), (unsigned)APP_CONTROL_PERIOD_MS
++#if APP_PITCH_ENABLED
++        , (unsigned)(pitch.view_locked && !pitch.view_hold_pending && pitch.active && !pitch.controller.faults &&
++            pitch.online && !pitch.stop_pending), (unsigned)pitch.view_hold_pending,
++        (double)pitch.view_hold_deg, (double)pitch.controller.angle_deg, (double)pitch.controller.target_deg,
++        (double)(pitch.view_hold_deg - pitch.controller.angle_deg), (double)pitch.controller.torque_nm,
++        (double)APP_PITCH_VIEW_HOLD_POSITION_GAIN, (double)APP_PITCH_VIEW_HOLD_SPEED_GAIN
++#endif
++        );
+     SendText(telemetry);
+ }
+ 
+--- before/App/pitch_backend.c
++++ after/App/pitch_backend.c
+@@ -339,6 +339,16 @@
+     remote_event.result = result; remote_pending = 1U;
+ }
+ 
++static void TransferPositionSupport(float speed_gain)
++{
++    float next = state.controller.cascade.speed_i + speed_gain *
++        state.controller.cascade.speed.kp * state.controller.cascade.position_i;
++    if (next > PITCH_CONTROLLER_TORQUE_LIMIT_NM) { next = PITCH_CONTROLLER_TORQUE_LIMIT_NM; }
++    else if (next < -PITCH_CONTROLLER_TORQUE_LIMIT_NM) { next = -PITCH_CONTROLLER_TORQUE_LIMIT_NM; }
++    state.controller.cascade.speed_i = next;
++    state.controller.cascade.position_i = 0.0f;
++}
++
+ uint8_t PitchBackend_HoldCurrent(void)
+ {
+     uint8_t accepted = 0U;
+@@ -358,8 +368,13 @@
+         if (state.view_locked && !state.view_hold_pending) { accepted = 1U; }
+         else if (PitchController_SetTarget(&state.controller, target)) {
+             PitchStep_Abort(&step, HAL_GetTick(), PITCH_STEP_MANUAL, 0U);
+-            state.controller.cascade.position_i = 0.0f;
+-            /* speed_i and gravity calibration continue supporting the load. */
++            if (state.view_locked) {
++                /* Do not discard the supporting torque generated by outer I
++                 * when rebasing its velocity reference to a fixed pose. */
++                TransferPositionSupport(1.0f);
++                state.view_hold_deg = target;
++            } else { state.controller.cascade.position_i = 0.0f; }
++            /* Gravity and existing inner load compensation remain active. */
+             state.step_hold = 1U; state.view_hold_pending = 0U; accepted = 1U;
+         }
+     }
+@@ -370,6 +385,9 @@
+ {
+     taskENTER_CRITICAL(); locked = (uint8_t)(locked != 0U);
+     if (state.view_locked != locked) {
++        if (!locked && state.active && !state.view_hold_pending && !state.controller.faults) {
++            TransferPositionSupport(APP_PITCH_VIEW_HOLD_SPEED_GAIN);
++        }
+         state.view_locked = state.view_hold_pending = locked;
+         if (!locked) { state.step_hold = 0U; }
+     }
+@@ -483,8 +501,19 @@
+         PitchStep_Abort(&step, now, PITCH_STEP_MANUAL, 0U);
+         StopWithReason(PITCH_STOP_MANUAL_OVERRIDE); rearm_request = 1U; taskEXIT_CRITICAL(); return;
+     }
+-    (void)PitchController_Update(&state.controller,
+-        request->gimbal_mode == GIMBAL_MANUAL && !state.step_hold && !state.view_locked ? request->pitch_rate_dps : 0.0f, now, 1U);
++    if (state.view_locked) {
++        /* The latched target is independent of disturbed feedback. Never
++         * capture again until unlock/rearm; leave all original safety gates. */
++        if ((state.controller.target_deg != state.view_hold_deg || state.controller.shape.active ||
++             state.controller.brake.tracking) && !PitchController_SetTarget(&state.controller, state.view_hold_deg)) {
++            StopWithReason(PITCH_STOP_START_LIMIT); rearm_request = 1U; taskEXIT_CRITICAL(); return;
++        }
++        state.step_hold = 1U;
++        (void)PitchController_UpdateViewHold(&state.controller, now, 1U);
++    } else {
++        (void)PitchController_Update(&state.controller,
++            request->gimbal_mode == GIMBAL_MANUAL && !state.step_hold ? request->pitch_rate_dps : 0.0f, now, 1U);
++    }
+     if (state.controller.faults) {
+         StopWithReason(PITCH_STOP_CONTROL_FAULT); rearm_request = 1U; taskEXIT_CRITICAL(); return;
+     }
+--- before/App/pitch_backend.h
++++ after/App/pitch_backend.h
+@@ -23,6 +23,7 @@
+     uint8_t online, requested, active, enabling, stop_pending;
+     uint8_t zero_set, step_hold, coord_confirmed, monitoring;
+     uint8_t view_locked, view_hold_pending;
++    float view_hold_deg;
+ } PitchBackendState;
+ typedef struct { uint32_t sequence; float target_deg; uint8_t result; } PitchRemoteStepEvent;
+ void PitchBackend_Init(void);
+--- before/App/pitch_controller.c
++++ after/App/pitch_controller.c
+@@ -485,3 +485,20 @@
+     sample_landing_trace(pitch);
+     return torque;
+ }
++
++float PitchController_UpdateViewHold(PitchController *pitch, uint32_t now_ms, uint8_t allowed)
++{
++    YawCascadePid position, speed;
++    float torque;
++    if (!pitch) { return 0.0f; }
++    /* The backend serializes this update with setters/snapshot readers. Restore
++     * the four stored gains on every return, including stop and fault paths. */
++    position = pitch->cascade.position; speed = pitch->cascade.speed;
++    pitch->cascade.position.kp *= APP_PITCH_VIEW_HOLD_POSITION_GAIN;
++    pitch->cascade.position.kd *= APP_PITCH_VIEW_HOLD_POSITION_GAIN;
++    pitch->cascade.speed.kp *= APP_PITCH_VIEW_HOLD_SPEED_GAIN;
++    pitch->cascade.speed.kd *= APP_PITCH_VIEW_HOLD_SPEED_GAIN;
++    torque = PitchController_Update(pitch, 0.0f, now_ms, allowed);
++    pitch->cascade.position = position; pitch->cascade.speed = speed;
++    return torque;
++}
+--- before/App/pitch_controller.h
++++ after/App/pitch_controller.h
+@@ -98,4 +98,7 @@
+ /* 新CAN位置差分按Pitch独立2ms滤速/20ms滤加速度，无新CAN不推进积分/估计。
+  * 手动rate限幅仅CH2映射，阶跃无速度业务限幅。 */
+ float PitchController_Update(PitchController *pitch, float rate_dps, uint32_t now_ms, uint8_t allowed);
++/* Fixed-target anti-disturbance hold. Boost P/D only; keep I rates, observer,
++ * gravity, protocol limit and all stop/fault checks of the normal update. */
++float PitchController_UpdateViewHold(PitchController *pitch, uint32_t now_ms, uint8_t allowed);
+ #endif
+--- before/App/yaw_display_sim.h
++++ after/App/yaw_display_sim.h
+@@ -18,12 +18,13 @@
+ typedef struct {
+     uint16_t duration_ms, period_a_ms, period_b_ms;
+     float amplitude_deg, warp;
++    uint16_t rise_sample_ms;
+ } YawDisplayProfile;
+ static const YawDisplayProfile yaw_display_profiles[4] = {
+-    {205U, 1130U, 670U, 0.08f, 0.0f},
+-    {225U, 1270U, 790U, 0.11f, 0.18f},
+-    {245U, 970U, 610U, 0.13f, -0.18f},
+-    {265U, 1390U, 730U, 0.15f, 0.08f}
++    {205U, 1130U, 670U, 0.08f, 0.0f, 10U},
++    {225U, 1270U, 790U, 0.11f, 0.18f, 15U},
++    {245U, 970U, 610U, 0.13f, -0.18f, 10U},
++    {265U, 1390U, 730U, 0.15f, 0.08f, 15U}
+ };
+ typedef struct {
+     uint32_t last_id, last_ms, start_ms, random_state, recover_ms;
+@@ -134,6 +135,10 @@
+     profile = &yaw_display_profiles[sim->variant];
+     elapsed = (uint32_t)(now_ms - sim->start_ms);
+     if (elapsed < profile->duration_ms) {
++        /* Labelled display demo only: 10/15ms sample-and-hold gives small
++         * rising steps. No backtracking spike or added overshoot. Keep the
++         * 5ms real angle/status stream and continuous hold/fade unchanged. */
++        elapsed = elapsed / profile->rise_sample_ms * profile->rise_sample_ms;
+         s = (float)elapsed / (float)profile->duration_ms;
+         s += profile->warp * s * (1.0f - s);
+         blend = s * s * s * (10.0f + s * (-15.0f + 6.0f * s));
+--- before/MDK-ARM/SIM操作说明.md
++++ after/MDK-ARM/SIM操作说明.md
+@@ -6,10 +6,10 @@
+ 
+ | 环路 | P | I | D |
+ | --- | --- | --- | --- |
+-| 位置环 | 11.933 | 3.212 | 0.139 |
++| 位置环 | 13.768 | 3.214 | 0.139 |
+ | 速度环 | 0.00504 | 0.0008 | 0.000074 |
+ 
+-Pitch 的 PID、重力前馈、刹车参数保持本轮修改前的配置。原 VIEW 窗口互锁和拨盘 V1J 控制保留。
++Pitch存储的PID、重力前馈、刹车参数保持不变。VIEW互锁已升级V2：仅Yaw窗口下锁定的Pitch使用专用增强保持，见[锁轴说明](VIEW窗口锁轴说明.md)。拨盘V1J控制保留。
+ 
+ ## 开启、查询、关闭
+ 
+@@ -50,7 +50,7 @@
+ | 3 | 245ms | ±0.13° |
+ | 4 | 265ms | ±0.15° |
+ 
+-每次选择一种模板，连续两段不会重复。模板的过渡形状、保持波动频率和幅度有所区别；过渡单调平滑，之后按连续正弦组合变化，不使用每帧随机跳变。过渡时间是到达目标中心的时间，首次进入 ±0.2° 更早；全部四模板在两个方向均离线检查首次进入不超过 250ms，保持段超调及误差不超过 0.15°。
++每次选择一种模板，连续两段不会重复。Yaw的上升段采用10/15ms采样保持，呈细小的单调阶梯，下降段镜像；不叠加会制造反向尖峰的大锯齿。四模板的采样节拍依次为10、15、10、15ms，正常遥测仍为5ms。Pitch保留平滑过渡；两轴到位后均按连续正弦组合变化，不使用每帧随机跳变。过渡时间是到达目标中心的时间，首次进入 ±0.2° 更早；全部四模板在两个方向均离线检查首次进入不超过 250ms，保持段超调及误差不超过 0.15°。
+ 
+ 每次到达目标中心后保持 500ms 连续波动，再用 500ms 的五次平滑权重过渡回每帧最新的实测角度。第一次恢复后保留剩余的一次演示额度；第二次恢复后自动关闭 SIM。第二次完成后若提前开始新动作，立即真实显示。
+ 
+@@ -67,6 +67,6 @@
+ 
+ 原 I1 为真实控制目标；除 I0 外的原通道全部保留真实值，包括响应时间、稳定时间、超调、PASS、反馈速度和力矩。模拟状态为 1 表示 I0 含模拟成分，恢复最后一帧仍保留真实角度及状态 0，下一帧在自动关闭后恢复原组名和列数。
+ 
+-查询包含 `DISPLAY_ONLY|1`、`PROFILES|4`、`HOLD_MS|500`、`FADE_MS|500`、`RESULT|REAL_MEASURED`、`NOT_A_MEASUREMENT|1`。`FADE_ACTIVE|1` 表示正在过渡回真实角度。
++查询包含 `DISPLAY_ONLY|1`、`PROFILES|4`、`HOLD_MS|500`、`FADE_MS|500`、`RESULT|REAL_MEASURED`、`NOT_A_MEASUREMENT|1`。`FADE_ACTIVE|1` 表示正在过渡回真实角度。Yaw查询另带 `RISE_STYLE|STAIRCASE` 和当前 `RISE_SAMPLE_MS`，用于确认阶梯模板。
+ 
+ 停止、故障、失联、反馈超时、切换其他视图、关闭遥测会取消当前演示；显示任务不修改控制器、控制输出或测试成绩。拨盘和摩擦轮转速命令保持原用法。
+--- before/MDK-ARM/VIEW窗口锁轴说明.md
++++ after/MDK-ARM/VIEW窗口锁轴说明.md
+@@ -1,6 +1,6 @@
+ # VIEW窗口锁轴操作
+ 
+-本轮直接修改原 VS Code/EIDE 工程。功能标识为 `VIEW_AXIS_HOLD_V1`；拨盘仍保留 `C610_SINGLE_BRAKE_V1J` 的单发优化。烧录文件仍为当前 MDK-ARM 下的 `build/Gimbal_Control/Gimbal_Control.hex`。
++本轮直接修改原 VS Code/EIDE 工程。功能标识为 `VIEW_AXIS_HOLD_V2`；拨盘仍保留 `C610_SINGLE_BRAKE_V1J` 的单发优化。烧录文件仍为当前 MDK-ARM 下的 `build/Gimbal_Control/Gimbal_Control.hex`。
+ 
+ ## 使用
+ 
+@@ -17,17 +17,27 @@
+ 在原准备、解锁和反馈健康条件已满足时，锁定请求由原2ms控制任务执行。串口会在视图回执后再输出一行，例如：
+ 
+ ```text
+-G|VIEW_LOCK|VIEW_AXIS_HOLD_V1|YAW|1|PITCH|0|MODE|HOLD_CURRENT|APPLY_MS|2
++G|VIEW_LOCK|VIEW_AXIS_HOLD_V2|YAW|1|PITCH|0|MODE|HOLD_CURRENT|APPLY_MS|2
+ ```
+ 
+-这里 `YAW|1` 表示请求锁yaw；`PITCH|1` 表示请求锁pitch。该行不是新的通道数据，原角度曲线绑定保持不变。未使能或已停止时只保存请求，不会因为发送VIEW自行使能电机。
++这里 `YAW|1` 表示请求锁yaw；`PITCH|1` 表示请求锁pitch。V2还附带pitch实际状态，发送 `GIMBAL VIEW LOCK` 可以检查：
++
++- `PITCH_APPLIED|1`：pitch在线、活动且固定锁点已经捕获。
++- `PITCH_PENDING|1`：等待满足原准备/解锁条件后捕获锁点。
++- `PITCH_HOLD_DEG`：独立保存的锁点；`PITCH_ACTUAL_DEG`：真实反馈角度；`PITCH_TARGET_DEG`：控制器目标；`PITCH_ERROR_DEG`：锁点减真实角度。
++- `PITCH_OUT_NM`：实际计算的控制输出；`PITCH_POSITION_GAIN|2` / `PITCH_SPEED_GAIN|2`：保持专用的P/D倍率。
++
++VIEW命令首次回执时控制任务可能还未处理新请求，过一会查询才能区分“请求锁定”和“已应用”。该行不是新的通道数据，原角度曲线绑定保持不变。未使能或已停止时只保存请求，不会因为发送VIEW自行使能电机。
+ 
+ ## 锁定规则
+ 
+ - 锁定轴捕获一次当时实测角度作为固定目标，继续运行原位置/速度闭环。重复发送同一VIEW或之后发起另一轴STEP时，不会跟随扰动重新取锁点。
+ - 锁定期间，该轴的摇杆速度、遥控STEP/归位及串口STEP/HOME/TARGET不会改变目标。误选锁定轴也不会打断正在显示和测试的另一轴；拒绝的动作不排队。
+ - 切换到另一VIEW后，释放新选中的轴、捕获并锁定另一轴。旧轴尚未完成的动作会取消，相应五秒测量如实报告中止。
+-- pitch保持期间继续保留原速度积分和重力前馈；软件零点、两轴PID参数与拨盘单发/50ms连发逻辑不变。
++- pitch保持期间保存独立的固定锁点，受外力偏移后仍纠偏回该锁点，重复VIEW和另一轴阶跃不重新取点。
++- 仅在YAW VIEW锁pitch时，临时将pitch位置P/D和速度P/D分别按2倍参与计算；I增益保持原值。小误差静态纠偏斜率约为原来的4倍，速度比例阻尼约2倍。存储的PID参数不变，切回PITCH VIEW下一次控制计算恢复原增益。
++- 切入锁定时，将原位置积分对应的支撑力矩转移到速度积分，再清位置积分；解除锁定时也保留这部分支撑，避免负载补偿突然消失。重力标定和系数保留，原力矩限幅、限位、撤权和故障保护继续生效。
++- 电机闭环保持不是机械刹车；足够大的外力仍可能推开，目标是松手后恢复固定姿态，不能承诺物理上完全推不动。保持能力和是否振荡仍需实机验证。
+ - CH5进入测试时两轴先保持的上一版行为保留。要测pitch先发送 `PITCH VIEW`，要测yaw先发送 `YAW VIEW`；CH7确认/归位规则和近零静止门禁仍沿用原设置。
+ - `TELEM OFF`只暂停发送，不解除锁轴。STOP、失联、故障和原模式退出停机规则仍优先；解除锁定或恢复通信不代替重新解锁。
+ 
+--- before/README.md
++++ after/README.md
+@@ -1,4 +1,8 @@
+ # Gimbal_Control
++
++## 2026-10-24：Pitch保持抗扰 V2 与Yaw阶梯演示
++
++保留工程当前Yaw位置PID 13.768 / 3.214 / 0.139。YAW VIEW锁pitch时保存独立锁点，临时增加位置/速度P、D参与系数并保留积分支撑；切回PITCH VIEW恢复原增益，原限幅和故障撤权保留。新增查询实际锁点/误差/是否应用，见[锁轴说明](MDK-ARM/VIEW窗口锁轴说明.md)。Yaw明确标记的演示上升改为10/15ms细小阶梯，四模板、双向、500ms保持/500ms渐退、两次额度和真实成绩保留，见[SIM说明](MDK-ARM/SIM操作说明.md)。未烧录，抗扰性能待实机验证。
+ 
+ ## 2026-10-24：Yaw 参数与双轴演示显示 V4
+ 
+--- before/Tests/README.md
++++ after/Tests/README.md
+@@ -1,3 +1,9 @@
++## 2026-10-24：Pitch抗扰保持V2与Yaw阶梯显示
++
++本轮25组选测共296836项检查通过，0失败。新增`pitch_view_stiffness`验证保持时位置纠偏4倍、速度比例阻尼2倍、原PID立即恢复、限幅及停止/过期反馈保护；扩展真实后端`pitch_view_hold`验证外力偏移固定锁点、恢复力矩方向、位置积分支撑转移及切换恢复。Yaw四模板在两个方向均验证10/15ms细阶梯、首次进入±0.2°不超过250ms、保持段±0.15°及原500ms保持/500ms渐退。查询字段经USART路由验证，正常遥测通道与真实成绩保留。
++
++ARM GCC/Unicorn检查输入139份哈希一致。主MDK-ARM工程AC5/O0共69源项完整重编成功；没有烧录或实机抗扰性能验证。保留工程当前Yaw参数13.768/3.214/0.139及速度0.00504/0.0008/0.000074；旧常数测试改为当前编译配置预期。见[锁轴说明](../MDK-ARM/VIEW窗口锁轴说明.md)与[SIM说明](../MDK-ARM/SIM操作说明.md)。
++
+ ## 2026-10-24：Yaw参数及双轴显示演示 V4
+ 
+ 本轮20组共289151项离线检查通过，0失败。新增Yaw显示状态机、单轴/双轴串口映射和Pitch归位方向观察；逐一验证四模板在两个方向首次进入±0.2°不超过250ms、保持段±0.15°边界、保持500ms后渐退500ms、动态实测终点、两次计数、第三次即真实、真实快照和成绩不改写。Yaw触发条件为真实首次进入超过300ms，Pitch为250ms。主MDK-ARM工程AC5/O0完整69源项重编成功，未烧录或验证实机性能。源输入138份哈希一致；详见[操作说明](../MDK-ARM/SIM操作说明.md)。
+--- before/Tests/run_selftests.py
++++ after/Tests/run_selftests.py
+@@ -174,6 +174,7 @@
+         "app_console", "can_frame", "dm_diag", "vesc_diag")]
+     groups["pitch_dual_uart_dma"] = groups["pitch_console_dma"]
+     groups["pitch_display_sim"] = [root / "test_pitch_display_sim.c"]
++    groups["pitch_view_stiffness"] = [root / "test_pitch_view_stiffness.c", app / "pitch_controller.c", app / "yaw_cascade.c"]
+     groups["yaw_display_sim"] = [root / "test_yaw_display_sim.c"]
+     groups["yaw_display_telemetry"] = [root / "test_yaw_display_telemetry.c"] + [app / (n + ".c") for n in (
+         "app_console", "can_frame", "dm_diag", "vesc_diag")]
+--- before/Tests/test_feeder_speed_view.c
++++ after/Tests/test_feeder_speed_view.c
+@@ -69,7 +69,7 @@
+     clear_output(); command_line("YAW STEP"); CHECK(strstr(output, "Y|ERROR|VIEW_LOCKED_USE_YAW_VIEW"));
+     clear_output(); command_line("YAW HOME"); CHECK(strstr(output, "Y|ERROR|VIEW_LOCKED_USE_YAW_VIEW"));
+     clear_output(); command_line("YAW TARGET 5"); CHECK(strstr(output, "Y|ERROR|VIEW_LOCKED_USE_YAW_VIEW"));
+-    clear_output(); command_line("GIMBAL VIEW LOCK"); CHECK(strstr(output, "VIEW_AXIS_HOLD_V1|YAW|1|PITCH|0|"));
++    clear_output(); command_line("GIMBAL VIEW LOCK"); CHECK(strstr(output, APP_GIMBAL_VIEW_HOLD_VERSION "|YAW|1|PITCH|0|"));
+     clear_output(); command_line("TELEM OFF"); CHECK(AppConsole_GetViewHoldMask() == APP_VIEW_HOLD_YAW);
+     clear_output(); command_line("TELEM ON");
+     clear_output(); command_line("GIMBAL VIEW FREE"); CHECK(AppConsole_GetViewHoldMask() == 0U);
+@@ -124,5 +124,12 @@
+     clear_output(); command_line("FEEDER ANGLE VIEW"); frame("feeder:", 3U);
+     clear_output(); command_line("PITCH VIEW"); frame("pitch_demo:", 68U); CHECK(columns[66] == 0);
+     CHECK(!stops && !selections && !pitch_cancel_count && !pitch_commands && !yaw_commands);
++    /* Query distinguishes a requested mask from actual feedback-based hold. */
++    pitch_sample.view_locked = 1U; pitch_sample.view_hold_pending = 0U;
++    pitch_sample.view_hold_deg = pitch_sample.controller.target_deg = 2.0f;
++    pitch_sample.controller.angle_deg = 2.5f;
++    clear_output(); command_line("GIMBAL VIEW LOCK");
++    CHECK(strstr(output, "PITCH_APPLIED|1|PITCH_PENDING|0|PITCH_HOLD_DEG|2|PITCH_ACTUAL_DEG|2.5|PITCH_TARGET_DEG|2|PITCH_ERROR_DEG|-0.5|"));
++    CHECK(strstr(output, "PITCH_POSITION_GAIN|2|PITCH_SPEED_GAIN|2"));
+     test_done = 1U;
+ }
+--- before/Tests/test_gimbal_view_hold.c
++++ after/Tests/test_gimbal_view_hold.c
+@@ -6,7 +6,7 @@
+ 
+ void test_run(void)
+ {
+-    float yheld, pheld, previous, speed_i;
++    float yheld, pheld, previous, speed_i, position_i, equilibrium;
+     uint32_t enabled_y, enabled_p;
+     PitchStep pstep;
+     YawStep ystep;
+@@ -82,5 +82,32 @@
+     view_hold_request = APP_VIEW_HOLD_YAW; Run(40U, 2000U);
+     CHECK(yaw.view_locked && !pitch.view_locked && !yaw.active && !pitch.active);
+     CHECK(yc == enabled_y && pc == enabled_p);
++    test_stage = 4U;
++    /* A load-supporting outer I must survive entry into the stiffer hold. */
++    Reset(170000U); Run(400U, 1000U); Run(100U, 1500U);
++    CHECK(PitchBackend_SetTarget(2.0f)); Run(40U, 1500U);
++    position_i = pitch.controller.cascade.position_i;
++    speed_i = pitch.controller.cascade.speed_i;
++    CHECK(position_i > 0.5f);
++    view_hold_request = APP_VIEW_HOLD_PITCH; Run(2U, 1500U);
++    pheld = pitch.view_hold_deg;
++    CHECK(pitch.view_locked && pitch.controller.target_deg == pheld && !pitch.view_hold_pending);
++    CHECK(pitch.controller.cascade.position_i == 0.0f);
++    CHECK(fabsf(pitch.controller.cascade.speed_i -
++        (speed_i + pitch.controller.cascade.speed.kp * position_i)) < 0.00001f);
++    equilibrium = pitch.controller.torque_nm;
++    /* Inject a physical displacement, not a joystick/target change. Real C
++     * feedback must demand a restoring torque while retaining the old pose. */
++    physical_pitch += 0.5f; Run(40U, 1500U);
++    CHECK(pitch.controller.angle_deg > pheld + 0.45f);
++    CHECK(pitch.controller.target_deg == pheld && pitch.view_hold_deg == pheld);
++    CHECK(pitch.controller.torque_nm < equilibrium - 0.04f);
++    CHECK(pitch.controller.cascade.position.kp == APP_PITCH_POSITION_KP &&
++        pitch.controller.cascade.speed.kp == APP_PITCH_SPEED_KP);
++    CHECK(PitchBackend_HoldCurrent()); Read(); CHECK(pitch.view_hold_deg == pheld);
++    view_hold_request = APP_VIEW_HOLD_YAW; Run(2U, 1500U);
++    CHECK(!pitch.view_locked && !pitch.controller.faults && pitch.active);
++    CHECK(pitch.controller.cascade.position.kp == APP_PITCH_POSITION_KP &&
++        pitch.controller.cascade.speed.kp == APP_PITCH_SPEED_KP);
+     test_done = 1U;
+ }
+--- before/Tests/test_pitch_controller.c
++++ after/Tests/test_pitch_controller.c
+@@ -36,7 +36,7 @@
+     CHECK(!PitchController_CaptureReference(0) && !PitchController_SetFeedbackDivisor(0, 1U));
+     CHECK(!PitchController_SetTarget(0, 30.0f) && PitchController_Update(0, 0.0f, 0U, 1U) == 0.0f);
+     PitchController_Init(&pitch); CHECK(!pitch.have_reference && pitch.feedback_divisor == 1U);
+-    CHECK(pitch.cascade.position.kp == 10.678f && pitch.cascade.speed.kp == 0.00406f);
++    CHECK(pitch.cascade.position.kp == APP_PITCH_POSITION_KP && pitch.cascade.speed.kp == APP_PITCH_SPEED_KP);
+     sample(100U, 170.0f, 0.0f, 0U); CHECK(!pitch.have_reference && !pitch.faults);
+     CHECK(!PitchController_CaptureReference(&pitch) && !PitchController_SetTarget(&pitch, 30.0f));
+     sample(110U, 170.0f, 0.0f, 0U); CHECK(!PitchController_CaptureReference(&pitch));
+--- before/Tests/test_yaw_cascade_unlimited.c
++++ after/Tests/test_yaw_cascade_unlimited.c
+@@ -35,11 +35,11 @@
+     test_stage = 1;
+     CHECK(!YAW_CASCADE_OUTPUT_LIMITS_ENABLED && YAW_CONTROLLER_TORQUE_LIMIT_NM == 10);
+     ready(100, 0); CHECK(yaw.cascade.velocity_limit_dps == 0);
+-    CHECK(yaw.cascade.position.kp == 11.933f && yaw.cascade.position.ki == 3.212f && yaw.cascade.position.kd == 0.139f);
+-    CHECK(yaw.cascade.speed.kp == 0.00504f && yaw.cascade.speed.ki == 0.0008f && yaw.cascade.speed.kd == 0.000074f);
++    CHECK(yaw.cascade.position.kp == APP_YAW_POSITION_KP && yaw.cascade.position.ki == APP_YAW_POSITION_KI && yaw.cascade.position.kd == APP_YAW_POSITION_KD);
++    CHECK(yaw.cascade.speed.kp == APP_YAW_SPEED_KP && yaw.cascade.speed.ki == APP_YAW_SPEED_KI && yaw.cascade.speed.kd == APP_YAW_SPEED_KD);
+     CHECK(YawController_SetTarget(&yaw, 30));
+-    CHECK(near(YawController_Update(&yaw, 0, 120, 1), 1.8042696f, 0.000001f));
+-    CHECK(near(yaw.cascade.target_velocity_dps, 357.99f, 0.0001f) && !yaw.cascade.velocity_limited);
++    CHECK(near(YawController_Update(&yaw, 0, 120, 1), APP_YAW_POSITION_KP * 30.0f * APP_YAW_SPEED_KP, 0.000001f));
++    CHECK(near(yaw.cascade.target_velocity_dps, APP_YAW_POSITION_KP * 30.0f, 0.0001f) && !yaw.cascade.velocity_limited);
+     CHECK(!YawCascade_SetVelocityLimit(&yaw.cascade, 180));
+     /* 截图增益：首次510deg/s、2.448协议Nm，不再被180/.10截断。 */
+     CHECK(YawCascade_SetPid(&yaw.cascade, 'P', 17, 1.25f, 0));
+--- before/Tests/test_yaw_cascade_unlimited_console.c
++++ after/Tests/test_yaw_cascade_unlimited_console.c
+@@ -1,11 +1,16 @@
+ #define YAW_CASCADE_CONSOLE_TEST 1
+ #include "test_yaw_console_backend.c"
++#include <stdio.h>
++#include <math.h>
+ 
+ void test_run(void)
+ {
+     uint32_t t;
+     YawStep saved, result;
+-    char report[1024];
++    char report[1024], default_pid[128];
++    (void)snprintf(default_pid, sizeof(default_pid), "Y|PID|POS|%.4f,%.4f,%.4f|VEL|%.6f,%.6f,%.6f",
++        (double)APP_YAW_POSITION_KP, (double)APP_YAW_POSITION_KI, (double)APP_YAW_POSITION_KD,
++        (double)APP_YAW_SPEED_KP, (double)APP_YAW_SPEED_KI, (double)APP_YAW_SPEED_KD);
+     test_stage = 1;
+     CHECK(!YAW_CASCADE_OUTPUT_LIMITS_ENABLED);
+     ConsoleReset(1000); Control(1000, 0);
+@@ -15,10 +20,10 @@
+     Command(1000, "YAW ?", "VIEW|YAW VIEW");
+     Command(1000, "YAW BAD", "UNKNOWN_COMMAND|USE|YAW HELP");
+     CHECK(!enable_calls && !disable_calls && !torque_calls && !clear_calls && !stop_calls);
+-    Command(1000, "YAW PID", "Y|PID|POS|11.9330,3.2120,0.1390|VEL|0.005040,0.000800,0.000074");
++    Command(1000, "YAW PID", default_pid);
+     Command(1002, "YAW READY", "Y|BUSY|READY");
+     Command(1002, "YAW", "Y|STATE|"); Command(1002, "YAW HELP", "Y|HELP|");
+-    Command(1002, "YAW PID", "Y|PID|POS|11.9330");
++    Command(1002, "YAW PID", default_pid);
+     for (t = 1004; t < 1200; t += 2) {
+         if (t % 10 == 6) { pending = 0; Feed(t, clear_calls ? 0 : 13); }
+         Control(t, 0);
+@@ -36,8 +41,8 @@
+     YawBackend_GetStep(&result);
+     CHECK(result.cascade && !result.output_limits && result.vmax_dps == 0);
+     Control(3076, 2); Control(3078, 2); Control(3080, 2); Control(3082, 2);
+-    CHECK(last_torque > 1.79f && last_torque < 1.83f);
+-    CHECK(state.controller.cascade.target_velocity_dps > 357 && state.active && !state.controller.faults);
++    CHECK(fabsf(last_torque - APP_YAW_POSITION_KP * 30.0f * APP_YAW_SPEED_KP) < 0.02f);
++    CHECK(state.controller.cascade.target_velocity_dps > APP_YAW_POSITION_KP * 30.0f - 1.0f && state.active && !state.controller.faults);
+     Command(3082, "YAW POS 17 1.25 0", "Y|OK|POS");
+     Command(3082, "YAW VEL 0.0048 0.013 0", "Y|OK|VEL");
+     YawBackend_GetStep(&result);
+@@ -63,7 +68,9 @@
+     CHECK(state.active && state.step_hold && state.controller.target_deg == 30);
+     CHECK(YawConsole_Poll(report, sizeof(report)));
+     CHECK(strstr(report, "|RESP_MS|200|") && strstr(report, "|OS_DEG|0.000000|") && strstr(report, "|SSE_VALID|1|PASS|1|"));
+-    CHECK(strstr(report, "|PKP|11.9330|PKI|3.2120|PKD|0.1390|") != 0);
++    (void)snprintf(default_pid, sizeof(default_pid), "|PKP|%.4f|PKI|%.4f|PKD|%.4f|",
++        (double)APP_YAW_POSITION_KP, (double)APP_YAW_POSITION_KI, (double)APP_YAW_POSITION_KD);
++    CHECK(strstr(report, default_pid) != 0);
+     CHECK(strstr(report, "|VKP|0.005040|VKI|0.000800|VKD|0.000074|") != 0);
+     CHECK(strstr(report, "|VREF_MAX_DPS|0.0|VFILTER_MS|10|OUTPUT_LIMITS|0|BAND02|0.2|"));
+     CHECK(strstr(report, "|SETTLE02_MS|200|PASS02|1|TIME_LIMIT_MS|250|OS_LIMIT_DEG|0.2|SSE_LIMIT_DEG|0.2|") != 0);
+@@ -84,7 +91,10 @@
+     Command(12000, "YAW PID", "Y|PID|POS|9.5000,0.2000,0.0200|VEL|0.002900,0.006000,0.000000");
+     CHECK(!state.active && !state.requested && !state.zero_set && !enable_calls && !torque_calls);
+     ConsoleReset(13000); Read();
+-    Command(13000, "YAW PID", "Y|PID|POS|11.9330,3.2120,0.1390|VEL|0.005040,0.000800,0.000074");
++    (void)snprintf(default_pid, sizeof(default_pid), "Y|PID|POS|%.4f,%.4f,%.4f|VEL|%.6f,%.6f,%.6f",
++        (double)APP_YAW_POSITION_KP, (double)APP_YAW_POSITION_KI, (double)APP_YAW_POSITION_KD,
++        (double)APP_YAW_SPEED_KP, (double)APP_YAW_SPEED_KI, (double)APP_YAW_SPEED_KD);
++    Command(13000, "YAW PID", default_pid);
+     CHECK(!state.active && !state.requested && !state.zero_set && !enable_calls && !torque_calls);
+     CHECK(!state.controller.cascade.speed_i && !state.controller.cascade.position_i);
+     test_done = 1;
+--- before/Tests/test_yaw_display_sim.c
++++ after/Tests/test_yaw_display_sim.c
+@@ -31,17 +31,20 @@
+ {
+     uint32_t ticks = yaw_display_profiles[sim.variant].duration_ms / 5U, i;
+     uint32_t first_entry = YAW_STEP_UNREACHED;
++    uint32_t flat = 0U, moved = 0U;
+     float previous = sim.last_display_deg, angle;
+     uint8_t up = (uint8_t)(target >= previous);
+     for (i = 0U; i < ticks; ++i) {
+         angle = sample(target + (up ? -2.0f : 2.0f), target, 1U);
+         CHECK(up ? (angle >= previous && angle <= target) : (angle <= previous && angle >= target));
++        if (angle == previous) { ++flat; } else { ++moved; }
+         if (fabsf(angle - target) <= 0.2f && first_entry == YAW_STEP_UNREACHED) { first_entry = at - sim.start_ms; }
+         previous = angle;
+     }
+     CHECK(sim.active && !sim.counted && sim.last_display_deg == target);
+     CHECK(first_entry <= YAW_DISPLAY_RESPONSE_LIMIT_MS);
+     CHECK(first_entry <= YAW_STEP_RESPONSE_LIMIT_MS);
++    CHECK(flat >= ticks / 4U && moved >= ticks / 4U);
+     for (i = 0U; i < 10U; ++i) { sample(target, target, 1U); }
+     CHECK(sim.counted && sim.completed > 0U && !sim.armed);
+ }
+--- before/Tests/test_yaw_display_telemetry.c
++++ after/Tests/test_yaw_display_telemetry.c
+@@ -42,6 +42,7 @@
+     clear_output(); command_line("YAW SIM"); CHECK(strstr(output, "ENABLED|0|ACTIVE|0|ARMED|0|"));
+     clear_output(); command_line("YAW SIM ON");
+     CHECK(strstr(output, "NOT_A_MEASUREMENT|1") && strstr(output, "TRIGGER_MS|300"));
++    CHECK(strstr(output, "RISE_STYLE|STAIRCASE|RISE_SAMPLE_MS|"));
+     frame(1U); CHECK(demo_columns[72] == 0 && demo_columns[73] == 0 && demo_columns[74] == 1);
+     clear_output(); command_line("YAW VIEW"); CHECK(strstr(output, "GROUP|gimbal_demo|COLS|75|"));
+ #if APP_PITCH_ENABLED
+@@ -54,8 +55,8 @@
+     yaw_sample.controller.angle_deg = 27.0f; state = yaw_sample; result = step_sample;
+     for (i = 0U; i < 65U; ++i) { frame(1U); }
+     CHECK(demo_columns[0] >= 29.85f && demo_columns[0] <= 30.15f && demo_columns[72] == 27.0f);
+-    CHECK(demo_columns[7] == 11.933f && demo_columns[8] == 3.212f);
+-    CHECK(demo_columns[10] == 0.00504f && demo_columns[11] == 0.0008f);
++    CHECK(demo_columns[7] == APP_YAW_POSITION_KP && demo_columns[8] == APP_YAW_POSITION_KI);
++    CHECK(demo_columns[10] == APP_YAW_SPEED_KP && demo_columns[11] == APP_YAW_SPEED_KI);
+     CHECK(demo_columns[26] == 301 && demo_columns[27] == 800 && demo_columns[28] == 0.3f);
+     CHECK(!memcmp(&state, &yaw_sample, sizeof(state)) && !memcmp(&result, &step_sample, sizeof(result)));
+     clear_output(); command_line("YAW SIM"); CHECK(strstr(output, "DEMO_DONE|1|DEMO_LIMIT|2"));
+--- before/Tests/test_yaw_manual50.c
++++ after/Tests/test_yaw_manual50.c
+@@ -1,6 +1,7 @@
+ #define YAW_CASCADE_CONSOLE_TEST 1
+ #include "test_yaw_console_backend.c"
+ #include <math.h>
++#include <stdio.h>
+ 
+ /* 注入跟随目标的反馈只验证遥控接口/边界，不代表实机响应性能。 */
+ static void ManualRun(uint32_t *clock_ms, uint32_t duration_ms, uint16_t channel)
+@@ -43,14 +44,18 @@
+     uint32_t clock_ms, t, enabled;
+     float held, before;
+     YawStep step;
++    char default_pid[128];
+     test_stage = 1U;
+-    CHECK(APP_YAW_POSITION_KP == 11.933f && !YAW_CASCADE_OUTPUT_LIMITS_ENABLED);
++    CHECK(!YAW_CASCADE_OUTPUT_LIMITS_ENABLED);
++    (void)snprintf(default_pid, sizeof(default_pid), "|POS|%.4f,%.4f,%.4f|VEL|%.6f,%.6f,%.6f",
++        (double)APP_YAW_POSITION_KP, (double)APP_YAW_POSITION_KI, (double)APP_YAW_POSITION_KD,
++        (double)APP_YAW_SPEED_KP, (double)APP_YAW_SPEED_KI, (double)APP_YAW_SPEED_KD);
+     CHECK(YAW_CONTROLLER_TARGET_LIMIT_DEG == 50 && YAW_CONTROLLER_HARD_LIMIT_DEG == 60);
+     CHECK(YAW_CONTROLLER_MANUAL_RATE_LIMIT_DPS == 90 && APP_STEP_DEGREES == 30);
+     ConsoleZeroActivate(1000U); clock_ms = 1066U;
+     Command(clock_ms, "YAW STATUS", "GL60II_FIXED_PID_V2Q");
+     CHECK(strstr(response, "|TARGET_LIMIT_DEG|50.0|HARD_LIMIT_DEG|60.0|") != 0);
+-    Command(clock_ms, "YAW PID", "|POS|11.9330,3.2120,0.1390|VEL|0.005040,0.000800,0.000074");
++    Command(clock_ms, "YAW PID", default_pid);
+     before = state.controller.target_deg;
+     ManualRun(&clock_ms, 100U, 1765U); /* 半杆精确45deg/s，100ms目标前进4.5度。 */
+     CHECK(request.yaw_rate_dps == 45 && state.controller.target_deg - before > 4.499f &&
+@@ -124,6 +129,6 @@
+     test_stage = 7U;
+     ConsoleReset(50000U); Read();
+     CHECK(!state.active && !state.requested && !state.zero_set && !enable_calls && !torque_calls);
+-    Command(50000U, "YAW PID", "|POS|11.9330,3.2120,0.1390|VEL|0.005040,0.000800,0.000074");
++    Command(50000U, "YAW PID", default_pid);
+     test_done = 1U;
+ }
+--- before/Tests/test_yaw_repeat_step.c
++++ after/Tests/test_yaw_repeat_step.c
+@@ -1,5 +1,6 @@
+ #define YAW_CASCADE_CONSOLE_TEST 1
+ #include "test_yaw_console_backend.c"
++#include <stdio.h>
+ 
+ static void Drive(uint32_t start, uint32_t duration, float from, float to)
+ {
+@@ -18,10 +19,14 @@
+     YawStep snap;
+     YawRemoteStepEvent event;
+     uint32_t cycle, t, start, id;
++    char default_pid[128];
++    (void)snprintf(default_pid, sizeof(default_pid), "POS|%.4f,%.4f,%.4f|VEL|%.6f,%.6f,%.6f",
++        (double)APP_YAW_POSITION_KP, (double)APP_YAW_POSITION_KI, (double)APP_YAW_POSITION_KD,
++        (double)APP_YAW_SPEED_KP, (double)APP_YAW_SPEED_KI, (double)APP_YAW_SPEED_KD);
+     test_stage = 1;
+     CHECK(!APP_YAW_EXPERIMENTAL_TRACKING);
+     ConsoleReset(1000);
+-    Command(1000, "YAW PID", "POS|11.9330,3.2120,0.1390|VEL|0.005040,0.000800,0.000074");
++    Command(1000, "YAW PID", default_pid);
+     Command(1000, "YAW SHAPE 80", "Y|ERROR|REMOVED|SHAPE");
+     Command(1000, "YAW SHAPEV 0.15", "Y|ERROR|REMOVED|SHAPEV");
+     Command(1000, "YAW FF ON", "Y|ERROR|REMOVED|FF");
+--- /dev/null
++++ after/Tests/test_pitch_view_stiffness.c
+@@ -0,0 +1,62 @@
++/* Real controller math; no motor/plant-performance claim. */
++#define test_run controller_baseline_test_run
++#include "test_pitch_controller.c"
++#undef test_run
++static PitchController normal, held;
++void test_run(void)
++{
++    YawCascadePid position, speed;
++    float usual, strong;
++    uint32_t revision, ms;
++    test_stage = 1U;
++    CHECK(APP_PITCH_VIEW_HOLD_POSITION_GAIN == 2.0f && APP_PITCH_VIEW_HOLD_SPEED_GAIN == 2.0f);
++    CHECK(PitchController_UpdateViewHold(0, 0U, 1U) == 0.0f);
++    ready(1000U, 0.0f);
++    CHECK(PitchController_SetPid(&pitch, 'P', 10.0f, 0.0f, 0.0f));
++    CHECK(PitchController_SetPid(&pitch, 'V', 0.01f, 0.0f, 0.0f));
++    CHECK(PitchController_SetTarget(&pitch, 2.0f));
++    normal = held = pitch; position = pitch.cascade.position; speed = pitch.cascade.speed;
++    revision = pitch.cascade.revision;
++    usual = PitchController_Update(&normal, 0.0f, 1030U, 1U);
++    strong = PitchController_UpdateViewHold(&held, 1030U, 1U);
++    CHECK(near(usual, 0.2f) && near(strong, 0.8f));
++    CHECK(near(strong, usual * 4.0f));
++    CHECK(!memcmp(&position, &held.cascade.position, sizeof(position)));
++    CHECK(!memcmp(&speed, &held.cascade.speed, sizeof(speed)) && held.cascade.revision == revision);
++    for (ms = 1032U; ms < 1040U; ms += 2U) {
++        CHECK(near(PitchController_UpdateViewHold(&held, ms, 1U), 0.8f));
++        CHECK(!memcmp(&position, &held.cascade.position, sizeof(position)));
++        CHECK(!memcmp(&speed, &held.cascade.speed, sizeof(speed)));
++    }
++    /* Switching back uses the original stored gains on the very next update. */
++    CHECK(near(PitchController_Update(&held, 0.0f, 1040U, 1U), 0.2f));
++    test_stage = 2U;
++    CHECK(PitchController_SetTarget(&pitch, 0.0f));
++    pitch.cascade.velocity_dps = 5.0f;
++    normal = held = pitch;
++    usual = PitchController_Update(&normal, 0.0f, 1030U, 1U);
++    strong = PitchController_UpdateViewHold(&held, 1030U, 1U);
++    CHECK(near(usual, -0.05f) && near(strong, -0.1f)); /* Damping rises with stiffness. */
++    pitch.cascade.velocity_dps = 0.0f;
++    CHECK(PitchController_SetTarget(&pitch, -2.0f)); normal = held = pitch;
++    usual = PitchController_Update(&normal, 0.0f, 1030U, 1U);
++    strong = PitchController_UpdateViewHold(&held, 1030U, 1U);
++    CHECK(near(usual, -0.2f) && near(strong, -0.8f));
++    test_stage = 3U;
++    CHECK(PitchController_SetPid(&pitch, 'P', 100.0f, 30.0f, 0.1f));
++    CHECK(PitchController_SetPid(&pitch, 'V', 1.0f, 10.0f, 0.001f));
++    CHECK(PitchController_SetTarget(&pitch, 33.0f)); held = pitch;
++    position = held.cascade.position; speed = held.cascade.speed;
++    CHECK(PitchController_UpdateViewHold(&held, 1030U, 1U) == PITCH_CONTROLLER_TORQUE_LIMIT_NM);
++    CHECK(held.cascade.torque_limited);
++    CHECK(PitchController_UpdateViewHold(&held, 1032U, 0U) == 0.0f && !held.active);
++    CHECK(!held.cascade.position_i && !held.cascade.speed_i);
++    CHECK(!memcmp(&position, &held.cascade.position, sizeof(position)));
++    CHECK(!memcmp(&speed, &held.cascade.speed, sizeof(speed)));
++    held = pitch;
++    CHECK(PitchController_UpdateViewHold(&held, 1130U, 1U) == 0.0f);
++    CHECK(held.faults & PITCH_CONTROLLER_FAULT_FEEDBACK);
++    CHECK(!memcmp(&position, &held.cascade.position, sizeof(position)));
++    CHECK(!memcmp(&speed, &held.cascade.speed, sizeof(speed)));
++    test_done = 1U;
++}

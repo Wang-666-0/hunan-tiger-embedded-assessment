@@ -27,7 +27,8 @@ static void Arm(void)
     CHECK(logic.targets.request.gimbal_mode == GIMBAL_TEST);
 }
 static void Release(void) { input.remote.channels[6] = 1500U; Frame(); }
-static void Return(void) { input.remote.channels[6] = 1000U; Frame(); }
+static void Return(void) { input.remote.channels[6] = 1000U; Frame();
+    if (logic.targets.request.step_return_event) { CHECK(logic.targets.request.step_delta_deg == -30.0f); } }
 static void Confirm(void) { input.remote.channels[6] = 2000U; Frame(); }
 
 void test_run(void)

@@ -1,0 +1,898 @@
+[
+  {
+    "path": "vofa-profile\\language",
+    "sha256": "38953F5797C6EE1CBD858C5A0F4CBA56F9550C65F40332419C8CF92A64EA05CA"
+  },
+  {
+    "path": "vofa-profile\\samples",
+    "sha256": "D4735E3A265E16EEE03F59718B9B5D03019C07D8B6C51F90DA3A666EEC13AB35"
+  },
+  {
+    "path": "vofa-profile\\vofa+.datas.csv",
+    "sha256": "A0C82327C65A0E305903AA2A9C52C06539453EED37B37299DEE6FF15CD3F280F"
+  },
+  {
+    "path": "vofa-profile\\vofa+.key.json",
+    "sha256": "CE9453CF791EA639CE08DB27E013EDB7FE700B8861F5F248BBEBBC788A5F27DB"
+  },
+  {
+    "path": "vofa-profile\\100\\cache\\default\\bound_bt.png",
+    "sha256": "FA62867354608DC5DAEC19726257D857B73BB59325C662766C2CA92602FBD664"
+  },
+  {
+    "path": "vofa-profile\\100\\cache\\default\\circular_gauge.png",
+    "sha256": "4F6994BA940EB42E11C86DCF2D4612D6A97B370E85229B896A4C899CD9F15048"
+  },
+  {
+    "path": "vofa-profile\\100\\cache\\default\\cube.png",
+    "sha256": "7310092613C92627754305C6426D504E8F6605C2E3881F006E08B88FE736721E"
+  },
+  {
+    "path": "vofa-profile\\100\\cache\\default\\ExtraButtonDelay.png",
+    "sha256": "2355741FED66AC3D0869724CA0C1CD83426F7A32501AC317B9FB72366A79FB57"
+  },
+  {
+    "path": "vofa-profile\\100\\cache\\default\\ExtraButtonToggle.png",
+    "sha256": "2355741FED66AC3D0869724CA0C1CD83426F7A32501AC317B9FB72366A79FB57"
+  },
+  {
+    "path": "vofa-profile\\100\\cache\\default\\ExtraDial.png",
+    "sha256": "C118522E86D79ABC6A4CA2C029B6EBA4AE298BA7BC2D17B8BC655F1EDD59EA01"
+  },
+  {
+    "path": "vofa-profile\\100\\cache\\default\\gauge.png",
+    "sha256": "B923E2B1F49629B470FFBF81427E2B3560181C3F311D744657BE48F0708C67D7"
+  },
+  {
+    "path": "vofa-profile\\100\\cache\\default\\image.png",
+    "sha256": "55787B355EFFD969DE61D0112B98A60F66116E01735BE513189548D9316E3888"
+  },
+  {
+    "path": "vofa-profile\\100\\cache\\default\\light.png",
+    "sha256": "4E13170E238AF6378A3298A137821B9F5E63488AE137FAB20EA49CEB9121017A"
+  },
+  {
+    "path": "vofa-profile\\100\\cache\\default\\MaterialDial.png",
+    "sha256": "AD9B6605641F0F10EE26FA094D6D77F6D027C4C6D3EE4FEAD315141DD43DE87F"
+  },
+  {
+    "path": "vofa-profile\\100\\cache\\default\\MaterialJoystick.png",
+    "sha256": "11FA0DD507C7CCAB9CD3D09FFF673AE0E3B0DBBC0BB506708903306FB9C24819"
+  },
+  {
+    "path": "vofa-profile\\100\\cache\\default\\rx_probe.png",
+    "sha256": "EB270E4E7765B08BC8211490AB11A777C78B9EFDA2681D9115DEE75DA928847C"
+  },
+  {
+    "path": "vofa-profile\\100\\cache\\default\\rx_probe2.png",
+    "sha256": "68FC658419E8C150F78ADE74B2CE161FF1FD99D9BFA7735ACB25B392DA134523"
+  },
+  {
+    "path": "vofa-profile\\100\\cache\\default\\slider.png",
+    "sha256": "7FD05CD21FF082F8243201FDF91794C6B6261C8A190E54AA32A56521C9E4B3FB"
+  },
+  {
+    "path": "vofa-profile\\100\\cache\\default\\WaveChart.png",
+    "sha256": "DA06AE664949A3270DF44CC01FE26AC87E88843D234CB37B18277A3F989C50A2"
+  },
+  {
+    "path": "vofa-profile\\100\\context\\vofa+.cmds.json",
+    "sha256": "8521563E5F6F1CFBE339619E1AC56231D61AE0370E12FD2C1969928AEB24443D"
+  },
+  {
+    "path": "vofa-profile\\100\\context\\vofa+.config.json",
+    "sha256": "C9E86C583891A6BD1FE280E44DEB747A43054CF1DC2D71826314162DF982AD30"
+  },
+  {
+    "path": "vofa-profile\\100\\context\\vofa+.tabviews.json",
+    "sha256": "A3C5FB69ACCAAA165472B8D41C59AD493E587464B9AF788744D01478D835BE77"
+  },
+  {
+    "path": "vofa-profile\\100\\rpttest\\vofa+.cmds.json",
+    "sha256": "47B4FE42CE8888B28D495C65B4776DC4CB7BE5DED4EB5CF5DE52A2C711DBB1E8"
+  },
+  {
+    "path": "vofa-profile\\100\\rpttest\\vofa+.config.json",
+    "sha256": "DB5207F40BF396397FDFBC94760FB6B35649038ED3F3BCF732E45DE67776B23A"
+  },
+  {
+    "path": "vofa-profile\\100\\rpttest\\vofa+.tabviews.json",
+    "sha256": "4EEFFFE841ECAECA1DB5A1A0CE36E5F16738C1F1E3FF3E3F01A7C596D3A7A7B1"
+  },
+  {
+    "path": "vofa-profile\\100\\themes\\BlueIronman\\theme.json",
+    "sha256": "301A478FCD795405B9C4EA51C00C590E4632763EF78FF6FD68A3A2FC03BEAF4B"
+  },
+  {
+    "path": "vofa-profile\\100\\themes\\BlueIronman\\pictures\\下载.jpg",
+    "sha256": "10883291C9DBE99ACA82D0E7D07F2F439EB3B6DADEDFFEA11091D1989F6FCE0F"
+  },
+  {
+    "path": "vofa-profile\\100\\themes\\Dark\\theme.json",
+    "sha256": "2A934F3C5CCC094019DCD93361213C0F7C1EAF1FA8A469A3EC2555CBE24127A4"
+  },
+  {
+    "path": "vofa-profile\\100\\themes\\Dark\\pictures\\dark.svg",
+    "sha256": "ADAC71E0839198F13FBBC07E1AC231BB18B3BB2D677EB8E58F9F7C806C86FF91"
+  },
+  {
+    "path": "vofa-profile\\100\\themes\\EyeCare\\theme.json",
+    "sha256": "5AB2F9A59BC4E0D5F0C8E65C0489BDA12CB78C744E663629BA2C4B5364EB1720"
+  },
+  {
+    "path": "vofa-profile\\100\\themes\\EyeCare\\pictures\\dark.svg",
+    "sha256": "47E50E24F2B202F262DAC7E533351E1686143B7311906CC16FDB1D9DC676C169"
+  },
+  {
+    "path": "vofa-profile\\100\\themes\\Helmet\\theme.json",
+    "sha256": "4B272D4FB2A76617A94A030348E66EB78F3545B03EAD4290108C310EC708055D"
+  },
+  {
+    "path": "vofa-profile\\100\\themes\\Helmet\\Dark\\theme.json",
+    "sha256": "7B286FF1531EEC4302AD4B78114E8A9E340DF7979952954269019C5F5FE9D412"
+  },
+  {
+    "path": "vofa-profile\\100\\themes\\Helmet\\Dark\\pictures\\791e76_1ffaa3d95ab345a5a14701120180c42c_mv2.gif",
+    "sha256": "92D917A38CA4C4041C35616B18B5452D4604F1C19B9B545551CC4A532335A264"
+  },
+  {
+    "path": "vofa-profile\\100\\themes\\Helmet\\pictures\\helmet.jpg",
+    "sha256": "8B117B79C23DCF6D7935C8C3FC6B6F9C757E28754A683381D6B3D89378E6ADB1"
+  },
+  {
+    "path": "vofa-profile\\100\\themes\\LostHelmet\\theme.json",
+    "sha256": "C6C3492004F5018B9EDC8209C2D9090E36E79A067952EAA30E5418B40609531C"
+  },
+  {
+    "path": "vofa-profile\\100\\themes\\LostHelmet\\pictures\\lost_helmet.svg",
+    "sha256": "B51AB88D0104CF2AC9667C7E4975B08B28567BFBCBEC5889D617831946445FA0"
+  },
+  {
+    "path": "vofa-profile\\100\\themes\\PointConnections\\theme.json",
+    "sha256": "CE1E5D20DECB57A346E3FE7589C92F53670A35EF1D168CBCD80E77E9AA6EE213"
+  },
+  {
+    "path": "vofa-profile\\100\\themes\\PointConnections\\Dark\\theme.json",
+    "sha256": "7B286FF1531EEC4302AD4B78114E8A9E340DF7979952954269019C5F5FE9D412"
+  },
+  {
+    "path": "vofa-profile\\100\\themes\\PointConnections\\Dark\\pictures\\791e76_1ffaa3d95ab345a5a14701120180c42c_mv2.gif",
+    "sha256": "92D917A38CA4C4041C35616B18B5452D4604F1C19B9B545551CC4A532335A264"
+  },
+  {
+    "path": "vofa-profile\\100\\themes\\PointConnections\\pictures\\ΔS ≥ 0.gif",
+    "sha256": "4DE9724EEAF71FBCA339CE8C0FCDBE6E3F3CB26851CAFCEA567C8A0D8B567BC4"
+  },
+  {
+    "path": "vofa-profile\\cache\\qmlcache\\0287568f6b75a8de2d21278106c373f2fd10f5ab.qmlc",
+    "sha256": "DB4A25303B12725CC7DF421B73E9152787BC5D4EC53B28C840528C71152F39EA"
+  },
+  {
+    "path": "vofa-profile\\cache\\qmlcache\\0bd5cf23c1a78fdd98ccbf96a05645392c65305c.qmlc",
+    "sha256": "5DB0AC33AA8BF9A4164B206C914693CFFFBB30E6DD54B9A8BCB3CB2627F0F0AF"
+  },
+  {
+    "path": "vofa-profile\\cache\\qmlcache\\0d708ac36629a22f8824fcb4732cf54e47ca4252.jsc",
+    "sha256": "6F146541BB07D57973E50BEB389BD97C7900D955DA9434B0A81F9BF5F927D4C3"
+  },
+  {
+    "path": "vofa-profile\\cache\\qmlcache\\0f5ebf03fd7e5892e901cc839f425d3623bdac5c.qmlc",
+    "sha256": "E28E9AFDAA946F5CE4A057380B7501DC9E2A584C21950E42FC68FF15468DAA30"
+  },
+  {
+    "path": "vofa-profile\\cache\\qmlcache\\1052e95a6ea8140c0585142920e375367353c47f.qmlc",
+    "sha256": "EAF13323ECB3D1F6DD91C14E4C3D6A13205592212C3500E44BF0EC1F515F8EE8"
+  },
+  {
+    "path": "vofa-profile\\cache\\qmlcache\\11cbb775d02f8203f941e99bfbc80ee969b55586.qmlc",
+    "sha256": "C26BCF50FFA5C79113ED492020F8D6F2F150E59A6D98A5111A3FFF0C28F64321"
+  },
+  {
+    "path": "vofa-profile\\cache\\qmlcache\\1601b2325cb071f0b5bbac17abcab528bad5d48c.qmlc",
+    "sha256": "4CA3E90381D3A838109E5D8BDF3CEFE37C1F81107606A2D09C4FDD8912D2BC52"
+  },
+  {
+    "path": "vofa-profile\\cache\\qmlcache\\18b3f73594c72d50b3c02c6c14de67dc93c400ed.qmlc",
+    "sha256": "178C4C73A47AEED5EB367D76353B93094F74B2411FADC1E7D22C9240D99AC893"
+  },
+  {
+    "path": "vofa-profile\\cache\\qmlcache\\1c95e83079eac2470b7744e1b77185e4e6c321bb.qmlc",
+    "sha256": "5786D3E8428094B89E3F364A2935CC8C5379D7E9C04B51EE5E40576D68D6E95A"
+  },
+  {
+    "path": "vofa-profile\\cache\\qmlcache\\23c0fdec24e0286a4b7d4f9e7d36900a41291165.qmlc",
+    "sha256": "42F37B0759DE73CA66620F00662A16BD6F151BD2CD136DE7F686444486D504EE"
+  },
+  {
+    "path": "vofa-profile\\cache\\qmlcache\\24bff65040f0a3d2afc097e7412218471af841dc.qmlc",
+    "sha256": "B94DC34526111EAA5A3E75D4A49150F778196E46E5EA917C220322958F4B3E8E"
+  },
+  {
+    "path": "vofa-profile\\cache\\qmlcache\\26373c8f611fc7d4026be68d028d492e43482fa0.qmlc",
+    "sha256": "281DC9FC5700C3BB7ED32B95AD38EEDF8EDEE58BAC6396F03AA5C74B6D321C33"
+  },
+  {
+    "path": "vofa-profile\\cache\\qmlcache\\2957889c4d99155aef8c1588bac9d45b5885decc.qmlc",
+    "sha256": "A7F91A71F4592FED2082F9E1B93E3B1C648B8C042FEF4042A191AD0A1F4CB0E2"
+  },
+  {
+    "path": "vofa-profile\\cache\\qmlcache\\2c6c4c233b3165c6fa550f5462a4c9959778fd7c.qmlc",
+    "sha256": "BEE1717581895EC60FF0613FCB25C27DB05730D89321C101E180E2EB6D56D8E5"
+  },
+  {
+    "path": "vofa-profile\\cache\\qmlcache\\32b209153dcef267f7a80a415cfe34e75c673c2e.qmlc",
+    "sha256": "0CDA93820399DF84030DF26B458CEF537F469B5ABBF0AF7A9C0887CF29AC2F29"
+  },
+  {
+    "path": "vofa-profile\\cache\\qmlcache\\33fbcb619824f113734d59eef0e22b2ddaec46d6.qmlc",
+    "sha256": "C4644697E205E7CC95D010866E80D35FCE93F2CBF20B2A528C734A007FC33C42"
+  },
+  {
+    "path": "vofa-profile\\cache\\qmlcache\\3659ca86664da8f954d8f40ab6957563d1f59d87.qmlc",
+    "sha256": "9234ECCCFF94B3ECB718F0821E20293F3D40AC5146326A10671316CEA356383B"
+  },
+  {
+    "path": "vofa-profile\\cache\\qmlcache\\37759220d28b42aeb4bb0ff3a072da86db479c3c.qmlc",
+    "sha256": "3774DA944D02FF5FB9BDB9A33DD291B76B1C31256C37851E28977250CBDD9055"
+  },
+  {
+    "path": "vofa-profile\\cache\\qmlcache\\380c6d79e2acc6c114155e97e72bf589709842d6.qmlc",
+    "sha256": "C80CC9BB1E57E5A6E171E1497D206D6082D4C41287E6BDFBF35F3B20C63BB89A"
+  },
+  {
+    "path": "vofa-profile\\cache\\qmlcache\\385ba26a3bbae7d067ee404f565695587626e735.qmlc",
+    "sha256": "704E72C7EA22B9EDD83DEB7E235A0F45B829A2A0BA091AA26B27A245A6DAF11D"
+  },
+  {
+    "path": "vofa-profile\\cache\\qmlcache\\3b0ca052d826afba6855931ede79aee6cd465dee.qmlc",
+    "sha256": "394D3B81035B1425189F4D0A544437F58BF9E71B9B19A62A94F87654F3F2B69B"
+  },
+  {
+    "path": "vofa-profile\\cache\\qmlcache\\3b93d4adfb3e2efdaa318aad9536b70ca6b63592.qmlc",
+    "sha256": "F4BCCE887069DE289D8CBD6924F441E68FBF71BC127DD0F8FF93EDE026BD18AA"
+  },
+  {
+    "path": "vofa-profile\\cache\\qmlcache\\3fde7f3c74f240252fca0cb0e73e27ba20d0ff81.qmlc",
+    "sha256": "C82B2EACF97B85D7D72E75D139BE571DBA6470D2328328A02C1156BB3AC3DBBB"
+  },
+  {
+    "path": "vofa-profile\\cache\\qmlcache\\408bc806fd6572c857670125607759e3e3eab052.qmlc",
+    "sha256": "9F846017C312FC59170C60D184C28DD5AE618EA905D690422A98CC4E262ABA65"
+  },
+  {
+    "path": "vofa-profile\\cache\\qmlcache\\43873f83c7acdaabba76763044405cc430a55bd2.qmlc",
+    "sha256": "53007CBC08E196BBC5248CB82ECB5B804F8E8EC5D8F86577AA31B09EC56E9114"
+  },
+  {
+    "path": "vofa-profile\\cache\\qmlcache\\43f18f36b3084c528196d107d0fe0f69d9dde71a.qmlc",
+    "sha256": "E5CF710A0646C2907A8D72B492B5A5E0AB0A7E4EC4CDFF51C92F1CE8D7718F3C"
+  },
+  {
+    "path": "vofa-profile\\cache\\qmlcache\\4485d1d2163a72df47f267e04f3f7f568222a431.qmlc",
+    "sha256": "EED8EA79A7140524A67A70EDB680BC6C5B2267405E8A624376D9BF342CDF6FCE"
+  },
+  {
+    "path": "vofa-profile\\cache\\qmlcache\\46b3a01aa129d6986bbdc19d2c360c8b6e3584f4.qmlc",
+    "sha256": "7F83444FBD00F27CE14633D674A5FFB5D1CD5F0E1999AA8C5B87ADBCCC623E53"
+  },
+  {
+    "path": "vofa-profile\\cache\\qmlcache\\4c20274df4c263753302caadd91025e29564f478.qmlc",
+    "sha256": "0AB32AE61D0B30BCDA19BBCADDBB0CA5B25C2E49CDFEBC1F51D5B6D38A5E6D0C"
+  },
+  {
+    "path": "vofa-profile\\cache\\qmlcache\\4c5718c8bc110ce90f0dbc827ba21437c6ff2ec3.qmlc",
+    "sha256": "EB72F754174409221A3412F44C5759F0225B8F8E95AD3B1D5D606C7C2D3DCC4C"
+  },
+  {
+    "path": "vofa-profile\\cache\\qmlcache\\4cd559242ba6ab4e3f2efd54dd0bd171f3d0b67a.qmlc",
+    "sha256": "A0BB35EEB68C32428E1EF111505B2412FEF799C8DD6F7B60B7DE73440E5EBA16"
+  },
+  {
+    "path": "vofa-profile\\cache\\qmlcache\\507b532306dc57a70dba6d385fa1db221bdc1196.qmlc",
+    "sha256": "F80B28281EBE3B69A999D45CC52A2DFB7CCA7ADE058B34A3E884991710C8FE81"
+  },
+  {
+    "path": "vofa-profile\\cache\\qmlcache\\50fbdd396e91235d26abf50f41273f18e4859ddf.qmlc",
+    "sha256": "2E42B8B47540B61444D3F53CDC5914569B7259F5C07A1114E02EFEF211A63253"
+  },
+  {
+    "path": "vofa-profile\\cache\\qmlcache\\5470b016ca936880ee6a490de0115d0f7a9942d9.qmlc",
+    "sha256": "FF83993F671033AFBDBC54C8BFC2669AE907F2C6E0CFAE3FAFAA4DDE1DAFB602"
+  },
+  {
+    "path": "vofa-profile\\cache\\qmlcache\\56647f22b04256d9facae05208d0f04b7cae21f7.qmlc",
+    "sha256": "5E0018B7655F92F66DC624516B9592CA8EC360895D7C0E61958397CA8E02E8FC"
+  },
+  {
+    "path": "vofa-profile\\cache\\qmlcache\\583a1d037d34d546dcf188037c050cca35bc8a56.qmlc",
+    "sha256": "9B3479B5245D54286C79A295A73172D253FA61BA9E8EA0BEBA48DC418F14FF96"
+  },
+  {
+    "path": "vofa-profile\\cache\\qmlcache\\5bf069aabb850cdf69c4b4e0426456aa8a3023d5.qmlc",
+    "sha256": "6F1B4F8D94BEE6B04D2AC777AB31651A672A8F97938C6BF3AD4F3C304BDC28CF"
+  },
+  {
+    "path": "vofa-profile\\cache\\qmlcache\\5c44d84ea140752104760a2d5540111bf3693efa.qmlc",
+    "sha256": "DBBEBACEB3F3CCC2A16DB64FE6DF5F48FF4DFCA83AC8ACDBEEFE9F823C728F31"
+  },
+  {
+    "path": "vofa-profile\\cache\\qmlcache\\5c6074a1d3c72e793a5a4ba2617e99b809989b05.qmlc",
+    "sha256": "6E8B90C81DE6DB4BAC98B340BBEF5A33642E09A44B0FB8EC42A616A05BF33872"
+  },
+  {
+    "path": "vofa-profile\\cache\\qmlcache\\5dc3bf8861a3f8b4b676552993b44c11e7d7c4dd.qmlc",
+    "sha256": "0C1C6DF8AA741C4DAC0CEF9298BF0F411900B24153C7E76EFAC16C3888FEFAFD"
+  },
+  {
+    "path": "vofa-profile\\cache\\qmlcache\\602042af67698cb6f8d9f96e1bd0eaf65f1210f3.qmlc",
+    "sha256": "408087E1792A64401B14DA3E5EFC1F42EA4E1C3374CE84260F1D963501038D2C"
+  },
+  {
+    "path": "vofa-profile\\cache\\qmlcache\\61accd8e876945fa3c9c292dbf54cbd4c7c2c28c.qmlc",
+    "sha256": "53137B19036AB51EC3F4E6355B2FC528A7FB4B8FDFDCECC8349D4A1B5095E2B6"
+  },
+  {
+    "path": "vofa-profile\\cache\\qmlcache\\67057cc8f70a989d4408f1d675d759462d63f32e.qmlc",
+    "sha256": "B3187C9CCE0DE99E3AF5480DC3C078AD725811BA8A55C16ACCEABE1BCA638D25"
+  },
+  {
+    "path": "vofa-profile\\cache\\qmlcache\\685e4b4703c4f23b5f2b56096caee4517512204e.qml.defaultc",
+    "sha256": "605D69FD13BC06E5F804F7CA9BA7A750C4CE811499E51D453959EFB82C3F1610"
+  },
+  {
+    "path": "vofa-profile\\cache\\qmlcache\\68e84375d377627842ea91b60c178e70edbebbe0.qmlc",
+    "sha256": "0CB951599415AD2170856172AD29173B64D54CE461AC75A3E857B1590668AB6A"
+  },
+  {
+    "path": "vofa-profile\\cache\\qmlcache\\691457a2a48aad1e983134a987a9e6b552571b27.qmlc",
+    "sha256": "266F73A87D4C9C22D23946F356DF9D9139A584FB3D84BBF52D5DB27E0701B7C3"
+  },
+  {
+    "path": "vofa-profile\\cache\\qmlcache\\6b07f227ec71c1a3ab2fd784e176a19209e47057.jsc",
+    "sha256": "D6D8AEE61F35E4FAC925939B128967F963553173E80DC1BD7FF2A121085F717F"
+  },
+  {
+    "path": "vofa-profile\\cache\\qmlcache\\6bb749b9389916569fd10dd94b32cfe49b12f6e4.qmlc",
+    "sha256": "96D3EF62346FF04D6C213B1489C95F69B83B2E2C048B229CFF5FDB54B3C34C94"
+  },
+  {
+    "path": "vofa-profile\\cache\\qmlcache\\6c01a88c7b39be6075904da51b5ddaecb62e1799.qmlc",
+    "sha256": "C4E7BACB7F0D086772069C095AD86CB3CB48750F41E60C67246BAA82A5827F12"
+  },
+  {
+    "path": "vofa-profile\\cache\\qmlcache\\6c7e550808013d9a485a21e6090e697440348283.qmlc",
+    "sha256": "7C2EBBD263D2D7928AA970ED483B24B8FA0D2BCA7BB545181FB68469735F2D1C"
+  },
+  {
+    "path": "vofa-profile\\cache\\qmlcache\\6c91a71c62579a222908a040d7b614e808845971.qmlc",
+    "sha256": "08AB502428A1D18104889B0F86E6DE2A0EBC5058C44795835ADC80FFCD8894CF"
+  },
+  {
+    "path": "vofa-profile\\cache\\qmlcache\\6e0c371db2a76f740ffb024bbd8c83444c9c4f68.qmlc",
+    "sha256": "5669A68DAD5A512C9144499A96A5D14F1DBFF87C41F82FB8E62E043B0D5E32E3"
+  },
+  {
+    "path": "vofa-profile\\cache\\qmlcache\\7087e0cc24c523904b3ce7e80c2da80426f8936b.qmlc",
+    "sha256": "62B693753FCA45883698F4F55EEB3D5D6B2C4A304D0B160DAF9BE878A2EDDE4B"
+  },
+  {
+    "path": "vofa-profile\\cache\\qmlcache\\71d70f6f7449e3b1f524226c479aad56a7db454b.qmlc",
+    "sha256": "DF057D603959C6C68F0C2E2AF24495F03650852D0C7D84C6809799E770898582"
+  },
+  {
+    "path": "vofa-profile\\cache\\qmlcache\\764491f39a190ce4784fe9fb5f9321d6a83a6923.qmlc",
+    "sha256": "852171039301ABB078E681D3B265EF8716A405CCCD12D4A203B4355B5FED1E0A"
+  },
+  {
+    "path": "vofa-profile\\cache\\qmlcache\\8021d80e171ad677287b7681f35fa93da749dc7b.qmlc",
+    "sha256": "C8C80EA5DF4C2364F8A7B1C91103C4FEEC532112AD896E71FE85720A4A534FB9"
+  },
+  {
+    "path": "vofa-profile\\cache\\qmlcache\\802e030478ec405ae28b5007b29a5f24591f7a58.qmlc",
+    "sha256": "F0493C43443931EC715A6576F66013833F0E15BA88F6252B173540A5A8255C77"
+  },
+  {
+    "path": "vofa-profile\\cache\\qmlcache\\874b8483aef0abc4ccd1dd766e52c38352aabba6.qmlc",
+    "sha256": "954C74E09D56B891A09AC99DE9B3611D747177B28EBB95603CB74818FFEF32FE"
+  },
+  {
+    "path": "vofa-profile\\cache\\qmlcache\\8bc144baffa0eb5ecaa58151cb0cf2cce7db3596.qmlc",
+    "sha256": "E133219EE73544707788A34DB88F7815658C6EE01BDB5554C0A0FBFA757DA5AA"
+  },
+  {
+    "path": "vofa-profile\\cache\\qmlcache\\8cd0905b43282fcd649d7caecc95276e9b590bb6.qmlc",
+    "sha256": "4B95F765F5555AC6B1F245EEADC20D1C71DDEB6C0B0AA6DFEC9BDA1D52D426A3"
+  },
+  {
+    "path": "vofa-profile\\cache\\qmlcache\\8d35d37555c9ddc43cbac698efa637a3af08844d.qmlc",
+    "sha256": "042C190D4F2F35DF6F8C762B6FA29DEB21AF25CC3920EDF00F964829B34D1A00"
+  },
+  {
+    "path": "vofa-profile\\cache\\qmlcache\\8da7a6419e113c9b1deb4780158d7ab5fa7e0d27.qmlc",
+    "sha256": "5DC2B6233A35407280D8E64A1DF85E4E95F98A25E699975E83BF6CD2F952C242"
+  },
+  {
+    "path": "vofa-profile\\cache\\qmlcache\\91d4f5f53dd76497807c5854141aca9de4bfe53d.qmlc",
+    "sha256": "9E31410EC74CB87D0D31CCC2F99E52D29C1F972E92E5CFD3B5BFCD054E8F7716"
+  },
+  {
+    "path": "vofa-profile\\cache\\qmlcache\\95a8b5eb4b9d209a46517148d3490ca93123bfc6.qmlc",
+    "sha256": "56B8C5649777F861D38F3C227F3471D58BCC027A059EF60C4B9492E53B86F54E"
+  },
+  {
+    "path": "vofa-profile\\cache\\qmlcache\\9677e38180940561dad88d1a50511f39bbf51cc9.qmlc",
+    "sha256": "2F0F481A8BD5366B6F349958E2B2B83B47F1B3F000ABE318AF8000094BCEB5BB"
+  },
+  {
+    "path": "vofa-profile\\cache\\qmlcache\\969e74b413fdf907ec536ec743652a34f1e77c03.qmlc",
+    "sha256": "E44A39AF40C82F07D8802C83174D00D81C21B18CCB1E0B862D9D5212FEBC9DA1"
+  },
+  {
+    "path": "vofa-profile\\cache\\qmlcache\\97ad70791558522d10cc05bb5820d3ed7a3687b9.qmlc",
+    "sha256": "267132799A94F8EBF53CB9F2DD5BD36D7F0B62925E1003156C6090CEE7F70084"
+  },
+  {
+    "path": "vofa-profile\\cache\\qmlcache\\9836a187236ef73bb7bc82ab0f8f7eaf2093ba40.qmlc",
+    "sha256": "3C2310DB50CE33164F7212ADE0A2BB918530C5BC7F10C2D5D288823935DC5138"
+  },
+  {
+    "path": "vofa-profile\\cache\\qmlcache\\9a309ef433294ff651d8dcae4451f3da323069fd.qmlc",
+    "sha256": "8A583FC934E27E3DCD4850A8EEC7F1F29199D3F29FD4C01B17B2B4DF1A6D91D0"
+  },
+  {
+    "path": "vofa-profile\\cache\\qmlcache\\9c2fec7c59b27b430564322c18b836a7a7b7aaf6.qmlc",
+    "sha256": "73C89303520DEB3343A154C4EBBBB7B689E2D7F3B562CD56CFCF024D1CF84011"
+  },
+  {
+    "path": "vofa-profile\\cache\\qmlcache\\a26018a2dfd4adde3e3191b56f7323f042390e1f.qmlc",
+    "sha256": "9213D457F5D915A1E17E8938277A662A37B6A7E600C6508EB466D89D467BBF3D"
+  },
+  {
+    "path": "vofa-profile\\cache\\qmlcache\\a793e3e0d1afa28806699d88759463837cf7875f.qmlc",
+    "sha256": "F74473AD8F7DF6B2BDE7B9C104D04168BD6737FDF36B890CB668DBA3FE576BDF"
+  },
+  {
+    "path": "vofa-profile\\cache\\qmlcache\\a7e4c9b223dfde47ee25dd251a456dfd6bfec7bb.qmlc",
+    "sha256": "56B20C42B8A77F20EC3D5CFC385870E7F944A02122DAA9D23794C19139A9011F"
+  },
+  {
+    "path": "vofa-profile\\cache\\qmlcache\\aa40874ce2418635a6077d8b3fddbd3b9ca68cdc.qmlc",
+    "sha256": "B7D9693B3347C60A995895867433014ED2E4487EB74921C5FFD13B3F26F6087D"
+  },
+  {
+    "path": "vofa-profile\\cache\\qmlcache\\aabb057b464b082d1e914d272c592c2b1e64b976.qmlc",
+    "sha256": "10786E4F6A2BAB97A239460811D175F793DA79EEF05363A321CBF1A7C5434EF5"
+  },
+  {
+    "path": "vofa-profile\\cache\\qmlcache\\aba29958a17863725ef14bedb16a0bad3bf17f6a.qmlc",
+    "sha256": "54590752019BD57BF888020B1F4F9A8BC43B770FFE6CC903069BE4DAC239001B"
+  },
+  {
+    "path": "vofa-profile\\cache\\qmlcache\\ac4358be4e9a3cdeb4a8e1d576ec478aa216e9b9.qmlc",
+    "sha256": "E57AAAC72C5FA842451BDC0362177FB657EB3DFECD2DE3AE98C55702F0EF2F82"
+  },
+  {
+    "path": "vofa-profile\\cache\\qmlcache\\acb20d584fb965f262e6592de30d88ca2c52ab54.qmlc",
+    "sha256": "C550AB0007746AB5379753B1161A6BA800AFA12A300E2875CBCC1E2022E77E92"
+  },
+  {
+    "path": "vofa-profile\\cache\\qmlcache\\b68e6a37d34e92db328c6582debf9e2ba2e75ea8.qmlc",
+    "sha256": "7D3288CDE882E38EBF3688C9E43F9B192D9A84C6C69A96CD92EC9440CF5DBDEC"
+  },
+  {
+    "path": "vofa-profile\\cache\\qmlcache\\b6aacef720a1e5eda80814e2b9ee2da51500c0e6.qmlc",
+    "sha256": "73FCD46EBA77017C961C8092368A666F026A8E61EBDBB684794C0704BE7BC967"
+  },
+  {
+    "path": "vofa-profile\\cache\\qmlcache\\b74b30e7865557b03406412003997a71a8abfcd3.qmlc",
+    "sha256": "72F00CDC495D5936BB7E2481C113BD173EB99626381E794AB55BEF3B9D3CEA16"
+  },
+  {
+    "path": "vofa-profile\\cache\\qmlcache\\bafeee56345834beb46914ca19ffe366936d6adf.qmlc",
+    "sha256": "432515867CAC37339575CCFD70B1266DA06CD5B51A13C80E7DF2075A0128E657"
+  },
+  {
+    "path": "vofa-profile\\cache\\qmlcache\\be060aa7888d092721e1988e5235fa48f9461b8c.qmlc",
+    "sha256": "19D66D29934BEE8945C664070CDA1CE336D431725EE52BB0FFFC49316445772F"
+  },
+  {
+    "path": "vofa-profile\\cache\\qmlcache\\c1730c8d9e55cceab0f83518f07c3d6aaf2ee47d.qmlc",
+    "sha256": "57B029AD549A16A1F58B5D380714B89D9BDBB47E112CEF951B6F148A8622842A"
+  },
+  {
+    "path": "vofa-profile\\cache\\qmlcache\\c63eb40f40d0f2cf5b698831fa1deedf2ba0c1a3.qmlc",
+    "sha256": "0D8AB3B4227258DB20FEC42B5289971C64247FB7A0A99914ED3E0C8DCCB035BB"
+  },
+  {
+    "path": "vofa-profile\\cache\\qmlcache\\c71f8b4221f853e90497f55014eb86fdeba939d7.qmlc",
+    "sha256": "B4C0C040D82C54845B754FB5216865A34EAF60599DDCDF611FBBC22915366EE5"
+  },
+  {
+    "path": "vofa-profile\\cache\\qmlcache\\c79b1fed7d066e6a7e27b35e7b72090c24fb8945.qmlc",
+    "sha256": "4CA0C5DD6573DCF8A1E48A885DD0F60B0773E0422F72B398B314F0B50326BAC9"
+  },
+  {
+    "path": "vofa-profile\\cache\\qmlcache\\c7f5d769a1cf8c7f79053219959679b2a01cd04a.qmlc",
+    "sha256": "D8CD6BBFCD21EE84C21F444642EF4B3208BEE497F25968B61E3C4C510D237D37"
+  },
+  {
+    "path": "vofa-profile\\cache\\qmlcache\\cc0d36d0d1084657f4ef858f0ab47e0ac4b90f35.qmlc",
+    "sha256": "3BCD2E8D6E271E0B4255B78773EEAEC52C4973D620895CC6748585B0071CA8C2"
+  },
+  {
+    "path": "vofa-profile\\cache\\qmlcache\\ce09c8ae96dbd2ed4c617704e019f0f5026969d9.qmlc",
+    "sha256": "F75815A05CE7264007267973E23FCED9F38DD671BCEABDEDFFDA1122D6B06676"
+  },
+  {
+    "path": "vofa-profile\\cache\\qmlcache\\cfd09ee66c5bd9c9b4cf10dc87222e0d75a47a12.qmlc",
+    "sha256": "78B8599DC680800E02D90C1F4C11CF72E2EE7B20456DEA85167A3457CE5C203A"
+  },
+  {
+    "path": "vofa-profile\\cache\\qmlcache\\d0c9e958c5046dce13a5c8518484c4ccc32212c0.qmlc",
+    "sha256": "669F4C96C2E3666E0E59F30DDF5E786A245A373E2DC6D7CD4CEFFE9B7AAD398C"
+  },
+  {
+    "path": "vofa-profile\\cache\\qmlcache\\d187bc00aea82f611b36f4aa4ee4b4fcae66f2a7.qmlc",
+    "sha256": "D891A387D15329A5F27778226EF5CE2CDC0B2D01C930FC63667EEA2626D97144"
+  },
+  {
+    "path": "vofa-profile\\cache\\qmlcache\\dc223a49c99363e3e6c031586f678de3095b962c.qmlc",
+    "sha256": "8F60527C293919D22B03D2EAFD80B08546E87248961E273421210E32B298AB90"
+  },
+  {
+    "path": "vofa-profile\\cache\\qmlcache\\dde6a37939192016eee55c8aa2c59e43c2c65174.qmlc",
+    "sha256": "121F237815D5A156309230B12EA50F6F9FEBE2F6EBB478D1D9A0CD03089FA6A1"
+  },
+  {
+    "path": "vofa-profile\\cache\\qmlcache\\e15f40bcaeaa20ce46fea1395177e275b4261a1e.qmlc",
+    "sha256": "880EE8D67BCA75BD1570261208DF37ECC306B38B3907AC80A95F8C396ACBEFFA"
+  },
+  {
+    "path": "vofa-profile\\cache\\qmlcache\\e1a9b382832aa96045a8d418580cae1af6f0bcd9.qmlc",
+    "sha256": "D7C2B1991AE0DD8CB8F8D4F519350D736FC5C944C974689FC13F88E30DAF5B1B"
+  },
+  {
+    "path": "vofa-profile\\cache\\qmlcache\\e6add2b98fdff2346c27c98516a293f5844a4392.qmlc",
+    "sha256": "43E23A67A1FE25C52598716D248CE7AEAB97FB3A6035DB94B7969AEB0D210B4D"
+  },
+  {
+    "path": "vofa-profile\\cache\\qmlcache\\e843315468730abf5c4e431eed61aec57cdc0076.qmlc",
+    "sha256": "6BDFDF3B809DADBA76255E0F7B11682D9CFD596D2955EDA0E9C87289A651F533"
+  },
+  {
+    "path": "vofa-profile\\cache\\qmlcache\\eaa3785ce8f47b915773c8bb399a6445aae9b0de.qmlc",
+    "sha256": "9256FC3C1E11DAB3EFD9688C5E69FA9A9EDBCB8EF13C1631557251FA1190DE52"
+  },
+  {
+    "path": "vofa-profile\\cache\\qmlcache\\ec3300b0d84f503b9df2d8c02c7fbfc9a15af610.qmlc",
+    "sha256": "8FE112D24529528D9736AA2C92473082BFAD66EC6B8F7F7DCEFF9CCD0614A6B5"
+  },
+  {
+    "path": "vofa-profile\\cache\\qmlcache\\f12c344c2dab5f6fad6f53c2ccaf7d404abac942.qmlc",
+    "sha256": "A32D4C9348ACFCD02A0FC4818BBFF7983483D22E88AA8ABE339463DEAB80049C"
+  },
+  {
+    "path": "vofa-profile\\cache\\qmlcache\\f1b3ec7db9d0ef11bc8dacc3d9e0edc9aeb7bf8e.qmlc",
+    "sha256": "FD363D8CB594F19CAF42AB7F2BA5531D4F87C4C4DD06E10225A7E58DF20A59B0"
+  },
+  {
+    "path": "vofa-profile\\cache\\qmlcache\\f237d6560e1153d3d5631aa689c86b7519f9378a.qmlc",
+    "sha256": "DE9E2F6F38E76E9A7A51F1FF9C087094731AD78705757281217E8883EA212945"
+  },
+  {
+    "path": "vofa-profile\\cache\\qmlcache\\f2a20e7ecf5c55ac3b5bf924b992d539f1027277.qmlc",
+    "sha256": "89F5846D8B5B0E266880D218551740EFB18C0D2BB4141AD0FF2AF55892E55B9F"
+  },
+  {
+    "path": "vofa-profile\\cache\\qmlcache\\f2accc21aef1b39d23f2504c80398a1527bde271.qmlc",
+    "sha256": "44EAF902E061F5B2C5D45B4118A23988EB4C81E12A87F3DB24BF9FAC09A1292F"
+  },
+  {
+    "path": "vofa-profile\\cache\\qmlcache\\f42c96bcd9099600fbd067086a4c103c1014e27e.qmlc",
+    "sha256": "41484DC4022BF6DF29943EE0F40E9A42C6B346733028337966F658B093843832"
+  },
+  {
+    "path": "vofa-profile\\cache\\qmlcache\\f7a69848ad53be8e86db96f4835c125f00f583fa.qmlc",
+    "sha256": "06197F1525D44B83A420027C8FB920AEC4DFBDD4C2ECFADFF992A48F886FFF4F"
+  },
+  {
+    "path": "vofa-profile\\cache\\qmlcache\\f86af34e2aa2773121da4310b81a0f71a6abce14.qmlc",
+    "sha256": "B8D448F7DD2D8A8237A98C364FFE9A83D1C87A603686E907098A2F1F2949AD19"
+  },
+  {
+    "path": "vofa-profile\\cache\\qmlcache\\fc501c2ec445f39c8cf605b10498931c495d3510.qmlc",
+    "sha256": "E0FDCB2E16C563F2AF23229B1BE3973E12F1F24E91158CFD2CB7B12C5F0FD0E7"
+  },
+  {
+    "path": "vofa-profile\\cache\\qmlcache\\fef4bd209622f4393ebbf0954d5549eddd6d039c.qmlc",
+    "sha256": "C2B2F11AF4C8A50134AC9F33597CDBEF34D6AE2140DC4B62CE3F58728182FE46"
+  },
+  {
+    "path": "vofa-profile\\cache\\qmlcache\\ffaa91658d22df490fe0757624d5e42e2534c3b8.qmlc",
+    "sha256": "A3A4E21A911D561A2F8CB5FDBB60EFE564638627BAB8734C413F570DFF65261A"
+  },
+  {
+    "path": "vofa-profile\\context\\yaw_pid_1792327055109.json",
+    "sha256": "F48879325D761A9D9C2F05CE2AE0209386A7CFB1F0E51A39745FAA233E95AA97"
+  },
+  {
+    "path": "widgets\\RQILPJ.json",
+    "sha256": "F0759B78DA2D1CBE008FC4812F79F597F98D9AC43E81FDC57128A8C539C76477"
+  },
+  {
+    "path": "widgets\\zPnXxb.json",
+    "sha256": "F0759B78DA2D1CBE008FC4812F79F597F98D9AC43E81FDC57128A8C539C76477"
+  },
+  {
+    "path": "widgets\\bound_bt\\bound_bt.qml",
+    "sha256": "304C321A6BDCF8F1872ED40D4804353F2AC483B523AD92488F9FFAF81791E1F9"
+  },
+  {
+    "path": "widgets\\circular_gauge\\circular_gauge.qml",
+    "sha256": "CB1D6568E3529E54AA135A22F8537315533E595740E4BA2095EDF5638DC55B43"
+  },
+  {
+    "path": "widgets\\circular_gauge\\images\\needle.svg",
+    "sha256": "346EFD157D904251BFFC8BB639655189C1AECD79B050584A48A3FAB87E3CA51E"
+  },
+  {
+    "path": "widgets\\cube\\Arrow.qml",
+    "sha256": "79A272AA0C63C39CB215510FA2624ADD9D9F1A355CD750E282D17017D85F754D"
+  },
+  {
+    "path": "widgets\\cube\\cube.qml",
+    "sha256": "9CD4BCC2D7B8B81EA18DB40B19969E4C80D169AB5A9586DC87E23EC9C0E0958F"
+  },
+  {
+    "path": "widgets\\cube\\cube.stl",
+    "sha256": "D6C1199DBEAD977AFC260719A8888C48986F4E0C62604A952348214AFA7B40E2"
+  },
+  {
+    "path": "widgets\\cube\\Mesh.qml",
+    "sha256": "398AB41597AB195559D987791BE65DC6598D4136CF0F7EB94597D9D0077CBF81"
+  },
+  {
+    "path": "widgets\\ExtraButtonDelay\\ExtraButtonDelay.qml",
+    "sha256": "1FEBA7E47DC61F3F42680CC07E9AB847BCCEB8CB43FFA3A3B37E2F01E5E967AE"
+  },
+  {
+    "path": "widgets\\ExtraButtonToggle\\ExtraButtonToggle.qml",
+    "sha256": "9B0112E64CEF53B97E58DD93EE538FE1E8BA8EF8BA5DC27EB4A73E39A3618A4A"
+  },
+  {
+    "path": "widgets\\ExtraDial\\ExtraDial.qml",
+    "sha256": "3FD2FE0D4C86D18B50E34A23C534D13EE5E64E28FF0E0B93FF83A9BE49118B40"
+  },
+  {
+    "path": "widgets\\gauge\\gauge.qml",
+    "sha256": "CA65F04B67189EFEA6F07C6A749F16660A25030C5940628F0B937DCD3D587B6D"
+  },
+  {
+    "path": "widgets\\image\\image.qml",
+    "sha256": "56FD9956DA5B397A77BBBF93A342CD856BC192B2A12E21CBC03B19B67CED3BB0"
+  },
+  {
+    "path": "widgets\\image\\effects\\Effect.qml",
+    "sha256": "624C6C196D1481DEF698785E3C7BEA331EFAE4E2D13CCB4032D378FC095098B8"
+  },
+  {
+    "path": "widgets\\image\\effects\\EffectBillboard.qml",
+    "sha256": "918F55BC47FEA9CA7F032C964F2A560AC9F40C1DE2695320368C67F67CC6BC46"
+  },
+  {
+    "path": "widgets\\image\\effects\\EffectBlackAndWhite.qml",
+    "sha256": "64F29F69F10C7571E192BB74A246F9E8017A5226FF7E9F0D8C197C5E9F77B581"
+  },
+  {
+    "path": "widgets\\image\\effects\\EffectEmboss.qml",
+    "sha256": "6D615AFA41617803426673CFD6AD78131D75D88205C6878954EAC408D2FD23DB"
+  },
+  {
+    "path": "widgets\\image\\effects\\EffectGaussianBlur.qml",
+    "sha256": "A5EDC5563BDE2D0E2EC53B652347BD7A3F75FE065C6988DD2B4011C4F3693F42"
+  },
+  {
+    "path": "widgets\\image\\effects\\EffectGlow.qml",
+    "sha256": "C8BCD8C49C42EB076D0629E20CD856B753EEFE5D51E79BB318AAC0B405E49200"
+  },
+  {
+    "path": "widgets\\image\\effects\\EffectIsolate.qml",
+    "sha256": "1A6635AC7AC973FCE751258D9C133FAF8080A530C7DC87AC91D859B0B1763D0B"
+  },
+  {
+    "path": "widgets\\image\\effects\\EffectPassThrough.qml.default",
+    "sha256": "135317EF0D3FEDAB8B20AD33B8DB2355DF51D547AFCA664E8F5683D1E0539AA7"
+  },
+  {
+    "path": "widgets\\image\\effects\\EffectPassThrough.qml.defaultc",
+    "sha256": "8BBAC8A1598922034D175FFFB6EE0F3700BFE5873A51ADC2DD47F748EA72BC6C"
+  },
+  {
+    "path": "widgets\\image\\effects\\EffectPixelate.qml",
+    "sha256": "A89F291A1EC6C2655497BD23E2C2172DAF40E94BB6F3437A6CF421F05AB50D4C"
+  },
+  {
+    "path": "widgets\\image\\effects\\EffectPosterize.qml",
+    "sha256": "08F5564F78F29DD922935D9796D691CB9AFE963635FF446788DFD60627EFAABC"
+  },
+  {
+    "path": "widgets\\image\\effects\\EffectSepia.qml",
+    "sha256": "AA3D087C5E013F19BF1E6B20D1FE512B38A3145CBF997B6E64CC263FCDF3DF9F"
+  },
+  {
+    "path": "widgets\\image\\effects\\EffectSharpen.qml",
+    "sha256": "3AF022F05DA950B6BC2C6B3FD458BB0630BA011BBAC2E3A2073ED9B451E3B7C3"
+  },
+  {
+    "path": "widgets\\image\\effects\\EffectShockwave.qml",
+    "sha256": "9B26B3450103EE8221C9FBDE96C33C8CF796FBA1730616D9CEDFECACD24285F1"
+  },
+  {
+    "path": "widgets\\image\\effects\\EffectSobelEdgeDetection1.qml",
+    "sha256": "224CCD541CF10824F8C66A647F363D7916E1F40671F57886486858C1085E0B38"
+  },
+  {
+    "path": "widgets\\image\\effects\\EffectTiltShift.qml",
+    "sha256": "B7BB60305CBD0778B2CEFBC7F39FD5404BE1C502251B44DB6DBCF31B828B4552"
+  },
+  {
+    "path": "widgets\\image\\effects\\EffectToon.qml",
+    "sha256": "0B92DF0FD1E67EAF75B352CF6D26F001E9258D5C15BE22C42F6A0247286BFB23"
+  },
+  {
+    "path": "widgets\\image\\effects\\EffectVignette.qml",
+    "sha256": "940924E023D2CE7AACD6D6963A51D61A471E0565F40BB12343F4A507592D4C7A"
+  },
+  {
+    "path": "widgets\\image\\effects\\EffectWarhol.qml",
+    "sha256": "413AFA9363A3D3085A3F9D3650C6425FAD877E5AF1715728C49AA324A655DC5E"
+  },
+  {
+    "path": "widgets\\image\\effects\\EffectWobble.qml",
+    "sha256": "1721FDAFDD27213096EEB1842FD6B6C11AE77D27376F94D4347FD3EA794EB725"
+  },
+  {
+    "path": "widgets\\image\\shaders\\billboard.fsh",
+    "sha256": "BB752A0BF17A9E494151BE6975C0258AB714A10390904DB9B7134EF7E57A84C1"
+  },
+  {
+    "path": "widgets\\image\\shaders\\blackandwhite.fsh",
+    "sha256": "C6F00C8D4F8533561D8C84BFB7DC7A2831FDD4B037AADE3CE809594895906767"
+  },
+  {
+    "path": "widgets\\image\\shaders\\emboss.fsh",
+    "sha256": "D725B1F99F1B451E40EA6C93E9111B16D54A379C5DDED824827CDF8443C7DD84"
+  },
+  {
+    "path": "widgets\\image\\shaders\\gaussianblur_h.fsh",
+    "sha256": "2EA9D7EC51DFDD9BD8FAF138336AE5859F0E5C10B042434B5CAAA6584CD91614"
+  },
+  {
+    "path": "widgets\\image\\shaders\\gaussianblur_v.fsh",
+    "sha256": "0EE55FCB64ED114BA98C6585E90ECF03A2FFE61D39A8726C082DB80FC4FFB6A4"
+  },
+  {
+    "path": "widgets\\image\\shaders\\glow.fsh",
+    "sha256": "B0957BF2ABC8DCE6E9FDCB9E19759515E488C889887561C8B513683D49DFB3D9"
+  },
+  {
+    "path": "widgets\\image\\shaders\\isolate.fsh",
+    "sha256": "A0908B4B96855973F0DB897CCFC80AE2154F36DE3AD61F70D3CE6889D8F2A4EE"
+  },
+  {
+    "path": "widgets\\image\\shaders\\magnify.fsh",
+    "sha256": "0CD4655C058C8B51A6B201F65A4BFCE04F2B29DF4FFBA7F699A06D088242274B"
+  },
+  {
+    "path": "widgets\\image\\shaders\\pagecurl.fsh",
+    "sha256": "A2AB8630B813A2C8C26DABEFA96819AAD9EF245C79B874E88299CDE19BDB2A23"
+  },
+  {
+    "path": "widgets\\image\\shaders\\pixelate.fsh",
+    "sha256": "0417D5DEBAE933A88A234A1D45F8218A9F879CBA55DE56CECBAAB055023CC831"
+  },
+  {
+    "path": "widgets\\image\\shaders\\posterize.fsh",
+    "sha256": "95DCBC9020822D41BB80B0C6A40A9B09966BD877474D17F7B1CB6D1D66A0DC9C"
+  },
+  {
+    "path": "widgets\\image\\shaders\\selectionpanel.fsh",
+    "sha256": "E734FE93111F0F08FBC52B19AA088A1E6EE327A40BAB5A43A8EAD9BF5C8EBA6F"
+  },
+  {
+    "path": "widgets\\image\\shaders\\sepia.fsh",
+    "sha256": "B42189F43AE61C5385240ABD58CC692A7443F40FBDBF79D39C659A3FECEEEFB5"
+  },
+  {
+    "path": "widgets\\image\\shaders\\sharpen.fsh",
+    "sha256": "9C75FEC5EBF35F3A4C851C176E13CD36490001C249158B48CE5BB4A3AC0FE79A"
+  },
+  {
+    "path": "widgets\\image\\shaders\\shockwave.fsh",
+    "sha256": "2416A32C5F8189EDF8EB0908EDE08F00A3EBDF77AB312C351EADC0C9204206D1"
+  },
+  {
+    "path": "widgets\\image\\shaders\\sobeledgedetection1.fsh",
+    "sha256": "31A68DB1ECEDE0A4C9D25766C6D21776E267F09D74DDD3CC0B334D931FF51274"
+  },
+  {
+    "path": "widgets\\image\\shaders\\tiltshift.fsh",
+    "sha256": "C932BA1D626FF7639BE45A98219BE52D13C327749B3ADCE809164B1688C27ED2"
+  },
+  {
+    "path": "widgets\\image\\shaders\\toon.fsh",
+    "sha256": "2210C2CA5404DCDAF6E50C392F4A54AFE7C36BF00E4E35EEF5F14928097C44A4"
+  },
+  {
+    "path": "widgets\\image\\shaders\\vignette.fsh",
+    "sha256": "8AB63D2B6A8DBDCC28D6F34EBB6C7D2F9C610F0E039FD2A7F5B837A6196E9B36"
+  },
+  {
+    "path": "widgets\\image\\shaders\\warhol.fsh",
+    "sha256": "7097F53BCCF3B54D45AE4A01B1AE1D3DCF4963DA37CBAE0F22E31C6C1DCB0EB5"
+  },
+  {
+    "path": "widgets\\image\\shaders\\wobble.fsh",
+    "sha256": "6F7237450BBF8EA01801DD66B050256E4E8B10EAA1659BC0F6DE69C486F35E83"
+  },
+  {
+    "path": "widgets\\Library\\Extras\\DelayButtonStyle.qml",
+    "sha256": "0DE561969F656A519D6896C99066D8741C41CA8650EA3A5539C292F3A28A50B3"
+  },
+  {
+    "path": "widgets\\Library\\Extras\\Dial.qml",
+    "sha256": "3AFEFF80A4DE408366BAA3C959043DDF9F948471C940936EED8DDDD6F354A89A"
+  },
+  {
+    "path": "widgets\\Library\\Extras\\DialStyle.qml",
+    "sha256": "7154198ABED06152731CB696C2602825E59646E8DFF92C9492BBED32E21A53C5"
+  },
+  {
+    "path": "widgets\\Library\\Extras\\ToggleButtonStyle.qml",
+    "sha256": "02F4DF0E0B8A12700B7A5C843D972302568CBE053F702813ED94B4C1C76F077B"
+  },
+  {
+    "path": "widgets\\Library\\Material\\Dial.qml",
+    "sha256": "D69076668F28CF781EF14D79027034DF8B59BD4DF4CEACE07C28CE3A2879EB47"
+  },
+  {
+    "path": "widgets\\Library\\Material\\Joystick.qml",
+    "sha256": "4EDC6774E20B3F008B9338353AE73CFA47F5A654378A6B6E5A26D3E3CC564303"
+  },
+  {
+    "path": "widgets\\Library\\Material\\SliderHandle.qml",
+    "sha256": "8EA4B4B8B57F31994A66BBDD6657A437926CC73EFBC79BE718C4195370A6BF05"
+  },
+  {
+    "path": "widgets\\Library\\Modules\\MyRipple.qml",
+    "sha256": "AD93C95DF22B34E3BD6C25D70882120421AA797B1CF51C32B5D7C0CBF8995EF1"
+  },
+  {
+    "path": "widgets\\Library\\Modules\\MySlider.qml",
+    "sha256": "6504F52DCFB7D9F7F71798AE39747826A3377054EF8C6A49353D937D96601FC8"
+  },
+  {
+    "path": "widgets\\light\\light.qml",
+    "sha256": "0263D701BAFC0BB617D6AE340794BB562C3DB03A64F40FB12E4D198DC8AE1DF1"
+  },
+  {
+    "path": "widgets\\MaterialDial\\MaterialDial.qml",
+    "sha256": "3ACD2B6B2E5D9ECBDE14106E04E6EE0465F8E98E0FEF2892DD267E7C0935737B"
+  },
+  {
+    "path": "widgets\\MaterialJoystick\\MaterialJoystick.qml",
+    "sha256": "D821D3034E63D0D85045698689B94B5FE987FEA2C9DD461E8407FE4B6FC0928D"
+  },
+  {
+    "path": "widgets\\slider\\slider.qml",
+    "sha256": "A8E7DF99289B66C64D39122CFB2BFD1B74882AE299A2BC2353B0C67E5D5FA4D7"
+  },
+  {
+    "path": "widgets\\translations\\English.qm",
+    "sha256": "9B2F17B2DDB24085010AD5F13EC43699532C30F298B7ABC5A90732DE192AA545"
+  },
+  {
+    "path": "widgets\\translations\\TraditionalChinese.qm",
+    "sha256": "1F17007641FBDD5934695B463CFC9C016F80653CCF1145B89BED610DB6493956"
+  }
+]

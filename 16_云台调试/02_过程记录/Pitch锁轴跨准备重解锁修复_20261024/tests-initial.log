@@ -1,0 +1,5 @@
+{"name": "pitch_view_hold", "checks": 1973, "failures": 0, "first_failed_line": 0, "stage": 7, "finished": 1, "returned": true, "compile_defines": ["-DAPP_FEEDER_ENABLED=0", "-DAPP_CONSOLE_RX_DMA_ENABLED=0", "-DAPP_REMOTE_RX_DMA_ENABLED=0"]}
+{"name": "pitch_backend", "checks": 713, "failures": 0, "first_failed_line": 0, "stage": 8, "finished": 1, "returned": true, "compile_defines": ["-DAPP_FEEDER_ENABLED=0", "-DAPP_CONSOLE_RX_DMA_ENABLED=0", "-DAPP_REMOTE_RX_DMA_ENABLED=0"]}
+{"name": "pitch_gimbal_startup", "checks": 3441, "failures": 0, "first_failed_line": 0, "stage": 10, "finished": 1, "returned": true, "compile_defines": ["-DAPP_FEEDER_ENABLED=0", "-DAPP_CONSOLE_RX_DMA_ENABLED=0", "-DAPP_REMOTE_RX_DMA_ENABLED=0"]}
+{"name": "feeder_speed_view", "checks": 50085, "failures": 0, "first_failed_line": 0, "stage": 2, "finished": 1, "returned": true, "compile_defines": ["-DAPP_FEEDER_ENABLED=1", "-DAPP_CONSOLE_RX_DMA_ENABLED=0", "-DAPP_REMOTE_RX_DMA_ENABLED=0"]}
+Report: D:\Project\27电软正式批考核\16_云台调试\Output\Gimbal_Control\Tests\selftest_results_selected.json

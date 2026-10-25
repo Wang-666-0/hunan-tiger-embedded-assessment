@@ -164,9 +164,12 @@ void test_run(void)
     CHECK(state.controller.target_deg == 0.0f);
     request.step_axis = GIMBAL_STEP_PITCH; request.step_sequence = 2U;
     Apply(3048U, 1U); CHECK(PitchBackend_TakeRemoteStepEvent(&event) && event.result == 1U);
-    request.step_return_event = 1U; request.step_sequence = 3U; Apply(3050U, 1U);
-    CHECK(PitchBackend_TakeRemoteStepEvent(&event) && event.result == 3U && event.target_deg == 0.0f);
-    CHECK(state.controller.shape.active && state.controller.target_deg == 30.0f);
+    request.step_return_event = 1U; request.step_delta_deg = -30.0f; request.step_sequence = 3U; Apply(3050U, 1U);
+    CHECK(PitchBackend_TakeRemoteStepEvent(&event) && event.result == 2U && event.target_deg == 0.0f);
+    CHECK(!state.controller.shape.active && state.controller.target_deg == 0.0f);
+    CHECK(state.controller.shape.duration_ms == 200U);
+    PitchBackend_GetStep(&measurement);
+    CHECK(measurement.phase == PITCH_STEP_ABORTED && measurement.reason == PITCH_STEP_TARGET_CHANGE && !measurement.pass);
     request.step_event = 0U; request.gimbal_mode = GIMBAL_MANUAL; Apply(3052U, 1U);
     CHECK(!state.active && !state.requested && !permission && state.stop_pending);
     CHECK(state.stop_reason == PITCH_STOP_MODE_EXIT && state.stop_id == 1U && state.stopped_ms == 3052U);
@@ -240,5 +243,30 @@ void test_run(void)
     CHECK(PitchBackend_SetShape(180U, 0.3f));
     CHECK(!PitchBackend_SetShape(99U, 0.3f) && !PitchBackend_SetShape(251U, 0.3f));
     CHECK(!PitchBackend_SetShape(200U, -0.1f) && !PitchBackend_SetShape(200U, 1.1f));
+    test_stage = 8U;
+    Reset(10000U); PitchBackend_PrepareViewHold(); Read();
+    CHECK(state.monitoring && state.view_prepare_pending && !query_calls && !enable_calls);
+    Apply(10020U, 0U);
+    CHECK(query_calls == 1U && !enable_calls && !torque_calls && !state.requested);
+    CHECK(!state.active && !state.coord_confirmed && !state.zero_set);
+    test_stage = 9U;
+    Activate(12000U); CHECK(PitchBackend_StartStep(30.0f));
+    frame = Feedback(12054U, 1U, 5.0f, 100.0f); now_ms = 12054U;
+    CHECK(PitchBackend_OnFrame(&frame)); Apply(12054U, 1U);
+    CHECK(state.controller.shape.active && fabsf(state.controller.velocity_dps) > 6.0f);
+    CHECK(!PitchBackend_SetTarget(0.0f));
+    {
+        YawCascade snapshot = state.controller.cascade;
+        CHECK(PitchBackend_ReturnTo(0.0f)); Read();
+        CHECK(!memcmp(&snapshot, &state.controller.cascade, sizeof(snapshot)));
+    }
+    CHECK(state.active && !state.controller.shape.active && state.controller.target_deg == 0.0f);
+    CHECK(state.controller.shape.duration_ms == 200U && state.controller.brake.direction < 0.0f);
+    CHECK(!PitchBackend_ReturnTo(-30.0f) && !PitchBackend_ReturnTo(34.0f));
+    PitchBackend_SetViewLock(1U); CHECK(!PitchBackend_ReturnTo(0.0f));
+    PitchBackend_SetViewLock(0U);
+    permission = 0U; CHECK(!PitchBackend_ReturnTo(0.0f)); permission = 1U;
+    now_ms = 12154U; CHECK(!PitchBackend_ReturnTo(0.0f));
+    PitchBackend_Stop(); CHECK(!PitchBackend_ReturnTo(0.0f));
     test_done = 1U;
 }

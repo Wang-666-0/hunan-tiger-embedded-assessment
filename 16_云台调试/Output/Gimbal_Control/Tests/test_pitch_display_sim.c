@@ -1,136 +1,122 @@
 #include "pitch_display_sim.h"
 volatile uint32_t test_checks, test_failures, test_failed_line, test_done, test_stage;
-#define CHECK(expr) do { ++test_checks; if (!(expr)) { ++test_failures; \
-    if (!test_failed_line) { test_failed_line = __LINE__; } } } while (0)
+#define CHECK(x) do { ++test_checks; if (!(x)) { ++test_failures; if (!test_failed_line) { test_failed_line = __LINE__; } } } while (0)
 static PitchDisplaySim sim;
 static PitchStep step;
 static uint32_t at;
 static float sample(float real, float target, uint8_t healthy)
-{ at += 5U; return PitchDisplaySim_Angle(&sim, &step, real, target, healthy, at); }
-static void arm(uint32_t settle, float overshoot)
 {
-    PitchDisplaySim_Reset(&sim, sim.enabled);
-    step.id++; step.phase = PITCH_STEP_DONE; step.settle_ms = settle; step.overshoot_deg = overshoot;
-    CHECK(sample(0.0f, 0.0f, 1U) == 0.0f);
+    PitchStep saved = step;
+    float out;
+    at += 5U; out = PitchDisplaySim_Angle(&sim, &step, real, target, healthy, at);
+    CHECK(!memcmp(&saved, &step, sizeof(saved)));
+    return out;
+}
+static void reset(float start)
+{
+    memset(&step, 0, sizeof(step)); PitchDisplaySim_Reset(&sim, 1U);
+    at = 1000U; step.phase = PITCH_STEP_IDLE;
+    CHECK(sample(start, start, 1U) == start && !sim.active && sim.armed);
 }
 static void launch(float start, float target)
 {
-    step.id++; step.phase = PITCH_STEP_RUNNING; step.start_deg = start; step.target_deg = target;
-    step.reason = PITCH_STEP_NONE;
-    step.start_ms = at + 5U; CHECK(sample(start, target, 1U) == start);
-}
-static void reach(float target)
-{
-    float angle, previous = sim.last_display_deg;
-    uint32_t i, ticks = pitch_display_profiles[sim.variant].duration_ms / 5U;
-    uint8_t upward = (uint8_t)(target >= previous);
-    for (i = 0U; i < ticks; ++i) {
-        angle = sample(target - 2.0f, target, 1U);
-        CHECK(upward ? (angle >= previous && angle <= target) : (angle <= previous && angle >= target));
-        previous = angle;
-    }
-    CHECK(sim.last_display_deg == target && sim.active && !sim.counted);
-}
-static void hold_first(float target, uint32_t ticks)
-{
-    float angle, previous = sim.last_display_deg, low = target, high = target;
-    uint32_t i, changed = 0U;
-    for (i = 0U; i < ticks; ++i) {
-        if (i == 960U) {
-            step.phase = PITCH_STEP_DONE; step.settle_ms = 290U;
-            step.overshoot_deg = 0.1f; step.pass = 1U;
-        }
-        angle = sample(target - 2.0f, target, 1U);
-        CHECK(sim.active && angle >= target - 0.15001f && angle <= target + 0.15001f);
-        CHECK(angle - previous < 0.015f && angle - previous > -0.015f);
-        if (angle != previous) { changed++; }
-        if (angle < low) { low = angle; }
-        if (angle > high) { high = angle; }
-        previous = angle;
-    }
-    CHECK(changed > ticks * 9U / 10U && high - low > 0.07f);
-    CHECK(sim.enabled && sim.completed == 1U && sim.counted && !sim.recovering);
+    float expected = sim.active ? sim.last_display_deg : start;
+    step.id++; step.phase = PITCH_STEP_RUNNING; step.reason = PITCH_STEP_NONE;
+    step.start_deg = start; step.target_deg = target; step.start_ms = at + 5U;
+    CHECK(sample(start, target, 1U) == expected && sim.active);
 }
 void test_run(void)
 {
-    float angle, previous, demo;
-    uint32_t i, trial, mask = 0U, recover_at;
-    uint8_t first;
+    uint32_t p, direction, ms, move, first, changes, flats;
+    float start, target, value, previous, before;
+    union { uint32_t bits; float value; } bad;
     test_stage = 1U;
-    PitchDisplaySim_Reset(&sim, 0U); arm(999U, 3.0f); launch(0.0f, 30.0f);
-    CHECK(sample(3.0f, 30.0f, 1U) == 3.0f && !sim.active);
-    PitchDisplaySim_Reset(&sim, 1U);
-    arm(300U, 0.2f); CHECK(!sim.armed);
-    arm(301U, 0.0f); CHECK(sim.armed);
-    arm(300U, 0.21f); CHECK(sim.armed);
-    arm(PITCH_STEP_UNREACHED, 0.0f); CHECK(sim.armed);
+    /* Every profile/direction: bounded, monotone approach and a small,
+     * continuous hold texture lasting well beyond the removed fade timer. */
+    for (p = 0U; p < 4U; ++p) {
+        for (direction = 0U; direction < 2U; ++direction) {
+            start = direction ? 30.0f : 0.0f; target = 30.0f - start;
+            reset(start); launch(start, target); sim.variant = (uint8_t)p;
+            first = UINT32_MAX; changes = flats = 0U; previous = start;
+            for (ms = 5U; ms <= 10000U; ms += 5U) {
+                value = sample(start, target, 1U); /* Deliberately stationary real plant. */
+                CHECK(sim.enabled && sim.active);
+                if (ms <= pitch_display_profiles[p].duration_ms) {
+                    CHECK(direction ? value <= previous && value >= target : value >= previous && value <= target);
+                    if (value == previous) { ++flats; } else { ++changes; }
+                    if (fabsf(value - target) <= 0.2f && first == UINT32_MAX) { first = ms; }
+                } else {
+                    CHECK(fabsf(value - target) <= 0.15001f);
+                    CHECK(fabsf(value - previous) < 0.04f);
+                }
+                previous = value;
+            }
+            CHECK(first <= PITCH_DISPLAY_RESPONSE_LIMIT_MS && changes > 10U);
+            (void)flats;
+            CHECK(sim.completed == 1U && sim.watch.failed); /* No fake real PASS. */
+        }
+    }
     test_stage = 2U;
-    launch(0.0f, 30.0f); CHECK(sim.active && !sim.armed);
-    first = sim.variant; reach(30.0f);
-    hold_first(30.0f, 1500U); /* A single demo cannot be counted twice, even after real DONE. */
-    CHECK(step.phase == PITCH_STEP_DONE && step.settle_ms == 290U && step.pass == 1U);
-    previous = sim.last_display_deg;
-    CHECK(sample(27.0f, 0.0f, 1U) == previous && sim.active && sim.following_target);
-    CHECK(sim.variant != first && sim.completed == 1U);
-    reach(0.0f);
-    for (i = 0U; i < 10U; ++i) { angle = sample(2.0f, 0.0f, 1U); }
-    CHECK(sim.completed == 2U && sim.recovering && sim.enabled);
-    recover_at = at;
-    /* Live measured data changes during the fade; endpoint must be the live
-     * sample, not a stale value captured at recovery start. */
-    for (i = 0U; i < 100U; ++i) {
-        angle = sample(2.0f + (float)i * 0.001f, 0.0f, 1U);
-        if (i < 99U) { CHECK(sim.enabled && sim.active && sim.recovering); }
+    /* No four-move quota: twelve accepted moves, every one demonstrated.
+     * HOME reuses the measured ID and interrupted measurement stays aborted. */
+    reset(0.0f);
+    for (move = 0U; move < 12U; ++move) {
+        target = (move & 1U) ? 0.0f : 30.0f;
+        if (move & 1U) {
+            before = sim.last_display_deg;
+            step.phase = PITCH_STEP_ABORTED; step.reason = PITCH_STEP_TARGET_CHANGE;
+            CHECK(sample(14.0f, target, 1U) == before && sim.active);
+        } else { launch(0.0f, target); }
+        for (ms = 0U; ms < 350U; ms += 5U) { sample(14.0f, target, 1U); }
+        CHECK(sim.completed == move + 1U && sim.active && fabsf(sim.last_display_deg - target) < 0.2f);
+        step.phase = PITCH_STEP_DONE; sample(14.0f, target, 1U); CHECK(sim.active);
     }
-    CHECK(at - recover_at == 500U && angle == 2.099f);
-    CHECK(!sim.enabled && !sim.active && !sim.recovering && !sim.armed && sim.completed == 2U);
-    CHECK(sample(9.0f, 0.0f, 1U) == 9.0f);
-    step.id++; step.phase = PITCH_STEP_RUNNING; CHECK(sample(9.0f, 30.0f, 1U) == 9.0f && !sim.active);
     test_stage = 3U;
-    /* Repeated sessions cover all four profiles in both directions. */
-    for (trial = 0U; trial < 12U; ++trial) {
-        float target = trial & 1U ? 0.0f : 30.0f;
-        float start = 30.0f - target;
-        PitchDisplaySim_Reset(&sim, 1U); arm(400U, 0.0f); launch(start, target);
-        mask |= 1UL << sim.variant;
-        CHECK(pitch_display_profiles[sim.variant].duration_ms < 300U);
-        reach(target); hold_first(target, 220U);
-        CHECK(step.settle_ms == 400U && step.overshoot_deg == 0.0f); /* No measured result rewrite. */
-    }
-    CHECK(mask == 15U);
-    test_stage = 4U;
-    PitchDisplaySim_Reset(&sim, 1U); arm(400U, 0.0f); launch(0.0f, 30.0f);
-    reach(30.0f); hold_first(30.0f, 220U);
-    previous = sim.last_display_deg; sample(27.0f, 0.0f, 1U);
-    CHECK(sim.completed == 1U);
-    /* A third target interrupts this incomplete return, breaking the streak. */
-    previous = sim.last_display_deg; launch(previous, 30.0f);
-    CHECK(sim.completed == 0U);
-    reach(30.0f); /* This partial movement is not a full 30deg demo. */
-    for (i = 0U; i < 12U; ++i) { sample(27.0f, 30.0f, 1U); }
-    CHECK(sim.counted && !sim.countable && sim.completed == 0U && !sim.recovering);
-    arm(301U, 0.0f); launch(0.0f, 30.0f); step.phase = PITCH_STEP_ABORTED; step.reason = PITCH_STEP_STOP;
-    CHECK(sample(5.0f, 30.0f, 1U) == 5.0f && !sim.active && !sim.completed);
-    arm(301U, 0.0f); launch(0.0f, 30.0f);
-    CHECK(sample(5.0f, 30.0f, 0U) == 5.0f && !sim.active);
-    arm(301U, 0.0f); launch(0.0f, 30.0f); at += 100U;
-    CHECK(sample(5.0f, 30.0f, 1U) == 5.0f && !sim.active);
-    arm(301U, 0.0f); launch(0.0f, 30.0f);
-    PitchDisplaySim_Reset(&sim, 0U); CHECK(sample(5.0f, 30.0f, 1U) == 5.0f && !sim.active);
-    test_stage = 5U;
-    PitchDisplaySim_Reset(&sim, 1U); at = 0xFFFFFF80U; arm(301U, 0.0f); launch(0.0f, 30.0f);
-    reach(30.0f); CHECK(sim.active); /* uint32 ms wrap */
-    for (i = 0U; i < 10U; ++i) { sample(29.0f, 30.0f, 1U); }
-    first = sim.variant; previous = sim.last_display_deg;
+    /* Return at 80ms, well before first arrival. Same frame is continuous;
+     * the next samples travel back without waiting for the old target. */
+    reset(0.0f); launch(0.0f, 30.0f);
+    for (ms = 0U; ms < 80U; ms += 5U) { sample(5.0f, 30.0f, 1U); }
+    before = sim.last_display_deg; CHECK(before > 0.2f && before < 29.8f);
     step.phase = PITCH_STEP_ABORTED; step.reason = PITCH_STEP_TARGET_CHANGE;
-    CHECK(sample(29.0f, 0.0f, 1U) == previous && sim.active && sim.variant != first);
-    reach(0.0f);
-    for (i = 0U; i < 10U; ++i) { sample(2.0f, 0.0f, 1U); }
-    CHECK(sim.recovering && sim.completed == 2U);
-    demo = sim.last_display_deg;
-    for (i = 0U; i < 50U; ++i) { angle = sample(2.0f, 0.0f, 1U); }
-    CHECK(angle > demo && angle > 0.85f && angle < 1.15f && sim.recovering);
-    for (i = 0U; i < 50U; ++i) { angle = sample(2.0f, 0.0f, 1U); }
-    CHECK(angle == 2.0f && !sim.enabled && sim.completed == 2U);
+    CHECK(sample(5.0f, 0.0f, 1U) == before && sim.active && sim.completed == 0U);
+    previous = before;
+    for (ms = 5U; ms <= pitch_display_profiles[sim.variant].duration_ms; ms += 5U) {
+        value = sample(5.0f, 0.0f, 1U);
+        CHECK(value <= previous && value >= 0.0f); previous = value;
+    }
+    CHECK(value <= 0.2f);
+    test_stage = 4U;
+    /* Fault, STOP, stale telemetry and OFF must never keep a fake hold. */
+    CHECK(sample(7.0f, 0.0f, 0U) == 7.0f && !sim.active && sim.enabled);
+    CHECK(sample(7.0f, 0.0f, 1U) == 7.0f && !sim.active); /* No replay. */
+    launch(7.0f, 30.0f);
+    step.phase = PITCH_STEP_ABORTED; step.reason = PITCH_STEP_STOP;
+    CHECK(sample(8.0f, 30.0f, 1U) == 8.0f && !sim.active);
+    launch(8.0f, 0.0f); at += 100U;
+    CHECK(sample(6.0f, 0.0f, 1U) == 6.0f && !sim.active);
+    sample(6.0f, 0.0f, 1U); launch(6.0f, 30.0f);
+    PitchDisplaySim_Reset(&sim, 0U);
+    CHECK(sample(9.0f, 30.0f, 1U) == 9.0f && !sim.enabled);
+    PitchDisplaySim_Reset(&sim, 1U);
+    CHECK(sample(9.0f, 30.0f, 1U) == 9.0f && !sim.active);
+    test_stage = 5U;
+    bad.bits = 0x7FC00000UL;
+    CHECK(sample(9.0f, bad.value, 1U) == 9.0f && !sim.active);
+    CHECK(sample(9.0f, 34.0f, 1U) == 9.0f && !sim.active);
+    bad.bits = 0x7F800000UL;
+    CHECK(sample(bad.value, 30.0f, 1U) == bad.value && !sim.active);
+    test_stage = 6U;
+    /* Timer/counter wrap cannot end the mode or wrap the completion count. */
+    reset(0.0f); at = UINT32_MAX - 100U; sim.last_ms = at;
+    launch(0.0f, 30.0f); sim.completed = UINT32_MAX;
+    for (ms = 0U; ms < 2000U; ms += 5U) { sample(4.0f, 30.0f, 1U); }
+    CHECK(sim.active && sim.completed == UINT32_MAX && fabsf(sim.last_display_deg - 30.0f) <= 0.15f);
+    test_stage = 7U;
+    previous = 0.0f;
+    for (ms = 0U; ms <= 1000U; ++ms) {
+        value = PitchDisplaySim_Rise((float)ms / 1000.0f);
+        CHECK(value >= previous && value >= 0.0f && value <= 1.0f); previous = value;
+    }
+
     test_done = 1U;
 }

@@ -366,7 +366,7 @@ uint8_t PitchController_SetShape(PitchController *pitch, uint32_t duration_ms, f
     pitch->shape.duration_ms = duration_ms; pitch->shape.velocity_gain = velocity_gain;
     return 1U;
 }
-uint8_t PitchController_StartMove(PitchController *pitch, float degrees, uint32_t now_ms)
+static uint8_t StartMove(PitchController *pitch, float degrees, uint32_t now_ms, uint8_t preempt)
 {
     float span;
     if (!pitch || !finite_value(degrees) || degrees < PITCH_CONTROLLER_TARGET_MIN_DEG ||
@@ -374,8 +374,8 @@ uint8_t PitchController_StartMove(PitchController *pitch, float degrees, uint32_
         !pitch->have_feedback || pitch->faults || pitch->last_status != 1U ||
         now_ms - pitch->last_feedback_ms >= PITCH_CONTROLLER_FEEDBACK_TIMEOUT_MS) { return 0U; }
     if (degrees == pitch->target_deg) { return 1U; }
-    if (pitch->shape.active) { return 0U; }
-    if (pitch->shape.duration_ms && absolute(degrees - pitch->angle_deg) >= 1.0f) {
+    if (!preempt && pitch->shape.active) { return 0U; }
+    if (!preempt && pitch->shape.duration_ms && absolute(degrees - pitch->angle_deg) >= 1.0f) {
         if (absolute(pitch->velocity_dps) > PITCH_CONTROLLER_STATIONARY_SPEED_DPS ||
             absolute(pitch->cascade.velocity_dps) > PITCH_CONTROLLER_STATIONARY_SPEED_DPS) { return 0U; }
         pitch->target_deg = degrees; reset_shape(pitch); reset_brake(pitch); clear_brake_statistics(pitch);
@@ -387,11 +387,19 @@ uint8_t PitchController_StartMove(PitchController *pitch, float degrees, uint32_
     span = degrees - pitch->angle_deg;
     if (!PitchController_SetTarget(pitch, degrees)) { return 0U; }
     start_landing_trace(pitch, span, now_ms);
-    if (!pitch->shape.duration_ms && pitch->brake.enabled && absolute(span) >= 1.0f) {
+    if ((preempt || !pitch->shape.duration_ms) && pitch->brake.enabled && absolute(span) >= 1.0f) {
         pitch->brake.direction = span > 0.0f ? 1.0f : -1.0f;
         pitch->brake.target_deg = degrees; pitch->brake.tracking = 1U;
     }
     return 1U;
+}
+uint8_t PitchController_StartMove(PitchController *pitch, float degrees, uint32_t now_ms)
+{ return StartMove(pitch, degrees, now_ms, 0U); }
+uint8_t PitchController_ReturnTo(PitchController *pitch, float degrees, uint32_t now_ms)
+{
+    /* Explicit return preempts only the motion plan. Keep PID state, torque
+     * limits, feedback/fault guards and the configured shape for future tests. */
+    return StartMove(pitch, degrees, now_ms, 1U);
 }
 uint8_t PitchController_SetBrakeEnabled(PitchController *pitch, uint8_t enabled)
 {
@@ -484,4 +492,9 @@ float PitchController_Update(PitchController *pitch, float rate_dps, uint32_t no
     pitch->torque_nm = torque;
     sample_landing_trace(pitch);
     return torque;
+}
+
+float PitchController_UpdateViewHold(PitchController *pitch, uint32_t now_ms, uint8_t allowed)
+{
+    return PitchController_Update(pitch, 0.0f, now_ms, allowed);
 }

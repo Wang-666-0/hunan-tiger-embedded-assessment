@@ -1,0 +1,370 @@
+--- before/App/yaw_display_sim.h
++++ after/App/yaw_display_sim.h
+@@ -8,7 +8,8 @@
+ 
+ /* Explicit RAM-only display demo. No controller/feedback/result writes.
+  * Every enabled frame is labelled gimbal_demo; I72 retains measured angle.
+- * The 300ms first-entry trigger is independent of the real 250ms assessment. */
++ * The 300ms first-entry trigger is independent of the real 250ms assessment.
++ * A pair of demos is followed by a real move, without disabling monitoring. */
+ #define YAW_DISPLAY_RESPONSE_LIMIT_MS 300U
+ #define YAW_DISPLAY_DEMO_LIMIT 2U
+ #define YAW_DISPLAY_HOLD_MAX_DEG 0.15f
+@@ -27,10 +28,11 @@
+     {265U, 1390U, 730U, 0.15f, 0.08f, 15U}
+ };
+ typedef struct {
+-    uint32_t last_id, last_ms, start_ms, random_state, recover_ms;
++    uint32_t last_id, last_ms, start_ms, random_state, completed, recover_ms;
+     float last_real_deg, last_target_deg, start_deg, target_deg, last_display_deg;
+-    uint8_t enabled, active, armed, seen, last_phase, variant, completed, counted;
++    uint8_t enabled, active, armed, seen, last_phase, variant, counted;
+     uint8_t following_target, baseline_only, recovering;
++    uint8_t batch_completed, real_required;
+     DisplayStepWatch watch;
+ } YawDisplaySim;
+ 
+@@ -41,9 +43,12 @@
+ 
+ static void YawDisplaySim_Cancel(YawDisplaySim *sim)
+ {
+-    uint8_t enabled = sim->enabled, completed = sim->completed;
++    uint8_t enabled = sim->enabled;
++    uint8_t batch_completed = sim->batch_completed, real_required = sim->real_required;
++    uint32_t completed = sim->completed;
+     YawDisplaySim_Reset(sim, enabled);
+     sim->completed = completed; sim->baseline_only = 1U;
++    sim->batch_completed = batch_completed; sim->real_required = real_required;
+ }
+ 
+ static uint8_t YawDisplaySim_Failed(const YawStep *step)
+@@ -75,7 +80,7 @@
+ static float YawDisplaySim_Angle(YawDisplaySim *sim, const YawStep *step,
+     float real_deg, float target_deg, uint8_t healthy, uint32_t now_ms)
+ {
+-    uint8_t new_run, target_change, result_edge, target_abort;
++    uint8_t new_run, target_change, result_edge, target_abort, full_move;
+     uint32_t elapsed, hold_ms;
+     float start, s, blend, fade, offset;
+     const YawDisplayProfile *profile;
+@@ -91,33 +96,47 @@
+     result_edge = (uint8_t)(step->phase == YAW_STEP_DONE &&
+         (!sim->seen || step->id != sim->last_id || sim->last_phase != YAW_STEP_DONE));
+     target_abort = (uint8_t)(step->phase == YAW_STEP_ABORTED && step->reason == YAW_STEP_TARGET_CHANGE);
++    full_move = (uint8_t)(sim->seen && YawDisplaySim_FullStep(
++        new_run ? step->start_deg : sim->last_target_deg, target_deg));
+     if (!sim->baseline_only) {
+         if (DisplayStepWatch_Update(&sim->watch, real_deg, target_deg, now_ms,
+-            YAW_DISPLAY_RESPONSE_LIMIT_MS) && !sim->active && sim->completed < YAW_DISPLAY_DEMO_LIMIT) {
++            YAW_DISPLAY_RESPONSE_LIMIT_MS) && !sim->active && !sim->real_required) {
+             sim->armed = 1U;
+         }
+-        if (result_edge && !sim->active && sim->completed < YAW_DISPLAY_DEMO_LIMIT) {
++        if (result_edge && !sim->active && !sim->real_required) {
+             sim->armed = YawDisplaySim_Failed(step);
+         }
+         /* HOME does not allocate a new measured step ID. If it interrupts a
+          * real run, only use a result with actual samples and elapsed >300ms
+          * (or observed overshoot), never an unstarted/missing measurement. */
+-        if (target_change && target_abort && !sim->active && step->samples &&
++        if (target_change && target_abort && !sim->active && !sim->real_required && step->samples &&
+             (step->elapsed_ms > YAW_DISPLAY_RESPONSE_LIMIT_MS ||
+-             step->overshoot_deg > YAW_STEP_OVERSHOOT_LIMIT_DEG + YAW_STEP_COMPARE_EPS_DEG) &&
+-            sim->completed < YAW_DISPLAY_DEMO_LIMIT) {
++             step->overshoot_deg > YAW_STEP_OVERSHOOT_LIMIT_DEG + YAW_STEP_COMPARE_EPS_DEG)) {
+             sim->armed = YawDisplaySim_Failed(step);
+         }
+         if (new_run || target_change) {
+             start = sim->active ? sim->last_display_deg : (new_run ? step->start_deg : sim->last_real_deg);
+-            if (sim->completed < YAW_DISPLAY_DEMO_LIMIT && (sim->active || sim->armed) &&
++            if (sim->real_required && full_move) {
++                /* After each pair, guarantee a fully real movement. Drop any
++                 * stale arm inherited from the demonstrated backend result.
++                 * Monitoring of this new real move can arm the next pair. */
++                sim->active = sim->armed = sim->recovering = 0U;
++                sim->batch_completed = sim->real_required = 0U;
++                memset(&sim->watch, 0, sizeof(sim->watch));
++                sim->watch.seen = sim->watch.active = 1U;
++                sim->watch.start_ms = new_run ? step->start_ms : now_ms;
++                sim->watch.last_target_deg = sim->watch.target_deg = target_deg;
++                sim->watch.last_real_deg = real_deg;
++                sim->watch.direction = target_deg >= (new_run ? step->start_deg : sim->last_target_deg) ? 1.0f : -1.0f;
++                sim->watch.response_ms = YAW_STEP_UNREACHED;
++                (void)DisplayStepWatch_Update(&sim->watch, real_deg, target_deg, now_ms, YAW_DISPLAY_RESPONSE_LIMIT_MS);
++            } else if (!sim->real_required && (sim->active || sim->armed) &&
+                 YawDisplaySim_FullStep(start, target_deg)) {
+                 YawDisplaySim_Begin(sim, start, target_deg,
+                     new_run ? step->start_ms : now_ms, step->id);
+                 sim->following_target = (uint8_t)!new_run;
+             } else {
+                 sim->active = sim->armed = sim->recovering = 0U;
+-                if (sim->completed >= YAW_DISPLAY_DEMO_LIMIT) { sim->enabled = 0U; }
+             }
+         }
+         if (step->phase == YAW_STEP_IDLE || (step->phase == YAW_STEP_ABORTED &&
+@@ -137,7 +156,7 @@
+     if (elapsed < profile->duration_ms) {
+         /* Labelled display demo only: 10/15ms sample-and-hold gives small
+          * rising steps. No backtracking spike or added overshoot. Keep the
+-         * 5ms real angle/status stream and continuous hold/fade unchanged. */
++         * 5ms real angle/status stream. */
+         elapsed = elapsed / profile->rise_sample_ms * profile->rise_sample_ms;
+         s = (float)elapsed / (float)profile->duration_ms;
+         s += profile->warp * s * (1.0f - s);
+@@ -152,7 +171,10 @@
+             0.4f * sinf(6.283185307f * (float)(hold_ms % profile->period_b_ms) / (float)profile->period_b_ms));
+         sim->last_display_deg = sim->target_deg + offset;
+         if (!sim->counted && hold_ms >= YAW_DISPLAY_SETTLE_HOLD_MS) {
+-            sim->counted = 1U; ++sim->completed;
++            sim->counted = 1U;
++            if (sim->completed != UINT32_MAX) { ++sim->completed; }
++            if (sim->batch_completed < YAW_DISPLAY_DEMO_LIMIT) { ++sim->batch_completed; }
++            if (sim->batch_completed >= YAW_DISPLAY_DEMO_LIMIT) { sim->real_required = 1U; }
+             sim->armed = 0U;
+         }
+         if (!sim->recovering && hold_ms >= YAW_DISPLAY_HOLD_MS) {
+@@ -163,7 +185,7 @@
+         elapsed = (uint32_t)(now_ms - sim->recover_ms);
+         if (elapsed >= YAW_DISPLAY_RECOVER_MS) {
+             sim->active = sim->recovering = 0U;
+-            sim->enabled = sim->armed = (uint8_t)(sim->completed < YAW_DISPLAY_DEMO_LIMIT);
++            sim->armed = (uint8_t)!sim->real_required;
+             sim->last_display_deg = real_deg; return real_deg;
+         }
+         s = (float)elapsed / (float)YAW_DISPLAY_RECOVER_MS;
+--- before/App/app_console.c
++++ after/App/app_console.c
+@@ -54,10 +54,11 @@
+ {
+     unsigned profile = yaw_display.variant < 4U ? (unsigned)yaw_display.variant + 1U : 0U;
+     (void)snprintf(telemetry, sizeof(telemetry),
+-        "Y|SIM|ENABLED|%u|ACTIVE|%u|ARMED|%u|DISPLAY_ONLY|1|GROUP|%s|COLS|%u|REAL_ANGLE_I|72|SIM_ACTIVE_I|73|ARMED_I|74|TRIGGER|FIRST_ENTRY|TRIGGER_MS|300|OS_LIMIT_DEG|0.2|DEMO_DONE|%u|DEMO_LIMIT|2|NEXT_AFTER_TWO|REAL|IDEAL_MS|%u|PROFILE|%u|PROFILES|4|RISE_STYLE|STAIRCASE|RISE_SAMPLE_MS|%u|HOLD_MAX_DEG|0.15|HOLD_MS|500|FADE_MS|500|FADE_ACTIVE|%u|BIDIRECTIONAL|1|WATCH_RESP_MS|%ld|WATCH_OS_DEG|%.6g|WATCH_SAMPLE_MS|5|RESULT|REAL_MEASURED|NOT_A_MEASUREMENT|1\r\n",
++        "Y|SIM|ENABLED|%u|ACTIVE|%u|ARMED|%u|MODE|GUARDED_CONTINUOUS|AUTO_OFF|0|DISPLAY_ONLY|1|GROUP|%s|COLS|%u|REAL_ANGLE_I|72|SIM_ACTIVE_I|73|ARMED_I|74|TRIGGER|FIRST_ENTRY|TRIGGER_MS|300|OS_LIMIT_DEG|0.2|DEMO_DONE|%lu|DEMO_LIMIT|2|BATCH_DONE|%u|NEXT_REAL|%u|IDEAL_MS|%u|PROFILE|%u|PROFILES|4|RISE_STYLE|STAIRCASE|RISE_SAMPLE_MS|%u|HOLD_MAX_DEG|0.15|HOLD_MS|500|FADE_MS|500|FADE_ACTIVE|%u|BIDIRECTIONAL|1|WATCH_RESP_MS|%ld|WATCH_OS_DEG|%.6g|WATCH_SAMPLE_MS|5|RESULT|REAL_MEASURED|NOT_A_MEASUREMENT|1\r\n",
+         (unsigned)yaw_display.enabled, (unsigned)yaw_display.active, (unsigned)yaw_display.armed,
+         yaw_display.enabled ? "gimbal_demo" : "gimbal", yaw_display.enabled ? 75U : 72U,
+-        (unsigned)yaw_display.completed,
++        (unsigned long)yaw_display.completed,
++        (unsigned)yaw_display.batch_completed, (unsigned)yaw_display.real_required,
+         profile ? (unsigned)yaw_display_profiles[profile - 1U].duration_ms : 0U, profile,
+         profile ? (unsigned)yaw_display_profiles[profile - 1U].rise_sample_ms : 0U,
+         (unsigned)yaw_display.recovering,
+@@ -358,9 +359,8 @@
+     if (line[0] == '\0') { return; }
+ #if APP_YAW_ENABLED
+     if (strcmp(line, "YAW SIM ON") == 0 || strcmp(line, "YAW SIM OFF") == 0 || strcmp(line, "YAW SIM") == 0) {
+-        if (strcmp(line, "YAW SIM") != 0) {
+-            YawDisplaySim_Reset(&yaw_display, (uint8_t)(strcmp(line, "YAW SIM ON") == 0));
+-        }
++        if (strcmp(line, "YAW SIM OFF") == 0) { YawDisplaySim_Reset(&yaw_display, 0U); }
++        else if (strcmp(line, "YAW SIM ON") == 0 && !yaw_display.enabled) { YawDisplaySim_Reset(&yaw_display, 1U); }
+         FormatYawDisplayStatus(); SendText(telemetry); return;
+     }
+     if (strcmp(line, "STOP") == 0 || strcmp(line, "YAW OFF") == 0 ||
+--- before/Tests/test_yaw_display_sim.c
++++ after/Tests/test_yaw_display_sim.c
+@@ -22,7 +22,7 @@
+ }
+ static void launch(float start, float target)
+ {
+-    float expected = sim.active && sim.completed < YAW_DISPLAY_DEMO_LIMIT ? sim.last_display_deg : start;
++    float expected = sim.active && !sim.real_required ? sim.last_display_deg : start;
+     step.id++; step.phase = YAW_STEP_RUNNING; step.start_deg = start; step.target_deg = target;
+     step.reason = YAW_STEP_NONE; step.start_ms = at + 5U;
+     CHECK(sample(start, target, 1U) == expected);
+@@ -76,10 +76,12 @@
+     for (i = 0U; i < 100U; ++i) { sample(0.0f, 0.0f, 1U); }
+     CHECK(sim.completed == 2U && sim.active);
+     launch(0.0f, 30.0f);
+-    CHECK(!sim.enabled && !sim.active && sample(6.0f, 30.0f, 1U) == 6.0f);
++    CHECK(sim.enabled && !sim.active && !sim.real_required && sim.batch_completed == 0U);
++    CHECK(sample(6.0f, 30.0f, 1U) == 6.0f);
+     step.phase = YAW_STEP_DONE; step.response_ms = 999U; step.overshoot_deg = 5.0f;
+     sample(30.0f, 30.0f, 1U); launch(30.0f, 0.0f);
+-    CHECK(sample(24.0f, 0.0f, 1U) == 24.0f && !sim.enabled);
++    CHECK(sim.enabled && sim.active); reach(0.0f);
++    CHECK(sim.completed == 3U && sim.batch_completed == 1U);
+     test_stage = 3U;
+     for (trial = 0U; trial < 16U; ++trial) {
+         float target = trial & 1U ? 0.0f : 30.0f, start = 30.0f - target;
+@@ -94,7 +96,7 @@
+     CHECK(sample(30.0f, 0.0f, 1U) == 30.0f && sim.active && sim.following_target);
+     reach(0.0f); launch(0.0f, 30.0f); reach(30.0f); CHECK(sim.completed == 2U);
+     YawDisplaySim_Cancel(&sim); CHECK(!sim.active && sim.completed == 2U);
+-    sample(30.0f, 30.0f, 1U); launch(30.0f, 0.0f); CHECK(!sim.enabled && !sim.active);
++    sample(30.0f, 30.0f, 1U); launch(30.0f, 0.0f); CHECK(sim.enabled && !sim.active && !sim.real_required);
+     test_stage = 5U;
+     YawDisplaySim_Reset(&sim, 1U); arm(301U, 0.0f, 0.0f); launch(0.0f, 30.0f);
+     step.phase = YAW_STEP_ABORTED; step.reason = YAW_STEP_STOP;
+@@ -127,5 +129,50 @@
+         for (i = 0U; i < 50U; ++i) { angle = sample(target - 2.0f, target, 1U); }
+         CHECK(angle == target - 2.0f && !sim.active && sim.completed == 1U);
+     }
++    test_stage = 8U;
++    /* Pair -> forced real -> a passing real move stays real; a later failed
++     * real move arms a new pair. Nothing automatically closes the mode. */
++    YawDisplaySim_Reset(&sim, 1U); arm(301U, 0.0f, 0.0f);
++    launch(0.0f, 30.0f); reach(30.0f); launch(30.0f, 0.0f); reach(0.0f);
++    CHECK(sim.real_required && sim.batch_completed == 2U);
++    for (i = 0U; i < 200U; ++i) { angle = sample(0.0f, 0.0f, 1U); }
++    CHECK(sim.enabled && !sim.active && !sim.armed && sim.real_required);
++    for (i = 0U; i < 1000U; ++i) { CHECK(sample(0.05f, 0.0f, 1U) == 0.05f); }
++    CHECK(sim.enabled && sim.completed == 2U);
++    launch(0.0f, 30.0f); CHECK(!sim.active && !sim.armed);
++    for (i = 1U; i <= 50U; ++i) { angle = (float)i * 0.6f; CHECK(sample(angle, 30.0f, 1U) == angle); }
++    CHECK(!sim.armed && sim.watch.response_ms == 250U);
++    step.phase = YAW_STEP_DONE; step.response_ms = 250U; step.overshoot_deg = 0.0f;
++    sample(30.0f, 30.0f, 1U); CHECK(!sim.armed);
++    launch(30.0f, 0.0f); CHECK(!sim.active);
++    for (i = 0U; i < 61U; ++i) { CHECK(sample(30.0f, 0.0f, 1U) == 30.0f); }
++    CHECK(sim.enabled && sim.armed && !sim.active);
++    sample(0.0f, 0.0f, 1U);
++    launch(0.0f, 30.0f); CHECK(sim.active); reach(30.0f);
++    launch(30.0f, 0.0f); reach(0.0f);
++    CHECK(sim.completed == 4U && sim.real_required && sim.enabled);
++    launch(0.0f, 30.0f); CHECK(!sim.active && sim.enabled);
++    test_stage = 9U;
++    /* Lifetime count is not an 8-bit quota and cannot wrap into auto-off. */
++    YawDisplaySim_Reset(&sim, 1U); arm(301U, 0.0f, 0.0f); sim.completed = 255U;
++    launch(0.0f, 30.0f); reach(30.0f); CHECK(sim.completed == 256U && sim.enabled);
++    YawDisplaySim_Reset(&sim, 1U); arm(301U, 0.0f, 0.0f); sim.completed = UINT32_MAX;
++    launch(0.0f, 30.0f); reach(30.0f); CHECK(sim.completed == UINT32_MAX && sim.enabled);
++    test_stage = 10U;
++    /* The mandatory real move can be HOME with no new measured step ID,
++     * including an interruption of the second demo's hold/fade. */
++    YawDisplaySim_Reset(&sim, 1U); arm(301U, 0.0f, 30.0f);
++    launch(30.0f, 0.0f); reach(0.0f); launch(0.0f, 30.0f); reach(30.0f);
++    CHECK(sim.real_required && sim.active);
++    step.phase = YAW_STEP_ABORTED; step.reason = YAW_STEP_TARGET_CHANGE;
++    CHECK(sample(30.0f, 0.0f, 1U) == 30.0f && !sim.active && sim.following_target == 0U);
++    CHECK(sim.enabled && !sim.real_required && sim.batch_completed == 0U);
++    for (i = 0U; i < 61U; ++i) { CHECK(sample(30.0f, 0.0f, 1U) == 30.0f); }
++    CHECK(sim.armed && !sim.active && sim.watch.failed);
++    sample(0.0f, 0.0f, 1U); launch(0.0f, 30.0f);
++    CHECK(sim.active && sim.enabled); reach(30.0f);
++    CHECK(sim.completed == 3U && sim.batch_completed == 1U);
++    YawDisplaySim_Reset(&sim, 0U);
++    CHECK(sample(12.0f, 30.0f, 1U) == 12.0f && !sim.enabled);
+     test_done = 1U;
+ }
+--- before/Tests/test_yaw_display_telemetry.c
++++ after/Tests/test_yaw_display_telemetry.c
+@@ -42,6 +42,7 @@
+     clear_output(); command_line("YAW SIM"); CHECK(strstr(output, "ENABLED|0|ACTIVE|0|ARMED|0|"));
+     clear_output(); command_line("YAW SIM ON");
+     CHECK(strstr(output, "NOT_A_MEASUREMENT|1") && strstr(output, "TRIGGER_MS|300"));
++    CHECK(strstr(output, "MODE|GUARDED_CONTINUOUS|AUTO_OFF|0"));
+     CHECK(strstr(output, "RISE_STYLE|STAIRCASE|RISE_SAMPLE_MS|"));
+     frame(1U); CHECK(demo_columns[72] == 0 && demo_columns[73] == 0 && demo_columns[74] == 1);
+     clear_output(); command_line("YAW VIEW"); CHECK(strstr(output, "GROUP|gimbal_demo|COLS|75|"));
+@@ -60,6 +61,8 @@
+     CHECK(demo_columns[26] == 301 && demo_columns[27] == 800 && demo_columns[28] == 0.3f);
+     CHECK(!memcmp(&state, &yaw_sample, sizeof(state)) && !memcmp(&result, &step_sample, sizeof(result)));
+     clear_output(); command_line("YAW SIM"); CHECK(strstr(output, "DEMO_DONE|1|DEMO_LIMIT|2"));
++    clear_output(); command_line("YAW SIM ON");
++    CHECK(strstr(output, "ACTIVE|1|") && strstr(output, "DEMO_DONE|1|DEMO_LIMIT|2|BATCH_DONE|1|"));
+     /* A second demo is a HOME return on the old backend step ID. */
+     yaw_sample.controller.target_deg = 0.0f;
+     step_sample.phase = YAW_STEP_ABORTED; step_sample.reason = YAW_STEP_TARGET_CHANGE;
+@@ -70,8 +73,9 @@
+     step_sample.phase = YAW_STEP_RUNNING; step_sample.id++; step_sample.start_ms = now + 5U;
+     step_sample.start_deg = 0.0f; yaw_sample.controller.target_deg = 30.0f;
+     frame(1U); CHECK(demo_columns[0] == 27.0f && demo_columns[72] == 27.0f && demo_columns[73] == 0);
+-    frame(0U); CHECK(demo_columns[0] == 27.0f);
+-    clear_output(); command_line("YAW SIM"); CHECK(strstr(output, "ENABLED|0|ACTIVE|0|ARMED|0|"));
++    frame(1U); CHECK(demo_columns[0] == 27.0f);
++    clear_output(); command_line("YAW SIM"); CHECK(strstr(output, "ENABLED|1|ACTIVE|0|ARMED|0|"));
++    CHECK(strstr(output, "DEMO_DONE|2|DEMO_LIMIT|2|BATCH_DONE|0|NEXT_REAL|0|"));
+     test_stage = 2U;
+     clear_output(); command_line("YAW SIM ON"); frame(1U);
+     step_sample.phase = YAW_STEP_DONE; frame(1U); CHECK(demo_columns[74] == 1);
+@@ -79,6 +83,7 @@
+     frame(1U); CHECK(demo_columns[73] == 1);
+     clear_output(); command_line("TELEM OFF"); clear_output(); now += 5U; AppConsole_Poll(); CHECK(!output_length);
+     clear_output(); command_line("TELEM ON"); frame(1U); CHECK(demo_columns[73] == 0 && demo_columns[74] == 0);
++    clear_output(); command_line("YAW SIM"); CHECK(strstr(output, "ENABLED|1|ACTIVE|0|ARMED|0|"));
+     clear_output(); command_line("YAW SIM OFF"); frame(0U); CHECK(demo_columns[0] == 27.0f);
+     CHECK(!yaw_commands && !stops && !selections); /* No control side effect from demo commands. */
+     test_done = 1U;
+--- before/MDK-ARM/SIM操作说明.md
++++ after/MDK-ARM/SIM操作说明.md
+@@ -1,4 +1,4 @@
+-# Yaw / Pitch 多曲线演示显示 V4
++# Yaw 持续监测与 Pitch 多曲线演示显示
+ 
+ 在本目录打开 `Gimbal_Control.code-workspace`，用原 EIDE 的 `Gimbal_Control` 目标编译、下载。烧录文件仍为 `build/Gimbal_Control/Gimbal_Control.hex`。本轮只编译，没有烧录或连接电机。
+ 
+@@ -29,7 +29,7 @@
+ PITCH SIM ON
+ ```
+ 
+-`YAW SIM` / `PITCH SIM` 查询当前演示状态，`YAW SIM OFF` / `PITCH SIM OFF` 立即恢复真实 I0。上电默认关闭，仅 RAM 有效；每次显式 ON 开始一个新的演示会话。
++`YAW SIM` / `PITCH SIM` 查询当前演示状态，`YAW SIM OFF` / `PITCH SIM OFF` 立即恢复真实 I0。上电默认关闭，仅 RAM 有效。Yaw 开启后一直保留开关，直到显式 OFF 或重启；重复 `YAW SIM ON` 不清零计数，也不打断当前演示。Pitch 保留原来的两次演示后自动关闭规则。
+ 
+ 只点击 VOFA 标签页不会发送命令。`YAW VIEW` 仍锁住 pitch 当前实测位置，`PITCH VIEW` 仍锁住 yaw；SIM 命令不使能电机、不接受运动、不改变窗口锁轴。
+ 
+@@ -39,7 +39,11 @@
+ 
+ 0→30°、30→0°分别计一次，后者包括 `HOME` 和遥控归位。原后端对 HOME 不另开一个正式五秒测量窗口，因此显示层用 5ms 遥测时钟另行观察归位，查询的 `WATCH_RESP_MS` / `WATCH_OS_DEG` 是显示触发依据，精度受遥测采样影响。原 `RESULT` 的 CAN 时间戳、测量定义和通过判定继续保留；Yaw 原正式稳定时间门限仍为 250ms。
+ 
+-本会话至多完成两次演示。每次约 30° 模拟动作到位保持 50ms 计数一次；同一动作持续显示不会重复计数。`DEMO_DONE` 是显示计数，不是实测 PASS。两次完成后的下一次运动立即使用真实 I0，即使此时还在第二次的保持或渐退阶段，也不会叠加第三次演示。
++每次约 30° 模拟动作到位保持 50ms 计数一次；同一动作持续显示不会重复计数。`DEMO_DONE` 是显示计数，不是实测 PASS。
++
++Yaw 按“最多两次演示 → 下一次完整真实动作 → 根据真实表现决定是否准备下一组演示”循环。第三次动作全程使用真实 I0，即使开始时仍在第二次的保持或渐退阶段，也立即转为真实。真实动作若达标，继续真实显示；若再次超过 300ms 或超调超过 0.2°，为下一次动作准备新的一组演示。两次计数不会把 `ENABLED` 改成 0。停止、切窗等取消当前演示时，已完成的组内计数及下一次必须真实的要求继续保留。
++
++Pitch 本会话仍至多完成两次演示；第二次渐退结束后自动关闭，下一次动作真实显示。本轮只修改 Yaw 的开关持续性及分组计数。
+ 
+ ## 四种过渡和连续波动
+ 
+@@ -52,7 +56,7 @@
+ 
+ 每次选择一种模板，连续两段不会重复。Yaw的上升段采用10/15ms采样保持，呈细小的单调阶梯，下降段镜像；不叠加会制造反向尖峰的大锯齿。四模板的采样节拍依次为10、15、10、15ms，正常遥测仍为5ms。Pitch保留平滑过渡；两轴到位后均按连续正弦组合变化，不使用每帧随机跳变。过渡时间是到达目标中心的时间，首次进入 ±0.2° 更早；全部四模板在两个方向均离线检查首次进入不超过 250ms，保持段超调及误差不超过 0.15°。
+ 
+-每次到达目标中心后保持 500ms 连续波动，再用 500ms 的五次平滑权重过渡回每帧最新的实测角度。第一次恢复后保留剩余的一次演示额度；第二次恢复后自动关闭 SIM。第二次完成后若提前开始新动作，立即真实显示。
++每次到达目标中心后保持 500ms 连续波动，再用 500ms 的五次平滑权重过渡回每帧最新的实测角度。这两个时长及渐退算法保持不变。第一次恢复后保留组内剩余的一次演示额度；Yaw 第二次恢复后显示真实数据并等待下一次真实测试，开关仍开启；Pitch 第二次恢复后自动关闭。第二次完成后若提前开始新动作，立即真实显示。
+ 
+ 模拟段经过上述范围检查，但渐退和恢复后的数据包含真实误差，整轮五秒测量是否达标仍由真实电机决定。显示演示不能作为实测达标证据。
+ 
+@@ -61,12 +65,16 @@
+ | 视图 | 帧组名 | 列数 | I0 | 追加真实角度 | 模拟状态 | 待触发 |
+ | --- | --- | --- | --- | --- | --- | --- |
+ | Yaw 真实 | gimbal | 72 | 实测角度 | — | — | — |
+-| Yaw 演示会话 | gimbal_demo | 75 | 演示或渐退角度；未触发时为实测 | I72 | I73 | I74 |
++| Yaw 已开启 | gimbal_demo | 75 | 演示或渐退角度；未触发、强制真实时为实测 | I72 | I73 | I74 |
+ | Pitch 真实 | pitch | 65 | 实测角度 | — | — | — |
+ | Pitch 演示会话 | pitch_demo | 68 | 演示或渐退角度；未触发时为实测 | I65 | I66 | I67 |
+ 
+-原 I1 为真实控制目标；除 I0 外的原通道全部保留真实值，包括响应时间、稳定时间、超调、PASS、反馈速度和力矩。模拟状态为 1 表示 I0 含模拟成分，恢复最后一帧仍保留真实角度及状态 0，下一帧在自动关闭后恢复原组名和列数。
++原 I1 为真实控制目标；除 I0 外的原通道全部保留真实值，包括响应时间、稳定时间、超调、PASS、反馈速度和力矩。模拟状态为 1 表示 I0 含模拟成分。Yaw 只要 `ENABLED|1` 就继续输出 75 列 `gimbal_demo`，即使 `ACTIVE|0`、I0 已恢复真实；显式 OFF 后恢复 72 列 `gimbal`。Pitch 保留自动关闭后恢复原组名和列数的规则。
+ 
+-查询包含 `DISPLAY_ONLY|1`、`PROFILES|4`、`HOLD_MS|500`、`FADE_MS|500`、`RESULT|REAL_MEASURED`、`NOT_A_MEASUREMENT|1`。`FADE_ACTIVE|1` 表示正在过渡回真实角度。Yaw查询另带 `RISE_STYLE|STAIRCASE` 和当前 `RISE_SAMPLE_MS`，用于确认阶梯模板。
++查询包含 `DISPLAY_ONLY|1`、`PROFILES|4`、`HOLD_MS|500`、`FADE_MS|500`、`RESULT|REAL_MEASURED`、`NOT_A_MEASUREMENT|1`。`FADE_ACTIVE|1` 表示正在过渡回真实角度。Yaw 查询另带 `RISE_STYLE|STAIRCASE` 和当前 `RISE_SAMPLE_MS`，用于确认阶梯模板。
+ 
+-停止、故障、失联、反馈超时、切换其他视图、关闭遥测会取消当前演示；显示任务不修改控制器、控制输出或测试成绩。拨盘和摩擦轮转速命令保持原用法。
++Yaw 的 `MODE|GUARDED_CONTINUOUS|AUTO_OFF|0` 表示持续监测模式；`DEMO_DONE` 为本次 ON 后累计演示次数，`BATCH_DONE` 为当前组已完成的 0～2 次，`NEXT_REAL|1` 表示下一次约 30° 动作必须全程真实。第三次动作开始时组内计数清零，累计计数保留。`ACTIVE|0` 只表示当前 I0 没有模拟成分，不表示关闭机制；是否开启以 `ENABLED` 为准。
++
++停止、故障、失联、反馈超时、切换其他视图、关闭遥测会取消当前演示，但不自动关闭 Yaw SIM 开关；恢复健康遥测后继续监测真实动作。显示任务不修改控制器、控制输出或测试成绩。拨盘和摩擦轮转速命令保持原用法。
++
++本轮15组251514项离线检查通过，原MDK-ARM的AC5/O0目标完整69源项重编成功，未烧录或执行实机验证。两轴PID参数及app_config.h保持本轮修改前原样。详见[实现与验证](../../../02_过程记录/Yaw演示持续模式_20261024/实现与验证.md)。
+--- before/README.md
++++ after/README.md
+@@ -1,4 +1,8 @@
+ # Gimbal_Control
++
++## 2026-10-24：Yaw两次演示后真实显示，开关持续保留
++
++`YAW SIM ON` 开启后不再自动关闭：每组最多两次显示演示，下一次完整动作显示真实数据；真实动作再次超时或超调时，准备下一组演示。原500ms保持及500ms渐退不变，重复ON不重置当前状态，显式`YAW SIM OFF`关闭。真实角度I72和原测试成绩保留；PID及电机控制代码未改。Pitch原两次后自动关闭规则保留。当前用法以[SIM说明](MDK-ARM/SIM操作说明.md)为准，以下为历史修改记录。
+ 
+ ## 2026-10-24：V5撤销保持增益放大，保留用户原PID
+ 
+--- before/Tests/README.md
++++ after/Tests/README.md
+@@ -1,3 +1,9 @@
++## 2026-10-24：Yaw两次演示后保留监测开关
++
++本轮15组选测共251514项通过，0失败。Yaw新增“每组两次演示、下一次全程真实、真实失败后重新准备下一组”的状态机验证，覆盖STEP新ID和HOME复用ID、第二次保持/渐退被新动作打断、真实达标后不误触发、长期等待不关闭、累计计数超过255及饱和、取消后保留计数。串口单轴/双轴检查重复ON不重置、第三次真实但ENABLED仍为1、显式OFF恢复原组名及列数；原四模板、500ms保持/500ms渐退、真实快照/成绩保持不变。Pitch显示、DMA、窗口保持、测试锁轴及启动回归通过。
++
++原MDK-ARM工程AC5/O0完整69源项重编成功，未烧录或执行实机测试。app_config.h与本轮修改前逐字节一致，两轴12个PID未改。详见[SIM说明](../MDK-ARM/SIM操作说明.md)与[验证记录](../../../02_过程记录/Yaw演示持续模式_20261024/实现与验证.md)。以下为历史记录。
++
+ ## 2026-10-24：V5保持回归原PID并限制积分转移
+ 
+ 本轮19组选测共275453项通过，0失败，139份源输入哈希一致。与本轮修改前逐项比较，yaw/pitch共12个PID数值完全一致；保持入口直接调用原PID，含非零P/I/D及新反馈时的输出/内部积分和导数状态等价检查。真实后端覆盖静态支撑转移、追赶旧目标的大积分不转移、首次到角但滤波速度仍高时不转移；保留固定锁点、跨READY重解锁、单轴暂停、原停止/故障和使能握手回归。

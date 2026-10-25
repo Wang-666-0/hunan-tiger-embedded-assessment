@@ -1,0 +1,343 @@
+--- before/App/app_config.h
++++ after/App/app_config.h
+@@ -59,7 +59,7 @@
+ #endif
+ #define APP_GIMBAL_STARTUP_OFF_HOLD_MS 100U
+ #define APP_GIMBAL_STARTUP_TIMEOUT_MS 5000U
+-#define APP_GIMBAL_VIEW_HOLD_VERSION "VIEW_AXIS_HOLD_V2"
++#define APP_GIMBAL_VIEW_HOLD_VERSION "VIEW_AXIS_HOLD_V3"
+ /* Only the inactive Pitch axis in YAW VIEW uses this stiffer hold. Stored PID
+  * values and the normal Pitch step response remain unchanged. */
+ #define APP_PITCH_VIEW_HOLD_POSITION_GAIN 2.0f
+--- before/App/app_console.c
++++ after/App/app_console.c
+@@ -101,16 +101,41 @@
+     }
+ }
+ 
++#if APP_PITCH_ENABLED
++static const char *PitchViewBlock(const PitchBackendState *pitch, const AppState *app)
++{
++    if (!(view_hold_mask & APP_VIEW_HOLD_PITCH)) { return "NOT_SELECTED"; }
++    if (!pitch->view_locked) { return "WAIT_CONTROL"; }
++    if (pitch->controller.faults) { return "PITCH_FAULT"; }
++    if (!pitch->online) { return "FEEDBACK_NOT_FRESH"; }
++    if (pitch->stop_pending) { return "WAIT_DISABLED_FEEDBACK"; }
++    if (!pitch->coord_confirmed || !pitch->zero_set || !pitch->controller.have_reference) { return "REFERENCE_NOT_READY"; }
++    if (pitch->controller.gravity_kg_nm != 0.0f && !pitch->controller.gravity_calibrated) { return "GRAVITY_NOT_CALIBRATED"; }
++    if (diagnostic_mode) { return "DIAGNOSTIC_MODE"; }
++    if (!app->logic.safety.operator_armed) { return "REMOTE_NOT_ARMED"; }
++    if (!app->logic.safety.output_allowed) { return "GLOBAL_OUTPUT_BLOCKED"; }
++    if (!pitch->requested) { return pitch->view_prepare_pending ? "WAIT_VIEW_PREPARE" : "SESSION_NOT_REQUESTED"; }
++    if (pitch->enabling) { return "WAIT_ENABLE_FEEDBACK"; }
++    if (!pitch->active || pitch->feedback.status != 1U) { return "PITCH_NOT_ACTIVE"; }
++    return pitch->view_hold_pending ? "WAIT_CAPTURE" : "APPLIED";
++}
++#endif
++
+ static void PublishViewHold(void)
+ {
++    int length;
+ #if APP_PITCH_ENABLED
+     PitchBackendState pitch;
+-    PitchBackend_GetState(&pitch);
+-#endif
+-    (void)snprintf(telemetry, sizeof(telemetry),
++    AppState app;
++    taskENTER_CRITICAL();
++    PitchBackend_GetState(&pitch); AppTasks_GetState(&app);
++    taskEXIT_CRITICAL();
++#endif
++    length = snprintf(telemetry, sizeof(telemetry),
+         "G|VIEW_LOCK|%s|YAW|%u|PITCH|%u|MODE|HOLD_CURRENT|APPLY_MS|%u"
+ #if APP_PITCH_ENABLED
+         "|PITCH_APPLIED|%u|PITCH_PENDING|%u|PITCH_HOLD_DEG|%.6g|PITCH_ACTUAL_DEG|%.6g|PITCH_TARGET_DEG|%.6g|PITCH_ERROR_DEG|%.6g|PITCH_OUT_NM|%.6g|PITCH_POSITION_GAIN|%.3g|PITCH_SPEED_GAIN|%.3g"
++        "|PITCH_BLOCK|%s|PITCH_HOLD_VALID|%u|PITCH_PREPARE|%u|PITCH_REQUESTED|%u|PITCH_ACTIVE|%u|PITCH_ENABLING|%u|PITCH_ONLINE|%u|PITCH_STATUS|%u|PITCH_FAULT|%lu|PITCH_STOP_PENDING|%u|PITCH_STOP_REASON|%u|ARMED|%u|OUTPUT_ALLOWED|%u|SAFETY_REASON|%u"
+ #endif
+         "\r\n",
+         APP_GIMBAL_VIEW_HOLD_VERSION, (unsigned)((view_hold_mask & APP_VIEW_HOLD_YAW) != 0U),
+@@ -121,9 +146,16 @@
+         (double)pitch.view_hold_deg, (double)pitch.controller.angle_deg, (double)pitch.controller.target_deg,
+         (double)(pitch.view_hold_deg - pitch.controller.angle_deg), (double)pitch.controller.torque_nm,
+         (double)APP_PITCH_VIEW_HOLD_POSITION_GAIN, (double)APP_PITCH_VIEW_HOLD_SPEED_GAIN
++        , PitchViewBlock(&pitch, &app), (unsigned)(pitch.view_locked && !pitch.view_hold_pending),
++        (unsigned)pitch.view_prepare_pending, (unsigned)pitch.requested, (unsigned)pitch.active,
++        (unsigned)pitch.enabling, (unsigned)pitch.online, (unsigned)pitch.feedback.status,
++        (unsigned long)pitch.controller.faults, (unsigned)pitch.stop_pending, (unsigned)pitch.stop_reason,
++        (unsigned)app.logic.safety.operator_armed, (unsigned)app.logic.safety.output_allowed,
++        (unsigned)app.logic.safety.reason
+ #endif
+         );
+-    SendText(telemetry);
++    if (length > 0 && (size_t)length < sizeof(telemetry)) { SendText(telemetry); }
++    else { SendText("G|VIEW_LOCK|ERROR|STATUS_TOO_LONG\r\n"); }
+ }
+ 
+ static void PublishRemoteRx(uint8_t only_fault)//
+@@ -449,6 +481,7 @@
+     if (strcmp(line, "TELEM YAW") == 0 || strcmp(line, "YAW VIEW") == 0) {
+         pitch_view = 0U;
+         view_hold_mask = APP_VIEW_HOLD_PITCH;
++        PitchBackend_PrepareViewHold();
+ #if APP_YAW_ENABLED
+         if (yaw_display.enabled) { FormatYawDisplayStatus(); SendText(telemetry); }
+         else
+--- before/App/pitch_backend.c
++++ after/App/pitch_backend.c
+@@ -67,6 +67,7 @@
+     PitchController_Stop(&state.controller);
+     state.requested = state.active = state.enabling = state.step_hold = 0U;
+     state.view_hold_pending = state.view_locked;
++    state.view_prepare_pending = 0U;
+     last_mode = GIMBAL_MANUAL;
+     if (had_session && !state.stop_pending) {
+         ++state.stop_id; state.stopped_ms = HAL_GetTick(); state.stop_reason = reason;
+@@ -375,7 +376,7 @@
+                 state.view_hold_deg = target;
+             } else { state.controller.cascade.position_i = 0.0f; }
+             /* Gravity and existing inner load compensation remain active. */
+-            state.step_hold = 1U; state.view_hold_pending = 0U; accepted = 1U;
++            state.step_hold = 1U; state.view_hold_pending = state.view_prepare_pending = 0U; accepted = 1U;
+         }
+     }
+     taskEXIT_CRITICAL(); return accepted;
+@@ -389,7 +390,20 @@
+             TransferPositionSupport(APP_PITCH_VIEW_HOLD_SPEED_GAIN);
+         }
+         state.view_locked = state.view_hold_pending = locked;
++        state.view_prepare_pending = locked;
+         if (!locked) { state.step_hold = 0U; }
++    }
++    taskEXIT_CRITICAL();
++}
++
++void PitchBackend_PrepareViewHold(void)
++{
++    taskENTER_CRITICAL();
++    if (!state.active && !state.enabling) {
++        state.view_prepare_pending = 1U;
++        /* Refresh stopped-motor feedback through the existing read-only CC
++         * path, rather than waiting forever on an expired last frame. */
++        state.monitoring = 1U;
+     }
+     taskEXIT_CRITICAL();
+ }
+@@ -408,6 +422,18 @@
+     if ((state.active || state.enabling) && !Online(now)) {
+         state.controller.faults |= PITCH_CONTROLLER_FAULT_FEEDBACK;
+         StopWithReason(PITCH_STOP_FEEDBACK); rearm_request = 1U;
++    }
++    /* A new YAW VIEW can join the already armed, permitted gimbal session.
++     * Reuse Request + the original FC/feedback handshake; VIEW cannot bypass
++     * OFF/rearm, reference, gravity, feedback or fault gates. Stop cancels the
++     * one-shot ticket, so a persistent view selection cannot undo a stop. */
++    if (state.view_locked && state.view_hold_pending && state.view_prepare_pending &&
++        !state.requested && allowed && !diagnostic && request &&
++        state.coord_confirmed && state.zero_set && state.controller.have_reference &&
++        !state.active && !state.enabling && !state.stop_pending && !state.controller.faults &&
++        Online(now) && state.feedback.status == 0U &&
++        (state.controller.gravity_kg_nm == 0.0f || state.controller.gravity_calibrated)) {
++        if (PitchBackend_Request(1U)) { state.view_prepare_pending = 0U; }
+     }
+     wanted = (uint8_t)(APP_PITCH_ENABLED && state.requested && state.coord_confirmed &&
+         state.zero_set && allowed && !diagnostic && request && Online(now) &&
+--- before/App/pitch_backend.h
++++ after/App/pitch_backend.h
+@@ -23,6 +23,7 @@
+     uint8_t online, requested, active, enabling, stop_pending;
+     uint8_t zero_set, step_hold, coord_confirmed, monitoring;
+     uint8_t view_locked, view_hold_pending;
++    uint8_t view_prepare_pending;
+     float view_hold_deg;
+ } PitchBackendState;
+ typedef struct { uint32_t sequence; float target_deg; uint8_t result; } PitchRemoteStepEvent;
+@@ -40,6 +41,8 @@
+ /* Active hold at the measured pose; preserve gravity calibration and speed I. */
+ uint8_t PitchBackend_HoldCurrent(void);
+ void PitchBackend_SetViewLock(uint8_t locked);
++/* One-shot preparation intent from a fresh VIEW command; no CAN/enable here. */
++void PitchBackend_PrepareViewHold(void);
+ void PitchBackend_Apply(const TargetRequest *request, uint8_t allowed, uint8_t diagnostic);
+ uint8_t PitchBackend_TakeRearmRequest(void);
+ uint8_t PitchBackend_SetTarget(float degrees);
+--- before/MDK-ARM/VIEW窗口锁轴说明.md
++++ after/MDK-ARM/VIEW窗口锁轴说明.md
+@@ -1,6 +1,6 @@
+ # VIEW窗口锁轴操作
+ 
+-本轮直接修改原 VS Code/EIDE 工程。功能标识为 `VIEW_AXIS_HOLD_V2`；拨盘仍保留 `C610_SINGLE_BRAKE_V1J` 的单发优化。烧录文件仍为当前 MDK-ARM 下的 `build/Gimbal_Control/Gimbal_Control.hex`。
++本轮直接修改原 VS Code/EIDE 工程。功能标识为 `VIEW_AXIS_HOLD_V3`；拨盘仍保留 `C610_SINGLE_BRAKE_V1J` 的单发优化。烧录文件仍为当前 MDK-ARM 下的 `build/Gimbal_Control/Gimbal_Control.hex`。
+ 
+ ## 使用
+ 
+@@ -17,7 +17,7 @@
+ 在原准备、解锁和反馈健康条件已满足时，锁定请求由原2ms控制任务执行。串口会在视图回执后再输出一行，例如：
+ 
+ ```text
+-G|VIEW_LOCK|VIEW_AXIS_HOLD_V2|YAW|1|PITCH|0|MODE|HOLD_CURRENT|APPLY_MS|2
++G|VIEW_LOCK|VIEW_AXIS_HOLD_V3|YAW|1|PITCH|0|MODE|HOLD_CURRENT|APPLY_MS|2
+ ```
+ 
+ 这里 `YAW|1` 表示请求锁yaw；`PITCH|1` 表示请求锁pitch。V2还附带pitch实际状态，发送 `GIMBAL VIEW LOCK` 可以检查：
+@@ -27,7 +27,35 @@
+ - `PITCH_HOLD_DEG`：独立保存的锁点；`PITCH_ACTUAL_DEG`：真实反馈角度；`PITCH_TARGET_DEG`：控制器目标；`PITCH_ERROR_DEG`：锁点减真实角度。
+ - `PITCH_OUT_NM`：实际计算的控制输出；`PITCH_POSITION_GAIN|2` / `PITCH_SPEED_GAIN|2`：保持专用的P/D倍率。
+ 
+-VIEW命令首次回执时控制任务可能还未处理新请求，过一会查询才能区分“请求锁定”和“已应用”。该行不是新的通道数据，原角度曲线绑定保持不变。未使能或已停止时只保存请求，不会因为发送VIEW自行使能电机。
++VIEW命令首次回执时控制任务可能还未处理新请求，过一会查询才能区分“请求锁定”和“已应用”。该行不是新的通道数据，原角度曲线绑定保持不变。未解锁、故障或未准备时保持停止。V3允许新发出的YAW VIEW在已经解锁且全局动力许可有效的会话中，为健康且已准备的pitch恢复保持会话；走原Request/FC/状态1反馈握手，之后捕获当前实测姿态，使用中不会直接追旧目标。
++
++## V3：处理PITCH_PENDING一直为1
++
++V2只设置VIEW锁定标志。如果此前用单轴READY/ON流程或单轴OFF使pitch.requested变成0，即使yaw还在正常工作，pitch也可能长期停在PENDING、OUT=0。
++
++V3在原控制任务中消费新的VIEW准备请求：先通过原CC只读查询保持反馈新鲜；已有全局解锁/动力许可，且坐标、软件零点、重力标定、反馈、状态和故障门禁均满足时，才通过原使能握手恢复pitch。成功后捕获当时的真实角度，旧的−18°目标不沿用。重复点击YAW VIEW也可以发起这次准备；已经保持时重复点击不重新取锁点。
++
++STOP会取消本次准备，不会因为VIEW一直选中就重新启动。再次发送VIEW也不能绕过全局重新解锁、故障和坐标准备要求。普通安全OFF、冷启动时VIEW不会发出FC或力矩。
++
++`GIMBAL VIEW LOCK`新增`PITCH_BLOCK`直接解释当前阻碍：
++
++| 值 | 含义 |
++| --- | --- |
++| APPLIED | 已完成保持 |
++| WAIT_CONTROL | 新视图请求尚未被控制任务处理 |
++| WAIT_VIEW_PREPARE | 等待恢复pitch保持会话 |
++| WAIT_ENABLE_FEEDBACK | 已提交使能，等待新的状态1反馈 |
++| WAIT_CAPTURE | 等待捕获固定锁点 |
++| REMOTE_NOT_ARMED / GLOBAL_OUTPUT_BLOCKED | 尚未解锁或全局动力许可被撤销 |
++| REFERENCE_NOT_READY / GRAVITY_NOT_CALIBRATED | 坐标、零点或重力标定尚未准备 |
++| FEEDBACK_NOT_FRESH | 没有新鲜反馈，正在保持只读查询 |
++| WAIT_DISABLED_FEEDBACK | 等待旧失能动作及状态0确认 |
++| PITCH_FAULT / DIAGNOSTIC_MODE | pitch故障或诊断模式正在阻止动力 |
++| SESSION_NOT_REQUESTED | 会话未请求，需新的VIEW动作或原准备流程 |
++| PITCH_NOT_ACTIVE | 后端/电机未进入活动状态 |
++| NOT_SELECTED | 当前不是锁pitch的视图请求 |
++
++`PITCH_HOLD_VALID|0`时，旧的`PITCH_HOLD_DEG`和`PITCH_ERROR_DEG`不表示已经锁定。回执同时包含requested、active、enabling、online、status、fault、stop reason以及全局armed/output allowed，避免仅凭PENDING猜原因。
+ 
+ ## 锁定规则
+ 
+--- before/README.md
++++ after/README.md
+@@ -1,4 +1,8 @@
+ # Gimbal_Control
++
++## 2026-10-24：修复Yaw窗口下Pitch一直待锁定（V3）
++
++新发YAW VIEW在已经解锁且全局许可有效时，为已准备、健康的pitch接回原Request/使能握手，再捕获当前真实位置；补齐单轴流程里pitch会话已停止时只有锁定标志、没有活动闭环的缺口。重复VIEW可重新请求，STOP/故障/未解锁保持原门禁。新增`PITCH_BLOCK`及真实状态字段，未捕获的锁点明确标记无效。详见[操作说明](MDK-ARM/VIEW窗口锁轴说明.md)。
+ 
+ ## 2026-10-24：Pitch保持抗扰 V2 与Yaw阶梯演示
+ 
+--- before/Tests/README.md
++++ after/Tests/README.md
+@@ -1,3 +1,9 @@
++## 2026-10-24：Pitch保持会话恢复 V3
++
++本轮19组选测共274397项通过，0失败；139份测试输入哈希一致。真实后端回归覆盖Yaw仍活动、Pitch独立停止后旧目标−18°、手动姿态移到约−0.625°、新YAW VIEW完成原使能握手并捕获新锁点；重复VIEW重新请求、活动时不重捕获、STOP不能被VIEW绕过、冷启动OFF不发使能。只读CC监测另有回归，确认无坐标/未解锁时可读反馈而不发FC或力矩。UART查询覆盖APPLIED/SESSION_NOT_REQUESTED/WAIT_VIEW_PREPARE/REMOTE_NOT_ARMED/PITCH_FAULT及锁点有效性，原角度/演示/拨盘通道与真实成绩保持。
++
++主MDK-ARM工程AC5/O0完整69源项重编成功，未烧录或验证实机效果。原PID与上轮保持刚度不变；本轮补齐的是会话准备和使能握手路径。见[操作说明](../MDK-ARM/VIEW窗口锁轴说明.md)。
++
+ ## 2026-10-24：Pitch抗扰保持V2与Yaw阶梯显示
+ 
+ 本轮25组选测共296836项检查通过，0失败。新增`pitch_view_stiffness`验证保持时位置纠偏4倍、速度比例阻尼2倍、原PID立即恢复、限幅及停止/过期反馈保护；扩展真实后端`pitch_view_hold`验证外力偏移固定锁点、恢复力矩方向、位置积分支撑转移及切换恢复。Yaw四模板在两个方向均验证10/15ms细阶梯、首次进入±0.2°不超过250ms、保持段±0.15°及原500ms保持/500ms渐退。查询字段经USART路由验证，正常遥测通道与真实成绩保留。
+--- before/Tests/test_app_console.c
++++ after/Tests/test_app_console.c
+@@ -130,7 +130,8 @@
+ }
+ uint8_t CanBus_OutputAllowed(void) { return output_allowed; }
+ void AppTasks_GetState(AppState *state)
+-{ memset(state, 0, sizeof(*state)); state->logic.safety.operator_armed = app_armed; }
++{ memset(state, 0, sizeof(*state)); state->logic.safety.operator_armed = app_armed;
++  state->logic.safety.output_allowed = output_allowed; }
+ void AppDiagnostics_Cancel(void) { ++cancels; event_count = 0U; event_read = 0U; }
+ void AppTasks_RequestStop(void) { ++stops; output_allowed = 0U; AppDiagnostics_Cancel(); }
+ #if APP_FLYWHEEL_JOG_ENABLED
+--- before/Tests/test_feeder_speed_view.c
++++ after/Tests/test_feeder_speed_view.c
+@@ -131,5 +131,21 @@
+     clear_output(); command_line("GIMBAL VIEW LOCK");
+     CHECK(strstr(output, "PITCH_APPLIED|1|PITCH_PENDING|0|PITCH_HOLD_DEG|2|PITCH_ACTUAL_DEG|2.5|PITCH_TARGET_DEG|2|PITCH_ERROR_DEG|-0.5|"));
+     CHECK(strstr(output, "PITCH_POSITION_GAIN|2|PITCH_SPEED_GAIN|2"));
++    clear_output(); command_line("YAW VIEW");
++    pitch_sample.requested = pitch_sample.coord_confirmed = pitch_sample.zero_set = 1U;
++    pitch_sample.controller.have_reference = pitch_sample.controller.gravity_calibrated = 1U;
++    pitch_sample.feedback.status = 1U; app_armed = output_allowed = 1U;
++    clear_output(); command_line("GIMBAL VIEW LOCK"); CHECK(strstr(output, "PITCH_BLOCK|APPLIED|PITCH_HOLD_VALID|1|"));
++    pitch_sample.active = pitch_sample.requested = 0U; pitch_sample.feedback.status = 0U;
++    pitch_sample.view_hold_pending = 1U; pitch_sample.view_prepare_pending = 0U;
++    pitch_sample.controller.target_deg = -18.0f; pitch_sample.controller.angle_deg = -0.625f;
++    clear_output(); command_line("GIMBAL VIEW LOCK");
++    CHECK(strstr(output, "PITCH_BLOCK|SESSION_NOT_REQUESTED|PITCH_HOLD_VALID|0|"));
++    clear_output(); command_line("YAW VIEW"); CHECK(pitch_sample.view_prepare_pending);
++    clear_output(); command_line("GIMBAL VIEW LOCK"); CHECK(strstr(output, "PITCH_BLOCK|WAIT_VIEW_PREPARE|"));
++    app_armed = output_allowed = 0U;
++    clear_output(); command_line("GIMBAL VIEW LOCK"); CHECK(strstr(output, "PITCH_BLOCK|REMOTE_NOT_ARMED|"));
++    pitch_sample.controller.faults = 16U;
++    clear_output(); command_line("GIMBAL VIEW LOCK"); CHECK(strstr(output, "PITCH_BLOCK|PITCH_FAULT|"));
+     test_done = 1U;
+ }
+--- before/Tests/test_gimbal_view_hold.c
++++ after/Tests/test_gimbal_view_hold.c
+@@ -109,5 +109,38 @@
+     CHECK(!pitch.view_locked && !pitch.controller.faults && pitch.active);
+     CHECK(pitch.controller.cascade.position.kp == APP_PITCH_POSITION_KP &&
+         pitch.controller.cascade.speed.kp == APP_PITCH_SPEED_KP);
++    test_stage = 5U;
++    /* Reproduce the user's V2 pending snapshot: Yaw remains armed/running,
++     * Pitch is healthy but its requested session was stopped; target is old. */
++    Reset(180000U); Run(400U, 1000U); Run(100U, 1500U);
++    view_hold_request = APP_VIEW_HOLD_YAW; Run(2U, 1500U);
++    CHECK(PitchBackend_SetTarget(-18.0f)); follow_target = 1U; Run(100U, 1500U); follow_target = 0U;
++    GimbalStartup_ManualOverride(); /* Existing single-axis READY/ON workflow. */
++    CHECK(PitchBackend_Request(0U)); Run(50U, 1500U);
++    CHECK(yaw.active && logic.safety.operator_armed && logic.safety.output_allowed);
++    CHECK(!pitch.active && !pitch.requested && !pitch.stop_pending && !pitch.controller.faults);
++    CHECK(pitch.controller.target_deg == -18.0f && pitch.controller.torque_nm == 0.0f);
++    physical_pitch = 99.375f; Run(20U, 1500U);
++    enabled_p = pc;
++    view_hold_request = APP_VIEW_HOLD_PITCH; Run(50U, 1500U);
++    CHECK(pitch.active && pitch.requested && pitch.view_locked && !pitch.view_hold_pending);
++    CHECK(pc == enabled_p + 1U && yaw.active && !pitch.controller.faults);
++    CHECK(fabsf(pitch.controller.target_deg - pitch.controller.angle_deg) < 0.01f);
++    CHECK(pitch.controller.target_deg > -1.0f && pitch.controller.target_deg < -0.25f);
++    enabled_p = pc;
++    CHECK(PitchBackend_Request(0U)); Run(50U, 1500U);
++    CHECK(!pitch.active && !pitch.requested && !pitch.view_prepare_pending && pc == enabled_p);
++    /* A repeated explicit YAW VIEW can request a new session without changing
++     * an already applied lockpoint or undoing the global rearm barrier. */
++    PitchBackend_PrepareViewHold(); Run(50U, 1500U);
++    CHECK(pitch.active && pitch.requested && pc == enabled_p + 1U && !pitch.view_hold_pending);
++    pheld = pitch.view_hold_deg; PitchBackend_PrepareViewHold(); Run(20U, 1500U);
++    CHECK(pitch.view_hold_deg == pheld && !pitch.view_prepare_pending);
++    enabled_p = pc; AppTasks_RequestStop(); PitchBackend_PrepareViewHold(); Run(80U, 1500U);
++    CHECK(!pitch.active && !pitch.requested && pc == enabled_p);
++    test_stage = 6U;
++    Reset(190000U); view_hold_request = APP_VIEW_HOLD_PITCH; PitchBackend_PrepareViewHold();
++    Run(400U, 1000U); CHECK(!pc && !yc && !pitch.active);
++    Run(100U, 1500U); CHECK(pc == 1U && pitch.active && !pitch.view_hold_pending);
+     test_done = 1U;
+ }
+--- before/Tests/test_pitch_backend.c
++++ after/Tests/test_pitch_backend.c
+@@ -240,5 +240,11 @@
+     CHECK(PitchBackend_SetShape(180U, 0.3f));
+     CHECK(!PitchBackend_SetShape(99U, 0.3f) && !PitchBackend_SetShape(251U, 0.3f));
+     CHECK(!PitchBackend_SetShape(200U, -0.1f) && !PitchBackend_SetShape(200U, 1.1f));
++    test_stage = 8U;
++    Reset(10000U); PitchBackend_PrepareViewHold(); Read();
++    CHECK(state.monitoring && state.view_prepare_pending && !query_calls && !enable_calls);
++    Apply(10020U, 0U);
++    CHECK(query_calls == 1U && !enable_calls && !torque_calls && !state.requested);
++    CHECK(!state.active && !state.coord_confirmed && !state.zero_set);
+     test_done = 1U;
+ }
+--- before/Tests/test_pitch_telemetry.c
++++ after/Tests/test_pitch_telemetry.c
+@@ -27,6 +27,8 @@
+     ++pitch_commands; (void)snprintf(response, capacity, "P|MOCK\r\n"); return 1U;
+ }
+ void PitchBackend_GetState(PitchBackendState *out) { *out = pitch_sample; }
++void PitchBackend_PrepareViewHold(void)
++{ if (!pitch_sample.active && !pitch_sample.enabling) { pitch_sample.view_prepare_pending = 1U; } }
+ void PitchBackend_GetStep(PitchStep *out) { *out = pitch_step_sample; }
+ void YawConsole_CancelPreparation(void) { }
+ uint8_t YawConsole_Poll(char *response, size_t capacity) { (void)response; (void)capacity; return 0U; }

@@ -1,0 +1,69 @@
+#version 330 core
+#extension GL_ARB_explicit_uniform_location : enable
+#extension GL_ARB_explicit_attrib_location : enable
+
+layout (location = 0) in float value;
+layout (location = 1) in float index;
+layout (location = 2) in float next_value;
+layout (location = 3) in float next_index;
+
+uniform highp float left_index;
+uniform highp float top_value;
+uniform highp float yoffset;
+uniform highp float scale;
+uniform highp float xratio;
+uniform highp float yratio;
+uniform highp float z;
+uniform highp float point_size;
+uniform highp vec2 window_size;
+uniform highp float use_instance;
+
+void main(void)
+{
+    vec4 adjustedPos;
+
+    if (use_instance > 0.5) {
+        float cur_value, cur_index;
+
+        float tmp_x, tmp_y;
+        if (value != next_value) {
+            float k = ((window_size.x * (next_index - left_index)   // pixel_x2
+                        - window_size.x * (index - left_index))     // pixel_x1
+                       * xratio)
+                    /
+                    ((window_size.y * (top_value - (value * scale + yoffset))           // pixel_y1
+                      - window_size.y * (top_value - (next_value * scale + yoffset)))   // pixel_y2
+                     * yratio);
+            tmp_x = sqrt(point_size*point_size / (k*k + 1));
+            tmp_y = k * tmp_x;
+        } else {
+            tmp_x = 0;
+            tmp_y = point_size;
+        }
+
+        tmp_x = tmp_x / window_size.x;
+        tmp_y = tmp_y / window_size.y;
+
+        //    (k*k + 1) * x^2 = point_size*point_size;
+        if (gl_VertexID <= 1) {
+            cur_value = value;
+            cur_index = index;
+        } else {
+            cur_value = next_value;
+            cur_index = next_index;
+        }
+        if (gl_VertexID == 0 || gl_VertexID == 2) {
+            tmp_x = -tmp_x;
+            tmp_y = -tmp_y;
+        }
+        adjustedPos.y = -1.0 + (top_value - (cur_value * scale + yoffset)) * yratio + tmp_y;
+        adjustedPos.x = -1.0 + (cur_index - left_index) * xratio + tmp_x;
+    } else {
+        adjustedPos.y = -1.0 + (top_value - (value * scale + yoffset)) * yratio;
+        adjustedPos.x = -1.0 + (index - left_index) * xratio;
+    }
+    adjustedPos.w = 1.0;
+    adjustedPos.z = z;
+    gl_PointSize = point_size;
+    gl_Position = adjustedPos;
+}

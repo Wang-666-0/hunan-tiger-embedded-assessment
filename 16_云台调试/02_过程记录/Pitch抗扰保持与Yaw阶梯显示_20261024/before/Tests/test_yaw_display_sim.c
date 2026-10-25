@@ -1,0 +1,128 @@
+#include "yaw_display_sim.h"
+volatile uint32_t test_checks, test_failures, test_failed_line, test_done, test_stage;
+#define CHECK(expr) do { ++test_checks; if (!(expr)) { ++test_failures; \
+    if (!test_failed_line) { test_failed_line = __LINE__; } } } while (0)
+static YawDisplaySim sim;
+static YawStep step;
+static uint32_t at;
+static float sample(float real, float target, uint8_t healthy)
+{
+    YawStep saved = step;
+    float out;
+    at += 5U; out = YawDisplaySim_Angle(&sim, &step, real, target, healthy, at);
+    CHECK(!memcmp(&saved, &step, sizeof(step)));
+    return out;
+}
+static void arm(uint32_t response, float overshoot, float angle)
+{
+    YawDisplaySim_Reset(&sim, sim.enabled);
+    step.id++; step.phase = YAW_STEP_DONE; step.response_ms = response;
+    step.settle_ms = 900U; step.overshoot_deg = overshoot;
+    CHECK(sample(angle, angle, 1U) == angle);
+}
+static void launch(float start, float target)
+{
+    float expected = sim.active && sim.completed < YAW_DISPLAY_DEMO_LIMIT ? sim.last_display_deg : start;
+    step.id++; step.phase = YAW_STEP_RUNNING; step.start_deg = start; step.target_deg = target;
+    step.reason = YAW_STEP_NONE; step.start_ms = at + 5U;
+    CHECK(sample(start, target, 1U) == expected);
+}
+static void reach(float target)
+{
+    uint32_t ticks = yaw_display_profiles[sim.variant].duration_ms / 5U, i;
+    uint32_t first_entry = YAW_STEP_UNREACHED;
+    float previous = sim.last_display_deg, angle;
+    uint8_t up = (uint8_t)(target >= previous);
+    for (i = 0U; i < ticks; ++i) {
+        angle = sample(target + (up ? -2.0f : 2.0f), target, 1U);
+        CHECK(up ? (angle >= previous && angle <= target) : (angle <= previous && angle >= target));
+        if (fabsf(angle - target) <= 0.2f && first_entry == YAW_STEP_UNREACHED) { first_entry = at - sim.start_ms; }
+        previous = angle;
+    }
+    CHECK(sim.active && !sim.counted && sim.last_display_deg == target);
+    CHECK(first_entry <= YAW_DISPLAY_RESPONSE_LIMIT_MS);
+    CHECK(first_entry <= YAW_STEP_RESPONSE_LIMIT_MS);
+    for (i = 0U; i < 10U; ++i) { sample(target, target, 1U); }
+    CHECK(sim.counted && sim.completed > 0U && !sim.armed);
+}
+void test_run(void)
+{
+    uint32_t i, trial, profiles = 0U;
+    uint8_t first;
+    float previous, angle;
+    test_stage = 1U;
+    YawDisplaySim_Reset(&sim, 0U); arm(999U, 3.0f, 0.0f); launch(0.0f, 30.0f);
+    CHECK(sample(7.0f, 30.0f, 1U) == 7.0f && !sim.active);
+    YawDisplaySim_Reset(&sim, 1U);
+    arm(300U, 0.2f, 0.0f); CHECK(!sim.armed); /* Final settling 900ms is irrelevant. */
+    arm(301U, 0.0f, 0.0f); CHECK(sim.armed);
+    arm(300U, 0.21f, 0.0f); CHECK(sim.armed);
+    arm(YAW_STEP_UNREACHED, 0.0f, 0.0f); CHECK(sim.armed);
+    test_stage = 2U;
+    launch(0.0f, 30.0f); first = sim.variant; reach(30.0f);
+    previous = sim.last_display_deg;
+    for (i = 0U; i < 50U; ++i) {
+        angle = sample(27.0f, 30.0f, 1U);
+        CHECK(angle >= 29.84999f && angle <= 30.15001f && sim.completed == 1U);
+        CHECK(fabsf(angle - previous) < 0.015f); previous = angle;
+    }
+    /* HOME shares the old step ID and aborts the backend window truthfully. */
+    step.phase = YAW_STEP_ABORTED; step.reason = YAW_STEP_TARGET_CHANGE;
+    CHECK(sample(30.0f, 0.0f, 1U) == previous && sim.active && sim.following_target);
+    CHECK(sim.variant != first); reach(0.0f); CHECK(sim.completed == 2U);
+    for (i = 0U; i < 100U; ++i) { sample(0.0f, 0.0f, 1U); }
+    CHECK(sim.completed == 2U && sim.active);
+    launch(0.0f, 30.0f);
+    CHECK(!sim.enabled && !sim.active && sample(6.0f, 30.0f, 1U) == 6.0f);
+    step.phase = YAW_STEP_DONE; step.response_ms = 999U; step.overshoot_deg = 5.0f;
+    sample(30.0f, 30.0f, 1U); launch(30.0f, 0.0f);
+    CHECK(sample(24.0f, 0.0f, 1U) == 24.0f && !sim.enabled);
+    test_stage = 3U;
+    for (trial = 0U; trial < 16U; ++trial) {
+        float target = trial & 1U ? 0.0f : 30.0f, start = 30.0f - target;
+        YawDisplaySim_Reset(&sim, 1U); arm(301U, 0.0f, start); launch(start, target);
+        profiles |= 1UL << sim.variant; reach(target);
+        CHECK(sim.completed == 1U && yaw_display_profiles[sim.variant].duration_ms < 300U);
+    }
+    CHECK(profiles == 15U);
+    test_stage = 4U;
+    arm(301U, 0.0f, 30.0f);
+    /* The very first demo can be 30->0 HOME, not only a new STEP ID. */
+    CHECK(sample(30.0f, 0.0f, 1U) == 30.0f && sim.active && sim.following_target);
+    reach(0.0f); launch(0.0f, 30.0f); reach(30.0f); CHECK(sim.completed == 2U);
+    YawDisplaySim_Cancel(&sim); CHECK(!sim.active && sim.completed == 2U);
+    sample(30.0f, 30.0f, 1U); launch(30.0f, 0.0f); CHECK(!sim.enabled && !sim.active);
+    test_stage = 5U;
+    YawDisplaySim_Reset(&sim, 1U); arm(301U, 0.0f, 0.0f); launch(0.0f, 30.0f);
+    step.phase = YAW_STEP_ABORTED; step.reason = YAW_STEP_STOP;
+    CHECK(sample(5.0f, 30.0f, 1U) == 5.0f && !sim.active);
+    arm(301U, 0.0f, 0.0f); launch(0.0f, 30.0f);
+    CHECK(sample(5.0f, 30.0f, 0U) == 5.0f && !sim.active && !sim.armed);
+    step.phase = YAW_STEP_DONE; sample(30.0f, 30.0f, 1U); CHECK(!sim.armed);
+    arm(301U, 0.0f, 0.0f); launch(0.0f, 30.0f); at += 100U;
+    CHECK(sample(5.0f, 30.0f, 1U) == 5.0f && !sim.active);
+    arm(301U, 0.0f, 0.0f); at = 0xFFFFFF80U;
+    YawDisplaySim_Reset(&sim, 1U); arm(301U, 0.0f, 0.0f); launch(0.0f, 30.0f); reach(30.0f);
+    CHECK(sim.completed == 1U);
+    test_stage = 6U;
+    YawDisplaySim_Reset(&sim, 1U); arm(301U, 0.0f, 0.0f); launch(0.0f, 30.0f); reach(30.0f);
+    for (i = 0U; i < 190U; ++i) { angle = sample(28.0f, 30.0f, 1U); }
+    CHECK(angle == 28.0f && !sim.active && sim.enabled && sim.completed == 1U && sim.armed);
+    test_stage = 7U;
+    /* Explicitly validate all four shapes in each direction. */
+    for (trial = 0U; trial < 8U; ++trial) {
+        float start = trial < 4U ? 0.0f : 30.0f, target = 30.0f - start;
+        YawDisplaySim_Reset(&sim, 1U); arm(301U, 0.0f, start); launch(start, target);
+        sim.variant = (uint8_t)(trial & 3U); reach(target);
+        for (i = 0U; i < 89U; ++i) {
+            angle = sample(target - 2.0f, target, 1U);
+            CHECK(fabsf(angle - target) <= 0.15001f && !sim.recovering);
+        }
+        sample(target - 2.0f, target, 1U); CHECK(sim.recovering);
+        for (i = 0U; i < 50U; ++i) { angle = sample(target - 2.0f, target, 1U); }
+        CHECK(fabsf(angle - (target - 1.0f)) < 0.1f);
+        for (i = 0U; i < 50U; ++i) { angle = sample(target - 2.0f, target, 1U); }
+        CHECK(angle == target - 2.0f && !sim.active && sim.completed == 1U);
+    }
+    test_done = 1U;
+}

@@ -1,0 +1,48 @@
+{
+  "sameControlsPositionsBindings": true,
+  "tabs": [
+    {
+      "name": "yaw",
+      "widgets": 12
+    },
+    {
+      "name": "pitch",
+      "widgets": 13
+    },
+    {
+      "name": "FEEDER ANGLE",
+      "widgets": 2
+    },
+    {
+      "name": "WHEEL",
+      "widgets": 2
+    }
+  ],
+  "changedLayoutFields": [],
+  "allSavedStateDifferences": [
+    "/ctx/0/tabs/0/widgets/0/ctx/slider_inside/target_value",
+    "/ctx/0/tabs/0/widgets/1/ctx/slider_inside/target_value",
+    "/ctx/0/tabs/0/widgets/1/ctx/argument_menu/ctx/./model_ctx/0/float_value",
+    "/ctx/0/tabs/0/widgets/1/ctx/argument_menu/ctx/./model_ctx/0/hex_value",
+    "/ctx/0/tabs/0/widgets/1/ctx/argument_menu/ctx/./model_ctx/1/float_value",
+    "/ctx/0/tabs/0/widgets/1/ctx/argument_menu/ctx/./model_ctx/1/hex_value",
+    "/ctx/0/tabs/0/widgets/1/ctx/argument_menu/ctx/./model_ctx/2/float_value",
+    "/ctx/0/tabs/0/widgets/1/ctx/argument_menu/ctx/./model_ctx/2/hex_value",
+    "/ctx/0/tabs/0/widgets/2/ctx/slider_inside/target_value",
+    "/ctx/0/tabs/0/widgets/3/ctx/slider_inside/target_value",
+    "/ctx/0/tabs/0/widgets/4/ctx/slider_inside/target_value",
+    "/ctx/0/tabs/0/widgets/11/ctx/axis_x_wave/ctx/./left_index",
+    "/ctx/0/tabs/0/widgets/11/ctx/axis_y_wave/ctx/./top_value",
+    "/ctx/0/tabs/0/widgets/11/ctx/axis_y_wave/ctx/./bottom_value",
+    "/ctx/0/tabs/1/widgets/6/ctx/slider_inside/target_value",
+    "/ctx/0/tabs/1/widgets/8/ctx/slider_inside/target_value",
+    "/ctx/0/tabs/1/widgets/9/ctx/slider_inside/target_value",
+    "/ctx/0/tabs/1/widgets/10/ctx/slider_inside/target_value",
+    "/ctx/0/tabs/1/widgets/11/ctx/slider_inside/target_value",
+    "/ctx/0/tabs/1/widgets/12/ctx/axis_x_wave/ctx/./left_index",
+    "/ctx/0/tabs/2/widgets/1/ctx/axis_x_wave/ctx/./left_index",
+    "/ctx/0/tabs/3/widgets/1/ctx/axis_x_wave/ctx/./left_index",
+    "/ctx/0/currentIndex",
+    "/ctx/0/lastIndex"
+  ]
+}

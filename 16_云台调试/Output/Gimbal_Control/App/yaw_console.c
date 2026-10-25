@@ -117,9 +117,10 @@ static const char *StepBlockReason(uint32_t blocks)
     if (blocks & YAW_STEP_BLOCK_TRANSITION) { return "WAIT_ENABLE_OR_STOP"; }
     if (blocks & YAW_STEP_BLOCK_INACTIVE) { return "NOT_ACTIVE"; }
     if (blocks & YAW_STEP_BLOCK_PERMISSION) { return "REMOTE_OR_OUTPUT_GUARD"; }
+    if (blocks & YAW_STEP_BLOCK_TARGET_LIMIT) { return "TARGET_LIMIT"; }
     if (blocks & YAW_STEP_BLOCK_WINDOW) { return "WAIT_5S_WINDOW"; }
     if (blocks & YAW_STEP_BLOCK_HOME) { return "SEND_HOME_FIRST"; }
-    if (blocks & YAW_STEP_BLOCK_POSITION) { return "WAIT_ZERO_BAND"; }
+    if (blocks & YAW_STEP_BLOCK_POSITION) { return "WAIT_TARGET_BAND"; }
     if (blocks & YAW_STEP_BLOCK_MOVING) { return "WAIT_STILL"; }
     if (blocks & YAW_STEP_BLOCK_STILL) { return "WAIT_STILL_HOLD"; }
     return "READY";
@@ -203,7 +204,7 @@ uint8_t YawConsole_Poll(char *response, size_t capacity)
         }
     }
     if (capacity >= 128U && YawBackend_TakeRemoteStepEvent(&event)) {
-        static const char *results[] = { "NONE", "STARTED", "RETURN_ZERO", "START_GUARD",
+        static const char *results[] = { "NONE", "STARTED", "BACK_30", "START_GUARD",
 #if APP_PITCH_ENABLED
             "OTHER_AXIS"
 #else
@@ -297,9 +298,9 @@ uint8_t YawConsole_Handle(const char *line, char *response, size_t capacity)
     if (strcmp(line, "YAW HELP") == 0 || strcmp(line, "YAW ?") == 0) {
         (void)snprintf(response, capacity,
 #if APP_YAW_EXPERIMENTAL_TRACKING
-            "Y|HELP|READ|YAW;PID;RESULT;STATUS|PREPARE|READY|STOP|OFF|VIEW|YAW VIEW|TUNE|POS kp ki kd;VEL kp ki kd;PKP/PKI/PKD/VKP/VKI/VKD value|FF|FF;FF ON/OFF;FKA [0_to_0.001];FMAX [0_to_1]|SHAPE|SHAPE [0_or_80_to_500_ms];SHAPEV [0_to_1]|TELEM|TELEM OFF/ON|TEST|STEP [30];HOME;REMOTE_CH5_CH7|DETAIL|INFO;CHECK;BUS;ZERO;CLEAR\r\n");
+            "Y|HELP|READ|YAW;PID;RESULT;STATUS|PREPARE|READY|STOP|OFF|VIEW|YAW VIEW|TUNE|POS kp ki kd;VEL kp ki kd;PKP/PKI/PKD/VKP/VKI/VKD value|FF|FF;FF ON/OFF;FKA [0_to_0.001];FMAX [0_to_1]|SHAPE|SHAPE [0_or_80_to_500_ms];SHAPEV [0_to_1]|TELEM|TELEM OFF/ON|TEST|STEP [+/-30_RELATIVE];HOME;REMOTE_CH5_CH7|DETAIL|INFO;CHECK;BUS;ZERO;CLEAR\r\n");
 #else
-            "Y|HELP|CTRL|FIXED_CASCADE_PID|READ|YAW;PID;RESULT;STATUS;STEP CHECK|PREPARE|READY|STOP|OFF|VIEW|YAW VIEW|TUNE|POS kp ki kd;VEL kp ki kd;PKP/PKI/PKD/VKP/VKI/VKD value|TELEM|TELEM OFF/ON|TEST|STEP [30];HOME;REMOTE_CH5_CH7|DETAIL|INFO;CHECK;BUS;ZERO;CLEAR\r\n");
+            "Y|HELP|CTRL|FIXED_CASCADE_PID|READ|YAW;PID;RESULT;STATUS;STEP CHECK|PREPARE|READY|STOP|OFF|VIEW|YAW VIEW|TUNE|POS kp ki kd;VEL kp ki kd;PKP/PKI/PKD/VKP/VKI/VKD value|TELEM|TELEM OFF/ON|TEST|STEP [+/-30_RELATIVE];HOME;REMOTE_CH5_CH7|DETAIL|INFO;CHECK;BUS;ZERO;CLEAR\r\n");
 #endif
         return 1U;
     }
@@ -329,11 +330,12 @@ uint8_t YawConsole_Handle(const char *line, char *response, size_t capacity)
         uint8_t remote_ok = SafeStep();
         YawBackend_GetState(&yaw);
         (void)snprintf(response, capacity,
-            "Y|STEP_CHECK|READY|%u|WHY|%s|BLOCKS|%lu|ANGLE|%.3f|TARGET|%.3f|ENC_DPS|%.2f|RAW_DPS|%.2f|STILL_MS|%lu|WINDOW_LEFT_MS|%lu|CONSOLE_READY|%u\r\n",
+            "Y|STEP_CHECK|READY|%u|WHY|%s|BLOCKS|%lu|ANGLE|%.3f|TARGET|%.3f|ENC_DPS|%.2f|RAW_DPS|%.2f|STILL_MS|%lu|WINDOW_LEFT_MS|%lu|CONSOLE_READY|%u|PLUS30_BLOCKS|%lu|MINUS30_BLOCKS|%lu|COUNT_LIMIT|0\r\n",
             (unsigned)(!yaw.step_blocks), StepBlockReason(yaw.step_blocks),
             (unsigned long)yaw.step_blocks, (double)yaw.controller.angle_deg, (double)yaw.controller.target_deg,
             (double)yaw.controller.cascade.velocity_dps, (double)yaw.controller.velocity_dps,
-            (unsigned long)yaw.step_still_ms, (unsigned long)yaw.step_window_left_ms, (unsigned)(!yaw.step_blocks && remote_ok));
+            (unsigned long)yaw.step_still_ms, (unsigned long)yaw.step_window_left_ms, (unsigned)(!yaw.step_blocks && remote_ok),
+            (unsigned long)YawBackend_StepBlocks(30.0f), (unsigned long)YawBackend_StepBlocks(-30.0f));
         return 1U;
     }
     if (strcmp(line, "YAW STEP") == 0 || strncmp(line, "YAW STEP ", 9U) == 0) {
@@ -348,10 +350,13 @@ uint8_t YawConsole_Handle(const char *line, char *response, size_t capacity)
         }
         taskEXIT_CRITICAL();
         if (accepted) {
-            (void)snprintf(response, capacity, "Y|OK|STEP_STARTED|TARGET|%.1f|WINDOW_MS|5000|HOLD|1\r\n", (double)value);
+            YawBackend_GetState(&yaw);
+            (void)snprintf(response, capacity, "Y|OK|STEP_STARTED|TARGET|%.1f|DELTA|%.1f|MODE|RELATIVE|WINDOW_MS|5000|HOLD|1\r\n",
+                (double)yaw.controller.target_deg, (double)value);
         } else {
             YawBackend_GetState(&yaw);
-            (void)snprintf(response, capacity, "Y|ERROR|STEP_REQUIRES_ARMED_ZERO_STATIONARY_HEALTHY|WHY|%s|BLOCKS|%lu\r\n",
+            yaw.step_blocks = YawBackend_StepBlocks(value);
+            (void)snprintf(response, capacity, "Y|ERROR|STEP_REQUIRES_ARMED_SETTLED_HEALTHY|WHY|%s|BLOCKS|%lu\r\n",
                 !target_ok ? "TARGET_OR_FORMAT" : (remote_ok ? StepBlockReason(yaw.step_blocks) : "REMOTE_OR_OUTPUT_GUARD"),
                 (unsigned long)yaw.step_blocks);
         }

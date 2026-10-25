@@ -130,7 +130,8 @@ void CanBus_GetState(CanBusState *state)
 }
 uint8_t CanBus_OutputAllowed(void) { return output_allowed; }
 void AppTasks_GetState(AppState *state)
-{ memset(state, 0, sizeof(*state)); state->logic.safety.operator_armed = app_armed; }
+{ memset(state, 0, sizeof(*state)); state->logic.safety.operator_armed = app_armed;
+  state->logic.safety.output_allowed = output_allowed; }
 void AppDiagnostics_Cancel(void) { ++cancels; event_count = 0U; event_read = 0U; }
 void AppTasks_RequestStop(void) { ++stops; output_allowed = 0U; AppDiagnostics_Cancel(); }
 #if APP_FLYWHEEL_JOG_ENABLED

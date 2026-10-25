@@ -18,7 +18,8 @@ typedef enum {
     YAW_STEP_BLOCK_MOVING = 1UL << 8,
     YAW_STEP_BLOCK_STILL = 1UL << 9,
     YAW_STEP_BLOCK_WINDOW = 1UL << 10,
-    YAW_STEP_BLOCK_VIEW = 1UL << 11
+    YAW_STEP_BLOCK_VIEW = 1UL << 11,
+    YAW_STEP_BLOCK_TARGET_LIMIT = 1UL << 12
 } YawStepBlock;
 typedef struct {
     YawController controller;
@@ -77,9 +78,11 @@ uint8_t YawBackend_SetFeedforward(char parameter, float value);
 uint8_t YawBackend_SetShape(uint32_t duration_ms);
 uint8_t YawBackend_SetShapeVelocityGain(float gain);
 uint8_t YawBackend_CaptureReference(void);
-/* 先安全OFF/ZERO、ON和人工CH5重解锁。STEP只在健康静止近零活动状态接受；
- * ±30是相对软件零点的绝对目标，完成5秒测量后继续保持，不自动失能。 */
+/* STEP adds +/-30 to the current target. Require healthy, settled feedback;
+ * no count/home/5-second-window gate. Target and hardware guards still apply.
+ * A new step aborts an unfinished measurement rather than reporting a pass. */
 uint8_t YawBackend_StartStep(float degrees);
+uint32_t YawBackend_StepBlocks(float delta_deg);
 /* 控制任务只需编号时避免复制完整测量快照；不消费报告。 */
 uint32_t YawBackend_GetStepId(void);
 void YawBackend_GetStep(YawStep *out);

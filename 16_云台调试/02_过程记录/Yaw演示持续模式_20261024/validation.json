@@ -1,0 +1,59 @@
+{
+  "recorded_at": "2026-10-24T20:22:09+08:00",
+  "test_groups": 15,
+  "checks": 251514,
+  "failures": 0,
+  "source_input_count": 136,
+  "source_hashes_match": true,
+  "app_config_bytes_unchanged": true,
+  "pid_unchanged": {
+    "APP_PITCH_POSITION_KP": "11.500f",
+    "APP_PITCH_POSITION_KI": "24.775f",
+    "APP_PITCH_POSITION_KD": "0.002f",
+    "APP_PITCH_SPEED_KP": "0.00408f",
+    "APP_PITCH_SPEED_KI": "0.0005f",
+    "APP_PITCH_SPEED_KD": "0.000001f",
+    "APP_YAW_POSITION_KP": "13.768f",
+    "APP_YAW_POSITION_KI": "3.214f",
+    "APP_YAW_POSITION_KD": "0.139f",
+    "APP_YAW_SPEED_KP": "0.00504f",
+    "APP_YAW_SPEED_KI": "0.0008f",
+    "APP_YAW_SPEED_KD": "0.000074f"
+  },
+  "changed_files": [
+    "App/yaw_display_sim.h",
+    "App/app_console.c",
+    "Tests/test_yaw_display_sim.c",
+    "Tests/test_yaw_display_telemetry.c",
+    "MDK-ARM/SIM操作说明.md",
+    "README.md",
+    "Tests/README.md"
+  ],
+  "firmware": {
+    "Gimbal_Control.hex": {
+      "path": "D:\\Project\\27电软正式批考核\\16_云台调试\\Output\\Gimbal_Control\\MDK-ARM\\build\\Gimbal_Control\\Gimbal_Control.hex",
+      "size_bytes": 399804,
+      "sha256": "2eea127ab013d5ac4bcff968a32f582d71a7e6ab8704e6e50505fb9fb931c697"
+    },
+    "Gimbal_Control.axf": {
+      "path": "D:\\Project\\27电软正式批考核\\16_云台调试\\Output\\Gimbal_Control\\MDK-ARM\\build\\Gimbal_Control\\Gimbal_Control.axf",
+      "size_bytes": 1639928,
+      "sha256": "02a1ac285c78eb71570158e7aeaee5427116a13c104cb2775f8fcbc0e8681974"
+    }
+  },
+  "compiler": "ARM Compiler 5.06, original EIDE AC5/O0, 68C+1ASM",
+  "rom_bytes": 142120,
+  "ram_bytes": 37064,
+  "flashed": false,
+  "hardware_tested": false,
+  "behavior": {
+    "yaw_enabled_until": "explicit OFF or reboot",
+    "demos_per_batch": 2,
+    "after_pair": "next full movement entirely real; failed real movement arms next pair",
+    "trigger_first_entry_ms": 300,
+    "trigger_overshoot_deg": 0.2,
+    "hold_ms_unchanged": 500,
+    "fade_ms_unchanged": 500,
+    "pitch_sim_unchanged": true
+  }
+}

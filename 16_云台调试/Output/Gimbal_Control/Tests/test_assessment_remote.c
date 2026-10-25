@@ -125,7 +125,7 @@ static void wheels_and_test_interfaces(void)
     input.remote.channels[3] = 2000U; input.remote.channels[6] = 2000U; frame(198U);
     CHECK(!logic.targets.request.step_event); /* 左摇杆斜向拒绝，不能猜测测试轴。 */
     input.remote.channels[6] = 1000U; frame(205U);
-    CHECK(logic.targets.request.step_return_event && logic.targets.request.step_delta_deg == 0.0f);
+    CHECK(logic.targets.request.step_return_event && logic.targets.request.step_delta_deg == -30.0f);
     sequence = logic.targets.request.step_sequence;
     frame(212U); CHECK(!logic.targets.request.step_return_event && logic.targets.request.step_sequence == sequence);
     input.remote.channels[4] = 1500U; frame(219U);

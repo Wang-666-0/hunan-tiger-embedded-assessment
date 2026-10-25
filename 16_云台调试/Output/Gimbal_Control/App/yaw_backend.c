@@ -7,6 +7,8 @@
 
 static YawBackendState state;
 static YawStep step;
+/* Preserve the latest interrupted/unread report when starting a new step. */
+static YawStep previous_step;
 static YawRemoteStepEvent remote_step_event;
 static uint32_t last_step_sequence;
 static uint8_t remote_event_pending, step_from_remote;
@@ -46,8 +48,8 @@ static uint32_t StepBlocks(uint32_t now)
     if (!Online(now) || state.feedback.status != 1U) { blocks |= YAW_STEP_BLOCK_FEEDBACK; }
     if (state.controller.faults) { blocks |= YAW_STEP_BLOCK_FAULT; }
     if (!CanBus_YawAllowed()) { blocks |= YAW_STEP_BLOCK_PERMISSION; }
-    if (fabsf(state.controller.target_deg) > YAW_STEP_BAND_DEG) { blocks |= YAW_STEP_BLOCK_HOME; }
-    if (fabsf(state.controller.angle_deg) > YAW_STEP_BAND_DEG) { blocks |= YAW_STEP_BLOCK_POSITION; }
+    if (fabsf(state.controller.angle_deg - state.controller.target_deg) >
+        YAW_STEP_BAND_DEG + YAW_STEP_COMPARE_EPS_DEG) { blocks |= YAW_STEP_BLOCK_POSITION; }
 #if YAW_CONTROLLER_CASCADE_ENABLED
     if (fabsf(state.controller.cascade.velocity_dps) > YAW_CONTROLLER_STATIONARY_SPEED_DPS ||
         fabsf(state.controller.velocity_dps) > YAW_STEP_RAW_SPEED_SANITY_DPS) { blocks |= YAW_STEP_BLOCK_MOVING; }
@@ -58,7 +60,6 @@ static uint32_t StepBlocks(uint32_t now)
     if (state.controller.stationary_samples < 2U || state.controller.last_feedback_ms - state.controller.stationary_started_ms <
         YAW_CONTROLLER_STATIONARY_HOLD_MS) { blocks |= YAW_STEP_BLOCK_STILL; }
 #endif
-    if (step.phase == YAW_STEP_RUNNING) { blocks |= YAW_STEP_BLOCK_WINDOW; }
     if (state.view_locked) { blocks |= YAW_STEP_BLOCK_VIEW; }
     return blocks;
 }
@@ -71,8 +72,8 @@ static uint8_t CaptureForStart(void)
     uint8_t ff_enabled = state.controller.ff.enabled;
     uint32_t ff_revision = state.controller.ff.revision;
 #if YAW_CONTROLLER_CASCADE_ENABLED
-    /* 端点反馈允许原到位误差带，避免±50附近的量化/微小静差阻断重启。
-     * 目标仍裁到±50；更远的位置继续要求人工处理，不沿旧目标使能。 */
+    /* 端点反馈允许原到位误差带，避免目标限位附近的量化/微小静差阻断重启。
+     * 目标仍裁到配置的限位；更远的位置继续要求人工处理，不沿旧目标使能。 */
     edge += YAW_STEP_BAND_DEG;
 #endif
     if (keep && fabsf(state.controller.angle_deg) > edge) {
@@ -101,6 +102,7 @@ void YawBackend_Init(void)
     memset(&state, 0, sizeof(state));
     YawController_Init(&state.controller);
     YawStep_Init(&step);
+    YawStep_Init(&previous_step);
     memset(&remote_step_event, 0, sizeof(remote_step_event));
     last_step_sequence = 0U; remote_event_pending = step_from_remote = 0U;
     last_mode = GIMBAL_MANUAL;
@@ -427,13 +429,30 @@ uint8_t YawBackend_SetShapeVelocityGain(float gain)
     taskEXIT_CRITICAL(); return accepted;
 }
 
+uint32_t YawBackend_StepBlocks(float delta_deg)
+{
+    uint32_t blocks;
+    float target;
+    taskENTER_CRITICAL();
+    blocks = StepBlocks(HAL_GetTick());
+    target = state.controller.target_deg + delta_deg;
+    if ((delta_deg != 30.0f && delta_deg != -30.0f) || target != target ||
+        target < -YAW_CONTROLLER_TARGET_LIMIT_DEG || target > YAW_CONTROLLER_TARGET_LIMIT_DEG) {
+        blocks |= YAW_STEP_BLOCK_TARGET_LIMIT;
+    }
+    taskEXIT_CRITICAL(); return blocks;
+}
+
 uint8_t YawBackend_StartStep(float degrees)
 {
     uint8_t accepted = 0U;
+    float target;
     taskENTER_CRITICAL();
-    if ((degrees == 30.0f || degrees == -30.0f) && !StepBlocks(HAL_GetTick()) &&
-        YawController_SetTarget(&state.controller, degrees)) {
-        accepted = YawStep_Start(&step, HAL_GetTick(), state.controller.angle_deg, degrees);
+    target = state.controller.target_deg + degrees;
+    if (!YawBackend_StepBlocks(degrees) && YawController_SetTarget(&state.controller, target)) {
+        YawStep_Abort(&step, HAL_GetTick(), YAW_STEP_TARGET_CHANGE, 0U);
+        if (step.pending) { previous_step = step; }
+        accepted = YawStep_Start(&step, HAL_GetTick(), state.controller.angle_deg, target);
         if (accepted) {
             YawController_StartShape(&state.controller, step.start_ms);
             step.shape_ms = state.controller.shape.active ? state.controller.shape.duration_ms : 0U;
@@ -478,7 +497,8 @@ uint8_t YawBackend_TakeStepReport(YawStep *out)
     uint8_t ready = 0U;
     if (!out) { return 0U; }
     taskENTER_CRITICAL();
-    if (step.pending) { *out = step; step.pending = 0U; ready = 1U; }
+    if (previous_step.pending) { *out = previous_step; previous_step.pending = 0U; ready = 1U; }
+    else if (step.pending) { *out = step; step.pending = 0U; ready = 1U; }
     taskEXIT_CRITICAL(); return ready;
 }
 uint8_t YawBackend_TakeRemoteStepEvent(YawRemoteStepEvent *out)
@@ -492,9 +512,10 @@ uint8_t YawBackend_TakeRemoteStepEvent(YawRemoteStepEvent *out)
 static void RemoteNotice(const TargetRequest *request, uint8_t result)
 {
     remote_step_event.sequence = request->step_sequence;
-    remote_step_event.target_deg = request->step_delta_deg;
+    remote_step_event.target_deg = result == 1U || result == 2U ? state.controller.target_deg :
+        state.controller.target_deg + request->step_delta_deg;
     remote_step_event.result = result; remote_event_pending = 1U;
-    remote_step_event.blocks = result == 3U ? StepBlocks(HAL_GetTick()) : 0U;
+    remote_step_event.blocks = result == 3U ? YawBackend_StepBlocks(request->step_delta_deg) : 0U;
     if (result == 3U && !remote_step_event.blocks) { remote_step_event.blocks = YAW_STEP_BLOCK_PERMISSION; }
 }
 
@@ -705,7 +726,11 @@ void YawBackend_Apply(const TargetRequest *request, uint8_t allowed, uint8_t dia
                  && request->step_axis == GIMBAL_STEP_YAW
 #endif
                  ) {
-            if (YawBackend_SetParameter('T', 0.0f)) { RemoteNotice(request, 2U); }
+            /* A return is a retarget request, not a new settled-start test.
+             * Do not drop the edge while the old motion is still settling. */
+            if (YawBackend_SetParameter('T', state.controller.target_deg + request->step_delta_deg)) {
+                state.step_hold = step_from_remote = 1U; RemoteNotice(request, 2U);
+            }
             else { RemoteNotice(request, 3U); }
         } else if (request->step_axis != GIMBAL_STEP_YAW) { RemoteNotice(request, 4U); }
         else if (YawBackend_StartStep(request->step_delta_deg)) {

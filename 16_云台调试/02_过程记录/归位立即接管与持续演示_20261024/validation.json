@@ -1,0 +1,15 @@
+{
+  "date": "2026-10-25",
+  "groups": 22,
+  "checks": 642613,
+  "failures": 0,
+  "method": "ARM GCC -Wall -Wextra -Werror + Unicorn; actual C, HAL/RTOS mocked; no hardware",
+  "unique_test_input_hashes": 137,
+  "test_inputs_match": true,
+  "app_config_unchanged": true,
+  "build": "Original VS Code/EIDE Gimbal_Control, ARM Compiler 5.06, level-0, full 69 source items",
+  "hex": "D:\\Project\\27电软正式批考核\\16_云台调试\\Output\\Gimbal_Control\\MDK-ARM\\build\\Gimbal_Control\\Gimbal_Control.hex",
+  "hex_sha256": "389a9b48cfcc57a3041f81743e8745e7b2835a8cff754617b366fc224cf27d9a",
+  "flashed": false,
+  "hardware_verified": false
+}

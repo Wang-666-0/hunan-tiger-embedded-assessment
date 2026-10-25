@@ -34,12 +34,15 @@ static void ParseColumns(void)
     test_max_wire_us = (test_max_wire_bytes * 10000000UL + APP_CONSOLE_BAUDRATE - 1U) / APP_CONSOLE_BAUDRATE;
     CHECK(test_max_wire_us < 4500U); /* 64列仍小于5ms线路预算。 */
 }
-void test_run(void)
+#ifndef YAW_TELEMETRY_TEST_ENTRY
+#define YAW_TELEMETRY_TEST_ENTRY test_run
+#endif
+void YAW_TELEMETRY_TEST_ENTRY(void)
 {
     uint32_t index, frames;
     test_stage = 1U;
     CHECK(APP_TELEMETRY_PERIOD_MS == 5U && APP_CONSOLE_PERIOD_MS == 5U && APP_CONSOLE_BAUDRATE == 921600U);
-    AppConsole_CreateQueue(); AppConsole_Start();
+    AppConsole_CreateQueue(); AppConsole_Start(); clear_output(); command_line("YAW SIM OFF");
     memset(&yaw_sample, 0, sizeof(yaw_sample)); memset(&step_sample, 0, sizeof(step_sample));
     yaw_sample.controller.angle_deg = 1.234f; yaw_sample.controller.target_deg = 30.0f;
     yaw_sample.controller.cascade.target_velocity_dps = 180.0f;

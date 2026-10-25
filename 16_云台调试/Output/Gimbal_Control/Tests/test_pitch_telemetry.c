@@ -27,6 +27,9 @@ uint8_t PitchConsole_Handle(const char *text, char *response, size_t capacity)
     ++pitch_commands; (void)snprintf(response, capacity, "P|MOCK\r\n"); return 1U;
 }
 void PitchBackend_GetState(PitchBackendState *out) { *out = pitch_sample; }
+void PitchBackend_PrepareViewHold(void)
+{ if (!pitch_sample.active && !pitch_sample.enabling) {
+    pitch_sample.view_prepare_pending = 1U; pitch_sample.view_hold_suspended = 0U; } }
 void PitchBackend_GetStep(PitchStep *out) { *out = pitch_step_sample; }
 void YawConsole_CancelPreparation(void) { }
 uint8_t YawConsole_Poll(char *response, size_t capacity) { (void)response; (void)capacity; return 0U; }
@@ -60,7 +63,7 @@ void PITCH_TELEMETRY_TEST_ENTRY(void)
 {
     uint32_t i, frames = 0U;
     test_stage = 1U;
-    AppConsole_CreateQueue(); AppConsole_Start();
+    AppConsole_CreateQueue(); AppConsole_Start(); clear_output(); command_line("YAW SIM OFF"); clear_output(); command_line("PITCH SIM OFF");
     pitch_sample.controller.feedback_divisor = 1U;
     yaw_sample.controller.angle_deg = 11.25f; yaw_sample.controller.cascade.position.kp = 10.0f;
     now = 100U; clear_output(); AppConsole_Poll(); parse("gimbal:");
@@ -183,7 +186,7 @@ void PITCH_TELEMETRY_TEST_ENTRY(void)
     clear_output(); command_line("PITCH PID"); CHECK(strstr(output, "P|MOCK") && !strstr(output, "pitch:"));
     clear_output(); command_line("PITCH VIEW"); CHECK(strstr(output, "P|VIEW|PITCH|GROUP|pitch|COLS|65"));
     CHECK(strstr(output, "TERMINAL_BRAKE_NM_I|58|TERMINAL_BRAKE_ACTIVE_I|59|SHAPE_I|60_64|") && !strstr(output, "BRAKE_I"));
-    now += 100U; clear_output(); AppConsole_Poll(); CHECK(!output_length);
+    now += 100U; clear_output(); AppConsole_Poll(); parse("pitch:");
     CHECK(!stops && !pitch_cancel_count);
     clear_output(); command_line("TELEM ON"); CHECK(strstr(output, "C|OK|TELEM|ON"));
     now += 5U; clear_output(); AppConsole_Poll(); parse("pitch:");

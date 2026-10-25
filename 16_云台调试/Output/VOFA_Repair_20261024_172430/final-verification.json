@@ -1,0 +1,32 @@
+{
+  "verifiedAt": "2026-10-24T17:58:20.8233561+08:00",
+  "formalProcessId": 892,
+  "formalProcessResponding": true,
+  "continuousRunningSeconds": 204.0,
+  "programSha256": "81A360D34C099F1C5AE495DBE61D3CB2FAE715E896B2E0C32EA0B6C1E873A3FE",
+  "originalControlFileCount": 70,
+  "modifiedOrMissingControlFiles": [],
+  "sameControlsPositionsBindings": true,
+  "tabs": [
+    {
+      "name": "yaw",
+      "widgets": 12
+    },
+    {
+      "name": "pitch",
+      "widgets": 13
+    },
+    {
+      "name": "FEEDER ANGLE",
+      "widgets": 2
+    },
+    {
+      "name": "WHEEL",
+      "widgets": 2
+    }
+  ],
+  "pluginAbsent": true,
+  "diagnosticRuntimeRemoved": true,
+  "serialCommandsSentByRepair": false,
+  "normalSaveAndRestartCompleted": true
+}

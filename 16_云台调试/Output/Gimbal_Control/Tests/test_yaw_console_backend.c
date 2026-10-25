@@ -262,7 +262,7 @@ void test_run(void)
     CHECK(!state.stop_pending && state.controller.faults == 0U && torque_calls == before);
     test_stage = 8U;
     ConsoleActivate(7000U);
-    Command(7042U, "YAW STEP 30", "Y|ERROR|STEP_REQUIRES_ARMED_ZERO_STATIONARY_HEALTHY");
+    Command(7042U, "YAW STEP 30", "Y|ERROR|STEP_REQUIRES_ARMED_SETTLED_HEALTHY");
     CHECK(!state.step_hold && state.controller.target_deg == 0.0f); /* 必须先人工ZERO。 */
     ConsoleZeroActivate(8000U);
     Command(8068U, "YAW STEP 30", "Y|OK|STEP_STARTED");
@@ -370,7 +370,7 @@ void test_run(void)
     Control(20094U, 1U); FeedDegrees(20096U, 3.0f, 0.0f); Control(20096U, 1U);
     for (t = 20098U; t <= 20104U; t += 2U) { Control(t, 1U); }
     CHECK(state.active && state.zero_set && state.controller.angle_deg > 2.99f && state.controller.target_deg > 2.99f);
-    Command(20106U, "YAW STEP 30", "Y|ERROR|STEP_REQUIRES_ARMED_ZERO_STATIONARY_HEALTHY");
+    Command(20106U, "YAW STEP 30", "Y|ERROR|STEP_REQUIRES_ARMED_SETTLED_HEALTHY");
     CHECK(state.controller.target_deg > 2.99f); /* ON/FC不覆盖人工零点，也不自行回零。 */
     test_stage = 14U;
     /* 单条READY从无反馈起步：原FD->单次FB->真实状态0->静止ZERO->准备。

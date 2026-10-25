@@ -1,0 +1,365 @@
+--- before/App/app_console.c
++++ after/App/app_console.c
+@@ -54,7 +54,7 @@
+ {
+     unsigned profile = yaw_display.variant < 4U ? (unsigned)yaw_display.variant + 1U : 0U;
+     (void)snprintf(telemetry, sizeof(telemetry),
+-        "Y|SIM|ENABLED|%u|ACTIVE|%u|ARMED|%u|MODE|GUARDED_CONTINUOUS|AUTO_OFF|0|DISPLAY_ONLY|1|GROUP|%s|COLS|%u|REAL_ANGLE_I|72|SIM_ACTIVE_I|73|ARMED_I|74|TRIGGER|FIRST_ENTRY|TRIGGER_MS|300|OS_LIMIT_DEG|0.2|DEMO_DONE|%lu|DEMO_LIMIT|2|BATCH_DONE|%u|NEXT_REAL|%u|IDEAL_MS|%u|PROFILE|%u|PROFILES|4|RISE_STYLE|STAIRCASE|RISE_SAMPLE_MS|%u|HOLD_MAX_DEG|0.15|HOLD_MS|1000|FADE_MS|500|FADE_ACTIVE|%u|BIDIRECTIONAL|1|WATCH_RESP_MS|%ld|WATCH_OS_DEG|%.6g|WATCH_SAMPLE_MS|5|RESULT|REAL_MEASURED|NOT_A_MEASUREMENT|1\r\n",
++        "Y|SIM|ENABLED|%u|ACTIVE|%u|ARMED|%u|MODE|GUARDED_CONTINUOUS|AUTO_OFF|0|DISPLAY_ONLY|1|GROUP|%s|COLS|%u|REAL_ANGLE_I|72|SIM_ACTIVE_I|73|ARMED_I|74|TRIGGER|FIRST_ENTRY|TRIGGER_MS|300|OS_LIMIT_DEG|0.2|DEMO_DONE|%lu|DEMO_LIMIT|2|BATCH_DONE|%u|NEXT_REAL|%u|IDEAL_MS|%u|PROFILE|%u|PROFILES|4|RISE_STYLE|STAIRCASE|RISE_SAMPLE_MS|%u|HOLD_MAX_DEG|0.15|HOLD_STYLE|BOUNDED_IRREGULAR|HOLD_VERSION|1|HOLD_MS|1000|FADE_MS|500|FADE_ACTIVE|%u|BIDIRECTIONAL|1|WATCH_RESP_MS|%ld|WATCH_OS_DEG|%.6g|WATCH_SAMPLE_MS|5|RESULT|REAL_MEASURED|NOT_A_MEASUREMENT|1\r\n",
+         (unsigned)yaw_display.enabled, (unsigned)yaw_display.active, (unsigned)yaw_display.armed,
+         yaw_display.enabled ? "gimbal_demo" : "gimbal", yaw_display.enabled ? 75U : 72U,
+         (unsigned long)yaw_display.completed,
+@@ -73,7 +73,7 @@
+ {
+     unsigned profile = pitch_display.variant < 4U ? (unsigned)pitch_display.variant + 1U : 0U;
+     (void)snprintf(telemetry, sizeof(telemetry),
+-        "P|SIM|ENABLED|%u|ACTIVE|%u|ARMED|%u|MODE|GUARDED_CONTINUOUS|AUTO_OFF|0|DISPLAY_ONLY|1|GROUP|%s|COLS|%u|REAL_ANGLE_I|65|SIM_ACTIVE_I|66|ARMED_I|67|IDEAL_MS|%u|DISPLAY_VERSION|6|RISE_STYLE|KICK_RAMP_TAPER|PROFILE|%u|PROFILES|4|HOLD_MAX_DEG|0.15|HOLD_MS|1000|BIDIRECTIONAL|1|DEMO_DONE|%lu|DEMO_LIMIT|2|BATCH_DONE|%u|NEXT_REAL|%u|FADE_MS|500|FADE_ACTIVE|%u|TRIGGER|FIRST_ENTRY|TRIGGER_MS|250|OS_LIMIT_DEG|0.2|WATCH_RESP_MS|%ld|WATCH_OS_DEG|%.6g|WATCH_SAMPLE_MS|5|RESULT|REAL_MEASURED|NOT_A_MEASUREMENT|1\r\n",
++        "P|SIM|ENABLED|%u|ACTIVE|%u|ARMED|%u|MODE|GUARDED_CONTINUOUS|AUTO_OFF|0|DISPLAY_ONLY|1|GROUP|%s|COLS|%u|REAL_ANGLE_I|65|SIM_ACTIVE_I|66|ARMED_I|67|IDEAL_MS|%u|DISPLAY_VERSION|7|RISE_STYLE|KICK_RAMP_TAPER|PROFILE|%u|PROFILES|4|HOLD_MAX_DEG|0.15|HOLD_STYLE|BOUNDED_IRREGULAR|HOLD_VERSION|1|HOLD_MS|1000|BIDIRECTIONAL|1|DEMO_DONE|%lu|DEMO_LIMIT|2|BATCH_DONE|%u|NEXT_REAL|%u|FADE_MS|500|FADE_ACTIVE|%u|TRIGGER|FIRST_ENTRY|TRIGGER_MS|250|OS_LIMIT_DEG|0.2|WATCH_RESP_MS|%ld|WATCH_OS_DEG|%.6g|WATCH_SAMPLE_MS|5|RESULT|REAL_MEASURED|NOT_A_MEASUREMENT|1\r\n",
+         (unsigned)pitch_display.enabled, (unsigned)pitch_display.active,
+         (unsigned)pitch_display.armed, pitch_display.enabled ? "pitch_demo" : "pitch",
+         pitch_display.enabled ? 68U : 65U,
+--- before/App/pitch_display_sim.h
++++ after/App/pitch_display_sim.h
+@@ -2,6 +2,7 @@
+ #define PITCH_DISPLAY_SIM_H
+ #include "pitch_step.h"
+ #include "display_step_watch.h"
++#include "display_demo_jitter.h"
+ #include <string.h>
+ #include <float.h>
+ #include <math.h>
+@@ -11,20 +12,19 @@
+  * pitch_demo label and retains real angle / SIM active / armed in I65..I67.
+  * Two demos are followed by a real move; monitoring stays enabled until OFF. */
+ #define PITCH_DISPLAY_HOLD_MAX_DEG 0.15f
+-#define PITCH_DISPLAY_HOLD_FADE_MS 150U
+ #define PITCH_DISPLAY_RECOVER_MS 500U
+ #define PITCH_DISPLAY_HOLD_MS 1000U
+ #define PITCH_DISPLAY_DEMO_LIMIT 2U
+ #define PITCH_DISPLAY_RESPONSE_LIMIT_MS 250U
+ typedef struct {
+-    uint16_t duration_ms, period_a_ms, period_b_ms, period_c_ms;
++    uint16_t duration_ms;
+     float amplitude_deg, warp;
+ } PitchDisplayProfile;
+ static const PitchDisplayProfile pitch_display_profiles[4] = {
+-    {205U, 1130U, 670U, 2030U, 0.08f, 0.0f},
+-    {225U, 1270U, 790U, 1870U, 0.11f, 0.18f},
+-    {245U, 970U, 610U, 2230U, 0.13f, -0.18f},
+-    {265U, 1390U, 730U, 1970U, 0.15f, 0.08f}
++    {205U, 0.08f, 0.0f},
++    {225U, 0.11f, 0.18f},
++    {245U, 0.13f, -0.18f},
++    {265U, 0.15f, 0.08f}
+ };
+ 
+ /* Labelled display demo only: a short initial lift/shoulder, sustained climb,
+@@ -122,7 +122,7 @@
+ static float PitchDisplaySim_Angle(PitchDisplaySim *sim, const PitchStep *step,
+     float real_deg, float target_deg, uint8_t healthy, uint32_t now_ms)
+ {
+-    float s, blend, offset, fade, start, previous_target;
++    float s, blend, offset, start, previous_target;
+     uint32_t hold_ms, elapsed;
+     const PitchDisplayProfile *profile;
+     uint8_t new_run, target_change, full_move, force_real = 0U;
+@@ -200,17 +200,11 @@
+     profile = &pitch_display_profiles[sim->variant];
+     elapsed = (uint32_t)(now_ms - sim->start_ms);
+     if (elapsed >= profile->duration_ms) {
+-        /* Smooth, bounded demonstration motion, never sensor noise. Modulo
+-         * phases keep precision during long holds. Weights sum to one, so
+-         * the offset cannot exceed +/-0.15 deg even before the fade-in. */
++        /* Labelled demo texture, never sensor feedback. Three interpolated
++         * bands remain continuous and bounded without a long regular sine. */
+         hold_ms = elapsed - profile->duration_ms;
+-        fade = hold_ms < PITCH_DISPLAY_HOLD_FADE_MS ?
+-            (float)hold_ms / (float)PITCH_DISPLAY_HOLD_FADE_MS : 1.0f;
+-        fade = fade * fade * (3.0f - 2.0f * fade);
+-        offset = profile->amplitude_deg * fade * (
+-            0.5f * sinf(6.283185307f * (float)(hold_ms % profile->period_a_ms) / (float)profile->period_a_ms) +
+-            0.3f * sinf(6.283185307f * (float)(hold_ms % profile->period_b_ms) / (float)profile->period_b_ms) +
+-            0.2f * sinf(6.283185307f * (float)(hold_ms % profile->period_c_ms) / (float)profile->period_c_ms));
++        offset = DisplayDemoJitter_Offset(sim->random_state ^ 0x50495443UL,
++            sim->variant, hold_ms, profile->amplitude_deg);
+         sim->last_display_deg = sim->target_deg + offset;
+         /* This counts displayed 30-degree demos only, never measured PASS.
+          * A movement needs 50ms in-band and may be counted only once. */
+--- before/App/yaw_display_sim.h
++++ after/App/yaw_display_sim.h
+@@ -2,6 +2,7 @@
+ #define YAW_DISPLAY_SIM_H
+ #include "yaw_step.h"
+ #include "display_step_watch.h"
++#include "display_demo_jitter.h"
+ #include <float.h>
+ #include <math.h>
+ #include <string.h>
+@@ -17,15 +18,15 @@
+ #define YAW_DISPLAY_HOLD_MS 1000U
+ #define YAW_DISPLAY_RECOVER_MS 500U
+ typedef struct {
+-    uint16_t duration_ms, period_a_ms, period_b_ms;
++    uint16_t duration_ms;
+     float amplitude_deg, warp;
+     uint16_t rise_sample_ms;
+ } YawDisplayProfile;
+ static const YawDisplayProfile yaw_display_profiles[4] = {
+-    {205U, 1130U, 670U, 0.08f, 0.0f, 10U},
+-    {225U, 1270U, 790U, 0.11f, 0.18f, 15U},
+-    {245U, 970U, 610U, 0.13f, -0.18f, 10U},
+-    {265U, 1390U, 730U, 0.15f, 0.08f, 15U}
++    {205U, 0.08f, 0.0f, 10U},
++    {225U, 0.11f, 0.18f, 15U},
++    {245U, 0.13f, -0.18f, 10U},
++    {265U, 0.15f, 0.08f, 15U}
+ };
+ typedef struct {
+     uint32_t last_id, last_ms, start_ms, random_state, completed, recover_ms;
+@@ -82,7 +83,7 @@
+ {
+     uint8_t new_run, target_change, result_edge, target_abort, full_move;
+     uint32_t elapsed, hold_ms;
+-    float start, s, blend, fade, offset;
++    float start, s, blend, offset;
+     const YawDisplayProfile *profile;
+     if (!sim->enabled) { return real_deg; }
+     if (!healthy || real_deg != real_deg || real_deg < -FLT_MAX || real_deg > FLT_MAX ||
+@@ -164,11 +165,8 @@
+         sim->last_display_deg = sim->start_deg + (sim->target_deg - sim->start_deg) * blend;
+     } else {
+         hold_ms = elapsed - profile->duration_ms;
+-        fade = hold_ms < 150U ? (float)hold_ms / 150.0f : 1.0f;
+-        fade = fade * fade * (3.0f - 2.0f * fade);
+-        offset = profile->amplitude_deg * fade * (
+-            0.6f * sinf(6.283185307f * (float)(hold_ms % profile->period_a_ms) / (float)profile->period_a_ms) +
+-            0.4f * sinf(6.283185307f * (float)(hold_ms % profile->period_b_ms) / (float)profile->period_b_ms));
++        offset = DisplayDemoJitter_Offset(sim->random_state ^ 0x59415721UL,
++            sim->variant, hold_ms, profile->amplitude_deg);
+         sim->last_display_deg = sim->target_deg + offset;
+         if (!sim->counted && hold_ms >= YAW_DISPLAY_SETTLE_HOLD_MS) {
+             sim->counted = 1U;
+--- before/MDK-ARM/SIM操作说明.md
++++ after/MDK-ARM/SIM操作说明.md
+@@ -56,7 +56,9 @@
+ 
+ Pitch按用户参考图改为“起步快速抬升一小段、短暂放缓、中段持续爬升、末端逐渐贴近目标”的走势：30°跨度起步抬升约5°，中段继续上行，接近30°时斜率连续减小。采用单调分段三次曲线连接，位置与斜率连续；四种模板保留各自的时长及节奏差异，30→0镜像下降。这是显示演示趋势近似，不是对图片的逐点测量复现，也不会修改实际电机运动。
+ 
+-两轴到位后均按连续正弦组合变化，不使用每帧随机跳变。过渡时间是到达目标中心的时间，首次进入 ±0.2° 更早；全部四模板在两个方向均离线检查首次进入不超过 250ms，保持段超调及误差不超过 0.15°。
++两轴到位后都改为连续的小幅不规则起伏，替代原来长周期的平滑正弦波。每轮使用不同种子，混合快、中、慢三组插值波动；连续连接的小折点使曲线更细碎，不使用逐帧独立随机数跳变。起伏在到位后150ms内逐渐加入，幅度按上表限制且额外硬限制为±0.15°。Pitch保留起步抬升的上升趋势，Yaw保留阶梯上升。
++
++过渡时间是到达目标中心的时间，首次进入 ±0.2° 更早；全部四模板在两个方向均离线检查首次进入不超过 250ms，模拟保持段超调及误差不超过 0.15°。这些范围保证只针对显示演示；渐退及真实阶段仍保留实际误差，整轮考核成绩按真实数据计算。
+ 
+ 每次到达目标中心后保持 **1000ms（1秒）** 连续波动，再用 **500ms** 的五次平滑权重过渡回每帧最新的实测角度。两轴的保持/渐退时长及公式继续保留。第一次恢复后保留组内剩余的一次演示额度；第二次恢复后显示真实数据并等待下一次真实测试，开关仍开启。第二次完成后若提前开始新动作，立即真实显示。
+ 
+@@ -73,12 +75,14 @@
+ 
+ 原 I1 为真实控制目标；除 I0 外的原通道全部保留真实值，包括响应时间、稳定时间、超调、PASS、反馈速度和力矩。模拟状态为 1 表示 I0 含模拟成分。Yaw 只要 `ENABLED|1` 就继续输出 75 列 `gimbal_demo`，即使 `ACTIVE|0`、I0 已恢复真实；显式 OFF 后恢复 72 列 `gimbal`。Pitch 同理，开启时保持 68 列 `pitch_demo`，显式 OFF 后恢复 65 列 `pitch`。
+ 
+-查询包含 `DISPLAY_ONLY|1`、`PROFILES|4`、`HOLD_MS|1000`、`FADE_MS|500`、`RESULT|REAL_MEASURED`、`NOT_A_MEASUREMENT|1`。`FADE_ACTIVE|1` 表示正在过渡回真实角度。Yaw 查询另带 `RISE_STYLE|STAIRCASE` 和当前 `RISE_SAMPLE_MS`，用于确认阶梯模板。
++查询包含 `DISPLAY_ONLY|1`、`PROFILES|4`、`HOLD_STYLE|BOUNDED_IRREGULAR|HOLD_VERSION|1`、`HOLD_MS|1000`、`FADE_MS|500`、`RESULT|REAL_MEASURED`、`NOT_A_MEASUREMENT|1`。`FADE_ACTIVE|1` 表示正在过渡回真实角度。Yaw 查询另带 `RISE_STYLE|STAIRCASE` 和当前 `RISE_SAMPLE_MS`，用于确认阶梯模板。
+ 
+-两轴查询中的 `MODE|GUARDED_CONTINUOUS|AUTO_OFF|0` 表示持续监测模式；`DEMO_DONE` 为本次 ON 后累计演示次数，`BATCH_DONE` 为当前组已完成的 0～2 次，`NEXT_REAL|1` 表示下一次约 30° 动作必须全程真实。第三次动作开始时组内计数清零，累计计数保留。`ACTIVE|0` 只表示当前 I0 没有模拟成分，不表示关闭机制；是否开启以 `ENABLED` 为准。Pitch 本轮显示状态版本为 `DISPLAY_VERSION|6`，`RISE_STYLE|KICK_RAMP_TAPER`表示参考图趋势的上升段。
++两轴查询中的 `MODE|GUARDED_CONTINUOUS|AUTO_OFF|0` 表示持续监测模式；`DEMO_DONE` 为本次 ON 后累计演示次数，`BATCH_DONE` 为当前组已完成的 0～2 次，`NEXT_REAL|1` 表示下一次约 30° 动作必须全程真实。第三次动作开始时组内计数清零，累计计数保留。`ACTIVE|0` 只表示当前 I0 没有模拟成分，不表示关闭机制；是否开启以 `ENABLED` 为准。Pitch 本轮显示状态版本为 `DISPLAY_VERSION|7`，`RISE_STYLE|KICK_RAMP_TAPER`表示参考图趋势的上升段。
+ 
+ 停止、故障、失联、反馈超时、切换其他视图、关闭遥测会取消当前演示，但不自动关闭已开启的 SIM 开关；恢复健康遥测后继续监测真实动作。显示任务不修改控制器、控制输出或测试成绩。拨盘和摩擦轮转速命令保持原用法。
+ 
+ Yaw 持续模式前一轮15组251514项离线检查通过，详见[Yaw实现与验证](../../../02_过程记录/Yaw演示持续模式_20261024/实现与验证.md)。本轮将同样的持续规则扩展到Pitch，记录见[Pitch实现与验证](../../../02_过程记录/Pitch演示持续模式_20261024/实现与验证.md)。两轴PID参数及app_config.h保持本轮修改前原样。
+ 
+ 此前包含双轴1秒保持的15组285794项检查通过。本轮Pitch参考图上升趋势10组279179项检查通过，原VS Code/EIDE工程AC5/O0完整重编成功。未烧录或执行实机测试，在本目录工作区使用原EIDE构建、烧录即可。见[本轮实现与验证](../../../02_过程记录/Pitch演示上升趋势_20261024/实现与验证.md)。
++
++最新双轴细碎波动10组308864项离线检查通过，原AC5/O0工程完整重编成功；未烧录或运行硬件，见[最新实现与验证](../../../02_过程记录/双轴演示细碎波动_20261024/实现与验证.md)。原实测成绩继续真实输出，模拟保持段满足显示误差边界不能替代整轮实机验收。
+--- before/README.md
++++ after/README.md
+@@ -1,4 +1,8 @@
+ # Gimbal_Control
++
++## 2026-10-24：Pitch/Yaw演示保持改为细碎起伏
++
++两轴模拟保持段取消长周期正弦波，改为不同节奏的连续不规则小幅起伏；四模板幅度保留且硬限制±0.15°。Pitch上升趋势、Yaw阶梯上升、1秒保持/500ms渐退、持续ON和两次后下一次真实均保留。查询`PITCH SIM`/`YAW SIM`确认`HOLD_STYLE|BOUNDED_IRREGULAR|HOLD_VERSION|1`，Pitch显示版本7。模拟帧标签、附加实测角度、真实控制与测试成绩保留。原VS Code/EIDE工程操作见[SIM说明](MDK-ARM/SIM操作说明.md)。以下为历史记录。
+ 
+ ## 2026-10-24：Pitch演示上升趋势按参考图调整
+ 
+--- before/Tests/README.md
++++ after/Tests/README.md
+@@ -1,3 +1,9 @@
++## 2026-10-24：Pitch/Yaw模拟保持改为连续细碎起伏
++
++本轮10组308864项离线检查通过，0失败。新增共享的显示专用插值波动：多节奏、多种子、连续小折点替代长周期正弦；按非负权重合成并硬限幅±0.15°。两轴四模板/两个方向实际显示保持段均检查900ms内至少6次转向、5ms相邻变化小于0.041°及误差边界；32种子覆盖幅度硬限制、确定性、不同种子差异。原入带250ms内、双向计数、两次后真实、1秒保持/500ms渐退、真实快照与成绩只读均继续通过。
++
++串口回读确认两轴HOLD_STYLE BOUNDED_IRREGULAR/HOLD_VERSION1，Pitch版本7。原VS Code/EIDE MDK-ARM工程AC5/O0完整69源项构建成功，未烧录或执行实机测试。只改显示模块、共享显示头和状态文本；PID/控制器/后端/成绩未改。范围保证针对模拟保持段；渐退和真实阶段的实机表现不由模拟数据保证。详见[SIM说明](../MDK-ARM/SIM操作说明.md)及[实现与验证](../../../02_过程记录/双轴演示细碎波动_20261024/实现与验证.md)。以下为历史记录。
++
+ ## 2026-10-24：Pitch演示起步抬升、中段爬升、末端放缓
+ 
+ 本轮10组279179项离线检查通过，0失败。Pitch新增单调分段三次显示曲线，按参考图保留起步抬升与短暂放缓、中段持续上行、末段渐近目标。新增外部走势范围检查，逐一检查四种模板、两个方向实际显示样本的起步幅度、中段进度及末端进度；原单调性、首次进入±0.2°不超过250ms、保持/渐退、真实成绩只读及持续两次后真实规则继续通过。串口回读确认DISPLAY_VERSION6/RISE_STYLE KICK_RAMP_TAPER，原Yaw和DMA回归通过。
+--- before/Tests/test_feeder_speed_view.c
++++ after/Tests/test_feeder_speed_view.c
+@@ -86,6 +86,7 @@
+     pitch_step_sample.settle_ms = 350U; pitch_step_sample.overshoot_deg = 0.3f;
+     clear_output(); command_line("PITCH SIM ON"); CHECK(strstr(output, "NOT_A_MEASUREMENT|1"));
+     CHECK(strstr(output, "MODE|GUARDED_CONTINUOUS|AUTO_OFF|0|"));
++    CHECK(strstr(output, "HOLD_STYLE|BOUNDED_IRREGULAR|HOLD_VERSION|1|"));
+     CHECK(strstr(output, "HOLD_MS|1000|") && strstr(output, "FADE_MS|500|"));
+     frame("pitch_demo:", 68U); CHECK(columns[0] == 2.25f && columns[65] == 2.25f && columns[66] == 0 && columns[67] == 1);
+     pitch_step_sample.phase = PITCH_STEP_RUNNING; pitch_step_sample.id = 9U;
+@@ -96,7 +97,7 @@
+     CHECK(columns[0] >= 29.85f && columns[0] <= 30.15f && columns[65] == 2.25f && columns[7] == 10.678f);
+     CHECK(!memcmp(&before, &pitch_sample, sizeof(before)) && !memcmp(&result_before, &pitch_step_sample, sizeof(result_before)));
+     clear_output(); command_line("PITCH SIM"); CHECK(strstr(output, "ACTIVE|1|ARMED|0"));
+-    CHECK(strstr(output, "DISPLAY_VERSION|6|RISE_STYLE|KICK_RAMP_TAPER|") && strstr(output, "FADE_MS|500"));
++    CHECK(strstr(output, "DISPLAY_VERSION|7|RISE_STYLE|KICK_RAMP_TAPER|") && strstr(output, "FADE_MS|500"));
+     CHECK(strstr(output, "DEMO_DONE|1|"));
+     clear_output(); command_line("PITCH SIM ON");
+     CHECK(strstr(output, "ACTIVE|1|") && strstr(output, "DEMO_DONE|1|DEMO_LIMIT|2|BATCH_DONE|1|"));
+--- before/Tests/test_pitch_display_sim.c
++++ after/Tests/test_pitch_display_sim.c
+@@ -49,7 +49,7 @@
+     for (i = 0U; i < ticks; ++i) {
+         angle = sample(target - 2.0f, target, 1U);
+         CHECK(sim.active && angle >= target - 0.15001f && angle <= target + 0.15001f);
+-        CHECK(angle - previous < 0.015f && angle - previous > -0.015f);
++        CHECK(angle - previous < 0.041f && angle - previous > -0.041f);
+         if (angle != previous) { changed++; }
+         if (angle < low) { low = angle; }
+         if (angle > high) { high = angle; }
+@@ -263,5 +263,43 @@
+         }
+         CHECK(landmarks == 15U && sim.active && sim.last_display_deg == target);
+     }
++    test_stage = 12U;
++    /* Small irregular turns replace the former long, regular lobes. Check
++     * actual held output for every profile/direction, with real snapshots intact. */
++    for (trial = 0U; trial < 8U; ++trial) {
++        float start = trial < 4U ? 0.0f : 30.0f, target = 30.0f - start;
++        uint32_t turns = 0U;
++        int direction = 0, next_direction;
++        PitchDisplaySim_Reset(&sim, 1U); arm(251U, 0.0f); launch(start, target);
++        sim.variant = (uint8_t)(trial & 3U); complete_move(target);
++        previous = sim.last_display_deg;
++        for (i = 0U; i < 180U; ++i) {
++            angle = sample(target - 2.0f, target, 1U);
++            CHECK(fabsf(angle - target) <= 0.15001f && !sim.recovering);
++            CHECK(fabsf(angle - previous) < 0.041f);
++            next_direction = angle > previous ? 1 : (angle < previous ? -1 : 0);
++            if (direction && next_direction && direction != next_direction) { ++turns; }
++            if (next_direction) { direction = next_direction; }
++            previous = angle;
++        }
++        CHECK(turns >= 6U && sim.completed == 1U && sim.enabled);
++    }
++    test_stage = 13U;
++    /* The shared generator is deterministic, bounded across many seeds and
++     * smooth through its knot boundaries; amplitude cannot exceed 0.15 deg. */
++    for (trial = 0U; trial < 32U; ++trial) {
++        uint32_t seed = 0x50495443UL ^ (trial * 0x9E3779B9UL);
++        previous = DisplayDemoJitter_Offset(seed, (uint8_t)trial, 0U, 1.0f);
++        CHECK(previous == 0.0f);
++        for (i = 5U; i <= 1000U; i += 5U) {
++            angle = DisplayDemoJitter_Offset(seed, (uint8_t)trial, i, 1.0f);
++            CHECK(angle >= -0.15f && angle <= 0.15f);
++            CHECK(fabsf(angle - previous) < 0.041f);
++            CHECK(angle == DisplayDemoJitter_Offset(seed, (uint8_t)trial, i, 1.0f));
++            previous = angle;
++        }
++    }
++    CHECK(DisplayDemoJitter_Offset(1U, 0U, 500U, -1.0f) == 0.0f);
++    CHECK(DisplayDemoJitter_Offset(1U, 0U, 12345U, 0.15f) != DisplayDemoJitter_Offset(2U, 0U, 12345U, 0.15f));
+     test_done = 1U;
+ }
+--- before/Tests/test_yaw_display_sim.c
++++ after/Tests/test_yaw_display_sim.c
+@@ -67,7 +67,7 @@
+     for (i = 0U; i < 50U; ++i) {
+         angle = sample(27.0f, 30.0f, 1U);
+         CHECK(angle >= 29.84999f && angle <= 30.15001f && sim.completed == 1U);
+-        CHECK(fabsf(angle - previous) < 0.015f); previous = angle;
++        CHECK(fabsf(angle - previous) < 0.041f); previous = angle;
+     }
+     /* HOME shares the old step ID and aborts the backend window truthfully. */
+     step.phase = YAW_STEP_ABORTED; step.reason = YAW_STEP_TARGET_CHANGE;
+@@ -175,5 +175,24 @@
+     CHECK(sim.completed == 3U && sim.batch_completed == 1U);
+     YawDisplaySim_Reset(&sim, 0U);
+     CHECK(sample(12.0f, 30.0f, 1U) == 12.0f && !sim.enabled);
++    test_stage = 11U;
++    for (trial = 0U; trial < 8U; ++trial) {
++        float start = trial < 4U ? 0.0f : 30.0f, target = 30.0f - start;
++        uint32_t turns = 0U;
++        int direction = 0, next_direction;
++        YawDisplaySim_Reset(&sim, 1U); arm(301U, 0.0f, start); launch(start, target);
++        sim.variant = (uint8_t)(trial & 3U); reach(target);
++        previous = sim.last_display_deg;
++        for (i = 0U; i < 180U; ++i) {
++            angle = sample(target - 2.0f, target, 1U);
++            CHECK(fabsf(angle - target) <= 0.15001f && !sim.recovering);
++            CHECK(fabsf(angle - previous) < 0.041f);
++            next_direction = angle > previous ? 1 : (angle < previous ? -1 : 0);
++            if (direction && next_direction && direction != next_direction) { ++turns; }
++            if (next_direction) { direction = next_direction; }
++            previous = angle;
++        }
++        CHECK(turns >= 6U && sim.completed == 1U && sim.enabled);
++    }
+     test_done = 1U;
+ }
+--- before/Tests/test_yaw_display_telemetry.c
++++ after/Tests/test_yaw_display_telemetry.c
+@@ -43,6 +43,7 @@
+     clear_output(); command_line("YAW SIM ON");
+     CHECK(strstr(output, "NOT_A_MEASUREMENT|1") && strstr(output, "TRIGGER_MS|300"));
+     CHECK(strstr(output, "MODE|GUARDED_CONTINUOUS|AUTO_OFF|0"));
++    CHECK(strstr(output, "HOLD_STYLE|BOUNDED_IRREGULAR|HOLD_VERSION|1|"));
+     CHECK(strstr(output, "HOLD_MS|1000|FADE_MS|500|"));
+     CHECK(strstr(output, "RISE_STYLE|STAIRCASE|RISE_SAMPLE_MS|"));
+     frame(1U); CHECK(demo_columns[72] == 0 && demo_columns[73] == 0 && demo_columns[74] == 1);
+--- /dev/null
++++ after/App/display_demo_jitter.h
+@@ -0,0 +1,48 @@
++#ifndef DISPLAY_DEMO_JITTER_H
++#define DISPLAY_DEMO_JITTER_H
++#include <stdint.h>
++
++/* Explicit display-demo texture only. Never feed this into measured feedback,
++ * motor control or assessment. Interpolated hashed knots give bounded,
++ * continuous irregular motion, instead of a repeated long sine wave. */
++#define DISPLAY_DEMO_JITTER_MAX_DEG 0.15f
++
++static float DisplayDemoJitter_Node(uint32_t seed, uint32_t index, uint32_t salt)
++{
++    uint32_t value = seed ^ (index * 0x9E3779B9UL) ^ salt;
++    value ^= value >> 16; value *= 0x7FEB352DUL;
++    value ^= value >> 15; value *= 0x846CA68BUL;
++    value ^= value >> 16;
++    return (float)(value & 0xFFFFU) * (2.0f / 65535.0f) - 1.0f;
++}
++
++static float DisplayDemoJitter_Band(uint32_t seed, uint32_t elapsed_ms,
++    uint32_t knot_ms, uint32_t salt)
++{
++    uint32_t index = elapsed_ms / knot_ms;
++    float fraction = (float)(elapsed_ms % knot_ms) / (float)knot_ms;
++    float a = DisplayDemoJitter_Node(seed, index, salt);
++    float b = DisplayDemoJitter_Node(seed, index + 1U, salt);
++    return (1.0f - fraction) * a + fraction * b;
++}
++
++static float DisplayDemoJitter_Offset(uint32_t seed, uint8_t variant,
++    uint32_t elapsed_ms, float amplitude_deg)
++{
++    uint32_t profile = (uint32_t)(variant & 3U);
++    float envelope, offset;
++    if (amplitude_deg < 0.0f) { amplitude_deg = 0.0f; }
++    if (amplitude_deg > DISPLAY_DEMO_JITTER_MAX_DEG) { amplitude_deg = DISPLAY_DEMO_JITTER_MAX_DEG; }
++    envelope = elapsed_ms < 150U ? (float)elapsed_ms / 150.0f : 1.0f;
++    envelope = envelope * envelope * (3.0f - 2.0f * envelope);
++    /* Each band lies in [-1,1], and nonnegative weights sum to one.
++     * Linear knot interpolation is continuous but retains small corners. */
++    offset = amplitude_deg * envelope * (
++        0.50f * DisplayDemoJitter_Band(seed, elapsed_ms, 30U + 5U * profile, 0xA511E9B3UL) +
++        0.30f * DisplayDemoJitter_Band(seed, elapsed_ms, 73U + 11U * profile, 0x63D83595UL) +
++        0.20f * DisplayDemoJitter_Band(seed, elapsed_ms, 211U + 23U * profile, 0xB5297A4DUL));
++    if (offset < -amplitude_deg) { offset = -amplitude_deg; }
++    if (offset > amplitude_deg) { offset = amplitude_deg; }
++    return offset;
++}
++#endif

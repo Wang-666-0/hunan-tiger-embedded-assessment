@@ -250,7 +250,7 @@ uint8_t PitchConsole_Poll(char *response, size_t capacity)
         return 0U;
     }
     if (PitchBackend_TakeRemoteStepEvent(&event)) {
-        static const char *results[] = { "NONE", "STARTED", "RETURN_ZERO", "START_GUARD" };
+        static const char *results[] = { "NONE", "STARTED", "BACK_30", "START_GUARD" };
         (void)snprintf(response, capacity, "P|REMOTE_STEP|SEQ|%lu|RESULT|%s|TARGET|%.1f\r\n",
             (unsigned long)event.sequence, event.result <= 3U ? results[event.result] : "UNKNOWN",
             (double)event.target_deg);
@@ -470,10 +470,10 @@ uint8_t PitchConsole_Handle(const char *line, char *response, size_t capacity)
     }
     if (strcmp(line, "PITCH HOME") == 0) {
         taskENTER_CRITICAL();
-        if (strcmp(RemoteReason(0U), "OK") == 0) { accepted = PitchBackend_SetTarget(0.0f); }
+        if (strcmp(RemoteReason(0U), "OK") == 0) { accepted = PitchBackend_ReturnTo(0.0f); }
         taskEXIT_CRITICAL();
         (void)snprintf(response, capacity, accepted ? "P|OK|HOME|TARGET|0\r\n" :
-            "P|ERROR|HOME_REQUIRES_ARMED_ACTIVE_IDLE_PROFILE_AND_STATIONARY\r\n"); return 1U;
+            "P|ERROR|HOME_REQUIRES_ARMED_ACTIVE_HEALTHY_UNLOCKED_AXIS\r\n"); return 1U;
     }
     if (strncmp(line, "PITCH TARGET ", 13U) == 0) {
         uint8_t parsed = ConsoleParse_Number(line + 13U, &value);

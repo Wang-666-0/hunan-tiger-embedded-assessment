@@ -59,24 +59,28 @@
 #endif
 #define APP_GIMBAL_STARTUP_OFF_HOLD_MS 100U
 #define APP_GIMBAL_STARTUP_TIMEOUT_MS 5000U
-#define APP_GIMBAL_VIEW_HOLD_VERSION "VIEW_AXIS_HOLD_V1"
+#define APP_GIMBAL_VIEW_HOLD_VERSION "VIEW_AXIS_HOLD_V5"
+/* Diagnostic compatibility: hold now uses the user's original PID directly,
+ * with no hidden P/D multiplier in either loop. */
+#define APP_PITCH_VIEW_HOLD_POSITION_GAIN 1.0f
+#define APP_PITCH_VIEW_HOLD_SPEED_GAIN 1.0f
 /* 2026-10-20按用户达标截图固化六参数；保持直接双环PID。
  * 截图本轮稳定168ms、超调0.130461度、稳态误差-0.0965366度、PASS02=1。
  * 在线调参仍只作用于本次RAM会话；下面允许离线历史用例明确覆盖。 */
 #ifndef APP_YAW_POSITION_KP
-#define APP_YAW_POSITION_KP 15.549f
+#define APP_YAW_POSITION_KP 13.768f
 #endif
 #ifndef APP_YAW_POSITION_KI
-#define APP_YAW_POSITION_KI 0.734f
+#define APP_YAW_POSITION_KI 3.214f
 #endif
 #ifndef APP_YAW_POSITION_KD
 #define APP_YAW_POSITION_KD 0.139f
 #endif
 #ifndef APP_YAW_SPEED_KP
-#define APP_YAW_SPEED_KP 0.00517f
+#define APP_YAW_SPEED_KP 0.00504f
 #endif
 #ifndef APP_YAW_SPEED_KI
-#define APP_YAW_SPEED_KI 0.0035f
+#define APP_YAW_SPEED_KI 0.0008f
 #endif
 #ifndef APP_YAW_SPEED_KD
 #define APP_YAW_SPEED_KD 0.000074f

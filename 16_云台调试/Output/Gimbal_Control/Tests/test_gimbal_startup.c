@@ -241,8 +241,8 @@ void test_run(void)
     CHECK(PitchConsole_Handle("PITCH STEP", reply, sizeof(reply)) && strstr(reply, "P|OK|STEP_STARTED|TARGET|30.0"));
     Read(); CHECK(pitch.controller.target_deg == 30.0f && yaw.controller.target_deg == 0.0f);
     follow_target = 1U; Run(50U, 1500U);
-    CHECK(PitchConsole_Handle("PITCH HOME", reply, sizeof(reply)) && strstr(reply, "P|ERROR|HOME_REQUIRES_ARMED_ACTIVE_IDLE_PROFILE_AND_STATIONARY"));
-    Read(); CHECK(pitch.controller.shape.active && pitch.controller.target_deg == 30.0f);
+    CHECK(PitchConsole_Handle("PITCH HOME", reply, sizeof(reply)) && strstr(reply, "P|OK|HOME|TARGET|0"));
+    Read(); CHECK(!pitch.controller.shape.active && pitch.controller.target_deg == 0.0f);
     Run(200U, 1500U); /* The synthetic motor follows immediately; wait for the planned reference to finish. */
     CHECK(PitchConsole_Handle("PITCH HOME", reply, sizeof(reply)) && strstr(reply, "P|OK|HOME|TARGET|0"));
     Run(100U, 1500U); Read(); CHECK(pitch.controller.target_deg == 0.0f && pitch.active);

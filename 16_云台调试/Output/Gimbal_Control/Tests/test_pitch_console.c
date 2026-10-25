@@ -229,7 +229,7 @@ void test_run(void)
     Command("PITCH FF", "SHAPE_ACTIVE|1|REF_DEG|");
     Command("PITCH TARGET 30", "P|OK|TARGET|30.000");
     PitchBackend_GetStep(&measurement); CHECK(measurement.phase == PITCH_STEP_RUNNING && measurement.start_ms == 9044U);
-    Command("PITCH HOME", "P|ERROR|HOME_REQUIRES_ARMED_ACTIVE_IDLE_PROFILE_AND_STATIONARY");
+    Command("PITCH TARGET 0", "P|ERROR|TARGET_REQUIRES_ARMED_ACTIVE_IDLE_PROFILE_AND_STATIONARY_WITHIN_RANGE");
     for (tick = 9046U; tick <= 9284U; tick += 2U) {
         CanFrame frame;
         float u = (float)(tick - 9044U) / 200.0f;
@@ -246,10 +246,16 @@ void test_run(void)
     Command("PITCH HOME", "P|OK|HOME");
     before = state.controller.cascade.revision;
     Command("PITCH BRAKE ON", "P|OK|BRAKE|ON"); Read();
-    CHECK(state.controller.cascade.revision == before && state.controller.shape.active);
+    CHECK(state.controller.cascade.revision == before && !state.controller.shape.active);
     PitchBackend_GetStep(&measurement);
     CHECK(measurement.reason == PITCH_STEP_TARGET_CHANGE && measurement.shape_ms == 200U);
     CHECK(measurement.shape_velocity_gain == 0.2f && measurement.target_deg == 30.0f && measurement.start_ms == 9044U);
+    Activate(9500U); Receiver(9544U, 2000U); application.logic.safety.operator_armed = 1U;
+    CHECK(PitchBackend_StartStep(30.0f));
+    Command("PITCH HOME", "P|OK|HOME|TARGET|0"); Read();
+    CHECK(state.controller.target_deg == 0.0f && !state.controller.shape.active);
+    PitchBackend_GetStep(&measurement);
+    CHECK(measurement.reason == PITCH_STEP_TARGET_CHANGE && !measurement.pass);
     test_stage = 8U;
     Activate(10000U); Receiver(10044U, 2000U); application.logic.safety.operator_armed = 1U;
     CHECK(PitchBackend_SetShape(0U, 0.0f));

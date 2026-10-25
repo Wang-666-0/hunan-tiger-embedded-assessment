@@ -1,0 +1,66 @@
+{
+  "recorded_at": "2026-10-24T18:27:26+08:00",
+  "groups": 25,
+  "checks": 296836,
+  "failures": 0,
+  "verified_input_hashes": 139,
+  "build": {
+    "compiler": "ARM Compiler 5.06",
+    "optimization": "O0",
+    "sources": 69,
+    "rom_bytes": 140528,
+    "ram_bytes": 37056,
+    "success": true
+  },
+  "hold_version": "VIEW_AXIS_HOLD_V2",
+  "pitch_hold_position_pd_gain": 2,
+  "pitch_hold_speed_pd_gain": 2,
+  "pitch_hold_i_gain_unchanged": true,
+  "pitch_normal_pid_unchanged": true,
+  "gravity_and_protocol_limit_unchanged": true,
+  "fixed_latch_and_support_transfer": true,
+  "yaw_current_position_pid": [
+    13.768,
+    3.214,
+    0.139
+  ],
+  "yaw_current_speed_pid": [
+    0.00504,
+    0.0008,
+    7.4e-05
+  ],
+  "note": "Yaw KP/KI were already updated in the shared source while this task ran; retained the current source values, adapted stale test expectations. Hold stiffening is only for the inactive Pitch axis in YAW VIEW.",
+  "yaw_demo_style": "STAIRCASE",
+  "yaw_rise_sample_ms": [
+    10,
+    15,
+    10,
+    15
+  ],
+  "simulation_labeled": true,
+  "real_angles_and_results_retained": true,
+  "hardware_verified": false,
+  "flashed": false,
+  "artifacts": {
+    "Gimbal_Control.hex": {
+      "path": "D:\\Project\\27电软正式批考核\\16_云台调试\\Output\\Gimbal_Control\\MDK-ARM\\build\\Gimbal_Control\\Gimbal_Control.hex",
+      "bytes": 395320,
+      "sha256": "188d2a57fc7edacc35386fe95a50d04b2377373ccccbb812729f5f9e0341ee41"
+    },
+    "Gimbal_Control.axf": {
+      "path": "D:\\Project\\27电软正式批考核\\16_云台调试\\Output\\Gimbal_Control\\MDK-ARM\\build\\Gimbal_Control\\Gimbal_Control.axf",
+      "bytes": 1635900,
+      "sha256": "2dcab08281a6581d30e76267e300a7df9dc6babd246b26e10e980552b8e30319"
+    },
+    "compiler.log": {
+      "path": "D:\\Project\\27电软正式批考核\\16_云台调试\\Output\\Gimbal_Control\\MDK-ARM\\build\\Gimbal_Control\\compiler.log",
+      "bytes": 326,
+      "sha256": "9a0131b436c00b4e2813c247cb6474c88a57bc6e3d8ad6a2b46b8847f8127dfb"
+    },
+    "builder.params": {
+      "path": "D:\\Project\\27电软正式批考核\\16_云台调试\\Output\\Gimbal_Control\\MDK-ARM\\build\\Gimbal_Control\\builder.params",
+      "bytes": 7427,
+      "sha256": "48a0192ecc4705e07c12f04876aa689963c3a463a27a3304fe2d6a4e59252715"
+    }
+  }
+}

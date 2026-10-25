@@ -1,0 +1,27 @@
+[
+  {
+    "name": "resource-2e188c.txt",
+    "bytes": 2332,
+    "head": "#version 330 core\r\n#extension GL_ARB_explicit_uniform_location : enable\r\n#extension GL_ARB_explicit_"
+  },
+  {
+    "name": "resource-2ed74a.txt",
+    "bytes": 3589,
+    "head": "<?xml version=\"1.0\" encoding=\"utf-8\"?>\r\n<!-- Generator: Adobe Illustrator 16.0.0, SVG Export Plug-In"
+  },
+  {
+    "name": "resource-2edb2a.txt",
+    "bytes": 6686,
+    "head": "<?xml version=\"1.0\" encoding=\"utf-8\"?>\r\n<!-- Generator: Adobe Illustrator 16.0.0, SVG Export Plug-In"
+  },
+  {
+    "name": "resource-2ee2b8.txt",
+    "bytes": 3622,
+    "head": "<?xml version=\"1.0\" encoding=\"utf-8\"?>\r\n<!-- Generator: Adobe Illustrator 16.0.0, SVG Export Plug-In"
+  },
+  {
+    "name": "resource-307f7a.txt",
+    "bytes": 3658,
+    "head": "<?xml version=\"1.0\" standalone=\"no\"?><!DOCTYPE svg PUBLIC \"-//W3C//DTD SVG 1.1//EN\" \"http://www.w3.o"
+  }
+]

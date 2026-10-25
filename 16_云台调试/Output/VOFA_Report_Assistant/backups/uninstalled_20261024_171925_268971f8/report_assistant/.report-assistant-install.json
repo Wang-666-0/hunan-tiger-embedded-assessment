@@ -1,0 +1,24 @@
+{
+  "schemaVersion": 1,
+  "packageId": "vofa.report-assistant.pitch",
+  "version": "0.1.0",
+  "installedAt": "2026-10-22T13:13:40.6430859+08:00",
+  "files": [
+    {
+      "path": ".report-assistant-package.json",
+      "sha256": "A62654E83410BE6CEBFCABCEE7460B72410CCE13D8841C3E254619E74C8B583A"
+    },
+    {
+      "path": "HostBridge.js",
+      "sha256": "72B8DBB95E8FB5123367739D66B1F408EA56E9DE6E7A2E93AF371FEE7216724E"
+    },
+    {
+      "path": "report_assistant.qml",
+      "sha256": "1C5EBFFC6E3A87F4B0DCA28DFA307A4DF02DAFDDD382BB0156520E1F5FF56F03"
+    },
+    {
+      "path": "ReportEngine.js",
+      "sha256": "C2E0789FAD0B604418C8075C4C2BD1928795FBDF6195EC8336D7A5390DDCBAC5"
+    }
+  ]
+}

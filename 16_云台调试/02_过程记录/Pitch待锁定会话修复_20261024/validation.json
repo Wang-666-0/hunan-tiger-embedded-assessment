@@ -1,0 +1,49 @@
+{
+  "recorded_at": "2026-10-24T19:20:28+08:00",
+  "test_groups": 19,
+  "checks": 274397,
+  "failures": 0,
+  "verified_input_hashes": 139,
+  "build": {
+    "compiler": "ARM Compiler 5.06",
+    "optimization": "O0",
+    "sources": 69,
+    "rom_bytes": 141672,
+    "ram_bytes": 37056,
+    "success": true
+  },
+  "view_version": "VIEW_AXIS_HOLD_V3",
+  "paired_pitch_session_prepare": true,
+  "uses_original_enable_handshake": true,
+  "read_only_feedback_refresh": true,
+  "requires_existing_global_output_permission": true,
+  "requires_existing_reference_and_gravity_calibration": true,
+  "stop_cancels_prepare": true,
+  "no_enable_while_safe_off_or_unprepared": true,
+  "repeat_view_does_not_recapture_active_lock": true,
+  "pid_and_limits_unchanged_this_turn": true,
+  "hardware_verified": false,
+  "flashed": false,
+  "artifacts": {
+    "Gimbal_Control.hex": {
+      "path": "D:\\Project\\27电软正式批考核\\16_云台调试\\Output\\Gimbal_Control\\MDK-ARM\\build\\Gimbal_Control\\Gimbal_Control.hex",
+      "size": 398544,
+      "sha256": "a14624ee865549c0a14d34f3b32a3cf8aef72bde98507f89d687a18abc9bb7b8"
+    },
+    "Gimbal_Control.axf": {
+      "path": "D:\\Project\\27电软正式批考核\\16_云台调试\\Output\\Gimbal_Control\\MDK-ARM\\build\\Gimbal_Control\\Gimbal_Control.axf",
+      "size": 1638728,
+      "sha256": "92444a1adb6364729a1ce0ef6a0161b293950a93b2828ddf5fafee4beba54d76"
+    },
+    "compiler.log": {
+      "path": "D:\\Project\\27电软正式批考核\\16_云台调试\\Output\\Gimbal_Control\\MDK-ARM\\build\\Gimbal_Control\\compiler.log",
+      "size": 326,
+      "sha256": "3bc78d61f50748acea587f2a2bdafde0c779cddf00410402ad03337ef9e48181"
+    },
+    "builder.params": {
+      "path": "D:\\Project\\27电软正式批考核\\16_云台调试\\Output\\Gimbal_Control\\MDK-ARM\\build\\Gimbal_Control\\builder.params",
+      "size": 7427,
+      "sha256": "48a0192ecc4705e07c12f04876aa689963c3a463a27a3304fe2d6a4e59252715"
+    }
+  }
+}

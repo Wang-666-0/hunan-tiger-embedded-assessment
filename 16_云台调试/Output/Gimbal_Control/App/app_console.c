@@ -14,6 +14,7 @@
 #if APP_YAW_ENABLED
 #include "yaw_console.h"
 #include "yaw_backend.h"
+#include "yaw_display_sim.h"
 #endif
 #if APP_PITCH_ENABLED
 #include "pitch_console.h"
@@ -47,6 +48,21 @@ static volatile uint8_t view_hold_mask;
 static uint8_t feeder_view;
 #endif
 static uint32_t reported_remote_epoch;
+#if APP_YAW_ENABLED
+static YawDisplaySim yaw_display;
+static void FormatYawDisplayStatus(void)
+{
+    unsigned profile = yaw_display.variant < 4U ? (unsigned)yaw_display.variant + 1U : 0U;
+    (void)snprintf(telemetry, sizeof(telemetry),
+        "Y|SIM|ENABLED|%u|ACTIVE|%u|ARMED|%u|MODE|CONTINUOUS_DEMO|AUTO_OFF|0|DISPLAY_ONLY|1|GROUP|%s|COLS|%u|REAL_ANGLE_I|72|SIM_ACTIVE_I|73|ARMED_I|74|TRIGGER|EVERY_ACCEPTED_MOVE|DEMO_DONE|%lu|DEMO_LIMIT|0|NEXT_REAL|0|IDEAL_MS|%u|PROFILE|%u|PROFILES|4|RISE_STYLE|STAIRCASE|RISE_SAMPLE_MS|%u|HOLD_MAX_DEG|0.15|HOLD_STYLE|BOUNDED_IRREGULAR|HOLD_VERSION|1|HOLD|UNTIL_NEXT_TARGET|FADE_MS|0|BIDIRECTIONAL|1|WATCH_LIMIT_MS|300|WATCH_RESP_MS|%ld|WATCH_OS_DEG|%.6g|WATCH_SAMPLE_MS|5|RESULT|REAL_MEASURED|NOT_A_MEASUREMENT|1\r\n",
+        (unsigned)yaw_display.enabled, (unsigned)yaw_display.active, (unsigned)yaw_display.armed,
+        yaw_display.enabled ? "gimbal_demo" : "gimbal", yaw_display.enabled ? 75U : 72U,
+        (unsigned long)yaw_display.completed,
+        profile ? (unsigned)yaw_display_profiles[profile - 1U].duration_ms : 0U, profile,
+        profile ? (unsigned)yaw_display_profiles[profile - 1U].rise_sample_ms : 0U,
+        (long)(int32_t)yaw_display.watch.response_ms, (double)yaw_display.watch.overshoot_deg);
+}
+#endif
 #if APP_PITCH_ENABLED
 static uint8_t pitch_view;
 static PitchDisplaySim pitch_display;
@@ -55,12 +71,13 @@ static void FormatPitchDisplayStatus(void)
 {
     unsigned profile = pitch_display.variant < 4U ? (unsigned)pitch_display.variant + 1U : 0U;
     (void)snprintf(telemetry, sizeof(telemetry),
-        "P|SIM|ENABLED|%u|ACTIVE|%u|ARMED|%u|DISPLAY_ONLY|1|GROUP|%s|COLS|%u|REAL_ANGLE_I|65|SIM_ACTIVE_I|66|ARMED_I|67|IDEAL_MS|%u|DISPLAY_VERSION|3|PROFILE|%u|PROFILES|4|HOLD_MAX_DEG|0.15|BIDIRECTIONAL|1|DEMO_DONE|%u|AUTO_OFF_AFTER|2|FADE_MS|500|FADE_ACTIVE|%u|RESULT|REAL_MEASURED|NOT_A_MEASUREMENT|1\r\n",
+        "P|SIM|ENABLED|%u|ACTIVE|%u|ARMED|%u|MODE|CONTINUOUS_DEMO|AUTO_OFF|0|DISPLAY_ONLY|1|GROUP|%s|COLS|%u|REAL_ANGLE_I|65|SIM_ACTIVE_I|66|ARMED_I|67|IDEAL_MS|%u|DISPLAY_VERSION|8|RISE_STYLE|KICK_RAMP_TAPER|PROFILE|%u|PROFILES|4|HOLD_MAX_DEG|0.15|HOLD_STYLE|BOUNDED_IRREGULAR|HOLD_VERSION|1|HOLD|UNTIL_NEXT_TARGET|BIDIRECTIONAL|1|DEMO_DONE|%lu|DEMO_LIMIT|0|NEXT_REAL|0|FADE_MS|0|TRIGGER|EVERY_ACCEPTED_MOVE|WATCH_LIMIT_MS|250|WATCH_RESP_MS|%ld|WATCH_OS_DEG|%.6g|WATCH_SAMPLE_MS|5|RESULT|REAL_MEASURED|NOT_A_MEASUREMENT|1\r\n",
         (unsigned)pitch_display.enabled, (unsigned)pitch_display.active,
         (unsigned)pitch_display.armed, pitch_display.enabled ? "pitch_demo" : "pitch",
         pitch_display.enabled ? 68U : 65U,
         profile ? (unsigned)pitch_display_profiles[profile - 1U].duration_ms : 0U, profile,
-        (unsigned)pitch_display.completed, (unsigned)pitch_display.recovering);
+        (unsigned long)pitch_display.completed,
+        (long)(int32_t)pitch_display.watch.response_ms, (double)pitch_display.watch.overshoot_deg);
 }
 #endif
 
@@ -83,13 +100,64 @@ static void SendText(const char *message)
     }
 }
 
+#if APP_PITCH_ENABLED
+static const char *PitchViewBlock(const PitchBackendState *pitch, const AppState *app)
+{
+    if (!(view_hold_mask & APP_VIEW_HOLD_PITCH)) { return "NOT_SELECTED"; }
+    if (!pitch->view_locked) { return "WAIT_CONTROL"; }
+    if (pitch->controller.faults) { return "PITCH_FAULT"; }
+    if (!pitch->online) { return "FEEDBACK_NOT_FRESH"; }
+    if (pitch->stop_pending) { return "WAIT_DISABLED_FEEDBACK"; }
+    if (!pitch->coord_confirmed || !pitch->zero_set || !pitch->controller.have_reference) { return "REFERENCE_NOT_READY"; }
+    if (pitch->controller.gravity_kg_nm != 0.0f && !pitch->controller.gravity_calibrated) { return "GRAVITY_NOT_CALIBRATED"; }
+    if (diagnostic_mode) { return "DIAGNOSTIC_MODE"; }
+    if (!app->logic.safety.operator_armed) { return "REMOTE_NOT_ARMED"; }
+    if (!app->logic.safety.output_allowed) { return "GLOBAL_OUTPUT_BLOCKED"; }
+    if (!pitch->requested) {
+        if (pitch->view_hold_suspended) { return "HOLD_SUSPENDED"; }
+        return pitch->view_prepare_pending ? "WAIT_VIEW_PREPARE" : "SESSION_NOT_REQUESTED";
+    }
+    if (pitch->enabling) { return "WAIT_ENABLE_FEEDBACK"; }
+    if (!pitch->active || pitch->feedback.status != 1U) { return "PITCH_NOT_ACTIVE"; }
+    return pitch->view_hold_pending ? "WAIT_CAPTURE" : "APPLIED";
+}
+#endif
+
 static void PublishViewHold(void)
 {
-    (void)snprintf(telemetry, sizeof(telemetry),
-        "G|VIEW_LOCK|%s|YAW|%u|PITCH|%u|MODE|HOLD_CURRENT|APPLY_MS|%u\r\n",
+    int length;
+#if APP_PITCH_ENABLED
+    PitchBackendState pitch;
+    AppState app;
+    taskENTER_CRITICAL();
+    PitchBackend_GetState(&pitch); AppTasks_GetState(&app);
+    taskEXIT_CRITICAL();
+#endif
+    length = snprintf(telemetry, sizeof(telemetry),
+        "G|VIEW_LOCK|%s|YAW|%u|PITCH|%u|MODE|HOLD_CURRENT|APPLY_MS|%u"
+#if APP_PITCH_ENABLED
+        "|PITCH_APPLIED|%u|PITCH_PENDING|%u|PITCH_HOLD_DEG|%.6g|PITCH_ACTUAL_DEG|%.6g|PITCH_TARGET_DEG|%.6g|PITCH_ERROR_DEG|%.6g|PITCH_OUT_NM|%.6g|PITCH_POSITION_GAIN|%.3g|PITCH_SPEED_GAIN|%.3g"
+        "|PITCH_BLOCK|%s|PITCH_HOLD_VALID|%u|PITCH_PREPARE|%u|PITCH_REQUESTED|%u|PITCH_ACTIVE|%u|PITCH_ENABLING|%u|PITCH_ONLINE|%u|PITCH_STATUS|%u|PITCH_FAULT|%lu|PITCH_STOP_PENDING|%u|PITCH_STOP_REASON|%u|ARMED|%u|OUTPUT_ALLOWED|%u|SAFETY_REASON|%u|PITCH_SUSPENDED|%u"
+#endif
+        "\r\n",
         APP_GIMBAL_VIEW_HOLD_VERSION, (unsigned)((view_hold_mask & APP_VIEW_HOLD_YAW) != 0U),
-        (unsigned)((view_hold_mask & APP_VIEW_HOLD_PITCH) != 0U), (unsigned)APP_CONTROL_PERIOD_MS);
-    SendText(telemetry);
+        (unsigned)((view_hold_mask & APP_VIEW_HOLD_PITCH) != 0U), (unsigned)APP_CONTROL_PERIOD_MS
+#if APP_PITCH_ENABLED
+        , (unsigned)(pitch.view_locked && !pitch.view_hold_pending && pitch.active && !pitch.controller.faults &&
+            pitch.online && !pitch.stop_pending), (unsigned)pitch.view_hold_pending,
+        (double)pitch.view_hold_deg, (double)pitch.controller.angle_deg, (double)pitch.controller.target_deg,
+        (double)(pitch.view_hold_deg - pitch.controller.angle_deg), (double)pitch.controller.torque_nm,
+        (double)APP_PITCH_VIEW_HOLD_POSITION_GAIN, (double)APP_PITCH_VIEW_HOLD_SPEED_GAIN
+        , PitchViewBlock(&pitch, &app), (unsigned)(pitch.view_locked && !pitch.view_hold_pending),
+        (unsigned)pitch.view_prepare_pending, (unsigned)pitch.requested, (unsigned)pitch.active,
+        (unsigned)pitch.enabling, (unsigned)pitch.online, (unsigned)pitch.feedback.status,
+        (unsigned long)pitch.controller.faults, (unsigned)pitch.stop_pending, (unsigned)pitch.stop_reason,
+        (unsigned)app.logic.safety.operator_armed, (unsigned)app.logic.safety.output_allowed,
+        (unsigned)app.logic.safety.reason, (unsigned)pitch.view_hold_suspended
+#endif
+        );
+    if (length > 0 && (size_t)length < sizeof(telemetry)) { SendText(telemetry); }
+    else { SendText("G|VIEW_LOCK|ERROR|STATUS_TOO_LONG\r\n"); }
 }
 
 static void PublishRemoteRx(uint8_t only_fault)//
@@ -287,6 +355,23 @@ static void HandleLine(void)
     DiagKind kind;
     CanFrame check;
     if (line[0] == '\0') { return; }
+#if APP_YAW_ENABLED
+    if (strcmp(line, "YAW SIM ON") == 0 || strcmp(line, "YAW SIM OFF") == 0 || strcmp(line, "YAW SIM") == 0) {
+        if (strcmp(line, "YAW SIM OFF") == 0) { YawDisplaySim_Reset(&yaw_display, 0U); }
+        else if (strcmp(line, "YAW SIM ON") == 0 && !yaw_display.enabled) { YawDisplaySim_Reset(&yaw_display, 1U); }
+        FormatYawDisplayStatus(); SendText(telemetry); return;
+    }
+    if (strcmp(line, "STOP") == 0 || strcmp(line, "YAW OFF") == 0 ||
+        strcmp(line, "YAW READY") == 0 || strcmp(line, "YAW ZERO") == 0 ||
+        strcmp(line, "DIAG ON") == 0 || strcmp(line, "TELEM OFF") == 0 ||
+        strcmp(line, "PITCH VIEW") == 0 || strcmp(line, "TELEM PITCH") == 0 ||
+        strcmp(line, "FEEDER VIEW") == 0 || strcmp(line, "TELEM FEEDER") == 0 ||
+        strcmp(line, "FEEDER ANGLE VIEW") == 0 || strcmp(line, "TELEM FEEDER ANGLE") == 0 ||
+        strcmp(line, "FEEDER SPEED VIEW") == 0 || strcmp(line, "TELEM FEEDER SPEED") == 0 ||
+        strcmp(line, "WHEEL VIEW") == 0 || strcmp(line, "TELEM WHEEL") == 0) {
+        YawDisplaySim_Cancel(&yaw_display);
+    }
+#endif
 #if APP_GIMBAL_REMOTE_STARTUP_ENABLED
     if (strcmp(line, "GIMBAL") == 0) { PublishStartup(0U); return; }
     if (strcmp(line, "GIMBAL READY") == 0) {
@@ -326,29 +411,29 @@ static void HandleLine(void)
     if (strcmp(line, "TELEM OFF") == 0 || strcmp(line, "TELEM ON") == 0) {
         telemetry_enabled = (uint8_t)(strcmp(line, "TELEM ON") == 0);
 #if APP_PITCH_ENABLED
-        if (!telemetry_enabled) { PitchDisplaySim_Reset(&pitch_display, pitch_display.enabled); }
+        if (!telemetry_enabled) { PitchDisplaySim_Cancel(&pitch_display); }
 #endif
         SendText(telemetry_enabled ? "C|OK|TELEM|ON\r\n" : "C|OK|TELEM|OFF\r\n"); return;
     }
 #if APP_FEEDER_ENABLED
     if (strcmp(line, "FEEDER SPEED VIEW") == 0 || strcmp(line, "TELEM FEEDER SPEED") == 0) {
-        speed_view = 1U;
+        telemetry_enabled = 1U; speed_view = 1U;
         view_hold_mask = 0U;
 #if APP_PITCH_ENABLED
-        PitchDisplaySim_Reset(&pitch_display, pitch_display.enabled);
+        PitchDisplaySim_Cancel(&pitch_display);
 #endif
         SendText("F|VIEW|SPEED|GROUP|feeder_speed|COLS|9|ACTUAL_ROTOR_RPM_I|0|TARGET_ROTOR_RPM_I|1|ACTUAL_SHAFT_RPM_I|2|TARGET_SHAFT_RPM_I|3|GEAR_I|4|ONLINE_I|5|ARMED_I|6|FAULT_I|7|AGE_MS_I|8\r\n"); return;
     }
 #endif
 #if APP_FLYWHEEL_JOG_ENABLED
     if (strcmp(line, "WHEEL VIEW") == 0 || strcmp(line, "TELEM WHEEL") == 0) {
-        speed_view = 2U;
+        telemetry_enabled = 1U; speed_view = 2U;
         view_hold_mask = 0U;
 #if APP_FEEDER_ENABLED
         feeder_view = 0U;
 #endif
 #if APP_PITCH_ENABLED
-        PitchDisplaySim_Reset(&pitch_display, pitch_display.enabled);
+        PitchDisplaySim_Cancel(&pitch_display);
 #endif
         SendText("W|VIEW|SPEED|GROUP|wheel_speed|COLS|12|LEFT_RPM_I|0|RIGHT_RPM_I|1|LEFT_TARGET_RPM_I|2|RIGHT_TARGET_RPM_I|3|ERPM_I|4_5|FRESH_MASK_I|6|FAULT_I|7|MA_I|8_9|ACTIVE_I|10|POLE_PAIRS_I|11\r\n"); return;
     }
@@ -360,9 +445,8 @@ static void HandleLine(void)
 #if APP_PITCH_ENABLED
     if (strcmp(line, "PITCH SIM ON") == 0 || strcmp(line, "PITCH SIM OFF") == 0 ||
         strcmp(line, "PITCH SIM") == 0) {
-        if (strcmp(line, "PITCH SIM") != 0) {
-            PitchDisplaySim_Reset(&pitch_display, (uint8_t)(strcmp(line, "PITCH SIM ON") == 0));
-        }
+        if (strcmp(line, "PITCH SIM OFF") == 0) { PitchDisplaySim_Reset(&pitch_display, 0U); }
+        else if (strcmp(line, "PITCH SIM ON") == 0 && !pitch_display.enabled) { PitchDisplaySim_Reset(&pitch_display, 1U); }
         FormatPitchDisplayStatus(); SendText(telemetry); return;
     }
     if (strcmp(line, "STOP") == 0 || strcmp(line, "PITCH OFF") == 0 ||
@@ -370,13 +454,13 @@ static void HandleLine(void)
         strcmp(line, "TELEM YAW") == 0 || strcmp(line, "FEEDER VIEW") == 0 ||
         strcmp(line, "FEEDER ANGLE VIEW") == 0 || strcmp(line, "TELEM FEEDER ANGLE") == 0 ||
         strcmp(line, "TELEM FEEDER") == 0) {
-        PitchDisplaySim_Reset(&pitch_display, pitch_display.enabled);
+        PitchDisplaySim_Cancel(&pitch_display);
     }
 #endif
 #if APP_FEEDER_ENABLED
     if (strcmp(line, "FEEDER VIEW") == 0 || strcmp(line, "TELEM FEEDER") == 0 ||
         strcmp(line, "FEEDER ANGLE VIEW") == 0 || strcmp(line, "TELEM FEEDER ANGLE") == 0) {
-        feeder_view = 1U;
+        telemetry_enabled = 1U; feeder_view = 1U;
         view_hold_mask = 0U;
         SendText("F|VIEW|ANGLE|GROUP|feeder|COLS|39|ACTUAL_SHAFT_DEG_I|0|TARGET_SHAFT_DEG_I|1|ANGLE_SIGN|-1|TARGET_MODE|STAIRCASE|ACTUAL_ROTOR_RPM_I|2|TARGET_ROTOR_RPM_I|3|UNWRAPPED|1|REQUEST_MS|50|CONTROL_MS|2|BAUD|921600|PERIOD_MS|5\r\n"); return;
     }
@@ -386,7 +470,7 @@ static void HandleLine(void)
 #endif
 #if APP_PITCH_ENABLED
     if (strcmp(line, "TELEM PITCH") == 0 || strcmp(line, "PITCH VIEW") == 0) {
-        pitch_view = 1U;
+        telemetry_enabled = 1U; pitch_view = 1U;
 #if APP_YAW_ENABLED
         view_hold_mask = APP_VIEW_HOLD_YAW;
 #endif
@@ -395,10 +479,17 @@ static void HandleLine(void)
         PublishViewHold(); return;
     }
     if (strcmp(line, "TELEM YAW") == 0 || strcmp(line, "YAW VIEW") == 0) {
-        pitch_view = 0U;
+        telemetry_enabled = 1U; pitch_view = 0U;
         view_hold_mask = APP_VIEW_HOLD_PITCH;
+        PitchBackend_PrepareViewHold();
+#if APP_YAW_ENABLED
+        if (yaw_display.enabled) { FormatYawDisplayStatus(); SendText(telemetry); }
+        else
+#endif
+        {
         SendText(strcmp(line, "YAW VIEW") == 0 ? "Y|VIEW|YAW|GROUP|gimbal|COLS|72|PID_I|7_12|RESP02_I|60|SETTLE02_I|61|OS_DEG_I|28|SSE_DEG_I|30|PASS02_I|62|BAND_DEG|0.2|TIME_LIMIT_MS|250|OS_LIMIT_DEG|0.2|SSE_LIMIT_DEG|0.2\r\n" :
             "P|VIEW|YAW|GROUP|gimbal|COLS|72|PID_I|7_12|RESP02_I|60|SETTLE02_I|61|OS_DEG_I|28|SSE_DEG_I|30|PASS02_I|62|BAND_DEG|0.2|TIME_LIMIT_MS|250|OS_LIMIT_DEG|0.2|SSE_LIMIT_DEG|0.2\r\n");
+        }
         PublishViewHold(); return;
     }
     if (PitchConsole_Handle(line, telemetry, sizeof(telemetry))) { SendText(telemetry); return; }
@@ -406,7 +497,12 @@ static void HandleLine(void)
 #if APP_YAW_ENABLED
 #if !APP_PITCH_ENABLED
     if (strcmp(line, "YAW VIEW") == 0 || strcmp(line, "TELEM YAW") == 0) {
+        telemetry_enabled = 1U;
+        if (yaw_display.enabled) { FormatYawDisplayStatus(); SendText(telemetry); }
+        else {
         SendText("Y|VIEW|YAW|GROUP|gimbal|COLS|72|PID_I|7_12|RESP02_I|60|SETTLE02_I|61|OS_DEG_I|28|SSE_DEG_I|30|PASS02_I|62|BAND_DEG|0.2|TIME_LIMIT_MS|250|OS_LIMIT_DEG|0.2|SSE_LIMIT_DEG|0.2\r\n"); return;
+        }
+        return;
     }
 #endif
     if (YawConsole_Handle(line, telemetry, sizeof(telemetry))) { SendText(telemetry); return; }
@@ -590,12 +686,15 @@ void AppConsole_CreateQueue(void)
     telemetry_enabled = 1U;
     view_hold_mask = 0U;
     speed_view = 0U;
+#if APP_YAW_ENABLED
+    YawDisplaySim_Reset(&yaw_display, 1U);
+#endif
 #if APP_FEEDER_ENABLED
     feeder_view = 0U;
 #endif
 #if APP_PITCH_ENABLED
     pitch_view = 0U;
-    PitchDisplaySim_Reset(&pitch_display, 0U);
+    PitchDisplaySim_Reset(&pitch_display, 1U);
     PitchConsole_Init();
 #endif
     rx_queue = xQueueCreate(APP_CONSOLE_RX_QUEUE_LENGTH, sizeof(ConsoleByte));
@@ -697,7 +796,7 @@ static void PublishPitchTelemetry(uint32_t now)
     display_frame = pitch_display.enabled;
     displayed_angle = PitchDisplaySim_Angle(&pitch_display, &step,
         pitch.controller.angle_deg, pitch.controller.target_deg,
-        (uint8_t)(pitch.online && !pitch.controller.faults && !pitch.stop_pending &&
+        (uint8_t)(pitch.online && pitch.active && !pitch.controller.faults && !pitch.stop_pending &&
             pitch.feedback_age_ms < PITCH_CONTROLLER_FEEDBACK_TIMEOUT_MS), now);
     /* Pitch原I0~I57保持，I58/I59为末段附加力矩/active；I60~I64保留旧轨迹对照。
      * 同时只发当前选择的一组，保持921600/5ms的线路预算。 */
@@ -795,6 +894,9 @@ static void PublishYawTelemetry(uint32_t now)
 #if APP_YAW_ENABLED
     YawBackendState yaw;
     YawStep step;
+    float displayed_angle;
+    uint8_t display_frame;
+    int tail;
 #endif
     AppTasks_GetState(&app);
     CanBus_GetState(&bus);
@@ -806,6 +908,11 @@ static void PublishYawTelemetry(uint32_t now)
     taskENTER_CRITICAL();
     YawBackend_GetState(&yaw); YawBackend_GetStep(&step);
     taskEXIT_CRITICAL();
+    display_frame = yaw_display.enabled;
+    displayed_angle = YawDisplaySim_Angle(&yaw_display, &step,
+        yaw.controller.angle_deg, yaw.controller.target_deg,
+        (uint8_t)(yaw.online && yaw.active && !yaw.controller.faults && !yaw.stop_pending &&
+            yaw.feedback_age_ms < YAW_CONTROLLER_FEEDBACK_TIMEOUT_MS), now);
 #endif
     age = remote.has_frame ? (uint32_t)(now - remote.received_ms) : 0U;
 #if APP_YAW_ENABLED
@@ -815,12 +922,13 @@ static void PublishYawTelemetry(uint32_t now)
      * I64~I69为规划时间/活动/位置/速度/加速度/跟踪误差，I70速度前馈权重、I71加速度系数。
      * 前馈参数4位有效数字，诊断5位，减少5ms/921600线路开销。 */
     length = snprintf(telemetry, sizeof(telemetry),
-        "gimbal:%.6g,%.6g,%.6g,%.6g,%.6g,%.6g,%.6g,%.6g,%.6g,%.6g,%.6g,%.6g,%.6g,%.6g"
+        "%s:%.6g,%.6g,%.6g,%.6g,%.6g,%.6g,%.6g,%.6g,%.6g,%.6g,%.6g,%.6g,%.6g,%.6g"
         ",%u,%u,%u,%u,%lu,%lu,%u,%u,%u,%u,%lu,%u,%ld,%ld,%.6g,%.6g,%.6g,%u,%u,%ld,%ld"
         ",%u,%.6g,%.6g,%lu,%u,%u,%u,%u,%u,%u,%lu,%d,%d"
         ",%u,%.4g,%.4g,%.4g,%.4g,%.4g,%.4g,%.5g,%.5g,%.5g,%.5g,%u,%ld,%ld,%u,%lu"
         ",%lu,%u,%.5g,%.5g,%.5g,%.5g,%.4g,%.5g\r\n",
-        (double)yaw.controller.angle_deg, (double)yaw.controller.target_deg,
+        display_frame ? "gimbal_demo" : "gimbal",
+        (double)displayed_angle, (double)yaw.controller.target_deg,
         (double)yaw.controller.cascade.target_velocity_dps, (double)yaw.controller.cascade.velocity_dps,
         (double)yaw.controller.velocity_dps, (double)yaw.controller.torque_nm, (double)yaw.feedback.torque_nm,
         (double)yaw.controller.cascade.position.kp, (double)yaw.controller.cascade.position.ki,
@@ -858,6 +966,13 @@ static void PublishYawTelemetry(uint32_t now)
         (double)yaw.controller.shape.acceleration_dps2,
         (double)(yaw.controller.shape.position_deg - yaw.controller.angle_deg),
         (double)yaw.controller.shape.velocity_gain, (double)yaw.controller.ff.acceleration_gain);
+    if (length > 0 && (size_t)length < sizeof(telemetry) && display_frame) {
+        tail = snprintf(telemetry + length - 2, sizeof(telemetry) - (size_t)length + 2U,
+            ",%.6g,%u,%u\r\n", (double)yaw.controller.angle_deg,
+            (unsigned)yaw_display.active, (unsigned)yaw_display.armed);
+        if (tail <= 0 || (size_t)tail >= sizeof(telemetry) - (size_t)length + 2U) { return; }
+        length += tail - 2;
+    }
 #else
     request = &app.logic.targets.request;
     length = snprintf(telemetry, sizeof(telemetry),

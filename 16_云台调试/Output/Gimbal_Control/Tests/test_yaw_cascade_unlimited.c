@@ -35,11 +35,11 @@ void test_run(void)
     test_stage = 1;
     CHECK(!YAW_CASCADE_OUTPUT_LIMITS_ENABLED && YAW_CONTROLLER_TORQUE_LIMIT_NM == 10);
     ready(100, 0); CHECK(yaw.cascade.velocity_limit_dps == 0);
-    CHECK(yaw.cascade.position.kp == 15.549f && yaw.cascade.position.ki == 0.734f && yaw.cascade.position.kd == 0.139f);
-    CHECK(yaw.cascade.speed.kp == 0.00517f && yaw.cascade.speed.ki == 0.0035f && yaw.cascade.speed.kd == 0.000074f);
+    CHECK(yaw.cascade.position.kp == APP_YAW_POSITION_KP && yaw.cascade.position.ki == APP_YAW_POSITION_KI && yaw.cascade.position.kd == APP_YAW_POSITION_KD);
+    CHECK(yaw.cascade.speed.kp == APP_YAW_SPEED_KP && yaw.cascade.speed.ki == APP_YAW_SPEED_KI && yaw.cascade.speed.kd == APP_YAW_SPEED_KD);
     CHECK(YawController_SetTarget(&yaw, 30));
-    CHECK(near(YawController_Update(&yaw, 0, 120, 1), 2.4116499f, 0.000001f));
-    CHECK(near(yaw.cascade.target_velocity_dps, 466.47f, 0.0001f) && !yaw.cascade.velocity_limited);
+    CHECK(near(YawController_Update(&yaw, 0, 120, 1), APP_YAW_POSITION_KP * 30.0f * APP_YAW_SPEED_KP, 0.000001f));
+    CHECK(near(yaw.cascade.target_velocity_dps, APP_YAW_POSITION_KP * 30.0f, 0.0001f) && !yaw.cascade.velocity_limited);
     CHECK(!YawCascade_SetVelocityLimit(&yaw.cascade, 180));
     /* 截图增益：首次510deg/s、2.448协议Nm，不再被180/.10截断。 */
     CHECK(YawCascade_SetPid(&yaw.cascade, 'P', 17, 1.25f, 0));

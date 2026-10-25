@@ -23,6 +23,9 @@ typedef struct {
     uint8_t online, requested, active, enabling, stop_pending;
     uint8_t zero_set, step_hold, coord_confirmed, monitoring;
     uint8_t view_locked, view_hold_pending;
+    uint8_t view_prepare_pending;
+    uint8_t view_hold_suspended;
+    float view_hold_deg;
 } PitchBackendState;
 typedef struct { uint32_t sequence; float target_deg; uint8_t result; } PitchRemoteStepEvent;
 void PitchBackend_Init(void);
@@ -39,9 +42,13 @@ void PitchBackend_Stop(void);
 /* Active hold at the measured pose; preserve gravity calibration and speed I. */
 uint8_t PitchBackend_HoldCurrent(void);
 void PitchBackend_SetViewLock(uint8_t locked);
+/* Renew selected-view intent after an isolated stop; no CAN/enable here. */
+void PitchBackend_PrepareViewHold(void);
 void PitchBackend_Apply(const TargetRequest *request, uint8_t allowed, uint8_t diagnostic);
 uint8_t PitchBackend_TakeRearmRequest(void);
 uint8_t PitchBackend_SetTarget(float degrees);
+/* HOME / CH7 return can interrupt motion; ordinary STEP guards are unchanged. */
+uint8_t PitchBackend_ReturnTo(float degrees);
 uint8_t PitchBackend_SetLoopPid(char loop, float kp, float ki, float kd);
 uint8_t PitchBackend_SetLoopParameter(char loop, char parameter, float value);
 uint8_t PitchBackend_SetGravityGain(float kg_nm);

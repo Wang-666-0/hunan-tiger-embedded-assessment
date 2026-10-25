@@ -1,0 +1,22 @@
+{
+  "changed": [
+    "App\\pitch_backend.c",
+    "App\\pitch_console.c",
+    "App\\target_manager.c",
+    "App\\target_manager.h",
+    "App\\yaw_backend.c",
+    "Tests\\test_assessment_remote.c",
+    "Tests\\test_pitch_backend.c",
+    "Tests\\test_pitch_remote.c",
+    "Tests\\test_yaw_display_sim.c",
+    "Tests\\test_yaw_repeat_step.c",
+    "MDK-ARM\\SIM操作说明.md"
+  ],
+  "groups": 11,
+  "checks": 171461,
+  "failures": 0,
+  "build": "AC5/O0 original EIDE rebuild successful",
+  "hex_sha256": "d338c237353712bdba0db2261f91b2c605c6c718a77b7ea2b6d3a5e60cef0623",
+  "PID_and_display_algorithms_unchanged_in_CH7_change": true,
+  "flashed": false
+}

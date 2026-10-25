@@ -71,17 +71,18 @@ static void AssessmentStep(TargetManager *manager, const RemoteCommand *command,
             else if (command->step == RC_LOW) {
                 if (manager->last_step_switch != RC_LOW) {
 #if APP_PITCH_ENABLED
-                    /* 回中使用最后实际接受轴；斜向不能猜轴或回两轴。 */
+                    /* Physical CH7 up (1000): one relative -30 request.
+                     * Centered selection uses the last accepted axis. */
                     if (command->step_valid || command->step_selection_centered) {
                         request->step_return_event = request->step_event = 1U;
-                        request->step_delta_deg = 0.0f;
+                        request->step_delta_deg = -APP_STEP_DEGREES;
                         request->step_axis = command->step_valid ? command->step_axis : manager->last_test_axis;
                         request->step_sequence++;
                     }
 #else
                     request->step_return_event = request->step_event = 1U;
-                    request->step_delta_deg = 0.0f;
-                    request->step_axis = GIMBAL_MANUAL;
+                    request->step_delta_deg = -APP_STEP_DEGREES;
+                    request->step_axis = GIMBAL_STEP_YAW;
                     request->step_sequence++;
 #endif
                 }
