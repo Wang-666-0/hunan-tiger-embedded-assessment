@@ -1,5 +1,14 @@
-﻿#ifndef APP_DIAGNOSTICS_H
+/**
+ * @file app_diagnostics.h
+ * @brief 诊断会话接口
+ * 职责：定义只读查询种类、结果事件及被动 CAN 帧快照。
+ * 主要接口：AppDiagnostics_Request, AppDiagnostics_Cancel, AppDiagnostics_Poll, AppDiagnostics_OnFrame, AppDiagnostics_TakeEvent 等。
+ * 实现/调用：app_diagnostics.c；Request/Poll 推进查询，TakeEvent 分段读取结果。
+ * 参数：app_config.h 是 App 参数及常量的唯一宏定义入口。
+ */
+#ifndef APP_DIAGNOSTICS_H
 #define APP_DIAGNOSTICS_H
+#include "app_config.h"
 #include "can_frame.h"
 
 typedef enum { DIAG_DM = 1, DIAG_VESC = 2 } DiagKind;
@@ -27,5 +36,4 @@ void AppDiagnostics_Poll(uint32_t now);
 void AppDiagnostics_OnFrame(const CanFrame *frame);
 uint8_t AppDiagnostics_TakeEvent(DiagEvent *out);
 uint8_t AppDiagnostics_GetPassive(uint32_t index, DiagPassiveFrame *out);
-#define APP_DIAG_PASSIVE_SLOTS 16U
 #endif

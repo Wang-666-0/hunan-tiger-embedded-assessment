@@ -1,5 +1,14 @@
-﻿#ifndef MOTOR_BACKEND_H
+/**
+ * @file motor_backend.h
+ * @brief 双摩擦轮后端
+ * 职责：声明双轮初始化、反馈、遥控准备、健康判定和停机接口。
+ * 主要接口：MotorBackend_Init, MotorBackend_SelectJog, MotorBackend_PrepareRemote, MotorBackend_Stop, MotorBackend_TakeRearmRequest 等。
+ * 实现/调用：motor_backend.c；向应用层提供 flywheels_ready，供拨盘互锁。
+ * 参数：app_config.h 是 App 参数及常量的唯一宏定义入口。
+ */
+#ifndef MOTOR_BACKEND_H
 #define MOTOR_BACKEND_H
+#include "app_config.h"
 #include "can_frame.h"
 #include "target_manager.h"
 #include "flywheel_jog.h"

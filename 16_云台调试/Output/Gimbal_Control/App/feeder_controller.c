@@ -1,11 +1,26 @@
+/**
+ * @file feeder_controller.c
+ * @brief 拨盘控制与执行
+ *
+ * 职责：累计编码器角度，生成单发/连发目标，计算位置/速度控制及保护。
+ * 主要函数：
+ *   - Feeder_Init / SetConfig：加载 app_config.h 默认参数或显式配置。
+ *   - Feeder_OnFrame / Update：累计位置，计算输出并检查堵转、超时。
+ *   - FeederBackend_Apply：执行单发/连发、摩擦轮互锁和停机流程。
+ *   - FeederBackend_GetState：向控制台提供目标角度及实际角度。
+ * 调用关系：TargetManager 发射请求 → FeederBackend → Feeder 控制器 → CAN 电流命令。
+ * 维护约束：连发每 APP_FIRE_INTERVAL_MS 推进目标；PID 仍随高速控制任务更新。
+ * 参数入口：app_config.h；对外声明仍在原头文件中。
+ */
+
+/* APP_SECTION_BEGIN feeder_controller.c */
+/* 拨盘控制数学：累计角度、单发减速、连续跟踪及保护。 */
 #include "feeder_controller.h"
 #include "app_config.h"
 #include <float.h>
 #include <math.h>
 #include <string.h>
 
-#define HALF_TICK_RANGE 0x80000000UL
-#define COUNTS_TO_DEGREES (360.0 / (double)FEEDER_ENCODER_COUNTS)
 
 static float absolute(float x) { return x < 0.0f ? -x : x; }
 static double abs_double(double x) { return x < 0.0 ? -x : x; }
@@ -17,7 +32,7 @@ static uint8_t within(float x, float low, float high)
 { return (uint8_t)(finite_value(x) && x >= low && x <= high); }
 static void positions(FeederController *c)
 {
-    c->position_deg = (double)(c->accumulated_counts - c->zero_counts) * COUNTS_TO_DEGREES;
+    c->position_deg = (double)(c->accumulated_counts - c->zero_counts) * FEEDER_COUNTS_TO_DEGREES;
     c->axis_position_deg = c->position_deg / (double)c->config.gear_ratio;
     c->axis_target_deg = c->target_deg / (double)c->config.gear_ratio;
 }
@@ -77,19 +92,19 @@ void Feeder_Init(FeederController *c)
 {
     if (!c) { return; }
     memset(c, 0, sizeof(*c));
-    c->config.step_deg = 40.0f; c->config.gear_ratio = 35.68f;
-    c->config.direction = -1; c->config.calibrated = 1U;
-    c->config.pos_kp = 10.0f; c->config.speed_kp = 2.0f; c->config.speed_ki = 8.0f;
-    c->config.max_rpm = 3600.0f; c->config.max_feedback_rpm = 6000.0f;
-    c->config.continuous_max_rpm = 5800.0f;
+    c->config.step_deg = APP_FEEDER_STEP_DEG; c->config.gear_ratio = APP_FEEDER_GEAR_RATIO;
+    c->config.direction = APP_FEEDER_DIRECTION; c->config.calibrated = APP_FEEDER_CALIBRATED;
+    c->config.pos_kp = APP_FEEDER_POSITION_KP; c->config.speed_kp = APP_FEEDER_SPEED_KP; c->config.speed_ki = APP_FEEDER_SPEED_KI;
+    c->config.max_rpm = APP_FEEDER_MAX_RPM; c->config.max_feedback_rpm = APP_FEEDER_MAX_FEEDBACK_RPM;
+    c->config.continuous_max_rpm = APP_FEEDER_CONTINUOUS_MAX_RPM;
     /* Track from the trigger time; the previous 10ms lag intentionally lost
      * 8 shaft degrees at 40deg/50ms. Keep the existing boundary brake. */
-    c->config.continuous_brake_kp = 30.0f; c->config.continuous_phase_ms = 0.0f;
-    c->config.single_decel_rpm_s = 50000.0f;
-    c->config.current_limit = 3000.0f; c->config.tolerance_deg = 1.5f;
-    c->config.settle_rpm = 30.0f; c->config.settle_ms = 10U;
-    c->config.motion_timeout_ms = 3000U;
-    c->config.jam_rpm = 10.0f; c->config.jam_current_raw = 1600.0f; c->config.jam_ms = 300U;
+    c->config.continuous_brake_kp = APP_FEEDER_CONTINUOUS_BRAKE_KP; c->config.continuous_phase_ms = APP_FEEDER_CONTINUOUS_PHASE_MS;
+    c->config.single_decel_rpm_s = APP_FEEDER_SINGLE_DECEL_RPM_S;
+    c->config.current_limit = APP_FEEDER_CURRENT_LIMIT; c->config.tolerance_deg = APP_FEEDER_TOLERANCE_DEG;
+    c->config.settle_rpm = APP_FEEDER_SETTLE_RPM; c->config.settle_ms = APP_FEEDER_SETTLE_MS;
+    c->config.motion_timeout_ms = APP_FEEDER_MOTION_TIMEOUT_MS;
+    c->config.jam_rpm = APP_FEEDER_JAM_RPM; c->config.jam_current_raw = APP_FEEDER_JAM_CURRENT_RAW; c->config.jam_ms = APP_FEEDER_JAM_MS;
 }
 uint8_t Feeder_SetConfig(FeederController *c, const FeederConfig *p)
 {
@@ -128,7 +143,7 @@ uint8_t Feeder_OnFrame(FeederController *c, const CanFrame *f, uint32_t now, uin
     first = (uint8_t)!c->have_feedback;
     if (!first) {
         gap = f->received_ms - c->last_feedback_ms;
-        if (gap >= HALF_TICK_RANGE || (!gap && !rebase)) { return 0U; }
+        if (gap >= APP_TICK_HALF_RANGE || (!gap && !rebase)) { return 0U; }
         if (gap > FEEDER_FEEDBACK_TIMEOUT_MS) { reasons |= FEEDER_FAULT_FEEDBACK; rebase = 1U; }
         delta = (int32_t)angle - (int32_t)c->raw_angle;
         if (delta > 4096) { delta -= 8192; }
@@ -210,7 +225,7 @@ static uint8_t consume_event(FeederController *c, uint8_t event, uint32_t sequen
     uint32_t distance;
     if (!event) { return 0U; }
     distance = sequence - c->last_shot_sequence;
-    if (c->have_shot_sequence && (!distance || distance >= HALF_TICK_RANGE)) { return 0U; }
+    if (c->have_shot_sequence && (!distance || distance >= APP_TICK_HALF_RANGE)) { return 0U; }
     c->have_shot_sequence = 1U; c->last_shot_sequence = sequence; return 1U;
 }
 float Feeder_ContinuousRpm(const FeederController *c)
@@ -423,3 +438,265 @@ int16_t Feeder_Step(FeederController *c, uint32_t now, uint8_t allowed,
 {
     return Feeder_Run(c, now, allowed, wheels_ready, shot_event, sequence, 0U);
 }
+/* APP_SECTION_END feeder_controller.c */
+
+/* APP_SECTION_BEGIN feeder_backend.c */
+/* 拨盘会话：发射互锁、单发/连发请求与 CAN 输出。 */
+#include "feeder_backend.h"
+#include "app_config.h"
+#include "app_tasks.h"
+#include "app_console.h"
+#include "can_bus.h"
+#include "remote_input.h"
+#include "motor_backend.h"
+#include "task.h"
+#include <string.h>
+
+static FeederBackendState state;
+static uint8_t owned, rearm, was_allowed, single_pending, have_completed;
+static uint32_t last_tx_ms, last_success_ms, event_sequence, single_ms, completed_ms;
+static uint32_t auto_quiet_since;
+static uint8_t auto_quiet, reference_captured, manual_hold;
+
+static uint8_t Fresh(void)
+{
+    return state.controller.have_feedback &&
+        HAL_GetTick() - state.controller.last_feedback_ms < FEEDER_FEEDBACK_TIMEOUT_MS;
+}
+
+/* Caller holds the same critical section as mutation: a stale UI snapshot never authorizes motion. */
+static uint8_t RemoteGuard(uint8_t off)
+{
+    RemoteInput_State remote;
+    RemoteFrame frame;
+    RemoteCommand command;
+    AppState app;
+    CanBusState bus;
+    RemoteInput_GetState(&remote); AppTasks_GetState(&app); CanBus_GetState(&bus);
+    memset(&frame, 0, sizeof(frame)); memcpy(frame.channels, remote.channels, sizeof(frame.channels));
+    frame.has_frame = remote.has_frame;
+    RemoteMapper_Map(&frame, &command);
+    if (!remote.has_frame || HAL_GetTick() - remote.received_ms >= REMOTE_TIMEOUT_MS ||
+        !command.valid || !command.failsafe_ok || command.gimbal_mode != GIMBAL_MANUAL ||
+        AppConsole_IsDiagnosticMode() || remote.needs_rearm ||
+        app.logic.safety.uart_epoch != remote.fault_epoch + AppConsole_GetFaultEpoch() ||
+        !bus.started || bus.fault_epoch) { return 0U; }
+    if (off) {
+        return command.arm == RC_LOW && command.neutral &&
+            app.logic.safety.state == SAFETY_READY && !app.logic.safety.barrier_valid &&
+            !app.logic.safety.operator_armed &&
+            !app.logic.safety.output_allowed && !CanBus_FeederAllowed();
+    }
+    return command.arm == RC_HIGH && command.trigger == RC_LOW && command.friction_on &&
+        app.logic.safety.operator_armed && app.logic.safety.output_allowed;
+}
+
+void FeederBackend_Init(void)
+{
+    memset(&state, 0, sizeof(state)); Feeder_Init(&state.controller);
+    owned = rearm = was_allowed = single_pending = have_completed = 0U;
+    last_tx_ms = last_success_ms = event_sequence = single_ms = completed_ms = 0U;
+    auto_quiet_since = 0U; auto_quiet = reference_captured = manual_hold = 0U;
+}
+
+void FeederBackend_Stop(void)
+{
+    taskENTER_CRITICAL();
+    state.armed = was_allowed = single_pending = 0U;
+    if (state.controller.busy && state.controller.outstanding) { state.controller.have_zero = 0U; }
+    Feeder_Stop(&state.controller);
+    CanBus_SetFeederPermission(0U);
+    if (owned) { state.stop_pending = 1U; }
+    taskEXIT_CRITICAL();
+}
+
+void FeederBackend_ManualOff(void)
+{
+    taskENTER_CRITICAL(); manual_hold = 1U; FeederBackend_Stop(); taskEXIT_CRITICAL();
+}
+
+uint8_t FeederBackend_OnFrame(const CanFrame *frame)
+{
+    CanBusState bus;
+    uint8_t accepted;
+    uint32_t faults;
+    taskENTER_CRITICAL();
+    CanBus_GetState(&bus); faults = state.controller.faults;
+    accepted = Feeder_OnFrame(&state.controller, frame, HAL_GetTick(), bus.fault_epoch);
+    if (state.armed && faults != state.controller.faults) { FeederBackend_Stop(); rearm = 1U; }
+    taskEXIT_CRITICAL(); return accepted;
+}
+
+void FeederBackend_GetState(FeederBackendState *out)
+{
+    if (!out) { return; }
+    taskENTER_CRITICAL(); *out = state; out->online = Fresh(); taskEXIT_CRITICAL();
+}
+
+uint8_t FeederBackend_TakeRearmRequest(void)
+{
+    uint8_t value;
+    taskENTER_CRITICAL(); value = rearm; rearm = 0U; taskEXIT_CRITICAL(); return value;
+}
+
+uint8_t FeederBackend_SetConfig(const FeederConfig *config)
+{
+    uint8_t result = 0U;
+    taskENTER_CRITICAL();
+    if (!state.armed && !state.stop_pending && RemoteGuard(1U)) {
+        result = Feeder_SetConfig(&state.controller, config);
+    }
+    taskEXIT_CRITICAL(); return result;
+}
+
+uint8_t FeederBackend_Clear(void)
+{
+    uint8_t result = 0U;
+    taskENTER_CRITICAL();
+    if (!state.armed && !state.stop_pending && RemoteGuard(1U)) {
+        result = Feeder_Clear(&state.controller, HAL_GetTick());
+    }
+    taskEXIT_CRITICAL(); return result;
+}
+
+uint8_t FeederBackend_Zero(void)
+{
+    uint8_t result = 0U;
+    taskENTER_CRITICAL();
+    if (!state.armed && !state.stop_pending && RemoteGuard(1U)) {
+        result = Feeder_Zero(&state.controller, HAL_GetTick());
+        if (result) { reference_captured = 1U; }
+    }
+    taskEXIT_CRITICAL(); return result;
+}
+
+uint8_t FeederBackend_Arm(void)
+{
+    uint8_t result = 0U;
+    taskENTER_CRITICAL();
+    if (!state.stop_pending && RemoteGuard(1U) && Fresh() && !state.controller.faults &&
+        state.controller.have_zero && state.controller.config.calibrated &&
+        (state.controller.config.direction == 1 || state.controller.config.direction == -1)) {
+        state.armed = owned = state.stop_pending = 1U;
+        rearm = was_allowed = single_pending = 0U; result = 1U;
+        reference_captured = 1U;
+        manual_hold = 0U;
+    }
+    taskEXIT_CRITICAL(); return result;
+}
+
+uint8_t FeederBackend_Ready(void)
+{
+    uint8_t result = 0U;
+    taskENTER_CRITICAL();
+    /* Explicit human reference acknowledgement at safe OFF; never a boot action.
+     * All original clear/zero/arm guards still apply, including quiet feedback. */
+    if (!state.armed && !state.stop_pending && RemoteGuard(1U) && Fresh() &&
+        state.controller.config.calibrated && state.controller.config.direction &&
+        Feeder_Clear(&state.controller, HAL_GetTick()) &&
+        Feeder_Zero(&state.controller, HAL_GetTick())) { result = FeederBackend_Arm(); }
+    taskEXIT_CRITICAL(); return result;
+}
+
+uint8_t FeederBackend_PrepareRemote(void)
+{
+    uint8_t result = 0U;
+    uint32_t now;
+    taskENTER_CRITICAL(); now = HAL_GetTick();
+    /* Called only after the original gimbal preparation is ready. No motor
+     * movement during OFF; one initial reference per boot, never silent fault
+     * clearing or recapturing a half-shot reference after an interruption. */
+    if (manual_hold || state.armed || state.stop_pending || !RemoteGuard(1U) || !Fresh() ||
+        state.controller.faults || !state.controller.config.calibrated ||
+        !state.controller.config.direction ||
+        (reference_captured && !state.controller.have_zero) ||
+        state.controller.raw_rpm > state.controller.config.settle_rpm ||
+        state.controller.raw_rpm < -state.controller.config.settle_rpm) { auto_quiet = 0U; }
+    else {
+        if (!auto_quiet) { auto_quiet = 1U; auto_quiet_since = now; }
+        if (now - auto_quiet_since >= 100U && state.controller.recovery_samples >= 3U &&
+            (state.controller.have_zero || FeederBackend_Zero())) { result = FeederBackend_Arm(); }
+    }
+    taskEXIT_CRITICAL(); return result;
+}
+
+uint8_t FeederBackend_Single(void)
+{
+    uint8_t result = 0U;
+    MotorHealth wheels;
+    taskENTER_CRITICAL(); MotorBackend_GetHealth(&wheels);
+    if (state.armed && !state.stop_pending && !single_pending && !state.controller.busy &&
+        Fresh() && !state.controller.faults && wheels.flywheels_ready && RemoteGuard(0U)) {
+        single_pending = 1U; single_ms = HAL_GetTick(); result = 1U;
+    }
+    taskEXIT_CRITICAL(); return result;
+}
+
+void FeederBackend_Apply(const TargetRequest *request, uint8_t output_allowed,
+                         uint8_t wheels_ready, uint8_t diagnostic)
+{
+    uint32_t now, accepted, completed, aborted, faults;
+    uint8_t eligible, allowed, event, was_busy, console_single;
+    int16_t current;
+    HAL_StatusTypeDef result;
+    taskENTER_CRITICAL(); now = HAL_GetTick();
+    was_busy = state.controller.busy; faults = state.controller.faults;
+    eligible = request && output_allowed && !diagnostic && request->gimbal_mode == GIMBAL_MANUAL &&
+        request->friction_requested;
+    /* Speed readiness authorizes a new shot, not a half-shot abort. Actual
+     * wheel feedback loss/fault still revokes the shared output permission. */
+    allowed = state.armed && eligible && (wheels_ready || was_busy) && !state.stop_pending;
+    console_single = single_pending;
+    event = request && request->shot_event;
+    if (single_pending) {
+        if (now - single_ms <= APP_CONTROL_MAX_GAP_MS && allowed) { event = 1U; }
+        else { state.controller.rejected++; }
+        single_pending = 0U;
+    }
+    if (event) { event_sequence++; }
+    accepted = state.controller.accepted; completed = state.controller.completed;
+    aborted = state.controller.aborted;
+    current = Feeder_Run(&state.controller, now, allowed, wheels_ready, event, event_sequence,
+                        request && request->continuous_fire && !console_single);
+    if (state.controller.accepted != accepted) {
+        if (!console_single && request && request->fire_mode == FIRE_CONTINUOUS) { state.continuous_accepted++; }
+        else { state.single_accepted++; }
+    }
+    if (state.controller.completed != completed) {
+        state.completed_interval_ms = have_completed ? now - completed_ms : 0U;
+        completed_ms = now; have_completed = 1U;
+    }
+    if (state.controller.aborted != aborted ||
+        (state.armed && state.controller.faults != faults)) {
+        if (state.controller.aborted != aborted) { state.controller.have_zero = 0U; }
+        FeederBackend_Stop(); rearm = 1U; allowed = 0U;
+    } else if (was_allowed && !eligible) {
+        if (request && output_allowed && !diagnostic && request->gimbal_mode == GIMBAL_MANUAL) {
+            /* 空闲CH6普通关闭保留拨盘会话，沿用原遥控开关习惯；
+             * 目标和串口事件已清，重新开轮仍需稳速与新鲜释放/触发。 */
+            single_pending = 0U; CanBus_SetFeederPermission(0U); state.stop_pending = owned;
+        } else { FeederBackend_Stop(); }
+        allowed = 0U;
+    }
+    if (!allowed) {
+        if (was_allowed) { CanBus_SetFeederPermission(0U); state.stop_pending = owned; }
+        if (owned && (state.stop_pending || now - last_tx_ms >= 20U)) {
+            result = CanBus_StopFeeder(); last_tx_ms = now;
+            state.stop_pending = result != HAL_OK;
+        }
+    } else {
+        if (!was_allowed) { last_success_ms = now; }
+        CanBus_SetFeederPermission(1U);
+        if (now - last_tx_ms >= APP_FEEDER_COMMAND_PERIOD_MS) {
+            result = CanBus_FeederCurrent(current); last_tx_ms = now;
+            if (result == HAL_OK) { last_success_ms = now; }
+            if (result == HAL_ERROR || (result == HAL_BUSY && now - last_success_ms > 10U)) {
+                state.controller.faults |= FEEDER_FAULT_CAN;
+                state.controller.have_zero = 0U; FeederBackend_Stop(); rearm = 1U; allowed = 0U;
+            }
+        }
+    }
+    was_allowed = allowed;
+    taskEXIT_CRITICAL();
+}
+/* APP_SECTION_END feeder_backend.c */

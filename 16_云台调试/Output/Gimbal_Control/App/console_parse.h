@@ -1,5 +1,14 @@
+/**
+ * @file console_parse.h
+ * @brief 共用命令数字解析
+ * 职责：实现不依赖设备状态的浮点数及 PID 三参数解析。
+ * 主要接口：ConsoleParse_Number, ConsoleParse_PidNumbers, for。
+ * 实现/调用：头文件内 static 函数；Yaw/Pitch 命令共用，拒绝非有限值和尾随垃圾。
+ * 参数：app_config.h 是 App 参数及常量的唯一宏定义入口。
+ */
 #ifndef CONSOLE_PARSE_H
 #define CONSOLE_PARSE_H
+#include "app_config.h"
 
 #include <stdint.h>
 #include <stdlib.h>

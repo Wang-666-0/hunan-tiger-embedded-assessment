@@ -1,9 +1,16 @@
-﻿#ifndef VESC_DIAG_H
+/**
+ * @file vesc_diag.h
+ * @brief VESC 只读诊断协议
+ * 职责：定义参数接收缓存，声明查询、分片拼接和 CRC 结果接口。
+ * 主要接口：VescDiag_BuildRead, VescDiag_Begin, VescDiag_Reset, VescDiag_OnFrame。
+ * 实现/调用：app_diagnostics.c；长度及节点/命令白名单验证保持原逻辑。
+ * 参数：app_config.h 是 App 参数及常量的唯一宏定义入口。
+ */
+#ifndef VESC_DIAG_H
 #define VESC_DIAG_H
+#include "app_config.h"
 
 #include "can_frame.h"
-
-#define VESC_DIAG_MAX_PAYLOAD 1024U
 
 /* 只允许一笔查询在途。分片帧不携带发送节点，不能并行查询两个电调。 */
 typedef struct {

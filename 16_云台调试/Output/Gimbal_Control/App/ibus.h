@@ -1,5 +1,14 @@
-﻿#ifndef IBUS_H
+/**
+ * @file ibus.h
+ * @brief iBUS 解析接口
+ * 职责：定义解析器、有效帧和统计信息，支持按字节或块输入。
+ * 主要接口：ibus_init, ibus_set_channel_validation, ibus_poll_timeout, ibus_feed_byte, ibus_feed。
+ * 实现/调用：remote_input.c；处理帧头、校验和、通道范围、字节超时与丢字节重同步。
+ * 参数：app_config.h 是 App 参数及常量的唯一宏定义入口。
+ */
+#ifndef IBUS_H
 #define IBUS_H
+#include "app_config.h"
 
 #include <stddef.h>
 #include <stdint.h>
@@ -9,12 +18,6 @@ extern "C" {
 #endif
 
 /* 富斯 iBUS 舵机数据：115200、8N1、非反相，32 字节一帧。 */
-#define IBUS_FRAME_SIZE                 32U
-#define IBUS_CHANNEL_COUNT              14U
-#define IBUS_DEFAULT_CHECKED_CHANNELS   10U
-#define IBUS_DEFAULT_CHANNEL_MIN        800U
-#define IBUS_DEFAULT_CHANNEL_MAX        2200U
-#define IBUS_DEFAULT_BYTE_TIMEOUT_MS    5U
 
 typedef struct
 {

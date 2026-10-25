@@ -1,17 +1,17 @@
+/**
+ * @file yaw_step.h
+ * @brief 共用实测阶跃统计
+ * 职责：定义阶跃阶段、结束原因、测量快照及首次到位/稳定/超调判定。
+ * 主要接口：YawStep_Init, YawStep_Start, YawStep_Sample, YawStep_Command, YawStep_Abort 等。
+ * 实现/调用：yaw_controller.c；Yaw/Pitch 保留独立实例，只采真实反馈与实际提交命令。
+ * 参数：app_config.h 是 App 参数及常量的唯一宏定义入口。
+ */
 #ifndef YAW_STEP_H
 #define YAW_STEP_H
+#include "app_config.h"
 #include <stdint.h>
-#define YAW_STEP_WINDOW_MS 5000U
-#define YAW_STEP_STEADY_MS 1000U
-#define YAW_STEP_BAND_DEG 0.2f
-#define YAW_STEP_SETTLE_HOLD_MS 50U
 /* 正式考核：最终进入±0.2后保持到窗口末，同时限制超调和稳态误差。 */
-#define YAW_STEP_RESPONSE_LIMIT_MS 250U
-#define YAW_STEP_OVERSHOOT_LIMIT_DEG 0.2f
-#define YAW_STEP_SSE_LIMIT_DEG 0.2f
 /* 仅吸收单精度相减的边界舍入，远小于一个编码器刻度。 */
-#define YAW_STEP_COMPARE_EPS_DEG 0.00001f
-#define YAW_STEP_UNREACHED 0xFFFFFFFFUL
 typedef enum { YAW_STEP_IDLE, YAW_STEP_RUNNING, YAW_STEP_DONE, YAW_STEP_ABORTED } YawStepPhase;
 typedef enum {
     YAW_STEP_NONE, YAW_STEP_STOP, YAW_STEP_FAULT, YAW_STEP_PID_CHANGE,

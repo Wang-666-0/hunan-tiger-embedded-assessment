@@ -1,3 +1,11 @@
+/**
+ * @file flywheel_jog.h
+ * @brief 双摩擦轮受限会话
+ * 职责：定义左右轮反馈、点动/持续会话、过流过速等保护及输出请求。
+ * 主要接口：FlywheelJog_Init, FlywheelJog_OnFrame, FlywheelJog_GetHealth, FlywheelJog_Select, FlywheelJog_Step 等。
+ * 实现/调用：motor_backend.c；保留速度软滑行、硬保护及停机反馈确认。
+ * 参数：app_config.h 是 App 参数及常量的唯一宏定义入口。
+ */
 #ifndef FLYWHEEL_JOG_H
 #define FLYWHEEL_JOG_H
 #include "can_frame.h"
@@ -5,13 +13,6 @@
 #include "flywheel_speed.h"
 #include <stdint.h>
 
-/* 单/双轮受限会话与硬保护；按住运行，固定方向，速度以ERPM控制。 */
-#define FLYWHEEL_JOG_MAX_CURRENT_MA APP_FLYWHEEL_JOG_MAX_MA
-#define FLYWHEEL_JOG_STATUS1_TIMEOUT_MS 100U
-#define FLYWHEEL_JOG_STATUS4_TIMEOUT_MS 600U
-#define FLYWHEEL_JOG_MAX_DURATION_MS APP_FLYWHEEL_JOG_MAX_DURATION_MS
-#define FLYWHEEL_JOG_COMMAND_PERIOD_MS 20U
-#define FLYWHEEL_JOG_MAX_ERPM APP_FLYWHEEL_JOG_HARD_ERPM
 #if APP_FLYWHEEL_SPEED_ACTIVE && \
     (APP_FLYWHEEL_POLE_PAIRS_ASSUMED <= 0 || APP_FLYWHEEL_SPEED_TARGET_ERPM <= 0 || \
      APP_FLYWHEEL_SPEED_RESUME_ERPM < APP_FLYWHEEL_SPEED_TARGET_ERPM || \
@@ -23,18 +24,12 @@
      APP_FLYWHEEL_SPEED_TARGET_ERPM + APP_FLYWHEEL_SPEED_BAND_ERPM >= APP_FLYWHEEL_SPEED_COAST_ERPM)
 #error Speed_stage_must_keep_target_and_soft_coast_below_hard_protection
 #endif
-/* 持续观察的低速区间：达到上界滑行，降到下界再恢复受限加力。
- * 采用ERPM绝对值，不假定机械轮速/极对数；不是精确稳速控制。 */
-#define FLYWHEEL_OBSERVE_COAST_ERPM 1000
-#define FLYWHEEL_OBSERVE_RESUME_ERPM 600
+
 #if FLYWHEEL_OBSERVE_RESUME_ERPM <= 0 || \
     FLYWHEEL_OBSERVE_COAST_ERPM <= FLYWHEEL_OBSERVE_RESUME_ERPM || \
     FLYWHEEL_OBSERVE_COAST_ERPM >= FLYWHEEL_JOG_MAX_ERPM
 #error Observation_speed_band_must_stay_below_hard_overspeed_limit
 #endif
-#define FLYWHEEL_JOG_STOPPED_ERPM 100
-#define FLYWHEEL_JOG_MAX_FEEDBACK_CURRENT_MA APP_FLYWHEEL_JOG_FEEDBACK_MAX_MA
-#define FLYWHEEL_JOG_MAX_FET_DECI_C 600
 
 typedef enum {
     FLYWHEEL_JOG_OFF = 0, FLYWHEEL_JOG_LEFT = 1, FLYWHEEL_JOG_RIGHT = 2,

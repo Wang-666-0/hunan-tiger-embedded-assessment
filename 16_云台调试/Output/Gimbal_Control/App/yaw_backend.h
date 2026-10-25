@@ -1,10 +1,17 @@
-﻿#ifndef YAW_BACKEND_H
+/**
+ * @file yaw_backend.h
+ * @brief Yaw 执行后端
+ * 职责：声明基准、使能、参数、相对阶跃、锁轴、停机及实测结果接口。
+ * 主要接口：YawBackend_Init, YawBackend_OnFrame, YawBackend_GetState, YawBackend_Request, YawBackend_PrepareStop 等。
+ * 实现/调用：yaw_controller.c；普通阶跃保留静止门禁，归位使用明确的目标接管路径。
+ * 参数：app_config.h 是 App 参数及常量的唯一宏定义入口。
+ */
+#ifndef YAW_BACKEND_H
 #define YAW_BACKEND_H
+#include "app_config.h"
 #include "yaw_controller.h"
 #include "yaw_step.h"
 #include "target_manager.h"
-#define YAW_CLEAR_OFF_MOTION_HOLD_MS 500U
-#define YAW_STEP_RAW_SPEED_SANITY_DPS 30.0f
 /* 正式STEP门禁与故障保护分开；位值可组合，CHECK/遥控回执解释拒绝原因。 */
 typedef enum {
     YAW_STEP_BLOCK_REFERENCE = 1UL << 0,

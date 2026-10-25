@@ -1,11 +1,19 @@
+/**
+ * @file display_demo_jitter.h
+ * @brief 带标记演示的连续扰动
+ * 职责：生成连续、有界的不规则显示扰动，用于演示角度。
+ * 主要接口：DisplayDemoJitter_Node, DisplayDemoJitter_Band, DisplayDemoJitter_Offset。
+ * 实现/调用：头文件内纯显示函数；不修改真实反馈、闭环状态或考核成绩。
+ * 参数：app_config.h 是 App 参数及常量的唯一宏定义入口。
+ */
 #ifndef DISPLAY_DEMO_JITTER_H
 #define DISPLAY_DEMO_JITTER_H
+#include "app_config.h"
 #include <stdint.h>
 
 /* Explicit display-demo texture only. Never feed this into measured feedback,
  * motor control or assessment. Interpolated hashed knots give bounded,
  * continuous irregular motion, instead of a repeated long sine wave. */
-#define DISPLAY_DEMO_JITTER_MAX_DEG 0.15f
 
 static float DisplayDemoJitter_Node(uint32_t seed, uint32_t index, uint32_t salt)
 {

@@ -1,5 +1,14 @@
-﻿#ifndef REMOTE_MAPPER_H
+/**
+ * @file remote_mapper.h
+ * @brief 遥控语义映射
+ * 职责：定义 RemoteFrame、RemoteCommand、开关/发射/云台模式并声明映射函数。
+ * 主要接口：RemoteMapper_Map。
+ * 实现/调用：remote_input.c；通道从零编号，CH1 对应下标 0，物理档位见 app_config.h。
+ * 参数：app_config.h 是 App 参数及常量的唯一宏定义入口。
+ */
+#ifndef REMOTE_MAPPER_H
 #define REMOTE_MAPPER_H
+#include "app_config.h"
 #include <stdint.h>
 
 typedef enum { RC_LOW = 0, RC_MIDDLE = 1, RC_HIGH = 2 } RcSwitch;

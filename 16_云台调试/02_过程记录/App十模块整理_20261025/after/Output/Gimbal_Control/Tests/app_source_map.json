@@ -1,0 +1,112 @@
+{
+  "format": 1,
+  "description": "Production section ownership; tests select sections to keep their existing HAL mocks.",
+  "modules": {
+    "app_tasks.c": [
+      "app_fault.c",
+      "app_logic.c",
+      "gimbal_startup.c",
+      "app_tasks.c"
+    ],
+    "app_console.c": [
+      "app_console.c"
+    ],
+    "motor_console.c": [
+      "yaw_console.c",
+      "pitch_console.c",
+      "feeder_console.c"
+    ],
+    "can_bus.c": [
+      "can_frame.c",
+      "gl60_ii.c",
+      "dm3507.c",
+      "can_bus.c"
+    ],
+    "app_diagnostics.c": [
+      "dm_diag.c",
+      "vesc_diag.c",
+      "app_diagnostics.c"
+    ],
+    "remote_input.c": [
+      "ibus.c",
+      "remote_mapper.c",
+      "safety_manager.c",
+      "target_manager.c",
+      "remote_input.c"
+    ],
+    "motor_backend.c": [
+      "flywheel_speed.c",
+      "flywheel_jog.c",
+      "motor_backend.c"
+    ],
+    "feeder_controller.c": [
+      "feeder_controller.c",
+      "feeder_backend.c"
+    ],
+    "yaw_controller.c": [
+      "yaw_cascade.c",
+      "yaw_controller.c",
+      "yaw_step.c",
+      "yaw_backend.c"
+    ],
+    "pitch_controller.c": [
+      "pitch_controller.c",
+      "pitch_step.c",
+      "pitch_backend.c"
+    ]
+  },
+  "private_renames": {
+    "app_fault.c": {},
+    "app_logic.c": {},
+    "gimbal_startup.c": {},
+    "app_tasks.c": {},
+    "app_console.c": {},
+    "yaw_console.c": {
+      "BriefStatus": "yaw_console_BriefStatus",
+      "StepReport": "yaw_console_StepReport"
+    },
+    "pitch_console.c": {
+      "StepReport": "pitch_console_StepReport",
+      "BriefStatus": "pitch_console_BriefStatus"
+    },
+    "feeder_console.c": {},
+    "can_frame.c": {},
+    "gl60_ii.c": {},
+    "dm3507.c": {},
+    "can_bus.c": {},
+    "dm_diag.c": {},
+    "vesc_diag.c": {},
+    "app_diagnostics.c": {},
+    "ibus.c": {},
+    "remote_mapper.c": {},
+    "safety_manager.c": {},
+    "target_manager.c": {},
+    "remote_input.c": {},
+    "flywheel_speed.c": {},
+    "flywheel_jog.c": {},
+    "motor_backend.c": {},
+    "feeder_controller.c": {},
+    "feeder_backend.c": {},
+    "yaw_cascade.c": {
+      "finite_value": "yaw_cascade_finite_value",
+      "clamp": "yaw_cascade_clamp"
+    },
+    "yaw_controller.c": {
+      "finite_value": "yaw_controller_finite_value",
+      "absolute": "yaw_controller_absolute",
+      "clamp": "yaw_controller_clamp"
+    },
+    "yaw_step.c": {
+      "absolute": "yaw_step_absolute",
+      "finite_value": "yaw_step_finite_value"
+    },
+    "yaw_backend.c": {},
+    "pitch_controller.c": {
+      "absolute": "pitch_controller_absolute"
+    },
+    "pitch_step.c": {
+      "absolute": "pitch_step_absolute"
+    },
+    "pitch_backend.c": {}
+  }
+}

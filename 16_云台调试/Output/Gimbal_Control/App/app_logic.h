@@ -1,5 +1,14 @@
-﻿#ifndef APP_LOGIC_H
+/**
+ * @file app_logic.h
+ * @brief 应用逻辑与保护记录
+ * 职责：定义应用状态、轴健康输入和停机原因追踪；组合安全判定与目标请求。
+ * 主要接口：AppLogic_CombineActuatorHealth, AppLogic_Init, AppLogic_Step, AppLogic_RecordStop。
+ * 实现/调用：app_tasks.c；AppLogic_Step 先处理保护，再推进 TargetManager。
+ * 参数：app_config.h 是 App 参数及常量的唯一宏定义入口。
+ */
+#ifndef APP_LOGIC_H
 #define APP_LOGIC_H
+#include "app_config.h"
 #include "safety_manager.h"
 #include "target_manager.h"
 typedef enum {

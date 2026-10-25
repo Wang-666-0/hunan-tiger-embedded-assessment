@@ -1,3 +1,11 @@
+# 2026-10-25：十个实现文件的测试入口
+
+正式 App 已整理为 10 个 C 文件。现有夹具依然保留各自的逻辑依赖和 HAL/RTOS 模拟；`source_layout.py` 按 `app_source_map.json` 从正式文件的 `APP_SECTION_BEGIN/END` 分区读取源码并在临时目录编译。仓库中没有另存一套被测实现，源文件哈希记录完整的正式模块、头文件及测试辅助文件。正常 EIDE/Keil 固件直接编译全部 10 个文件。
+
+整理前完整运行了 85 组，共 1,002,890 个断言检查。其中 `yaw_performance`、`yaw_console`、`yaw_console_backend`、`yaw_console_backend_guarded`、`pitch_shape`、`pitch_manual90` 已有断言失败；基线记录保存在 `../../../02_过程记录/App十模块整理_20261025/baseline_tests.json`。本轮将这些组与整理后的结果逐项比较，不把原有失败写成“全部通过”，也不放宽断言掩盖差异。
+
+---
+
 ## 2026-10-25：归位立即接管、连续演示和 VIEW 恢复输出
 
 本轮22组选测共642613项检查完成返回，0失败；137份输入哈希与当前源码一致。覆盖Yaw运动中CH7单次回退、长按不重复及限位/锁轴拒绝；Pitch轨迹运动中HOME/CH7立即接管、PID状态保留、故障/过期反馈/撤权保护；普通STEP/TARGET保持原入口规则。原启动、测试轴保持、窗口互锁、串口路由、UART4与USART1双DMA、RX错误/丢包恢复继续通过。

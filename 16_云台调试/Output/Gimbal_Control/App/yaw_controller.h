@@ -1,59 +1,17 @@
+/**
+ * @file yaw_controller.h
+ * @brief Yaw 控制器数据与接口
+ * 职责：定义位置基准、PID、轨迹/前馈和反馈连续性、机械边界保护。
+ * 主要接口：YawController_Init, YawController_OnFeedback, YawController_CaptureReference, YawController_SetPid, YawController_SetTarget 等。
+ * 实现/调用：yaw_controller.c；支持既有单环对照和生产串级 PID，开关/限位见 app_config.h。
+ * 参数：app_config.h 是 App 参数及常量的唯一宏定义入口。
+ */
 #ifndef YAW_CONTROLLER_H
 #define YAW_CONTROLLER_H
 #include "gl60_ii.h"
 #include "yaw_cascade.h"
 #include "app_config.h"
 #include <stdint.h>
-
-/* 生产双环；0仅保留既有单环对照回归，不提供运行时自动切环。 */
-#ifndef YAW_CONTROLLER_CASCADE_ENABLED
-#define YAW_CONTROLLER_CASCADE_ENABLED 1U
-#endif
-
-/* Confirmed mechanical travel: +/-160 degrees relative to software zero.
- * Keep a 10-degree margin: targets +/-150, hard feedback guard +/-160.
- * Each STEP adds +/-30; no movement-count limit. */
-#ifndef YAW_CONTROLLER_TARGET_LIMIT_DEG
-#define YAW_CONTROLLER_TARGET_LIMIT_DEG 150.0f
-#endif
-#ifndef YAW_CONTROLLER_HARD_LIMIT_DEG
-#define YAW_CONTROLLER_HARD_LIMIT_DEG 160.0f
-#endif
-/* V2B生产仅裁到MIT协议端点；0.10只保留历史单环/V2A对照。 */
-#if YAW_CONTROLLER_CASCADE_ENABLED && !YAW_CASCADE_OUTPUT_LIMITS_ENABLED
-#define YAW_CONTROLLER_TORQUE_LIMIT_NM GL60_TORQUE_MAX_NM
-#else
-#define YAW_CONTROLLER_TORQUE_LIMIT_NM 0.10f
-#endif
-/* 跟随CH1配置的满杆速度映射，保持完整比例及死区，回中保持目标。 */
-#ifndef YAW_CONTROLLER_MANUAL_RATE_LIMIT_DPS
-#define YAW_CONTROLLER_MANUAL_RATE_LIMIT_DPS APP_YAW_RATE_LIMIT_DPS
-#endif
-/* 用户2026-10-14明确要求考核档取消60deg/s停机及40deg/s抑制。
- * 1仅供原受限单环档回归；生产默认0，速度参与双环控制及测量。 */
-#ifndef YAW_CONTROLLER_SPEED_GUARD_ENABLED
-#define YAW_CONTROLLER_SPEED_GUARD_ENABLED 0U
-#endif
-#define YAW_CONTROLLER_SPEED_LIMIT_DPS 60.0f
-/* 速度过软阈值时抑制加速并给反向制动，不以放宽硬保护掩盖超速。 */
-#define YAW_CONTROLLER_SOFT_SPEED_DPS 40.0f
-#define YAW_CONTROLLER_SPEED_BRAKE_KD 0.20f
-/* 通信连续性检查独立于原60deg/s门限，不作为转速控制器。
- * 10ms允许13deg；正常30deg/250ms轨迹不会被原60门槛代替拒绝。 */
-#define YAW_CONTROLLER_CONTINUITY_DPS 1200.0f
-#define YAW_CONTROLLER_CONTINUITY_MARGIN_DEG 1.0f
-/* 仅未尝试使能、状态0/13的无输出观察阶段；不扩大闭环活动空间。 */
-#define YAW_CONTROLLER_OFF_SPEED_LIMIT_DPS 360.0f
-#define YAW_CONTROLLER_OFF_JUMP_MARGIN_DEG 3.0f
-#ifndef YAW_CONTROLLER_OFF_ANGLE_LIMIT_DEG
-#define YAW_CONTROLLER_OFF_ANGLE_LIMIT_DEG 160.0f
-#endif
-#define YAW_CONTROLLER_STATIONARY_SPEED_DPS 6.0f
-#define YAW_CONTROLLER_FEEDBACK_TIMEOUT_MS 100U
-#define YAW_CONTROLLER_CONTROL_MAX_GAP_MS 10U
-#define YAW_CONTROLLER_STATIONARY_HOLD_MS 20U
-#define YAW_CONTROLLER_DRIVER_LIMIT_C 60
-#define YAW_CONTROLLER_MOTOR_LIMIT_C 70
 
 typedef enum {
     YAW_CONTROLLER_FAULT_NONE = 0U,

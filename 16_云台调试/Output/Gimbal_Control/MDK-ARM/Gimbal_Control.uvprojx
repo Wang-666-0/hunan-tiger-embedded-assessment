@@ -705,134 +705,9 @@
           <GroupName>App</GroupName>
           <Files>
             <File>
-              <FileName>gl60_ii.c</FileName>
-              <FileType>1</FileType>
-              <FilePath>../App/gl60_ii.c</FilePath>
-            </File>
-            <File>
-              <FileName>yaw_controller.c</FileName>
-              <FileType>1</FileType>
-              <FilePath>../App/yaw_controller.c</FilePath>
-            </File>
-            <File>
-              <FileName>yaw_cascade.c</FileName>
-              <FileType>1</FileType>
-              <FilePath>../App/yaw_cascade.c</FilePath>
-            </File>
-            <File>
-              <FileName>yaw_backend.c</FileName>
-              <FileType>1</FileType>
-              <FilePath>../App/yaw_backend.c</FilePath>
-            </File>
-            <File>
-              <FileName>yaw_step.c</FileName>
-              <FileType>1</FileType>
-              <FilePath>../App/yaw_step.c</FilePath>
-            </File>
-            <File>
-              <FileName>yaw_console.c</FileName>
-              <FileType>1</FileType>
-              <FilePath>../App/yaw_console.c</FilePath>
-            </File>
-              <File>
-                <FileName>dm3507.c</FileName>
-                <FileType>1</FileType>
-                <FilePath>../App/dm3507.c</FilePath>
-              </File>
-              <File>
-                <FileName>pitch_controller.c</FileName>
-                <FileType>1</FileType>
-                <FilePath>../App/pitch_controller.c</FilePath>
-              </File>
-              <File>
-                <FileName>pitch_step.c</FileName>
-                <FileType>1</FileType>
-                <FilePath>../App/pitch_step.c</FilePath>
-              </File>
-              <File>
-                <FileName>pitch_backend.c</FileName>
-                <FileType>1</FileType>
-                <FilePath>../App/pitch_backend.c</FilePath>
-              </File>
-              <File>
-                <FileName>pitch_console.c</FileName>
-                <FileType>1</FileType>
-                <FilePath>../App/pitch_console.c</FilePath>
-              </File>
-            <File>
-              <FileName>feeder_controller.c</FileName>
-              <FileType>1</FileType>
-              <FilePath>../App/feeder_controller.c</FilePath>
-            </File>
-            <File>
-              <FileName>feeder_backend.c</FileName>
-              <FileType>1</FileType>
-              <FilePath>../App/feeder_backend.c</FilePath>
-            </File>
-            <File>
-              <FileName>feeder_console.c</FileName>
-              <FileType>1</FileType>
-              <FilePath>../App/feeder_console.c</FilePath>
-            </File>
-            <File>
-              <FileName>flywheel_speed.c</FileName>
-              <FileType>1</FileType>
-              <FilePath>../App/flywheel_speed.c</FilePath>
-            </File>
-              <File>
-                <FileName>flywheel_jog.c</FileName>
-                <FileType>1</FileType>
-                <FilePath>../App/flywheel_jog.c</FilePath>
-              </File>
-            <File>
-              <FileName>app_diagnostics.c</FileName>
-              <FileType>1</FileType>
-              <FilePath>../App/app_diagnostics.c</FilePath>
-            </File>
-            <File>
-              <FileName>dm_diag.c</FileName>
-              <FileType>1</FileType>
-              <FilePath>../App/dm_diag.c</FilePath>
-            </File>
-            <File>
-              <FileName>vesc_diag.c</FileName>
-              <FileType>1</FileType>
-              <FilePath>../App/vesc_diag.c</FilePath>
-            </File>
-            <File>
-              <FileName>app_fault.c</FileName>
-              <FileType>1</FileType>
-              <FilePath>../App/app_fault.c</FilePath>
-            </File>
-            <File>
-              <FileName>app_logic.c</FileName>
-              <FileType>1</FileType>
-              <FilePath>../App/app_logic.c</FilePath>
-            </File>
-            <File>
-              <FileName>gimbal_startup.c</FileName>
-              <FileType>1</FileType>
-              <FilePath>../App/gimbal_startup.c</FilePath>
-            </File>
-            <File>
               <FileName>app_tasks.c</FileName>
               <FileType>1</FileType>
               <FilePath>../App/app_tasks.c</FilePath>
-            </File>
-            <File>
-              <FileName>can_bus.c</FileName>
-              <FileType>1</FileType>
-              <FilePath>../App/can_bus.c</FilePath>
-            </File>
-            <File>
-              <FileName>can_frame.c</FileName>
-              <FileType>1</FileType>
-              <FilePath>../App/can_frame.c</FilePath>
-            </File>
-            <File>
-              <FileName>motor_backend.c</FileName>
-              <FileType>1</FileType>
-              <FilePath>../App/motor_backend.c</FilePath>
             </File>
             <File>
               <FileName>app_console.c</FileName>
@@ -840,29 +715,44 @@
               <FilePath>../App/app_console.c</FilePath>
             </File>
             <File>
-              <FileName>safety_manager.c</FileName>
+              <FileName>motor_console.c</FileName>
               <FileType>1</FileType>
-              <FilePath>../App/safety_manager.c</FilePath>
+              <FilePath>../App/motor_console.c</FilePath>
             </File>
             <File>
-              <FileName>target_manager.c</FileName>
+              <FileName>can_bus.c</FileName>
               <FileType>1</FileType>
-              <FilePath>../App/target_manager.c</FilePath>
+              <FilePath>../App/can_bus.c</FilePath>
             </File>
             <File>
-              <FileName>ibus.c</FileName>
+              <FileName>app_diagnostics.c</FileName>
               <FileType>1</FileType>
-              <FilePath>../App/ibus.c</FilePath>
-            </File>
-            <File>
-              <FileName>remote_mapper.c</FileName>
-              <FileType>1</FileType>
-              <FilePath>../App/remote_mapper.c</FilePath>
+              <FilePath>../App/app_diagnostics.c</FilePath>
             </File>
             <File>
               <FileName>remote_input.c</FileName>
               <FileType>1</FileType>
               <FilePath>../App/remote_input.c</FilePath>
+            </File>
+            <File>
+              <FileName>motor_backend.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>../App/motor_backend.c</FilePath>
+            </File>
+            <File>
+              <FileName>feeder_controller.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>../App/feeder_controller.c</FilePath>
+            </File>
+            <File>
+              <FileName>yaw_controller.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>../App/yaw_controller.c</FilePath>
+            </File>
+            <File>
+              <FileName>pitch_controller.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>../App/pitch_controller.c</FilePath>
             </File>
           </Files>
         </Group>

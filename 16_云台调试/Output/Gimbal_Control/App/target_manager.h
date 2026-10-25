@@ -1,5 +1,14 @@
-﻿#ifndef TARGET_MANAGER_H
+/**
+ * @file target_manager.h
+ * @brief 运动与发射目标管理
+ * 职责：定义执行器请求、阶跃边沿序号及单发/连发目标节拍。
+ * 主要接口：TargetManager_Init, TargetManager_RecordAcceptedTestAxis, TargetManager_Step。
+ * 实现/调用：remote_input.c；目标请求不代表最终输出许可，后端仍逐项校验。
+ * 参数：app_config.h 是 App 参数及常量的唯一宏定义入口。
+ */
+#ifndef TARGET_MANAGER_H
 #define TARGET_MANAGER_H
+#include "app_config.h"
 #include "remote_mapper.h"
 
 typedef struct {

@@ -1,23 +1,17 @@
+/**
+ * @file pitch_controller.h
+ * @brief Pitch 控制器数据与接口
+ * 职责：定义串级 PID 接入、重力补偿、制动、轨迹和首次到位追踪。
+ * 主要接口：PitchController_Init, PitchController_OnFeedback, PitchController_CaptureReference, PitchController_SetFeedbackDivisor, PitchController_SetPid 等。
+ * 实现/调用：pitch_controller.c；主要单位为 deg、deg/s、N*m，内部共用 YawCascade。
+ * 参数：app_config.h 是 App 参数及常量的唯一宏定义入口。
+ */
 #ifndef PITCH_CONTROLLER_H
 #define PITCH_CONTROLLER_H
 #include "dm3507.h"
 #include "yaw_cascade.h"
 #include "app_config.h"
 #include <stdint.h>
-
-/* 相对READY时的实测行程基准：机械抬头-20/低头+35；目标留2度、撤权界留1度。
- * 2026-10-17用户更正了此前±50无遮挡条件。每次重设零都须回到同一基准姿态。 */
-#define PITCH_CONTROLLER_TARGET_MIN_DEG (-18.0f)
-#define PITCH_CONTROLLER_TARGET_MAX_DEG 33.0f
-#define PITCH_CONTROLLER_HARD_MIN_DEG (-19.0f)
-#define PITCH_CONTROLLER_HARD_MAX_DEG 34.0f
-#define PITCH_CONTROLLER_TORQUE_LIMIT_NM DM3507_TORQUE_MAX_NM
-#define PITCH_CONTROLLER_FEEDBACK_TIMEOUT_MS 100U
-#define PITCH_CONTROLLER_CONTROL_MAX_GAP_MS 10U
-#define PITCH_CONTROLLER_STATIONARY_SPEED_DPS 6.0f
-#define PITCH_CONTROLLER_STATIONARY_HOLD_MS 20U
-#define PITCH_CONTROLLER_DRIVER_LIMIT_C 60U
-#define PITCH_CONTROLLER_MOTOR_LIMIT_C 70U
 
 typedef enum {
     PITCH_CONTROLLER_FAULT_NONE = 0U,

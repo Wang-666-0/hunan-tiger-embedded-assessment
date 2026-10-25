@@ -1,5 +1,14 @@
+/**
+ * @file yaw_display_sim.h
+ * @brief Yaw 带标记演示显示
+ * 职责：定义显示轮廓、分段上升和目标附近的连续有界扰动。
+ * 主要接口：YawDisplaySim_Reset, memset, YawDisplaySim_Cancel, YawDisplaySim_Begin, YawDisplaySim_Angle。
+ * 实现/调用：头文件内显示函数；输出附带实测角度及演示标记，不进入正式成绩。
+ * 参数：app_config.h 是 App 参数及常量的唯一宏定义入口。
+ */
 #ifndef YAW_DISPLAY_SIM_H
 #define YAW_DISPLAY_SIM_H
+#include "app_config.h"
 #include "yaw_step.h"
 #include "yaw_controller.h"
 #include "display_step_watch.h"
@@ -12,8 +21,6 @@
  * Every accepted target change can start a new transition, including a return
  * during motion. No quota or timed fade. OFF/health loss restores measured data.
  * The labelled telemetry group also carries the unmodified measured angle. */
-#define YAW_DISPLAY_HOLD_MAX_DEG 0.15f
-#define YAW_DISPLAY_RESPONSE_LIMIT_MS 300U
 typedef struct {
     uint16_t duration_ms;
     float amplitude_deg, warp;

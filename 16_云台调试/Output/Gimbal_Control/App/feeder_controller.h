@@ -1,22 +1,17 @@
+/**
+ * @file feeder_controller.h
+ * @brief 拨盘控制器数据与接口
+ * 职责：定义编码器累计、位置/速度环参数、单发/连发状态和保护位。
+ * 主要接口：Feeder_Init, Feeder_ConfigValid, Feeder_SetConfig, Feeder_OnFrame, Feeder_Step 等。
+ * 实现/调用：feeder_controller.c；转子角度与输出轴角度分开，初始化默认值见 app_config.h。
+ * 参数：app_config.h 是 App 参数及常量的唯一宏定义入口。
+ */
 #ifndef FEEDER_CONTROLLER_H
 #define FEEDER_CONTROLLER_H
+#include "app_config.h"
 
 #include "can_frame.h"
 #include <stdint.h>
-
-#define FEEDER_ENCODER_COUNTS 8192U
-#define FEEDER_FEEDBACK_TIMEOUT_MS 20U
-#define FEEDER_CONTROL_MAX_GAP_MS 10U
-#define FEEDER_JUMP_SLACK_COUNTS 256U
-/* CAN receipt uses integer HAL_GetTick(): a difference of N ticks can span
- * almost N+1 milliseconds. This margin is only for encoder plausibility. */
-#define FEEDER_GAP_UNCERTAINTY_MS 1U
-#define FEEDER_STREAM_MAX_PENDING 2U
-#define FEEDER_CURRENT_PROTOCOL_LIMIT 10000
-#define FEEDER_CURRENT_CONFIG_LIMIT 3000
-#define FEEDER_SINGLE_BRAKE_DELAY_MS 8U
-#define FEEDER_SINGLE_PREVIEW_MS 12U
-#define FEEDER_SINGLE_I_RELAX_MS 12U
 
 typedef enum {
     FEEDER_FAULT_NONE = 0U,

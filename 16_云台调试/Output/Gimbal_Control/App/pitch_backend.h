@@ -1,12 +1,18 @@
+/**
+ * @file pitch_backend.h
+ * @brief Pitch 执行后端
+ * 职责：声明坐标标定、准备/使能、目标、归位、锁轴及实测结果接口。
+ * 主要接口：PitchBackend_Init, PitchBackend_OnFrame, PitchBackend_GetState, PitchBackend_QueryFeedback, PitchBackend_SetCoordinate 等。
+ * 实现/调用：pitch_controller.c；StartStep 保留门禁，ReturnTo 允许中断但保留健康和许可检查。
+ * 参数：app_config.h 是 App 参数及常量的唯一宏定义入口。
+ */
 #ifndef PITCH_BACKEND_H
 #define PITCH_BACKEND_H
+#include "app_config.h"
 #include "pitch_controller.h"
 #include "pitch_step.h"
 #include "target_manager.h"
 
-#define PITCH_BACKEND_FAULT_ENABLE (1UL << 16)
-#define PITCH_BACKEND_FAULT_TX (1UL << 17)
-#define PITCH_BACKEND_FAULT_DISABLED (1UL << 18)
 typedef enum {
     PITCH_STOP_NONE = 0U, PITCH_STOP_EXTERNAL, PITCH_STOP_PERMISSION,
     PITCH_STOP_FEEDBACK, PITCH_STOP_CAN_PERMISSION, PITCH_STOP_ENABLE_TX,

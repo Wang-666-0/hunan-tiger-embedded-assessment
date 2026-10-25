@@ -8,6 +8,7 @@ import struct
 import subprocess
 import sys
 import tempfile
+import source_layout
 
 
 def run(command):
@@ -45,6 +46,9 @@ def main():
     from unicorn.arm_const import UC_ARM_REG_SP, UC_ARM_REG_LR, UC_ARM_REG_PC
     app = root.parent / "App"
     output = Path(tempfile.mkdtemp(prefix="gimbal-foundation-selftests-"))
+    # Unit fixtures retain their original dependency seams; source text comes
+    # from the ten current production modules, whose complete files are hashed.
+    sections = source_layout.materialize(app, output / "production_sections")
     groups = {
         "feeder_controller": [root / "test_feeder_controller.c", app / "feeder_controller.c"],
         "feeder_single": [root / "test_feeder_single.c", app / "feeder_controller.c"],
@@ -197,9 +201,11 @@ def main():
     gcc = args.gcc_dir / "arm-none-eabi-gcc.exe"
     nm = args.gcc_dir / "arm-none-eabi-nm.exe"
     for name, sources in groups.items():
-        tested = sources + sorted(app.glob("*.h")) + sorted((root / "mocks").glob("*.h"))
+        compile_sources, production_sources = source_layout.resolve(sources, app, sections)
+        tested = production_sources + sorted(app.glob("*.h")) + sorted((root / "mocks").glob("*.h"))
         # 部分集成用例include已有夹具.c，也纳入源码哈希，避免漏验。
-        tested += list(root.glob("test_*.c")) + [root / "test.ld", Path(__file__)]
+        tested += list(root.glob("test_*.c")) + [root / "test.ld", Path(__file__),
+            root / "source_layout.py", root / "app_source_map.json"]
         hashes = {str(p.relative_to(root.parent)).replace("\\", "/"):
                   hashlib.sha256(p.read_bytes()).hexdigest() for p in tested}
         elf = output / (name + ".elf")
@@ -265,7 +271,7 @@ def main():
              "-Wall", "-Wextra", "-Werror", "-ffunction-sections", "-fdata-sections",
              "-I", str(root / "mocks"), "-I", str(app), "-nostartfiles", "--specs=nosys.specs",
              "-Wl,--gc-sections", "-T", str(root / "test.ld"), "-o", str(elf)] +
-            [str(p) for p in sources] + ["-lm"])
+            [str(p) for p in compile_sources] + ["-lm"])
         symbols = {parts[2]: int(parts[0], 16) for line in
                    run([str(nm), "-n", "--defined-only", str(elf)]).splitlines()
                    if len(parts := line.split()) == 3}

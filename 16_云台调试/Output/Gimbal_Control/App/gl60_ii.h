@@ -1,13 +1,19 @@
-﻿#ifndef GL60_II_H
+/**
+ * @file gl60_ii.h
+ * @brief GL60 II 协议接口
+ * 职责：定义 Yaw 电机反馈及力矩、使能、失能、清错报文接口。
+ * 主要接口：Gl60_Decode, Gl60_BuildTorque, Gl60_BuildEnable, Gl60_BuildDisable, Gl60_BuildClearError。
+ * 实现/调用：can_bus.c；协议量使用 rad、rad/s、N*m，正负方向保持既有约定。
+ * 参数：app_config.h 是 App 参数及常量的唯一宏定义入口。
+ */
+#ifndef GL60_II_H
 #define GL60_II_H
+#include "app_config.h"
 
 #include "can_frame.h"
 
 /* GL60 II, Firmware4407/002, MIT mode, actual saved mapping ranges.
  * Mapping ranges are neither mechanical limits nor authorized outputs. */
-#define GL60_POSITION_MAX_RAD 3.141593f
-#define GL60_VELOCITY_MAX_RAD_S 200.0f
-#define GL60_TORQUE_MAX_NM 10.0f
 
 typedef struct {
     float position_rad, velocity_rad_s, torque_nm;

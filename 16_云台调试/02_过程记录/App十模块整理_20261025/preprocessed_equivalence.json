@@ -1,0 +1,1445 @@
+{
+  "success": true,
+  "checks": [
+    {
+      "profile": "production",
+      "section": "app_fault.c",
+      "module": "app_tasks.c",
+      "equal": true,
+      "before_tokens": 17,
+      "after_tokens": 17,
+      "kind": "same_statements"
+    },
+    {
+      "profile": "production",
+      "section": "app_logic.c",
+      "module": "app_tasks.c",
+      "equal": true,
+      "before_tokens": 942,
+      "after_tokens": 942,
+      "kind": "same_statements"
+    },
+    {
+      "profile": "production",
+      "section": "gimbal_startup.c",
+      "module": "app_tasks.c",
+      "equal": true,
+      "before_tokens": 2012,
+      "after_tokens": 2012,
+      "kind": "same_statements"
+    },
+    {
+      "profile": "production",
+      "section": "app_tasks.c",
+      "module": "app_tasks.c",
+      "equal": true,
+      "before_tokens": 1562,
+      "after_tokens": 1562,
+      "kind": "same_statements"
+    },
+    {
+      "profile": "production",
+      "section": "app_console.c",
+      "module": "app_console.c",
+      "equal": true,
+      "before_tokens": 8702,
+      "after_tokens": 8702,
+      "kind": "same_statements"
+    },
+    {
+      "profile": "production",
+      "section": "yaw_console.c",
+      "module": "motor_console.c",
+      "equal": true,
+      "before_tokens": 6006,
+      "after_tokens": 6006,
+      "kind": "same_statements"
+    },
+    {
+      "profile": "production",
+      "section": "pitch_console.c",
+      "module": "motor_console.c",
+      "equal": true,
+      "before_tokens": 5812,
+      "after_tokens": 5812,
+      "kind": "same_statements"
+    },
+    {
+      "profile": "production",
+      "section": "feeder_console.c",
+      "module": "motor_console.c",
+      "equal": true,
+      "before_tokens": 2927,
+      "after_tokens": 2927,
+      "kind": "same_statements"
+    },
+    {
+      "profile": "production",
+      "section": "can_frame.c",
+      "module": "can_bus.c",
+      "equal": true,
+      "before_tokens": 78,
+      "after_tokens": 78,
+      "kind": "same_statements"
+    },
+    {
+      "profile": "production",
+      "section": "gl60_ii.c",
+      "module": "can_bus.c",
+      "equal": true,
+      "before_tokens": 870,
+      "after_tokens": 870,
+      "kind": "same_statements"
+    },
+    {
+      "profile": "production",
+      "section": "dm3507.c",
+      "module": "can_bus.c",
+      "equal": true,
+      "before_tokens": 873,
+      "after_tokens": 873,
+      "kind": "same_statements"
+    },
+    {
+      "profile": "production",
+      "section": "can_bus.c",
+      "module": "can_bus.c",
+      "equal": true,
+      "before_tokens": 4931,
+      "after_tokens": 4931,
+      "kind": "same_statements"
+    },
+    {
+      "profile": "production",
+      "section": "dm_diag.c",
+      "module": "app_diagnostics.c",
+      "equal": true,
+      "before_tokens": 389,
+      "after_tokens": 389,
+      "kind": "same_statements"
+    },
+    {
+      "profile": "production",
+      "section": "vesc_diag.c",
+      "module": "app_diagnostics.c",
+      "equal": true,
+      "before_tokens": 1102,
+      "after_tokens": 1102,
+      "kind": "same_statements"
+    },
+    {
+      "profile": "production",
+      "section": "app_diagnostics.c",
+      "module": "app_diagnostics.c",
+      "equal": true,
+      "before_tokens": 1427,
+      "after_tokens": 1427,
+      "kind": "same_statements"
+    },
+    {
+      "profile": "production",
+      "section": "ibus.c",
+      "module": "remote_input.c",
+      "equal": true,
+      "before_tokens": 924,
+      "after_tokens": 924,
+      "kind": "same_statements"
+    },
+    {
+      "profile": "production",
+      "section": "remote_mapper.c",
+      "module": "remote_input.c",
+      "equal": true,
+      "before_tokens": 670,
+      "after_tokens": 670,
+      "kind": "same_statements"
+    },
+    {
+      "profile": "production",
+      "section": "safety_manager.c",
+      "module": "remote_input.c",
+      "equal": true,
+      "before_tokens": 659,
+      "after_tokens": 659,
+      "kind": "same_statements"
+    },
+    {
+      "profile": "production",
+      "section": "target_manager.c",
+      "module": "remote_input.c",
+      "equal": true,
+      "before_tokens": 1060,
+      "after_tokens": 1060,
+      "kind": "same_statements"
+    },
+    {
+      "profile": "production",
+      "section": "remote_input.c",
+      "module": "remote_input.c",
+      "equal": true,
+      "before_tokens": 873,
+      "after_tokens": 873,
+      "kind": "same_statements"
+    },
+    {
+      "profile": "production",
+      "section": "flywheel_speed.c",
+      "module": "motor_backend.c",
+      "equal": true,
+      "before_tokens": 1486,
+      "after_tokens": 1486,
+      "kind": "same_statements"
+    },
+    {
+      "profile": "production",
+      "section": "flywheel_jog.c",
+      "module": "motor_backend.c",
+      "equal": true,
+      "before_tokens": 3400,
+      "after_tokens": 3400,
+      "kind": "same_statements"
+    },
+    {
+      "profile": "production",
+      "section": "motor_backend.c",
+      "module": "motor_backend.c",
+      "equal": true,
+      "before_tokens": 1989,
+      "after_tokens": 1989,
+      "kind": "same_statements"
+    },
+    {
+      "profile": "production",
+      "section": "feeder_controller.c",
+      "module": "feeder_controller.c",
+      "equal": true,
+      "before_tokens": 5097,
+      "after_tokens": 5097,
+      "kind": "same_statements"
+    },
+    {
+      "profile": "production",
+      "section": "feeder_backend.c",
+      "module": "feeder_controller.c",
+      "equal": true,
+      "before_tokens": 2069,
+      "after_tokens": 2069,
+      "kind": "same_statements"
+    },
+    {
+      "profile": "production",
+      "section": "yaw_cascade.c",
+      "module": "yaw_controller.c",
+      "equal": true,
+      "before_tokens": 1410,
+      "after_tokens": 1410,
+      "kind": "same_statements"
+    },
+    {
+      "profile": "production",
+      "section": "yaw_controller.c",
+      "module": "yaw_controller.c",
+      "equal": true,
+      "before_tokens": 2606,
+      "after_tokens": 2606,
+      "kind": "same_statements"
+    },
+    {
+      "profile": "production",
+      "section": "yaw_step.c",
+      "module": "yaw_controller.c",
+      "equal": true,
+      "before_tokens": 1459,
+      "after_tokens": 1459,
+      "kind": "same_statements"
+    },
+    {
+      "profile": "production",
+      "section": "yaw_backend.c",
+      "module": "yaw_controller.c",
+      "equal": true,
+      "before_tokens": 6376,
+      "after_tokens": 6376,
+      "kind": "same_statements"
+    },
+    {
+      "profile": "production",
+      "section": "pitch_controller.c",
+      "module": "pitch_controller.c",
+      "equal": true,
+      "before_tokens": 5507,
+      "after_tokens": 5507,
+      "kind": "same_statements"
+    },
+    {
+      "profile": "production",
+      "section": "pitch_step.c",
+      "module": "pitch_controller.c",
+      "equal": true,
+      "before_tokens": 223,
+      "after_tokens": 223,
+      "kind": "same_statements"
+    },
+    {
+      "profile": "production",
+      "section": "pitch_backend.c",
+      "module": "pitch_controller.c",
+      "equal": true,
+      "before_tokens": 5161,
+      "after_tokens": 5161,
+      "kind": "same_statements"
+    },
+    {
+      "profile": "historical_single_guarded",
+      "section": "app_fault.c",
+      "module": "app_tasks.c",
+      "equal": true,
+      "before_tokens": 17,
+      "after_tokens": 17,
+      "kind": "same_statements"
+    },
+    {
+      "profile": "historical_single_guarded",
+      "section": "app_logic.c",
+      "module": "app_tasks.c",
+      "equal": true,
+      "before_tokens": 942,
+      "after_tokens": 942,
+      "kind": "same_statements"
+    },
+    {
+      "profile": "historical_single_guarded",
+      "section": "gimbal_startup.c",
+      "module": "app_tasks.c",
+      "equal": true,
+      "before_tokens": 2012,
+      "after_tokens": 2012,
+      "kind": "same_statements"
+    },
+    {
+      "profile": "historical_single_guarded",
+      "section": "app_tasks.c",
+      "module": "app_tasks.c",
+      "equal": true,
+      "before_tokens": 1155,
+      "after_tokens": 1155,
+      "kind": "same_statements"
+    },
+    {
+      "profile": "historical_single_guarded",
+      "section": "app_console.c",
+      "module": "app_console.c",
+      "equal": true,
+      "before_tokens": 5935,
+      "after_tokens": 5935,
+      "kind": "same_statements"
+    },
+    {
+      "profile": "historical_single_guarded",
+      "section": "yaw_console.c",
+      "module": "motor_console.c",
+      "equal": true,
+      "before_tokens": 4402,
+      "after_tokens": 4402,
+      "kind": "same_statements"
+    },
+    {
+      "profile": "historical_single_guarded",
+      "section": "pitch_console.c",
+      "module": "motor_console.c",
+      "equal": true,
+      "before_tokens": 5812,
+      "after_tokens": 5812,
+      "kind": "same_statements"
+    },
+    {
+      "profile": "historical_single_guarded",
+      "section": "feeder_console.c",
+      "module": "motor_console.c",
+      "equal": true,
+      "before_tokens": 2927,
+      "after_tokens": 2927,
+      "kind": "same_statements"
+    },
+    {
+      "profile": "historical_single_guarded",
+      "section": "can_frame.c",
+      "module": "can_bus.c",
+      "equal": true,
+      "before_tokens": 78,
+      "after_tokens": 78,
+      "kind": "same_statements"
+    },
+    {
+      "profile": "historical_single_guarded",
+      "section": "gl60_ii.c",
+      "module": "can_bus.c",
+      "equal": true,
+      "before_tokens": 870,
+      "after_tokens": 870,
+      "kind": "same_statements"
+    },
+    {
+      "profile": "historical_single_guarded",
+      "section": "dm3507.c",
+      "module": "can_bus.c",
+      "equal": true,
+      "before_tokens": 873,
+      "after_tokens": 873,
+      "kind": "same_statements"
+    },
+    {
+      "profile": "historical_single_guarded",
+      "section": "can_bus.c",
+      "module": "can_bus.c",
+      "equal": true,
+      "before_tokens": 3504,
+      "after_tokens": 3504,
+      "kind": "same_statements"
+    },
+    {
+      "profile": "historical_single_guarded",
+      "section": "dm_diag.c",
+      "module": "app_diagnostics.c",
+      "equal": true,
+      "before_tokens": 389,
+      "after_tokens": 389,
+      "kind": "same_statements"
+    },
+    {
+      "profile": "historical_single_guarded",
+      "section": "vesc_diag.c",
+      "module": "app_diagnostics.c",
+      "equal": true,
+      "before_tokens": 1102,
+      "after_tokens": 1102,
+      "kind": "same_statements"
+    },
+    {
+      "profile": "historical_single_guarded",
+      "section": "app_diagnostics.c",
+      "module": "app_diagnostics.c",
+      "equal": true,
+      "before_tokens": 1427,
+      "after_tokens": 1427,
+      "kind": "same_statements"
+    },
+    {
+      "profile": "historical_single_guarded",
+      "section": "ibus.c",
+      "module": "remote_input.c",
+      "equal": true,
+      "before_tokens": 924,
+      "after_tokens": 924,
+      "kind": "same_statements"
+    },
+    {
+      "profile": "historical_single_guarded",
+      "section": "remote_mapper.c",
+      "module": "remote_input.c",
+      "equal": true,
+      "before_tokens": 670,
+      "after_tokens": 670,
+      "kind": "same_statements"
+    },
+    {
+      "profile": "historical_single_guarded",
+      "section": "safety_manager.c",
+      "module": "remote_input.c",
+      "equal": true,
+      "before_tokens": 659,
+      "after_tokens": 659,
+      "kind": "same_statements"
+    },
+    {
+      "profile": "historical_single_guarded",
+      "section": "target_manager.c",
+      "module": "remote_input.c",
+      "equal": true,
+      "before_tokens": 1032,
+      "after_tokens": 1032,
+      "kind": "same_statements"
+    },
+    {
+      "profile": "historical_single_guarded",
+      "section": "remote_input.c",
+      "module": "remote_input.c",
+      "equal": true,
+      "before_tokens": 873,
+      "after_tokens": 873,
+      "kind": "same_statements"
+    },
+    {
+      "profile": "historical_single_guarded",
+      "section": "flywheel_speed.c",
+      "module": "motor_backend.c",
+      "equal": true,
+      "before_tokens": 1486,
+      "after_tokens": 1486,
+      "kind": "same_statements"
+    },
+    {
+      "profile": "historical_single_guarded",
+      "section": "flywheel_jog.c",
+      "module": "motor_backend.c",
+      "equal": true,
+      "before_tokens": 3400,
+      "after_tokens": 3400,
+      "kind": "same_statements"
+    },
+    {
+      "profile": "historical_single_guarded",
+      "section": "motor_backend.c",
+      "module": "motor_backend.c",
+      "equal": true,
+      "before_tokens": 1694,
+      "after_tokens": 1694,
+      "kind": "same_statements"
+    },
+    {
+      "profile": "historical_single_guarded",
+      "section": "feeder_controller.c",
+      "module": "feeder_controller.c",
+      "equal": true,
+      "before_tokens": 5097,
+      "after_tokens": 5097,
+      "kind": "same_statements"
+    },
+    {
+      "profile": "historical_single_guarded",
+      "section": "feeder_backend.c",
+      "module": "feeder_controller.c",
+      "equal": true,
+      "before_tokens": 2069,
+      "after_tokens": 2069,
+      "kind": "same_statements"
+    },
+    {
+      "profile": "historical_single_guarded",
+      "section": "yaw_cascade.c",
+      "module": "yaw_controller.c",
+      "equal": true,
+      "before_tokens": 1410,
+      "after_tokens": 1410,
+      "kind": "same_statements"
+    },
+    {
+      "profile": "historical_single_guarded",
+      "section": "yaw_controller.c",
+      "module": "yaw_controller.c",
+      "equal": true,
+      "before_tokens": 2829,
+      "after_tokens": 2829,
+      "kind": "same_statements"
+    },
+    {
+      "profile": "historical_single_guarded",
+      "section": "yaw_step.c",
+      "module": "yaw_controller.c",
+      "equal": true,
+      "before_tokens": 1459,
+      "after_tokens": 1459,
+      "kind": "same_statements"
+    },
+    {
+      "profile": "historical_single_guarded",
+      "section": "yaw_backend.c",
+      "module": "yaw_controller.c",
+      "equal": true,
+      "before_tokens": 6282,
+      "after_tokens": 6282,
+      "kind": "same_statements"
+    },
+    {
+      "profile": "historical_single_guarded",
+      "section": "pitch_controller.c",
+      "module": "pitch_controller.c",
+      "equal": true,
+      "before_tokens": 5507,
+      "after_tokens": 5507,
+      "kind": "same_statements"
+    },
+    {
+      "profile": "historical_single_guarded",
+      "section": "pitch_step.c",
+      "module": "pitch_controller.c",
+      "equal": true,
+      "before_tokens": 223,
+      "after_tokens": 223,
+      "kind": "same_statements"
+    },
+    {
+      "profile": "historical_single_guarded",
+      "section": "pitch_backend.c",
+      "module": "pitch_controller.c",
+      "equal": true,
+      "before_tokens": 5161,
+      "after_tokens": 5161,
+      "kind": "same_statements"
+    },
+    {
+      "profile": "historical_limited_cascade",
+      "section": "app_fault.c",
+      "module": "app_tasks.c",
+      "equal": true,
+      "before_tokens": 17,
+      "after_tokens": 17,
+      "kind": "same_statements"
+    },
+    {
+      "profile": "historical_limited_cascade",
+      "section": "app_logic.c",
+      "module": "app_tasks.c",
+      "equal": true,
+      "before_tokens": 942,
+      "after_tokens": 942,
+      "kind": "same_statements"
+    },
+    {
+      "profile": "historical_limited_cascade",
+      "section": "gimbal_startup.c",
+      "module": "app_tasks.c",
+      "equal": true,
+      "before_tokens": 2012,
+      "after_tokens": 2012,
+      "kind": "same_statements"
+    },
+    {
+      "profile": "historical_limited_cascade",
+      "section": "app_tasks.c",
+      "module": "app_tasks.c",
+      "equal": true,
+      "before_tokens": 1155,
+      "after_tokens": 1155,
+      "kind": "same_statements"
+    },
+    {
+      "profile": "historical_limited_cascade",
+      "section": "app_console.c",
+      "module": "app_console.c",
+      "equal": true,
+      "before_tokens": 5935,
+      "after_tokens": 5935,
+      "kind": "same_statements"
+    },
+    {
+      "profile": "historical_limited_cascade",
+      "section": "yaw_console.c",
+      "module": "motor_console.c",
+      "equal": true,
+      "before_tokens": 6037,
+      "after_tokens": 6037,
+      "kind": "same_statements"
+    },
+    {
+      "profile": "historical_limited_cascade",
+      "section": "pitch_console.c",
+      "module": "motor_console.c",
+      "equal": true,
+      "before_tokens": 5812,
+      "after_tokens": 5812,
+      "kind": "same_statements"
+    },
+    {
+      "profile": "historical_limited_cascade",
+      "section": "feeder_console.c",
+      "module": "motor_console.c",
+      "equal": true,
+      "before_tokens": 2927,
+      "after_tokens": 2927,
+      "kind": "same_statements"
+    },
+    {
+      "profile": "historical_limited_cascade",
+      "section": "can_frame.c",
+      "module": "can_bus.c",
+      "equal": true,
+      "before_tokens": 78,
+      "after_tokens": 78,
+      "kind": "same_statements"
+    },
+    {
+      "profile": "historical_limited_cascade",
+      "section": "gl60_ii.c",
+      "module": "can_bus.c",
+      "equal": true,
+      "before_tokens": 870,
+      "after_tokens": 870,
+      "kind": "same_statements"
+    },
+    {
+      "profile": "historical_limited_cascade",
+      "section": "dm3507.c",
+      "module": "can_bus.c",
+      "equal": true,
+      "before_tokens": 873,
+      "after_tokens": 873,
+      "kind": "same_statements"
+    },
+    {
+      "profile": "historical_limited_cascade",
+      "section": "can_bus.c",
+      "module": "can_bus.c",
+      "equal": true,
+      "before_tokens": 3504,
+      "after_tokens": 3504,
+      "kind": "same_statements"
+    },
+    {
+      "profile": "historical_limited_cascade",
+      "section": "dm_diag.c",
+      "module": "app_diagnostics.c",
+      "equal": true,
+      "before_tokens": 389,
+      "after_tokens": 389,
+      "kind": "same_statements"
+    },
+    {
+      "profile": "historical_limited_cascade",
+      "section": "vesc_diag.c",
+      "module": "app_diagnostics.c",
+      "equal": true,
+      "before_tokens": 1102,
+      "after_tokens": 1102,
+      "kind": "same_statements"
+    },
+    {
+      "profile": "historical_limited_cascade",
+      "section": "app_diagnostics.c",
+      "module": "app_diagnostics.c",
+      "equal": true,
+      "before_tokens": 1427,
+      "after_tokens": 1427,
+      "kind": "same_statements"
+    },
+    {
+      "profile": "historical_limited_cascade",
+      "section": "ibus.c",
+      "module": "remote_input.c",
+      "equal": true,
+      "before_tokens": 924,
+      "after_tokens": 924,
+      "kind": "same_statements"
+    },
+    {
+      "profile": "historical_limited_cascade",
+      "section": "remote_mapper.c",
+      "module": "remote_input.c",
+      "equal": true,
+      "before_tokens": 670,
+      "after_tokens": 670,
+      "kind": "same_statements"
+    },
+    {
+      "profile": "historical_limited_cascade",
+      "section": "safety_manager.c",
+      "module": "remote_input.c",
+      "equal": true,
+      "before_tokens": 659,
+      "after_tokens": 659,
+      "kind": "same_statements"
+    },
+    {
+      "profile": "historical_limited_cascade",
+      "section": "target_manager.c",
+      "module": "remote_input.c",
+      "equal": true,
+      "before_tokens": 1032,
+      "after_tokens": 1032,
+      "kind": "same_statements"
+    },
+    {
+      "profile": "historical_limited_cascade",
+      "section": "remote_input.c",
+      "module": "remote_input.c",
+      "equal": true,
+      "before_tokens": 873,
+      "after_tokens": 873,
+      "kind": "same_statements"
+    },
+    {
+      "profile": "historical_limited_cascade",
+      "section": "flywheel_speed.c",
+      "module": "motor_backend.c",
+      "equal": true,
+      "before_tokens": 1486,
+      "after_tokens": 1486,
+      "kind": "same_statements"
+    },
+    {
+      "profile": "historical_limited_cascade",
+      "section": "flywheel_jog.c",
+      "module": "motor_backend.c",
+      "equal": true,
+      "before_tokens": 3400,
+      "after_tokens": 3400,
+      "kind": "same_statements"
+    },
+    {
+      "profile": "historical_limited_cascade",
+      "section": "motor_backend.c",
+      "module": "motor_backend.c",
+      "equal": true,
+      "before_tokens": 1694,
+      "after_tokens": 1694,
+      "kind": "same_statements"
+    },
+    {
+      "profile": "historical_limited_cascade",
+      "section": "feeder_controller.c",
+      "module": "feeder_controller.c",
+      "equal": true,
+      "before_tokens": 5097,
+      "after_tokens": 5097,
+      "kind": "same_statements"
+    },
+    {
+      "profile": "historical_limited_cascade",
+      "section": "feeder_backend.c",
+      "module": "feeder_controller.c",
+      "equal": true,
+      "before_tokens": 2069,
+      "after_tokens": 2069,
+      "kind": "same_statements"
+    },
+    {
+      "profile": "historical_limited_cascade",
+      "section": "yaw_cascade.c",
+      "module": "yaw_controller.c",
+      "equal": true,
+      "before_tokens": 1598,
+      "after_tokens": 1598,
+      "kind": "same_statements"
+    },
+    {
+      "profile": "historical_limited_cascade",
+      "section": "yaw_controller.c",
+      "module": "yaw_controller.c",
+      "equal": true,
+      "before_tokens": 2606,
+      "after_tokens": 2606,
+      "kind": "same_statements"
+    },
+    {
+      "profile": "historical_limited_cascade",
+      "section": "yaw_step.c",
+      "module": "yaw_controller.c",
+      "equal": true,
+      "before_tokens": 1459,
+      "after_tokens": 1459,
+      "kind": "same_statements"
+    },
+    {
+      "profile": "historical_limited_cascade",
+      "section": "yaw_backend.c",
+      "module": "yaw_controller.c",
+      "equal": true,
+      "before_tokens": 6367,
+      "after_tokens": 6367,
+      "kind": "same_statements"
+    },
+    {
+      "profile": "historical_limited_cascade",
+      "section": "pitch_controller.c",
+      "module": "pitch_controller.c",
+      "equal": true,
+      "before_tokens": 2,
+      "after_tokens": 2,
+      "kind": "same_guard_rejection"
+    },
+    {
+      "profile": "historical_limited_cascade",
+      "section": "pitch_step.c",
+      "module": "pitch_controller.c",
+      "equal": true,
+      "before_tokens": 223,
+      "after_tokens": 223,
+      "kind": "same_statements"
+    },
+    {
+      "profile": "historical_limited_cascade",
+      "section": "pitch_backend.c",
+      "module": "pitch_controller.c",
+      "equal": true,
+      "before_tokens": 5161,
+      "after_tokens": 5161,
+      "kind": "same_statements"
+    },
+    {
+      "profile": "experimental_tracking",
+      "section": "app_fault.c",
+      "module": "app_tasks.c",
+      "equal": true,
+      "before_tokens": 17,
+      "after_tokens": 17,
+      "kind": "same_statements"
+    },
+    {
+      "profile": "experimental_tracking",
+      "section": "app_logic.c",
+      "module": "app_tasks.c",
+      "equal": true,
+      "before_tokens": 942,
+      "after_tokens": 942,
+      "kind": "same_statements"
+    },
+    {
+      "profile": "experimental_tracking",
+      "section": "gimbal_startup.c",
+      "module": "app_tasks.c",
+      "equal": true,
+      "before_tokens": 2012,
+      "after_tokens": 2012,
+      "kind": "same_statements"
+    },
+    {
+      "profile": "experimental_tracking",
+      "section": "app_tasks.c",
+      "module": "app_tasks.c",
+      "equal": true,
+      "before_tokens": 1562,
+      "after_tokens": 1562,
+      "kind": "same_statements"
+    },
+    {
+      "profile": "experimental_tracking",
+      "section": "app_console.c",
+      "module": "app_console.c",
+      "equal": true,
+      "before_tokens": 8702,
+      "after_tokens": 8702,
+      "kind": "same_statements"
+    },
+    {
+      "profile": "experimental_tracking",
+      "section": "yaw_console.c",
+      "module": "motor_console.c",
+      "equal": true,
+      "before_tokens": 6044,
+      "after_tokens": 6044,
+      "kind": "same_statements"
+    },
+    {
+      "profile": "experimental_tracking",
+      "section": "pitch_console.c",
+      "module": "motor_console.c",
+      "equal": true,
+      "before_tokens": 5812,
+      "after_tokens": 5812,
+      "kind": "same_statements"
+    },
+    {
+      "profile": "experimental_tracking",
+      "section": "feeder_console.c",
+      "module": "motor_console.c",
+      "equal": true,
+      "before_tokens": 2927,
+      "after_tokens": 2927,
+      "kind": "same_statements"
+    },
+    {
+      "profile": "experimental_tracking",
+      "section": "can_frame.c",
+      "module": "can_bus.c",
+      "equal": true,
+      "before_tokens": 78,
+      "after_tokens": 78,
+      "kind": "same_statements"
+    },
+    {
+      "profile": "experimental_tracking",
+      "section": "gl60_ii.c",
+      "module": "can_bus.c",
+      "equal": true,
+      "before_tokens": 870,
+      "after_tokens": 870,
+      "kind": "same_statements"
+    },
+    {
+      "profile": "experimental_tracking",
+      "section": "dm3507.c",
+      "module": "can_bus.c",
+      "equal": true,
+      "before_tokens": 873,
+      "after_tokens": 873,
+      "kind": "same_statements"
+    },
+    {
+      "profile": "experimental_tracking",
+      "section": "can_bus.c",
+      "module": "can_bus.c",
+      "equal": true,
+      "before_tokens": 4931,
+      "after_tokens": 4931,
+      "kind": "same_statements"
+    },
+    {
+      "profile": "experimental_tracking",
+      "section": "dm_diag.c",
+      "module": "app_diagnostics.c",
+      "equal": true,
+      "before_tokens": 389,
+      "after_tokens": 389,
+      "kind": "same_statements"
+    },
+    {
+      "profile": "experimental_tracking",
+      "section": "vesc_diag.c",
+      "module": "app_diagnostics.c",
+      "equal": true,
+      "before_tokens": 1102,
+      "after_tokens": 1102,
+      "kind": "same_statements"
+    },
+    {
+      "profile": "experimental_tracking",
+      "section": "app_diagnostics.c",
+      "module": "app_diagnostics.c",
+      "equal": true,
+      "before_tokens": 1427,
+      "after_tokens": 1427,
+      "kind": "same_statements"
+    },
+    {
+      "profile": "experimental_tracking",
+      "section": "ibus.c",
+      "module": "remote_input.c",
+      "equal": true,
+      "before_tokens": 924,
+      "after_tokens": 924,
+      "kind": "same_statements"
+    },
+    {
+      "profile": "experimental_tracking",
+      "section": "remote_mapper.c",
+      "module": "remote_input.c",
+      "equal": true,
+      "before_tokens": 670,
+      "after_tokens": 670,
+      "kind": "same_statements"
+    },
+    {
+      "profile": "experimental_tracking",
+      "section": "safety_manager.c",
+      "module": "remote_input.c",
+      "equal": true,
+      "before_tokens": 659,
+      "after_tokens": 659,
+      "kind": "same_statements"
+    },
+    {
+      "profile": "experimental_tracking",
+      "section": "target_manager.c",
+      "module": "remote_input.c",
+      "equal": true,
+      "before_tokens": 1060,
+      "after_tokens": 1060,
+      "kind": "same_statements"
+    },
+    {
+      "profile": "experimental_tracking",
+      "section": "remote_input.c",
+      "module": "remote_input.c",
+      "equal": true,
+      "before_tokens": 873,
+      "after_tokens": 873,
+      "kind": "same_statements"
+    },
+    {
+      "profile": "experimental_tracking",
+      "section": "flywheel_speed.c",
+      "module": "motor_backend.c",
+      "equal": true,
+      "before_tokens": 1486,
+      "after_tokens": 1486,
+      "kind": "same_statements"
+    },
+    {
+      "profile": "experimental_tracking",
+      "section": "flywheel_jog.c",
+      "module": "motor_backend.c",
+      "equal": true,
+      "before_tokens": 3400,
+      "after_tokens": 3400,
+      "kind": "same_statements"
+    },
+    {
+      "profile": "experimental_tracking",
+      "section": "motor_backend.c",
+      "module": "motor_backend.c",
+      "equal": true,
+      "before_tokens": 1989,
+      "after_tokens": 1989,
+      "kind": "same_statements"
+    },
+    {
+      "profile": "experimental_tracking",
+      "section": "feeder_controller.c",
+      "module": "feeder_controller.c",
+      "equal": true,
+      "before_tokens": 5097,
+      "after_tokens": 5097,
+      "kind": "same_statements"
+    },
+    {
+      "profile": "experimental_tracking",
+      "section": "feeder_backend.c",
+      "module": "feeder_controller.c",
+      "equal": true,
+      "before_tokens": 2069,
+      "after_tokens": 2069,
+      "kind": "same_statements"
+    },
+    {
+      "profile": "experimental_tracking",
+      "section": "yaw_cascade.c",
+      "module": "yaw_controller.c",
+      "equal": true,
+      "before_tokens": 1410,
+      "after_tokens": 1410,
+      "kind": "same_statements"
+    },
+    {
+      "profile": "experimental_tracking",
+      "section": "yaw_controller.c",
+      "module": "yaw_controller.c",
+      "equal": true,
+      "before_tokens": 3267,
+      "after_tokens": 3267,
+      "kind": "same_statements"
+    },
+    {
+      "profile": "experimental_tracking",
+      "section": "yaw_step.c",
+      "module": "yaw_controller.c",
+      "equal": true,
+      "before_tokens": 1459,
+      "after_tokens": 1459,
+      "kind": "same_statements"
+    },
+    {
+      "profile": "experimental_tracking",
+      "section": "yaw_backend.c",
+      "module": "yaw_controller.c",
+      "equal": true,
+      "before_tokens": 6376,
+      "after_tokens": 6376,
+      "kind": "same_statements"
+    },
+    {
+      "profile": "experimental_tracking",
+      "section": "pitch_controller.c",
+      "module": "pitch_controller.c",
+      "equal": true,
+      "before_tokens": 5507,
+      "after_tokens": 5507,
+      "kind": "same_statements"
+    },
+    {
+      "profile": "experimental_tracking",
+      "section": "pitch_step.c",
+      "module": "pitch_controller.c",
+      "equal": true,
+      "before_tokens": 223,
+      "after_tokens": 223,
+      "kind": "same_statements"
+    },
+    {
+      "profile": "experimental_tracking",
+      "section": "pitch_backend.c",
+      "module": "pitch_controller.c",
+      "equal": true,
+      "before_tokens": 5161,
+      "after_tokens": 5161,
+      "kind": "same_statements"
+    },
+    {
+      "profile": "legacy_wheels_byte_rx",
+      "section": "app_fault.c",
+      "module": "app_tasks.c",
+      "equal": true,
+      "before_tokens": 17,
+      "after_tokens": 17,
+      "kind": "same_statements"
+    },
+    {
+      "profile": "legacy_wheels_byte_rx",
+      "section": "app_logic.c",
+      "module": "app_tasks.c",
+      "equal": true,
+      "before_tokens": 942,
+      "after_tokens": 942,
+      "kind": "same_statements"
+    },
+    {
+      "profile": "legacy_wheels_byte_rx",
+      "section": "gimbal_startup.c",
+      "module": "app_tasks.c",
+      "equal": true,
+      "before_tokens": 2012,
+      "after_tokens": 2012,
+      "kind": "same_statements"
+    },
+    {
+      "profile": "legacy_wheels_byte_rx",
+      "section": "app_tasks.c",
+      "module": "app_tasks.c",
+      "equal": true,
+      "before_tokens": 885,
+      "after_tokens": 885,
+      "kind": "same_statements"
+    },
+    {
+      "profile": "legacy_wheels_byte_rx",
+      "section": "app_console.c",
+      "module": "app_console.c",
+      "equal": true,
+      "before_tokens": 5004,
+      "after_tokens": 5004,
+      "kind": "same_statements"
+    },
+    {
+      "profile": "legacy_wheels_byte_rx",
+      "section": "yaw_console.c",
+      "module": "motor_console.c",
+      "equal": true,
+      "before_tokens": 6006,
+      "after_tokens": 6006,
+      "kind": "same_statements"
+    },
+    {
+      "profile": "legacy_wheels_byte_rx",
+      "section": "pitch_console.c",
+      "module": "motor_console.c",
+      "equal": true,
+      "before_tokens": 5812,
+      "after_tokens": 5812,
+      "kind": "same_statements"
+    },
+    {
+      "profile": "legacy_wheels_byte_rx",
+      "section": "feeder_console.c",
+      "module": "motor_console.c",
+      "equal": true,
+      "before_tokens": 2927,
+      "after_tokens": 2927,
+      "kind": "same_statements"
+    },
+    {
+      "profile": "legacy_wheels_byte_rx",
+      "section": "can_frame.c",
+      "module": "can_bus.c",
+      "equal": true,
+      "before_tokens": 78,
+      "after_tokens": 78,
+      "kind": "same_statements"
+    },
+    {
+      "profile": "legacy_wheels_byte_rx",
+      "section": "gl60_ii.c",
+      "module": "can_bus.c",
+      "equal": true,
+      "before_tokens": 870,
+      "after_tokens": 870,
+      "kind": "same_statements"
+    },
+    {
+      "profile": "legacy_wheels_byte_rx",
+      "section": "dm3507.c",
+      "module": "can_bus.c",
+      "equal": true,
+      "before_tokens": 873,
+      "after_tokens": 873,
+      "kind": "same_statements"
+    },
+    {
+      "profile": "legacy_wheels_byte_rx",
+      "section": "can_bus.c",
+      "module": "can_bus.c",
+      "equal": true,
+      "before_tokens": 2928,
+      "after_tokens": 2928,
+      "kind": "same_statements"
+    },
+    {
+      "profile": "legacy_wheels_byte_rx",
+      "section": "dm_diag.c",
+      "module": "app_diagnostics.c",
+      "equal": true,
+      "before_tokens": 389,
+      "after_tokens": 389,
+      "kind": "same_statements"
+    },
+    {
+      "profile": "legacy_wheels_byte_rx",
+      "section": "vesc_diag.c",
+      "module": "app_diagnostics.c",
+      "equal": true,
+      "before_tokens": 1102,
+      "after_tokens": 1102,
+      "kind": "same_statements"
+    },
+    {
+      "profile": "legacy_wheels_byte_rx",
+      "section": "app_diagnostics.c",
+      "module": "app_diagnostics.c",
+      "equal": true,
+      "before_tokens": 1427,
+      "after_tokens": 1427,
+      "kind": "same_statements"
+    },
+    {
+      "profile": "legacy_wheels_byte_rx",
+      "section": "ibus.c",
+      "module": "remote_input.c",
+      "equal": true,
+      "before_tokens": 924,
+      "after_tokens": 924,
+      "kind": "same_statements"
+    },
+    {
+      "profile": "legacy_wheels_byte_rx",
+      "section": "remote_mapper.c",
+      "module": "remote_input.c",
+      "equal": true,
+      "before_tokens": 359,
+      "after_tokens": 359,
+      "kind": "same_statements"
+    },
+    {
+      "profile": "legacy_wheels_byte_rx",
+      "section": "safety_manager.c",
+      "module": "remote_input.c",
+      "equal": true,
+      "before_tokens": 659,
+      "after_tokens": 659,
+      "kind": "same_statements"
+    },
+    {
+      "profile": "legacy_wheels_byte_rx",
+      "section": "target_manager.c",
+      "module": "remote_input.c",
+      "equal": true,
+      "before_tokens": 845,
+      "after_tokens": 845,
+      "kind": "same_statements"
+    },
+    {
+      "profile": "legacy_wheels_byte_rx",
+      "section": "remote_input.c",
+      "module": "remote_input.c",
+      "equal": true,
+      "before_tokens": 822,
+      "after_tokens": 822,
+      "kind": "same_statements"
+    },
+    {
+      "profile": "legacy_wheels_byte_rx",
+      "section": "flywheel_speed.c",
+      "module": "motor_backend.c",
+      "equal": true,
+      "before_tokens": 1486,
+      "after_tokens": 1486,
+      "kind": "same_statements"
+    },
+    {
+      "profile": "legacy_wheels_byte_rx",
+      "section": "flywheel_jog.c",
+      "module": "motor_backend.c",
+      "equal": true,
+      "before_tokens": 3400,
+      "after_tokens": 3400,
+      "kind": "same_statements"
+    },
+    {
+      "profile": "legacy_wheels_byte_rx",
+      "section": "motor_backend.c",
+      "module": "motor_backend.c",
+      "equal": true,
+      "before_tokens": 1342,
+      "after_tokens": 1342,
+      "kind": "same_statements"
+    },
+    {
+      "profile": "legacy_wheels_byte_rx",
+      "section": "feeder_controller.c",
+      "module": "feeder_controller.c",
+      "equal": true,
+      "before_tokens": 5097,
+      "after_tokens": 5097,
+      "kind": "same_statements"
+    },
+    {
+      "profile": "legacy_wheels_byte_rx",
+      "section": "feeder_backend.c",
+      "module": "feeder_controller.c",
+      "equal": true,
+      "before_tokens": 2069,
+      "after_tokens": 2069,
+      "kind": "same_statements"
+    },
+    {
+      "profile": "legacy_wheels_byte_rx",
+      "section": "yaw_cascade.c",
+      "module": "yaw_controller.c",
+      "equal": true,
+      "before_tokens": 1410,
+      "after_tokens": 1410,
+      "kind": "same_statements"
+    },
+    {
+      "profile": "legacy_wheels_byte_rx",
+      "section": "yaw_controller.c",
+      "module": "yaw_controller.c",
+      "equal": true,
+      "before_tokens": 2606,
+      "after_tokens": 2606,
+      "kind": "same_statements"
+    },
+    {
+      "profile": "legacy_wheels_byte_rx",
+      "section": "yaw_step.c",
+      "module": "yaw_controller.c",
+      "equal": true,
+      "before_tokens": 1459,
+      "after_tokens": 1459,
+      "kind": "same_statements"
+    },
+    {
+      "profile": "legacy_wheels_byte_rx",
+      "section": "yaw_backend.c",
+      "module": "yaw_controller.c",
+      "equal": true,
+      "before_tokens": 6294,
+      "after_tokens": 6294,
+      "kind": "same_statements"
+    },
+    {
+      "profile": "legacy_wheels_byte_rx",
+      "section": "pitch_controller.c",
+      "module": "pitch_controller.c",
+      "equal": true,
+      "before_tokens": 5507,
+      "after_tokens": 5507,
+      "kind": "same_statements"
+    },
+    {
+      "profile": "legacy_wheels_byte_rx",
+      "section": "pitch_step.c",
+      "module": "pitch_controller.c",
+      "equal": true,
+      "before_tokens": 223,
+      "after_tokens": 223,
+      "kind": "same_statements"
+    },
+    {
+      "profile": "legacy_wheels_byte_rx",
+      "section": "pitch_backend.c",
+      "module": "pitch_controller.c",
+      "equal": true,
+      "before_tokens": 5087,
+      "after_tokens": 5087,
+      "kind": "same_statements"
+    }
+  ]
+}

@@ -1,3 +1,20 @@
+/**
+ * @file app_console.c
+ * @brief 串口命令入口与 VOFA 遥测
+ *
+ * 职责：接收串口命令，选择显示视图，发布实测状态及带标记的演示数据。
+ * 主要函数：
+ *   - AppConsole_CreateQueue / Start：建立命令队列并启动 USART1 接收。
+ *   - AppConsole_Poll：解析完整命令行，处理回执、报告和定时遥测。
+ *   - HandleLine：分发系统、Yaw、Pitch、拨盘和摩擦轮命令。
+ *   - PublishYawTelemetry / PublishPitchTelemetry：维持既有组名及通道顺序。
+ * 调用关系：USART1 DMA/中断 → 接收队列 → ConsoleTask → 命令处理或遥测输出。
+ * 维护约束：格式化和发送只在控制台任务执行；演示角度不能进入反馈、闭环或实测成绩。
+ * 参数入口：app_config.h；对外声明仍在原头文件中。
+ */
+
+/* APP_SECTION_BEGIN app_console.c */
+/* 控制台传输、命令分发和遥测调度。 */
 #include "app_console.h"
 #include "gimbal_startup.h"
 #include "app_tasks.h"
@@ -36,7 +53,7 @@ static volatile uint32_t rx_bytes_seen, rx_bursts, rx_uart_errors, rx_queue_drop
 #else
 static uint8_t rx_byte;
 #endif
-static char line[64], telemetry[1024];
+static char line[APP_CONSOLE_LINE_BYTES], telemetry[APP_CONSOLE_TELEMETRY_BYTES];
 static uint32_t observed_epoch, last_byte_ms, telemetry_ms;
 static uint8_t line_length, discard_line;
 static uint8_t diagnostic_mode, status_pending, status_index;
@@ -95,7 +112,7 @@ static void TransmitFailed(void)
 static void SendText(const char *message)
 {
     /* 只在低优先级Console任务调用。CAN接收、遥控保护继续运行。 */
-    if (HAL_UART_Transmit(&huart1, (uint8_t *)message, (uint16_t)strlen(message), APP_YAW_ENABLED ? 120U : 60U) != HAL_OK) {
+    if (HAL_UART_Transmit(&huart1, (uint8_t *)message, (uint16_t)strlen(message), APP_CONSOLE_TX_TIMEOUT_MS) != HAL_OK) {
         TransmitFailed();
     }
 }
@@ -358,7 +375,7 @@ static void HandleLine(void)
 #if APP_YAW_ENABLED
     if (strcmp(line, "YAW SIM ON") == 0 || strcmp(line, "YAW SIM OFF") == 0 || strcmp(line, "YAW SIM") == 0) {
         if (strcmp(line, "YAW SIM OFF") == 0) { YawDisplaySim_Reset(&yaw_display, 0U); }
-        else if (strcmp(line, "YAW SIM ON") == 0 && !yaw_display.enabled) { YawDisplaySim_Reset(&yaw_display, 1U); }
+        else if (strcmp(line, "YAW SIM ON") == 0 && !yaw_display.enabled) { YawDisplaySim_Reset(&yaw_display, APP_YAW_DISPLAY_DEFAULT_ENABLED); }
         FormatYawDisplayStatus(); SendText(telemetry); return;
     }
     if (strcmp(line, "STOP") == 0 || strcmp(line, "YAW OFF") == 0 ||
@@ -446,7 +463,7 @@ static void HandleLine(void)
     if (strcmp(line, "PITCH SIM ON") == 0 || strcmp(line, "PITCH SIM OFF") == 0 ||
         strcmp(line, "PITCH SIM") == 0) {
         if (strcmp(line, "PITCH SIM OFF") == 0) { PitchDisplaySim_Reset(&pitch_display, 0U); }
-        else if (strcmp(line, "PITCH SIM ON") == 0 && !pitch_display.enabled) { PitchDisplaySim_Reset(&pitch_display, 1U); }
+        else if (strcmp(line, "PITCH SIM ON") == 0 && !pitch_display.enabled) { PitchDisplaySim_Reset(&pitch_display, APP_PITCH_DISPLAY_DEFAULT_ENABLED); }
         FormatPitchDisplayStatus(); SendText(telemetry); return;
     }
     if (strcmp(line, "STOP") == 0 || strcmp(line, "PITCH OFF") == 0 ||
@@ -687,14 +704,14 @@ void AppConsole_CreateQueue(void)
     view_hold_mask = 0U;
     speed_view = 0U;
 #if APP_YAW_ENABLED
-    YawDisplaySim_Reset(&yaw_display, 1U);
+    YawDisplaySim_Reset(&yaw_display, APP_YAW_DISPLAY_DEFAULT_ENABLED);
 #endif
 #if APP_FEEDER_ENABLED
     feeder_view = 0U;
 #endif
 #if APP_PITCH_ENABLED
     pitch_view = 0U;
-    PitchDisplaySim_Reset(&pitch_display, 1U);
+    PitchDisplaySim_Reset(&pitch_display, APP_PITCH_DISPLAY_DEFAULT_ENABLED);
     PitchConsole_Init();
 #endif
     rx_queue = xQueueCreate(APP_CONSOLE_RX_QUEUE_LENGTH, sizeof(ConsoleByte));
@@ -798,7 +815,8 @@ static void PublishPitchTelemetry(uint32_t now)
         pitch.controller.angle_deg, pitch.controller.target_deg,
         (uint8_t)(pitch.online && pitch.active && !pitch.controller.faults && !pitch.stop_pending &&
             pitch.feedback_age_ms < PITCH_CONTROLLER_FEEDBACK_TIMEOUT_MS), now);
-    /* Pitch原I0~I57保持，I58/I59为末段附加力矩/active；I60~I64保留旧轨迹对照。
+    /* Pitch：实测组65列，带标记的演示组68列；I58/I59为制动力矩/active。
+     * I60~I64为轨迹状态；演示组追加I65实测角度、I66演示active、I67 armed。
      * 同时只发当前选择的一组，保持921600/5ms的线路预算。 */
     length = snprintf(telemetry, sizeof(telemetry),
         "%s:%.6g,%.6g,%.6g,%.6g,%.6g,%.6g,%.6g,%.6g,%.6g,%.6g,%.6g,%.6g,%.6g,%.6g"
@@ -1114,3 +1132,4 @@ void AppConsole_Poll(void)
     if (diagnostic_mode) { PublishDiagnostics(HAL_GetTick()); }
     else { PublishTelemetry(HAL_GetTick()); }
 }
+/* APP_SECTION_END app_console.c */

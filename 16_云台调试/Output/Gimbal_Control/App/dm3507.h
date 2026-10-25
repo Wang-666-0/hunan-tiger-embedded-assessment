@@ -1,15 +1,18 @@
+/**
+ * @file dm3507.h
+ * @brief DM3507 协议接口
+ * 职责：定义 Pitch 电机反馈，声明使能、失能、读取反馈和力矩报文编码。
+ * 主要接口：Dm3507_Decode, Dm3507_MakeEnable, Dm3507_MakeDisable, Dm3507_MakeReadFeedback, Dm3507_MakeTorque。
+ * 实现/调用：can_bus.c；角度 rad、速度 rad/s、力矩 N*m，协议端点集中在 app_config.h。
+ * 参数：app_config.h 是 App 参数及常量的唯一宏定义入口。
+ */
 #ifndef DM3507_H
 #define DM3507_H
+#include "app_config.h"
 #include "can_frame.h"
 #include <stdint.h>
 
 /* 本机2026-10-11实读，不采用SDK中其他电机型号的默认量程。 */
-#define DM3507_CAN_BUS 1U
-#define DM3507_MOTOR_ID 2U
-#define DM3507_MASTER_ID 2U
-#define DM3507_POSITION_MAX_RAD 3.141592979f
-#define DM3507_VELOCITY_MAX_RAD_S 200.0f
-#define DM3507_TORQUE_MAX_NM 10.0f
 
 typedef struct {
     float position_rad, velocity_rad_s, torque_nm;

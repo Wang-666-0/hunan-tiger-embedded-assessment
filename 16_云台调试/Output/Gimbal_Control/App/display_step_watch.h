@@ -1,5 +1,14 @@
+/**
+ * @file display_step_watch.h
+ * @brief 实测阶跃只读观察
+ * 职责：从真实角度记录首次进入误差带和超调，供显示状态查询。
+ * 主要接口：DisplayStepWatch_Update, fabsf。
+ * 实现/调用：头文件内观察器；正式成绩仍由 YawStep / PitchStep 给出。
+ * 参数：app_config.h 是 App 参数及常量的唯一宏定义入口。
+ */
 #ifndef DISPLAY_STEP_WATCH_H
 #define DISPLAY_STEP_WATCH_H
+#include "app_config.h"
 #include "yaw_step.h"
 #include <math.h>
 /* Display trigger only, sampled with the 5ms telemetry clock. Tracks accepted

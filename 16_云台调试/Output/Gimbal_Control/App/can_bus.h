@@ -1,5 +1,14 @@
-﻿#ifndef CAN_BUS_H
+/**
+ * @file can_bus.h
+ * @brief 双 CAN 总线接口
+ * 职责：定义总线状态和故障来源，声明接收、输出许可、电机命令及邮箱撤销接口。
+ * 主要接口：CanBus_CreateQueue, CanBus_Start, CanBus_Receive, CanBus_GetState, CanBus_GetDiagnostics 等。
+ * 实现/调用：can_bus.c；所有输出都经过许可和故障代次检查。
+ * 参数：app_config.h 是 App 参数及常量的唯一宏定义入口。
+ */
+#ifndef CAN_BUS_H
 #define CAN_BUS_H
+#include "app_config.h"
 #include "can_frame.h"
 #include "can.h"
 #include "FreeRTOS.h"

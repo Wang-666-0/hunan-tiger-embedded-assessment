@@ -1,5 +1,33 @@
+/**
+ * @file app_config.h
+ * @brief App 统一配置
+ * 职责：集中功能开关、PID 默认值、调度周期、遥控映射、机械边界和协议常量。
+ * 主要内容：数据类型、状态枚举或配置宏。
+ * 实现/调用：所有 .c / .h 均从这里取得宏；不包含业务头文件，避免循环依赖。
+ * 参数：app_config.h 是 App 参数及常量的唯一宏定义入口。
+ */
 #ifndef APP_CONFIG_H
 #define APP_CONFIG_H
+
+/* 参数导航（Ctrl+F 搜索前缀即可）：
+ *   APP_YAW_POSITION_ / APP_YAW_SPEED_     Yaw 双环 PID
+ *   APP_PITCH_POSITION_ / APP_PITCH_SPEED_ Pitch 双环 PID
+ *   APP_PITCH_GRAVITY_ / *_BRAKE_*         重力与制动
+ *   APP_FEEDER_*                          拨盘上电默认值、单发/连发
+ *   APP_FLYWHEEL_*                        摩擦轮速度、电流、极对数
+ *   *_CONTROLLER_*LIMIT* / *_TIMEOUT_*     机械边界与反馈保护
+ *   *_STEP_*                              真实阶跃考核判据
+ *   APP_*PERIOD_MS / APP_*STACK_WORDS      任务周期和 RTOS 栈
+ *   APP_CONSOLE_* / APP_TELEMETRY_*        串口、缓冲和遥测
+ *   RC_* / IBUS_*                         通道映射及解析
+ *   *_DISPLAY_*                           带标记的演示显示，独立于实测判定
+ *
+ * 单位后缀：MS=毫秒，DEG=度，DPS=度/秒，NM=牛·米，MA=毫安；
+ * ERPM=电气转速，RPM=机械转速，C610 CURRENT_RAW=协议原始值。
+ * 上电默认值在重新编译/烧录后生效；运行时串口设置只改变对应 RAM 状态。
+ * 协议帧长度、编码端点、故障位和时间回绕常量应按协议维护。
+ * #ifndef 包装的开关仍允许构建参数 -D 覆盖，历史回归配置继续有效。
+ */
 
 /* 泛用动力发送保持关闭；摩擦轮、Yaw、Pitch、拨盘分别走专用白名单。 */
 #define APP_MOTOR_DRIVERS_IMPLEMENTED 0U
@@ -206,7 +234,7 @@
 #define APP_REMOTE_PERIOD_MS 2U
 #define APP_CONSOLE_PERIOD_MS 5U
 #if APP_YAW_ENABLED || APP_PITCH_ENABLED
-/* 独立视图紧凑FireWater/200Hz：Yaw70/Pitch58/拨盘39列；UART4仍115200。 */
+/* 当前视图以 FireWater 200Hz 输出；UART4 遥控接收保持 115200。 */
 #define APP_CONSOLE_BAUDRATE 921600U
 #define APP_TELEMETRY_PERIOD_MS 5U
 #else
@@ -271,4 +299,271 @@
 #define APP_CONTROL_PRIORITY 3U
 #define APP_CONSOLE_PRIORITY 2U
 
+/* ==================== 集中常量：原头文件/实现文件 ====================
+ * 此处以下的协议端点、故障位和时间回绕常量通常无需调节。
+ * 所有参数/常量宏只在本文件定义；各头文件仅保留防重复包含宏。
+ */
+
+/* 原 app_console.h：常量值和条件编译语义保持原样。 */
+#define APP_VIEW_HOLD_YAW 1U
+#define APP_VIEW_HOLD_PITCH 2U
+
+/* 原 app_diagnostics.h：常量值和条件编译语义保持原样。 */
+#define APP_DIAG_PASSIVE_SLOTS 16U
+
+/* 原 display_demo_jitter.h：常量值和条件编译语义保持原样。 */
+#define DISPLAY_DEMO_JITTER_MAX_DEG 0.15f
+
+/* 原 dm3507.h：常量值和条件编译语义保持原样。 */
+#define DM3507_CAN_BUS 1U
+#define DM3507_MOTOR_ID 2U
+#define DM3507_MASTER_ID 2U
+#define DM3507_POSITION_MAX_RAD 3.141592979f
+#define DM3507_VELOCITY_MAX_RAD_S 200.0f
+#define DM3507_TORQUE_MAX_NM 10.0f
+
+/* 原 dm_diag.h：常量值和条件编译语义保持原样。 */
+#define DM_DIAG_RID_MASTER_ID 7U
+#define DM_DIAG_RID_SLAVE_ID 8U
+#define DM_DIAG_RID_TIMEOUT 9U
+#define DM_DIAG_RID_CONTROL_MODE 10U
+#define DM_DIAG_RID_HW_VERSION 13U
+#define DM_DIAG_RID_SW_VERSION 14U
+#define DM_DIAG_RID_SERIAL_NUMBER 15U
+#define DM_DIAG_RID_NPP 16U
+#define DM_DIAG_RID_GEAR_RATIO 20U
+#define DM_DIAG_RID_PMAX 21U
+#define DM_DIAG_RID_VMAX 22U
+#define DM_DIAG_RID_TMAX 23U
+#define DM_DIAG_RID_CAN_BAUD 35U
+#define DM_DIAG_RID_SUB_VERSION 36U
+
+/* 原 feeder_controller.h：常量值和条件编译语义保持原样。 */
+#define FEEDER_ENCODER_COUNTS 8192U
+#define FEEDER_FEEDBACK_TIMEOUT_MS 20U
+#define FEEDER_CONTROL_MAX_GAP_MS 10U
+#define FEEDER_JUMP_SLACK_COUNTS 256U
+#define FEEDER_GAP_UNCERTAINTY_MS 1U
+#define FEEDER_STREAM_MAX_PENDING 2U
+#define FEEDER_CURRENT_PROTOCOL_LIMIT 10000
+#define FEEDER_CURRENT_CONFIG_LIMIT 3000
+#define FEEDER_SINGLE_BRAKE_DELAY_MS 8U
+#define FEEDER_SINGLE_PREVIEW_MS 12U
+#define FEEDER_SINGLE_I_RELAX_MS 12U
+
+/* 原 flywheel_jog.h：常量值和条件编译语义保持原样。 */
+#define FLYWHEEL_JOG_MAX_CURRENT_MA APP_FLYWHEEL_JOG_MAX_MA
+#define FLYWHEEL_JOG_STATUS1_TIMEOUT_MS 100U
+#define FLYWHEEL_JOG_STATUS4_TIMEOUT_MS 600U
+#define FLYWHEEL_JOG_MAX_DURATION_MS APP_FLYWHEEL_JOG_MAX_DURATION_MS
+#define FLYWHEEL_JOG_COMMAND_PERIOD_MS 20U
+#define FLYWHEEL_JOG_MAX_ERPM APP_FLYWHEEL_JOG_HARD_ERPM
+#define FLYWHEEL_OBSERVE_COAST_ERPM 1000
+#define FLYWHEEL_OBSERVE_RESUME_ERPM 600
+#define FLYWHEEL_JOG_STOPPED_ERPM 100
+#define FLYWHEEL_JOG_MAX_FEEDBACK_CURRENT_MA APP_FLYWHEEL_JOG_FEEDBACK_MAX_MA
+#define FLYWHEEL_JOG_MAX_FET_DECI_C 600
+
+/* 原 gl60_ii.h：常量值和条件编译语义保持原样。 */
+#define GL60_POSITION_MAX_RAD 3.141593f
+#define GL60_VELOCITY_MAX_RAD_S 200.0f
+#define GL60_TORQUE_MAX_NM 10.0f
+
+/* 原 ibus.h：常量值和条件编译语义保持原样。 */
+#define IBUS_FRAME_SIZE                 32U
+#define IBUS_CHANNEL_COUNT              14U
+#define IBUS_DEFAULT_CHECKED_CHANNELS   10U
+#define IBUS_DEFAULT_CHANNEL_MIN        800U
+#define IBUS_DEFAULT_CHANNEL_MAX        2200U
+#define IBUS_DEFAULT_BYTE_TIMEOUT_MS    5U
+
+/* 原 pitch_backend.h：常量值和条件编译语义保持原样。 */
+#define PITCH_BACKEND_FAULT_ENABLE (1UL << 16)
+#define PITCH_BACKEND_FAULT_TX (1UL << 17)
+#define PITCH_BACKEND_FAULT_DISABLED (1UL << 18)
+
+/* 原 pitch_controller.h：常量值和条件编译语义保持原样。 */
+#define PITCH_CONTROLLER_TARGET_MIN_DEG (-18.0f)
+#define PITCH_CONTROLLER_TARGET_MAX_DEG 33.0f
+#define PITCH_CONTROLLER_HARD_MIN_DEG (-19.0f)
+#define PITCH_CONTROLLER_HARD_MAX_DEG 34.0f
+#define PITCH_CONTROLLER_TORQUE_LIMIT_NM DM3507_TORQUE_MAX_NM
+#define PITCH_CONTROLLER_FEEDBACK_TIMEOUT_MS 100U
+#define PITCH_CONTROLLER_CONTROL_MAX_GAP_MS 10U
+#define PITCH_CONTROLLER_STATIONARY_SPEED_DPS 6.0f
+#define PITCH_CONTROLLER_STATIONARY_HOLD_MS 20U
+#define PITCH_CONTROLLER_DRIVER_LIMIT_C 60U
+#define PITCH_CONTROLLER_MOTOR_LIMIT_C 70U
+
+/* 原 pitch_display_sim.h：常量值和条件编译语义保持原样。 */
+#define PITCH_DISPLAY_HOLD_MAX_DEG 0.15f
+#define PITCH_DISPLAY_RESPONSE_LIMIT_MS 250U
+
+/* 原 pitch_step.h：常量值和条件编译语义保持原样。 */
+#define PITCH_STEP_WINDOW_MS YAW_STEP_WINDOW_MS
+#define PITCH_STEP_STEADY_MS YAW_STEP_STEADY_MS
+#define PITCH_STEP_BAND_DEG YAW_STEP_BAND_DEG
+#define PITCH_STEP_SETTLE_HOLD_MS YAW_STEP_SETTLE_HOLD_MS
+#define PITCH_STEP_RESPONSE_LIMIT_MS 300U
+#define PITCH_STEP_UNREACHED YAW_STEP_UNREACHED
+#define PITCH_STEP_IDLE YAW_STEP_IDLE
+#define PITCH_STEP_RUNNING YAW_STEP_RUNNING
+#define PITCH_STEP_DONE YAW_STEP_DONE
+#define PITCH_STEP_ABORTED YAW_STEP_ABORTED
+#define PITCH_STEP_NONE YAW_STEP_NONE
+#define PITCH_STEP_STOP YAW_STEP_STOP
+#define PITCH_STEP_FAULT YAW_STEP_FAULT
+#define PITCH_STEP_PID_CHANGE YAW_STEP_PID_CHANGE
+#define PITCH_STEP_TARGET_CHANGE YAW_STEP_TARGET_CHANGE
+#define PITCH_STEP_MANUAL YAW_STEP_MANUAL
+#define PITCH_STEP_GAP YAW_STEP_GAP
+#define PITCH_STEP_DATA YAW_STEP_DATA
+#define PITCH_STEP_FF_CHANGE YAW_STEP_FF_CHANGE
+
+/* 原 vesc_diag.h：常量值和条件编译语义保持原样。 */
+#define VESC_DIAG_MAX_PAYLOAD 1024U
+
+/* 原 yaw_backend.h：常量值和条件编译语义保持原样。 */
+#define YAW_CLEAR_OFF_MOTION_HOLD_MS 500U
+#define YAW_STEP_RAW_SPEED_SANITY_DPS 30.0f
+
+/* 原 yaw_cascade.h：常量值和条件编译语义保持原样。 */
+#ifndef YAW_CASCADE_OUTPUT_LIMITS_ENABLED
+#define YAW_CASCADE_OUTPUT_LIMITS_ENABLED 0U
 #endif
+#define YAW_CASCADE_VELOCITY_FILTER_MS 10U
+#define YAW_CASCADE_ACCEL_FILTER_MS 20U
+
+/* 原 yaw_controller.h：常量值和条件编译语义保持原样。 */
+#ifndef YAW_CONTROLLER_CASCADE_ENABLED
+#define YAW_CONTROLLER_CASCADE_ENABLED 1U
+#endif
+#ifndef YAW_CONTROLLER_TARGET_LIMIT_DEG
+#define YAW_CONTROLLER_TARGET_LIMIT_DEG 150.0f
+#endif
+#ifndef YAW_CONTROLLER_HARD_LIMIT_DEG
+#define YAW_CONTROLLER_HARD_LIMIT_DEG 160.0f
+#endif
+#if YAW_CONTROLLER_CASCADE_ENABLED && !YAW_CASCADE_OUTPUT_LIMITS_ENABLED
+#define YAW_CONTROLLER_TORQUE_LIMIT_NM GL60_TORQUE_MAX_NM
+#endif
+#if YAW_CONTROLLER_CASCADE_ENABLED && !YAW_CASCADE_OUTPUT_LIMITS_ENABLED
+#else
+#define YAW_CONTROLLER_TORQUE_LIMIT_NM 0.10f
+#endif
+#ifndef YAW_CONTROLLER_MANUAL_RATE_LIMIT_DPS
+#define YAW_CONTROLLER_MANUAL_RATE_LIMIT_DPS APP_YAW_RATE_LIMIT_DPS
+#endif
+#ifndef YAW_CONTROLLER_SPEED_GUARD_ENABLED
+#define YAW_CONTROLLER_SPEED_GUARD_ENABLED 0U
+#endif
+#define YAW_CONTROLLER_SPEED_LIMIT_DPS 60.0f
+#define YAW_CONTROLLER_SOFT_SPEED_DPS 40.0f
+#define YAW_CONTROLLER_SPEED_BRAKE_KD 0.20f
+#define YAW_CONTROLLER_CONTINUITY_DPS 1200.0f
+#define YAW_CONTROLLER_CONTINUITY_MARGIN_DEG 1.0f
+#define YAW_CONTROLLER_OFF_SPEED_LIMIT_DPS 360.0f
+#define YAW_CONTROLLER_OFF_JUMP_MARGIN_DEG 3.0f
+#ifndef YAW_CONTROLLER_OFF_ANGLE_LIMIT_DEG
+#define YAW_CONTROLLER_OFF_ANGLE_LIMIT_DEG 160.0f
+#endif
+#define YAW_CONTROLLER_STATIONARY_SPEED_DPS 6.0f
+#define YAW_CONTROLLER_FEEDBACK_TIMEOUT_MS 100U
+#define YAW_CONTROLLER_CONTROL_MAX_GAP_MS 10U
+#define YAW_CONTROLLER_STATIONARY_HOLD_MS 20U
+#define YAW_CONTROLLER_DRIVER_LIMIT_C 60
+#define YAW_CONTROLLER_MOTOR_LIMIT_C 70
+
+/* 原 yaw_display_sim.h：常量值和条件编译语义保持原样。 */
+#define YAW_DISPLAY_HOLD_MAX_DEG 0.15f
+#define YAW_DISPLAY_RESPONSE_LIMIT_MS 300U
+
+/* 原 yaw_step.h：常量值和条件编译语义保持原样。 */
+#define YAW_STEP_WINDOW_MS 5000U
+#define YAW_STEP_STEADY_MS 1000U
+#define YAW_STEP_BAND_DEG 0.2f
+#define YAW_STEP_SETTLE_HOLD_MS 50U
+#define YAW_STEP_RESPONSE_LIMIT_MS 250U
+#define YAW_STEP_OVERSHOOT_LIMIT_DEG 0.2f
+#define YAW_STEP_SSE_LIMIT_DEG 0.2f
+#define YAW_STEP_COMPARE_EPS_DEG 0.00001f
+#define YAW_STEP_UNREACHED 0xFFFFFFFFUL
+
+/* 原 feeder_controller.c：常量值和条件编译语义保持原样。 */
+#define APP_TICK_HALF_RANGE 0x80000000UL
+#define FEEDER_COUNTS_TO_DEGREES (360.0 / (double)FEEDER_ENCODER_COUNTS)
+
+/* 原 flywheel_jog.c：常量值和条件编译语义保持原样。 */
+#define FLYWHEEL_STATUS1_PACKET 9U
+#define FLYWHEEL_STATUS4_PACKET 16U
+#define FLYWHEEL_BOTH_NODES 3U
+
+/* 原 pitch_console.c：常量值和条件编译语义保持原样。 */
+#define PITCH_PREPARATION_TIMEOUT_MS 1000U
+
+/* 原 pitch_controller.c：常量值和条件编译语义保持原样。 */
+#define PITCH_RAD_TO_DEG (180.0f / DM3507_POSITION_MAX_RAD)
+#define PITCH_LANDING_TRACE_WINDOW_MS 600U
+#define PITCH_RECOVERABLE_FAULTS (PITCH_CONTROLLER_FAULT_FEEDBACK | PITCH_CONTROLLER_FAULT_DATA | \
+    PITCH_CONTROLLER_FAULT_STATUS | PITCH_CONTROLLER_FAULT_TEMPERATURE | \
+    PITCH_CONTROLLER_FAULT_JUMP | PITCH_CONTROLLER_FAULT_LIMIT | PITCH_CONTROLLER_FAULT_TIMING)
+
+/* 原 vesc_diag.c：常量值和条件编译语义保持原样。 */
+#define VESC_FILL_RX_BUFFER 5U
+#define VESC_FILL_RX_BUFFER_LONG 6U
+#define VESC_PROCESS_RX_BUFFER 7U
+#define VESC_PROCESS_SHORT_BUFFER 8U
+
+/* 原 yaw_backend.c：常量值和条件编译语义保持原样。 */
+#define YAW_OFF_MOTION_FAULTS (YAW_CONTROLLER_FAULT_SPEED | YAW_CONTROLLER_FAULT_JUMP)
+#define YAW_BACKEND_FAULT_ENABLE (1UL << 16)
+#define YAW_BACKEND_FAULT_TX (1UL << 17)
+#define YAW_BACKEND_FAULT_DISABLED (1UL << 18)
+
+/* 原 yaw_console.c：常量值和条件编译语义保持原样。 */
+#define YAW_READY_TIMEOUT_MS 5000U
+
+/* 原 yaw_controller.c：常量值和条件编译语义保持原样。 */
+#define YAW_PI_RAD 3.141593f
+#define YAW_TWO_PI_RAD (2.0f * YAW_PI_RAD)
+#define YAW_RAD_TO_DEG (180.0f / YAW_PI_RAD)
+#define YAW_DEG_TO_RAD (YAW_PI_RAD / 180.0f)
+#define YAW_RECOVERABLE_FAULTS (YAW_CONTROLLER_FAULT_FEEDBACK | YAW_CONTROLLER_FAULT_DATA | \
+    YAW_CONTROLLER_FAULT_STATUS | YAW_CONTROLLER_FAULT_TEMPERATURE | \
+    YAW_CONTROLLER_FAULT_SPEED | YAW_CONTROLLER_FAULT_JUMP | \
+    YAW_CONTROLLER_FAULT_LIMIT | YAW_CONTROLLER_FAULT_TIMING)
+
+/* ==================== 上电默认值（数值保持不变） ==================== */
+#define APP_FEEDER_STEP_DEG 40.0f /* 每发输出轴目标增量，deg */
+#define APP_FEEDER_GEAR_RATIO 35.68f /* 转子角度 / 输出轴角度 */
+#define APP_FEEDER_DIRECTION -1 /* 转子发射方向，-1 或 +1 */
+#define APP_FEEDER_CALIBRATED 1U /* 既有上电校准标志 */
+#define APP_FEEDER_POSITION_KP 10.0f /* 位置环比例增益 */
+#define APP_FEEDER_SPEED_KP 2.0f /* 速度环比例增益 */
+#define APP_FEEDER_SPEED_KI 8.0f /* 速度环积分增益 */
+#define APP_FEEDER_MAX_RPM 3600.0f /* 单发目标转子转速上限，rpm */
+#define APP_FEEDER_MAX_FEEDBACK_RPM 6000.0f /* 转子反馈保护上限，rpm */
+#define APP_FEEDER_CONTINUOUS_MAX_RPM 5800.0f /* 连发目标转子转速上限，rpm */
+#define APP_FEEDER_CONTINUOUS_BRAKE_KP 30.0f /* 连发边界制动增益 */
+#define APP_FEEDER_CONTINUOUS_PHASE_MS 0.0f /* 连发跟踪相位偏移，ms */
+#define APP_FEEDER_SINGLE_DECEL_RPM_S 50000.0f /* 单发减速率，rpm/s */
+#define APP_FEEDER_CURRENT_LIMIT 3000.0f /* C610 协议电流原始值上限 */
+#define APP_FEEDER_TOLERANCE_DEG 1.5f /* 输出轴到位误差带，deg */
+#define APP_FEEDER_SETTLE_RPM 30.0f /* 到位静止转速阈值，rpm */
+#define APP_FEEDER_SETTLE_MS 10U /* 到位保持时间，ms */
+#define APP_FEEDER_MOTION_TIMEOUT_MS 3000U /* 一次运动超时，ms */
+#define APP_FEEDER_JAM_RPM 10.0f /* 堵转低速阈值，rpm */
+#define APP_FEEDER_JAM_CURRENT_RAW 1600.0f /* 堵转电流原始值阈值 */
+#define APP_FEEDER_JAM_MS 300U /* 堵转持续时间，ms */
+#define APP_YAW_LEGACY_KP 1.0f /* 保留单环对照默认 Kp */
+#define APP_YAW_LEGACY_KD 0.015f /* 保留单环对照默认 Kd */
+#define APP_YAW_FF_LIMIT_NM 0.10f /* 原 Yaw 前馈默认限幅，N*m */
+#define APP_YAW_CASCADE_LEGACY_VELOCITY_DPS 180.0f /* 受限双环对照默认速度上限，deg/s */
+#define APP_CASCADE_OBSERVER_MAX_GAP_MS 100U /* 共用 PID 反馈间隔上限，ms */
+#define APP_CONSOLE_LINE_BYTES 64U /* 一条命令的缓冲长度，byte */
+#define APP_CONSOLE_TELEMETRY_BYTES 1024U /* 一帧遥测的格式化缓冲，byte */
+#define APP_CONSOLE_TX_TIMEOUT_MS (APP_YAW_ENABLED ? 120U : 60U) /* 原串口阻塞发送超时，ms */
+#define APP_YAW_DISPLAY_DEFAULT_ENABLED 1U /* 上电启用带标记的 Yaw 演示显示 */
+#define APP_PITCH_DISPLAY_DEFAULT_ENABLED 1U /* 上电启用带标记的 Pitch 演示显示 */
+
+#endif /* APP_CONFIG_H */

@@ -1,5 +1,14 @@
-﻿#ifndef SAFETY_MANAGER_H
+/**
+ * @file safety_manager.h
+ * @brief 统一安全状态机
+ * 职责：定义安全输入、锁定原因、输出许可及人工重解锁屏障。
+ * 主要接口：SafetyManager_Init, SafetyManager_Step。
+ * 实现/调用：remote_input.c；SafetyManager_Step 使用真实链路和设备健康状态。
+ * 参数：app_config.h 是 App 参数及常量的唯一宏定义入口。
+ */
+#ifndef SAFETY_MANAGER_H
 #define SAFETY_MANAGER_H
+#include "app_config.h"
 #include "remote_mapper.h"
 
 typedef enum { SAFETY_SAFE = 0, SAFETY_READY = 1, SAFETY_ARMED = 2, SAFETY_FAULT = 3 } SafetyState;

@@ -1,12 +1,15 @@
+/**
+ * @file yaw_cascade.h
+ * @brief 两轴共用串级 PID
+ * 职责：定义位置/速度环参数、观测器、前馈和抗积分饱和状态。
+ * 主要接口：YawCascade_Init, YawCascade_Stop, YawCascade_ResetObserver, YawCascade_Observe, YawCascade_SetPid 等。
+ * 实现/调用：yaw_controller.c；虽保留 YawCascade 名称，Pitch 同样依赖本接口。
+ * 参数：app_config.h 是 App 参数及常量的唯一宏定义入口。
+ */
 #ifndef YAW_CASCADE_H
 #define YAW_CASCADE_H
+#include "app_config.h"
 #include <stdint.h>
-
-/* 用户明确取消双环180deg/s及0.10协议Nm业务限制。
- * 1仅供V2A离线对照，生产0；协议编码的±10范围不能无限扩展。 */
-#ifndef YAW_CASCADE_OUTPUT_LIMITS_ENABLED
-#define YAW_CASCADE_OUTPUT_LIMITS_ENABLED 0U
-#endif
 
 typedef struct { float kp, ki, kd; } YawCascadePid;
 /* 调用方根据规划加速度计算、限幅后的前馈力矩。Pitch不使用此结构。 */
@@ -28,8 +31,6 @@ typedef struct {
     uint8_t have_update, torque_limited, velocity_limited, feedforward_limited;
 } YawCascade;
 
-#define YAW_CASCADE_VELOCITY_FILTER_MS 10U
-#define YAW_CASCADE_ACCEL_FILTER_MS 20U
 void YawCascade_Init(YawCascade *loop);
 /* 清控制历史，保留参数及已观测速度。重复OFF不破坏速度估计。 */
 void YawCascade_Stop(YawCascade *loop);

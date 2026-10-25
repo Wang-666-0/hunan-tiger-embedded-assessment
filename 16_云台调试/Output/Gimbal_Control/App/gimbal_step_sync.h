@@ -1,5 +1,14 @@
+/**
+ * @file gimbal_step_sync.h
+ * @brief 双轴阶跃与视图同步
+ * 职责：同步实测阶跃编号、最近测试轴和视图保持请求。
+ * 主要接口：GimbalStepSync_ApplyViewHold, YawBackend_SetViewLock, PitchBackend_SetViewLock, GimbalStepSync_FilterViewRequest, GimbalStepSync_Update 等。
+ * 实现/调用：头文件内协调函数；调用时序保留在控制任务的各原同步位置。
+ * 参数：app_config.h 是 App 参数及常量的唯一宏定义入口。
+ */
 #ifndef GIMBAL_STEP_SYNC_H
 #define GIMBAL_STEP_SYNC_H
+#include "app_config.h"
 #include "yaw_backend.h"
 #include "pitch_backend.h"
 #include "app_console.h"

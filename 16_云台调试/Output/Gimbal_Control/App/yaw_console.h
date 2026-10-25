@@ -1,5 +1,14 @@
-﻿#ifndef YAW_CONSOLE_H
+/**
+ * @file yaw_console.h
+ * @brief Yaw 串口命令
+ * 职责：声明 YAW 命令处理、准备状态轮询和准备取消接口。
+ * 主要接口：YawConsole_Handle, YawConsole_Poll, YawConsole_CancelPreparation。
+ * 实现/调用：motor_console.c；查询、显式配置和运动请求分别沿用原权限规则。
+ * 参数：app_config.h 是 App 参数及常量的唯一宏定义入口。
+ */
+#ifndef YAW_CONSOLE_H
 #define YAW_CONSOLE_H
+#include "app_config.h"
 #include <stdint.h>
 #include <stddef.h>
 /* 单行ASCII命令；结果填入低优先级任务缓冲，函数内不发送串口。

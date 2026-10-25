@@ -1,5 +1,14 @@
+/**
+ * @file pitch_display_sim.h
+ * @brief Pitch 带标记演示显示
+ * 职责：定义演示轮廓、连续扰动及跟随目标的显示状态。
+ * 主要接口：PitchDisplaySim_Rise, for, PitchDisplaySim_Reset, memset, PitchDisplaySim_Cancel 等。
+ * 实现/调用：头文件内显示函数；关闭或健康失效返回真实角度，禁止进入控制与实测判定。
+ * 参数：app_config.h 是 App 参数及常量的唯一宏定义入口。
+ */
 #ifndef PITCH_DISPLAY_SIM_H
 #define PITCH_DISPLAY_SIM_H
+#include "app_config.h"
 #include "pitch_step.h"
 #include "display_step_watch.h"
 #include "display_demo_jitter.h"
@@ -11,8 +20,6 @@
  * Every accepted target change can start a new transition, including a return
  * during motion. No quota or timed fade. OFF/health loss restores measured data.
  * The labelled telemetry group also carries the unmodified measured angle. */
-#define PITCH_DISPLAY_HOLD_MAX_DEG 0.15f
-#define PITCH_DISPLAY_RESPONSE_LIMIT_MS 250U
 typedef struct {
     uint16_t duration_ms;
     float amplitude_deg, warp;
