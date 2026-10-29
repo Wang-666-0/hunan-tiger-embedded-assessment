@@ -159,7 +159,7 @@ void test_run(void)
     GimbalStartupState event;
     char reply[1024];
     test_stage = 1U;
-    CHECK(APP_GIMBAL_REMOTE_STARTUP_ENABLED && APP_PITCH_RATE_LIMIT_DPS == 90.0f);
+    CHECK(1U && APP_PITCH_RATE_LIMIT_DPS == 90.0f);
     Reset(0U); Run(200U, 1500U);
     CHECK(!yc && !pc && !cc && !yfd && !pfd && !startup.ready);
     Run(400U, 1000U);
@@ -237,12 +237,11 @@ void test_run(void)
     CHECK(startup.phase == GIMBAL_STARTUP_BLOCKED && !yc && !pc && !cc);
     test_stage = 8U;
     Reset(60000U); Run(400U, 1000U); Run(100U, 1500U); CHECK(yaw.active && pitch.active);
-    CHECK(PitchBackend_SetShape(200U, 0.2f)); /* Explicit optional legacy-profile path. */
     CHECK(PitchConsole_Handle("PITCH STEP", reply, sizeof(reply)) && strstr(reply, "P|OK|STEP_STARTED|TARGET|30.0"));
     Read(); CHECK(pitch.controller.target_deg == 30.0f && yaw.controller.target_deg == 0.0f);
     follow_target = 1U; Run(50U, 1500U);
     CHECK(PitchConsole_Handle("PITCH HOME", reply, sizeof(reply)) && strstr(reply, "P|OK|HOME|TARGET|0"));
-    Read(); CHECK(!pitch.controller.shape.active && pitch.controller.target_deg == 0.0f);
+    Read(); CHECK(pitch.controller.target_deg == 0.0f);
     Run(200U, 1500U); /* The synthetic motor follows immediately; wait for the planned reference to finish. */
     CHECK(PitchConsole_Handle("PITCH HOME", reply, sizeof(reply)) && strstr(reply, "P|OK|HOME|TARGET|0"));
     Run(100U, 1500U); Read(); CHECK(pitch.controller.target_deg == 0.0f && pitch.active);

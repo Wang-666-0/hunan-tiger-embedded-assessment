@@ -1,317 +1,53 @@
 /**
  * @file feeder_controller.c
- * @brief 拨盘单发/连发位置速度控制
- * 配置入口：App/app_config.h；接口声明见同目录对应头文件。
- * 对外函数（10）：
- *   Feeder_Stop / Feeder_ConfigValid / Feeder_Init / Feeder_SetConfig / Feeder_OnFrame /
- *   Feeder_Clear / Feeder_Zero / Feeder_ContinuousRpm / Feeder_Run / Feeder_Step
- * 内部函数（14）：
- *   absolute / abs_double / clamp / finite_value / within / positions / reset_output / fault / fresh
- *   / consume_event / completed_step / stream_crossings / finish_stream / single_speed_limit
- * 文件级变量/常量（0；局部变量见对应函数）：
- *   无；状态由调用方传入的结构体保存。
- * 维护约束：函数前的功能说明对应当前实现，修改行为时同步更新。
+ * 作用：拨盘单发/连发位置速度控制
+ * 对外函数：
+ *   Feeder_Run / Feeder_Step / Feeder_OnFrame / Feeder_ContinuousRpm / Feeder_Init / Feeder_SetConfig /
+ *   Feeder_Stop / Feeder_Clear / Feeder_Zero / Feeder_ConfigValid
+ * 内部函数：
+ *   single_speed_limit / abs_double / within / positions / reset_output / fresh / consume_event /
+ *   completed_step / stream_crossings / finish_stream / absolute / clamp / finite_value / fault
+ * 文件级变量（函数局部变量在各函数内定义）：
+ *   无；控制状态由调用方提供的结构体保存。
  */
-/* 拨盘控制数学：累计角度、单发减速、连续跟踪及保护。 */
 #include "feeder_controller.h"
 #include "app_config.h"
 #include <float.h>
 #include <math.h>
 #include <string.h>
 
-static float absolute(float x)
-/* 功能：返回数值的绝对值，用于误差或速度幅值比较。 */
-{ return x < 0.0f ? -x : x; }
-static double abs_double(double x)
-/* 功能：返回双精度数值的绝对值，保留连续编码器计算精度。 */
-{ return x < 0.0 ? -x : x; }
-static float clamp(float x, float low, float high)
-/* 功能：把数值限制在指定上下界内，避免控制请求越界。 */
-{ return x < low ? low : (x > high ? high : x); }
-static uint8_t finite_value(float x)
-/* 功能：检查浮点数是否有限，拒绝 NaN 和无穷值进入控制。 */
-{ return (uint8_t)(x == x && x >= -FLT_MAX && x <= FLT_MAX); }
-static uint8_t within(float x, float low, float high)
-/* 功能：检查数值是否有限且处于指定闭区间。 */
-{ return (uint8_t)(finite_value(x) && x >= low && x <= high); }
-static void positions(FeederController *c)
-/* 功能：由连续编码器计数和传动配置换算拨盘实际及目标角度。 */
-{
-    c->position_deg = (double)(c->accumulated_counts - c->zero_counts) * FEEDER_COUNTS_TO_DEGREES;
-    c->axis_position_deg = c->position_deg / (double)c->config.gear_ratio;
-    c->axis_target_deg = c->target_deg / (double)c->config.gear_ratio;
-}
-static void reset_output(FeederController *c)
-/* 功能：清除拨盘当前控制输出、速度参考及对应积分历史。 */
-{
-    c->command_raw = 0; c->target_rpm = c->integral = 0.0f;
-    c->single_braking = 0U;
-    c->settling = c->jamming = c->have_control_tick = 0U;
-}
-void Feeder_Stop(FeederController *c)
-/* 功能：结束拨盘当前动作并清除控制输出，保留原配置和后续恢复所需状态。 */
-{
-    if (!c) { return; }
-    if (c->busy && c->outstanding) {
-        ++c->aborted;
-        if (c->outstanding > 1U) { c->cancelled += c->outstanding - 1U; }
-    }
-    c->busy = 0U; reset_output(c);
-    c->outstanding = 0U; c->motion_kind = FEEDER_MOTION_IDLE;
-    c->target_deg = c->position_deg;
-    c->axis_target_deg = c->axis_position_deg;
-}
-static void fault(FeederController *c, uint32_t reason)
-/* 功能：锁存拨盘运行故障，并清除当前控制输出和动作请求。 */
-{
-    c->faults |= reason; Feeder_Stop(c); c->have_zero = 0U;
-    c->recovery_samples = 0U;
-}
-static uint8_t fresh(const FeederController *c, uint32_t now)
-/* 功能：判断拨盘控制器最近一帧反馈是否仍在有效时间范围内。 */
-{
-    uint32_t age = now - c->last_feedback_ms;
-    return (uint8_t)(c->have_feedback && age <= FEEDER_FEEDBACK_TIMEOUT_MS);
-}
-uint8_t Feeder_ConfigValid(const FeederConfig *p)
-/* 功能：检查拨盘传动、方向、PID、速度、电流、到位和堵转参数的合法范围。 */
-{
-    if (!p) { return 0U; }
-    return (uint8_t)(within(p->step_deg, 0.1f, 360.0f) &&
-        within(p->gear_ratio, 0.1f, 100.0f) &&
-        (p->direction == -1 || p->direction == 0 || p->direction == 1) &&
-        p->calibrated <= 1U && (!p->calibrated || p->direction != 0) &&
-        within(p->pos_kp, 0.001f, 100.0f) &&
-        within(p->speed_kp, 0.001f, 100.0f) && within(p->speed_ki, 0.0f, 1000.0f) &&
-        within(p->max_rpm, 1.0f, 6000.0f) &&
-        within(p->max_feedback_rpm, p->max_rpm, 6000.0f) &&
-        within(p->continuous_max_rpm, 1.0f, p->max_feedback_rpm) &&
-        within(p->continuous_brake_kp, 0.001f, 1000.0f) &&
-        within(p->continuous_phase_ms, 0.0f, (float)APP_FIRE_INTERVAL_MS * 0.8f) &&
-        (p->single_decel_rpm_s == 0.0f || within(p->single_decel_rpm_s, 1000.0f, 200000.0f)) &&
-        within(p->current_limit, 1.0f, (float)FEEDER_CURRENT_CONFIG_LIMIT) &&
-        within(p->tolerance_deg, 0.05f, 5.0f) &&
-        within(p->settle_rpm, 0.0f, 100.0f) &&
-        within(p->jam_rpm, 0.0f, 100.0f) &&
-        within(p->jam_current_raw, 1.0f, (float)FEEDER_CURRENT_CONFIG_LIMIT) &&
-        p->settle_ms >= 5U && p->settle_ms <= 500U &&
-        p->motion_timeout_ms >= 50U && p->motion_timeout_ms <= 5000U &&
-        p->jam_ms >= 20U && p->jam_ms <= 2000U && p->jam_ms < p->motion_timeout_ms);
-}
-void Feeder_Init(FeederController *c)
-/* 功能：载入拨盘默认配置，并初始化编码器、动作和故障状态。 */
-{
-    if (!c) { return; }
-    memset(c, 0, sizeof(*c));
-    c->config.step_deg = APP_FEEDER_STEP_DEG; c->config.gear_ratio = APP_FEEDER_GEAR_RATIO;
-    c->config.direction = APP_FEEDER_DIRECTION; c->config.calibrated = APP_FEEDER_CALIBRATED;
-    c->config.pos_kp = APP_FEEDER_POSITION_KP; c->config.speed_kp = APP_FEEDER_SPEED_KP; c->config.speed_ki = APP_FEEDER_SPEED_KI;
-    c->config.max_rpm = APP_FEEDER_MAX_RPM; c->config.max_feedback_rpm = APP_FEEDER_MAX_FEEDBACK_RPM;
-    c->config.continuous_max_rpm = APP_FEEDER_CONTINUOUS_MAX_RPM;
-    /* Track from the trigger time; the previous 10ms lag intentionally lost
-     * 8 shaft degrees at 40deg/50ms. Keep the existing boundary brake. */
-    c->config.continuous_brake_kp = APP_FEEDER_CONTINUOUS_BRAKE_KP; c->config.continuous_phase_ms = APP_FEEDER_CONTINUOUS_PHASE_MS;
-    c->config.single_decel_rpm_s = APP_FEEDER_SINGLE_DECEL_RPM_S;
-    c->config.current_limit = APP_FEEDER_CURRENT_LIMIT; c->config.tolerance_deg = APP_FEEDER_TOLERANCE_DEG;
-    c->config.settle_rpm = APP_FEEDER_SETTLE_RPM; c->config.settle_ms = APP_FEEDER_SETTLE_MS;
-    c->config.motion_timeout_ms = APP_FEEDER_MOTION_TIMEOUT_MS;
-    c->config.jam_rpm = APP_FEEDER_JAM_RPM; c->config.jam_current_raw = APP_FEEDER_JAM_CURRENT_RAW; c->config.jam_ms = APP_FEEDER_JAM_MS;
-}
-uint8_t Feeder_SetConfig(FeederController *c, const FeederConfig *p)
-/* 功能：在控制器允许修改时应用合法配置，并同步必要的控制状态。 */
-{
-    uint8_t invalidate;
-    if (!c || c->busy || !Feeder_ConfigValid(p)) { return 0U; }
-    invalidate = (uint8_t)(p->gear_ratio != c->config.gear_ratio ||
-        p->direction != c->config.direction || p->calibrated != c->config.calibrated);
-    c->config = *p; Feeder_Stop(c);
-    if (invalidate) { c->have_zero = 0U; }
-    positions(c); c->axis_target_deg = c->axis_position_deg;
-    return 1U;
-}
-uint8_t Feeder_OnFrame(FeederController *c, const CanFrame *f, uint32_t now, uint32_t epoch)
-/* 功能：解析 C610 反馈，进行解环、时效、跳变、速度和电流检查。 */
-{
-    uint16_t angle;
-    int16_t rpm, current;
-    int32_t delta = 0;
-    uint32_t gap = 0U, bound_gap, reasons = 0U, jump_flags;
-    float rpm_bound, counts_bound, exact_gap_bound, expected_counts;
-    uint8_t first, rebase = 0U;
-    if (!c || !f || f->bus != 2U || f->id != 0x205U || f->extended) { return 0U; }
-    if (f->dlc != 8U) { fault(c, FEEDER_FAULT_DATA); return 0U; }
-    if (c->have_feedback && c->bus_epoch != epoch) {
-        fault(c, FEEDER_FAULT_CAN); rebase = 1U;
-    }
-    if (f->fault_epoch != epoch) { return 0U; }
-    if (now - f->received_ms > FEEDER_FEEDBACK_TIMEOUT_MS) {
-        fault(c, FEEDER_FAULT_FEEDBACK); return 0U;
-    }
-    angle = (uint16_t)(((uint16_t)f->data[0] << 8) | f->data[1]);
-    rpm = (int16_t)(((uint16_t)f->data[2] << 8) | f->data[3]);
-    current = (int16_t)(((uint16_t)f->data[4] << 8) | f->data[5]);
-    if (angle >= FEEDER_ENCODER_COUNTS) { fault(c, FEEDER_FAULT_DATA); return 0U; }
-    if (absolute((float)rpm) > c->config.max_feedback_rpm) { reasons |= FEEDER_FAULT_OVERSPEED; }
-    if (absolute((float)current) > (float)FEEDER_CURRENT_PROTOCOL_LIMIT) { reasons |= FEEDER_FAULT_CURRENT; }
-    first = (uint8_t)!c->have_feedback;
-    if (!first) {
-        gap = f->received_ms - c->last_feedback_ms;
-        if (gap >= APP_TICK_HALF_RANGE || (!gap && !rebase)) { return 0U; }
-        if (gap > FEEDER_FEEDBACK_TIMEOUT_MS) { reasons |= FEEDER_FAULT_FEEDBACK; rebase = 1U; }
-        delta = (int32_t)angle - (int32_t)c->raw_angle;
-        if (delta > 4096) { delta -= 8192; }
-        else if (delta < -4096) { delta += 8192; }
-        rpm_bound = absolute((float)rpm);
-        if (absolute((float)c->raw_rpm) > rpm_bound) { rpm_bound = absolute((float)c->raw_rpm); }
-        bound_gap = gap + FEEDER_GAP_UNCERTAINTY_MS;
-        expected_counts = rpm_bound * (float)bound_gap * ((float)FEEDER_ENCODER_COUNTS / 60000.0f);
-        /* At >= half a rotor revolution between samples, shortest-path unwrap
-         * is ambiguous. Lose the zero rather than guessing unseen revolutions. */
-        /* Integer receipt timestamps are quantized, not exact frame periods.
-         * V1E field sample: -604 counts, tick gap 1, speeds -2048/-2234rpm.
-         * Bound with gap+1ms; accumulate the actual encoder delta unchanged.
-         * Keep the existing 256-count discrepancy allowance, and use the same
-         * conservative time bound for half-turn ambiguity (never guess turns). */
-        exact_gap_bound = (rpm_bound + 120.0f) * (float)gap *
-            ((float)FEEDER_ENCODER_COUNTS / 60000.0f) + (float)FEEDER_JUMP_SLACK_COUNTS;
-        counts_bound = (rpm_bound + 120.0f) * (float)bound_gap *
-            ((float)FEEDER_ENCODER_COUNTS / 60000.0f) + (float)FEEDER_JUMP_SLACK_COUNTS;
-        jump_flags = 0U;
-        if (expected_counts >= 4064.0f) { jump_flags |= FEEDER_JUMP_HALF_TURN; }
-        if (absolute((float)delta) > counts_bound) { jump_flags |= FEEDER_JUMP_DELTA; }
-        if (!rebase && !reasons && !jump_flags && absolute((float)delta) > exact_gap_bound) {
-            ++c->timestamp_allowances;
-        }
-        if (!rebase && jump_flags) {
-            ++c->jump.events;
-            if (!c->jump.valid) {
-                c->jump.valid = 1U; c->jump.at_ms = f->received_ms;
-                c->jump.gap_ms = gap; c->jump.bound_gap_ms = bound_gap;
-                c->jump.age_ms = now - f->received_ms;
-                c->jump.sequence = c->feedback_sequence + 1U; c->jump.flags = jump_flags;
-                c->jump.previous_angle = c->raw_angle; c->jump.angle = angle;
-                c->jump.previous_rpm = c->raw_rpm; c->jump.rpm = rpm;
-                c->jump.feedback_raw = current; c->jump.command_raw = c->command_raw;
-                c->jump.delta_counts = delta; c->jump.limit_counts = counts_bound;
-                c->jump.expected_counts = expected_counts;
-                c->jump.busy = c->busy; c->jump.zero_valid = c->have_zero;
-                memcpy(c->jump.data, f->data, sizeof(c->jump.data));
-            }
-            reasons |= FEEDER_FAULT_JUMP; rebase = 1U;
-        }
-    }
-    if (reasons) { fault(c, reasons); rebase = 1U; }
-    if (!first && !rebase) { c->accumulated_counts += delta; }
-    c->raw_angle = angle; c->raw_rpm = rpm; c->raw_current = current;
-    c->last_feedback_ms = f->received_ms; c->bus_epoch = epoch;
-    c->have_feedback = 1U; ++c->feedback_sequence;
-    positions(c);
-    if (!c->busy && !c->have_zero) {
-        c->target_deg = c->position_deg; c->axis_target_deg = c->axis_position_deg;
-    }
-    if (!reasons && !rebase && absolute((float)rpm) <= c->config.settle_rpm &&
-        absolute((float)delta) <= 2.0f) {
-        if (c->recovery_samples < 255U) { ++c->recovery_samples; }
-    } else { c->recovery_samples = 0U; }
-    return 1U;
-}
-uint8_t Feeder_Clear(FeederController *c, uint32_t now)
-/* 功能：在反馈健康且允许恢复时清除可恢复的拨盘故障。 */
-{
-    if (!c || c->busy || !fresh(c, now) || c->recovery_samples < 3U ||
-        absolute((float)c->raw_rpm) > c->config.settle_rpm ||
-        absolute((float)c->raw_current) > (float)FEEDER_CURRENT_PROTOCOL_LIMIT) { return 0U; }
-    Feeder_Stop(c); c->faults = 0U; c->have_zero = 0U;
-    c->jump.valid = 0U; /* Lifetime count remains; next trial captures its own first jump. */
-    return 1U;
-}
-uint8_t Feeder_Zero(FeederController *c, uint32_t now)
-/* 功能：在原静止门禁允许时建立拨盘软件零点。 */
-{
-    if (!c || c->busy || c->faults || !fresh(c, now) || c->recovery_samples < 3U ||
-        !c->config.calibrated || !c->config.direction ||
-        absolute((float)c->raw_rpm) > c->config.settle_rpm) { return 0U; }
-    Feeder_Stop(c); c->zero_counts = c->accumulated_counts;
-    c->position_deg = c->target_deg = c->axis_position_deg = c->axis_target_deg = 0.0;
-    c->have_zero = 1U; return 1U;
-}
-static uint8_t consume_event(FeederController *c, uint8_t event, uint32_t sequence)
-/* 功能：按事件序号识别新单次请求，避免重复执行同一个发射事件。 */
-{
-    uint32_t distance;
-    if (!event) { return 0U; }
-    distance = sequence - c->last_shot_sequence;
-    if (c->have_shot_sequence && (!distance || distance >= APP_TICK_HALF_RANGE)) { return 0U; }
-    c->have_shot_sequence = 1U; c->last_shot_sequence = sequence; return 1U;
-}
-float Feeder_ContinuousRpm(const FeederController *c)
-/* 功能：按每发角度、传动比和连发间隔计算所需转子转速。 */
-{
-    return c ? c->config.step_deg * c->config.gear_ratio *
-        (1000.0f / (6.0f * (float)APP_FIRE_INTERVAL_MS)) : 0.0f;
-}
-
-static void completed_step(FeederController *c, uint32_t now)
-/* 功能：记录一发完成后的用时、误差、超调及累计完成计数。 */
-{
-    uint32_t i;
-    if (!c->outstanding) { return; }
-    ++c->completed;
-    c->last_motion_ms = now - c->pending_started_ms[0]; c->last_completed_ms = now;
-    c->last_motion_error_deg = (float)((c->position_deg - c->next_step_deg) /
-                                      (double)c->config.gear_ratio);
-    if (c->motion_kind == FEEDER_MOTION_SINGLE) { ++c->single_completed; }
-    else {
-        ++c->continuous_completed; ++c->burst_completed;
-        if (c->burst_completed == 1U) { c->burst_first_ms = now; }
-        c->burst_elapsed_ms = now - c->burst_first_ms;
-        c->measured_hz = c->burst_completed > 1U && c->burst_elapsed_ms ?
-            (float)(c->burst_completed - 1U) * 1000.0f / (float)c->burst_elapsed_ms : 0.0f;
-    }
-    --c->outstanding;
-    for (i = 0U; i < c->outstanding; ++i) { c->pending_started_ms[i] = c->pending_started_ms[i + 1U]; }
-}
-
-static void stream_crossings(FeederController *c)
-/* 功能：依据实测连续角度统计连发过程中已经跨过的发射边界。 */
-{
-    double step = (double)c->config.step_deg * (double)c->config.gear_ratio * c->config.direction;
-    while (c->outstanding && (c->position_deg - c->next_step_deg) * c->config.direction >= 0.0) {
-        completed_step(c, c->last_feedback_ms);
-        if (c->outstanding) { c->next_step_deg += step; }
-    }
-}
-
-static void finish_stream(FeederController *c, uint32_t now)
-/* 功能：在释放连发时收回多余前瞻目标，保留已接受的尾步目标。 */
-{
-    if (c->outstanding > 1U) {
-        c->cancelled += c->outstanding - 1U; c->outstanding = 1U;
-    }
-    /* Finish only the boundary currently being traversed. No lookahead survives
-     * a trigger release or wheel speed dip, even if it was previously accepted. */
-    c->target_deg = c->next_step_deg;
-    c->axis_target_deg = c->target_deg / (double)c->config.gear_ratio;
-    c->motion_kind = FEEDER_MOTION_TAIL; c->motion_started_ms = now; c->settling = 0U;
-}
-
-static float single_speed_limit(const FeederController *c, float error)
-/* 功能：依据剩余角度和减速参数计算单发接近目标时的速度上限。 */
-{
-    /* Rotor distance = 6*v*delay + 3*v*v/decel, with v in rpm.
-     * Solve for a speed that leaves a stopping margin. This is a controller
-     * setting, not a measurement of available mechanical deceleration. */
-    float lead = c->config.single_decel_rpm_s *
-        ((float)FEEDER_SINGLE_BRAKE_DELAY_MS * 0.001f);
-    float distance_term = c->config.single_decel_rpm_s * absolute(error) / 3.0f;
-    float root = sqrtf(lead * lead + distance_term);
-    /* Rationalized form retains precision for very small position errors. */
-    return distance_term / (root + lead);
-}
+/* 内部函数前置声明：主流程先展示，辅助实现放在文件后方。 */
+static float absolute(float x);
+static double abs_double(double x);
+static float clamp(float x, float low, float high);
+static uint8_t finite_value(float x);
+static uint8_t within(float x, float low, float high);
+static void positions(FeederController *c);
+static void reset_output(FeederController *c);
+static void fault(FeederController *c, uint32_t reason);
+static uint8_t fresh(const FeederController *c, uint32_t now);
+static uint8_t consume_event(FeederController *c, uint8_t event, uint32_t sequence);
+static void completed_step(FeederController *c, uint32_t now);
+static void stream_crossings(FeederController *c);
+static void finish_stream(FeederController *c, uint32_t now);
+static float single_speed_limit(const FeederController *c, float error);
 
 int16_t Feeder_Run(FeederController *c, uint32_t now, uint8_t allowed,
                    uint8_t wheels_ready, uint8_t shot_event, uint32_t sequence, uint8_t continuous)
-/* 功能：执行拨盘请求接收、单发/连发目标推进、位置速度控制和运行保护。 */
+/*
+ * 作用：执行拨盘单发/连发目标接收、位置与速度控制，并返回 C610 原始电流指令。
+ * 参数 c：拨盘控制器状态，保存反馈、累计角度、目标和发射计数。
+ * 参数 now：当前毫秒时间。
+ * 参数 allowed：本轮是否允许输出动力。
+ * 参数 wheels_ready：当前模式下拨盘是否具备发射条件。
+ * 参数 shot_event：本轮是否有新的发射事件。
+ * 参数 sequence：本次数据或事件序号，用于区分新旧输入。
+ * 参数 continuous：是否保持连发请求。
+ * 流程：单发目标增加 40 deg 输出轴角度；连发按事件推进目标，由 2 ms 闭环持续跟踪。
+ * 流程：单发接近目标时结合位置预测、停车距离限速及积分释放减少回摆。
+ * 流程：单次事件按序号消费，计数与实测越过步界的完成记录分开维护。
+ * 返回 C610 原始电流命令，范围受配置限制；该整数不表示 mA。
+ */
 {
     uint8_t event, new_feedback, started = 0U;
     uint32_t tick_gap = 0U, feedback_gap;
@@ -457,7 +193,430 @@ int16_t Feeder_Run(FeederController *c, uint32_t now, uint8_t allowed,
 
 int16_t Feeder_Step(FeederController *c, uint32_t now, uint8_t allowed,
                     uint8_t wheels_ready, uint8_t shot_event, uint32_t sequence)
-/* 功能：以非连续模式调用拨盘统一控制入口，保留单步调用兼容性。 */
+/*
+ * 作用：以非连续模式调用拨盘统一控制入口，保留单步调用兼容性。
+ * 参数 c：拨盘控制器状态，保存反馈、累计角度、目标和发射计数。
+ * 参数 now：当前毫秒时间。
+ * 参数 allowed：本轮是否允许输出动力。
+ * 参数 wheels_ready：当前模式下拨盘是否具备发射条件。
+ * 参数 shot_event：本轮是否有新的发射事件。
+ * 参数 sequence：本次数据或事件序号，用于区分新旧输入。
+ * 返回转换或计算后的整数值，供调用方继续处理。
+ */
 {
     return Feeder_Run(c, now, allowed, wheels_ready, shot_event, sequence, 0U);
+}
+
+uint8_t Feeder_OnFrame(FeederController *c, const CanFrame *f, uint32_t now, uint32_t epoch)
+/*
+ * 作用：解析 C610 反馈，进行解环、时效、跳变、速度和电流检查。
+ * 参数 c：拨盘控制器状态，保存反馈、累计角度、目标和发射计数。
+ * 参数 f：本次收到的 CAN 反馈帧。
+ * 参数 now：当前毫秒时间。
+ * 参数 epoch：当前 CAN 故障代次，用于隔离异常前的旧反馈。
+ * 返回是否识别并处理了该设备的数据；电机反馈中的故障状态仍由上层检查。
+ */
+{
+    uint16_t angle;
+    int16_t rpm, current;
+    int32_t delta = 0;
+    uint32_t gap = 0U, bound_gap, reasons = 0U, jump_flags;
+    float rpm_bound, counts_bound, exact_gap_bound, expected_counts;
+    uint8_t first, rebase = 0U;
+    if (!c || !f || f->bus != 2U || f->id != 0x205U || f->extended) { return 0U; }
+    if (f->dlc != 8U) { fault(c, FEEDER_FAULT_DATA); return 0U; }
+    if (c->have_feedback && c->bus_epoch != epoch) {
+        fault(c, FEEDER_FAULT_CAN); rebase = 1U;
+    }
+    if (f->fault_epoch != epoch) { return 0U; }
+    if (now - f->received_ms > FEEDER_FEEDBACK_TIMEOUT_MS) {
+        fault(c, FEEDER_FAULT_FEEDBACK); return 0U;
+    }
+    angle = (uint16_t)(((uint16_t)f->data[0] << 8) | f->data[1]);
+    rpm = (int16_t)(((uint16_t)f->data[2] << 8) | f->data[3]);
+    current = (int16_t)(((uint16_t)f->data[4] << 8) | f->data[5]);
+    if (angle >= FEEDER_ENCODER_COUNTS) { fault(c, FEEDER_FAULT_DATA); return 0U; }
+    if (absolute((float)rpm) > c->config.max_feedback_rpm) { reasons |= FEEDER_FAULT_OVERSPEED; }
+    if (absolute((float)current) > (float)FEEDER_CURRENT_PROTOCOL_LIMIT) { reasons |= FEEDER_FAULT_CURRENT; }
+    first = (uint8_t)!c->have_feedback;
+    if (!first) {
+        gap = f->received_ms - c->last_feedback_ms;
+        if (gap >= APP_TICK_HALF_RANGE || (!gap && !rebase)) { return 0U; }
+        if (gap > FEEDER_FEEDBACK_TIMEOUT_MS) { reasons |= FEEDER_FAULT_FEEDBACK; rebase = 1U; }
+        delta = (int32_t)angle - (int32_t)c->raw_angle;
+        if (delta > 4096) { delta -= 8192; }
+        else if (delta < -4096) { delta += 8192; }
+        rpm_bound = absolute((float)rpm);
+        if (absolute((float)c->raw_rpm) > rpm_bound) { rpm_bound = absolute((float)c->raw_rpm); }
+        bound_gap = gap + FEEDER_GAP_UNCERTAINTY_MS;
+        expected_counts = rpm_bound * (float)bound_gap * ((float)FEEDER_ENCODER_COUNTS / 60000.0f);
+        /* At >= half a rotor revolution between samples, shortest-path unwrap
+         * is ambiguous. Lose the zero rather than guessing unseen revolutions. */
+        /* Integer receipt timestamps are quantized, not exact frame periods.
+         * V1E field sample: -604 counts, tick gap 1, speeds -2048/-2234rpm.
+         * Bound with gap+1ms; accumulate the actual encoder delta unchanged.
+         * Keep the existing 256-count discrepancy allowance, and use the same
+         * conservative time bound for half-turn ambiguity (never guess turns). */
+        exact_gap_bound = (rpm_bound + 120.0f) * (float)gap *
+            ((float)FEEDER_ENCODER_COUNTS / 60000.0f) + (float)FEEDER_JUMP_SLACK_COUNTS;
+        counts_bound = (rpm_bound + 120.0f) * (float)bound_gap *
+            ((float)FEEDER_ENCODER_COUNTS / 60000.0f) + (float)FEEDER_JUMP_SLACK_COUNTS;
+        jump_flags = 0U;
+        if (expected_counts >= 4064.0f) { jump_flags |= FEEDER_JUMP_HALF_TURN; }
+        if (absolute((float)delta) > counts_bound) { jump_flags |= FEEDER_JUMP_DELTA; }
+        if (!rebase && !reasons && !jump_flags && absolute((float)delta) > exact_gap_bound) {
+            ++c->timestamp_allowances;
+        }
+        if (!rebase && jump_flags) {
+            ++c->jump.events;
+            if (!c->jump.valid) {
+                c->jump.valid = 1U; c->jump.at_ms = f->received_ms;
+                c->jump.gap_ms = gap; c->jump.bound_gap_ms = bound_gap;
+                c->jump.age_ms = now - f->received_ms;
+                c->jump.sequence = c->feedback_sequence + 1U; c->jump.flags = jump_flags;
+                c->jump.previous_angle = c->raw_angle; c->jump.angle = angle;
+                c->jump.previous_rpm = c->raw_rpm; c->jump.rpm = rpm;
+                c->jump.feedback_raw = current; c->jump.command_raw = c->command_raw;
+                c->jump.delta_counts = delta; c->jump.limit_counts = counts_bound;
+                c->jump.expected_counts = expected_counts;
+                c->jump.busy = c->busy; c->jump.zero_valid = c->have_zero;
+                memcpy(c->jump.data, f->data, sizeof(c->jump.data));
+            }
+            reasons |= FEEDER_FAULT_JUMP; rebase = 1U;
+        }
+    }
+    if (reasons) { fault(c, reasons); rebase = 1U; }
+    if (!first && !rebase) { c->accumulated_counts += delta; }
+    c->raw_angle = angle; c->raw_rpm = rpm; c->raw_current = current;
+    c->last_feedback_ms = f->received_ms; c->bus_epoch = epoch;
+    c->have_feedback = 1U; ++c->feedback_sequence;
+    positions(c);
+    if (!c->busy && !c->have_zero) {
+        c->target_deg = c->position_deg; c->axis_target_deg = c->axis_position_deg;
+    }
+    if (!reasons && !rebase && absolute((float)rpm) <= c->config.settle_rpm &&
+        absolute((float)delta) <= 2.0f) {
+        if (c->recovery_samples < 255U) { ++c->recovery_samples; }
+    } else { c->recovery_samples = 0U; }
+    return 1U;
+}
+
+float Feeder_ContinuousRpm(const FeederController *c)
+/*
+ * 作用：按每发角度、传动比和连发间隔计算所需转子转速。
+ * 参数 c：拨盘控制器状态，保存反馈、累计角度、目标和发射计数。
+ * 返回转子转速或其上限，rpm。
+ */
+{
+    return c ? c->config.step_deg * c->config.gear_ratio *
+        (1000.0f / (6.0f * (float)APP_FIRE_INTERVAL_MS)) : 0.0f;
+}
+
+static float single_speed_limit(const FeederController *c, float error)
+/*
+ * 作用：根据剩余转子角度和减速度设置，求留有延迟余量的单发速度上限。
+ * 参数 c：拨盘控制器状态，保存反馈、累计角度、目标和发射计数。
+ * 参数 error：目标减当前位置的转子角度误差，deg。
+ * 流程：停车距离由延迟期间距离与匀减速距离组成；速度单位为 rpm。
+ * 流程：使用有理化后的求根式，减少接近目标时两个相近浮点数相减的精度损失。
+ * 返回转子转速或其上限，rpm。
+ */
+{
+    /* Rotor distance = 6*v*delay + 3*v*v/decel, with v in rpm.
+     * Solve for a speed that leaves a stopping margin. This is a controller
+     * setting, not a measurement of available mechanical deceleration. */
+    float lead = c->config.single_decel_rpm_s *
+        ((float)FEEDER_SINGLE_BRAKE_DELAY_MS * 0.001f);
+    float distance_term = c->config.single_decel_rpm_s * absolute(error) / 3.0f;
+    float root = sqrtf(lead * lead + distance_term);
+    /* Rationalized form retains precision for very small position errors. */
+    return distance_term / (root + lead);
+}
+
+void Feeder_Init(FeederController *c)
+/*
+ * 作用：载入拨盘默认配置，并初始化编码器、动作和故障状态。
+ * 参数 c：拨盘控制器状态，保存反馈、累计角度、目标和发射计数。
+ * 不返回数值；处理结果保存在传入结构体或本文件维护的状态中。
+ */
+{
+    if (!c) { return; }
+    memset(c, 0, sizeof(*c));
+    c->config.step_deg = APP_FEEDER_STEP_DEG; c->config.gear_ratio = APP_FEEDER_GEAR_RATIO;
+    c->config.direction = APP_FEEDER_DIRECTION; c->config.calibrated = APP_FEEDER_CALIBRATED;
+    c->config.pos_kp = APP_FEEDER_POSITION_KP; c->config.speed_kp = APP_FEEDER_SPEED_KP; c->config.speed_ki = APP_FEEDER_SPEED_KI;
+    c->config.max_rpm = APP_FEEDER_MAX_RPM; c->config.max_feedback_rpm = APP_FEEDER_MAX_FEEDBACK_RPM;
+    c->config.continuous_max_rpm = APP_FEEDER_CONTINUOUS_MAX_RPM;
+    /* Track from the trigger time; the previous 10ms lag intentionally lost
+     * 8 shaft degrees at 40deg/50ms. Keep the existing boundary brake. */
+    c->config.continuous_brake_kp = APP_FEEDER_CONTINUOUS_BRAKE_KP; c->config.continuous_phase_ms = APP_FEEDER_CONTINUOUS_PHASE_MS;
+    c->config.single_decel_rpm_s = APP_FEEDER_SINGLE_DECEL_RPM_S;
+    c->config.current_limit = APP_FEEDER_CURRENT_LIMIT; c->config.tolerance_deg = APP_FEEDER_TOLERANCE_DEG;
+    c->config.settle_rpm = APP_FEEDER_SETTLE_RPM; c->config.settle_ms = APP_FEEDER_SETTLE_MS;
+    c->config.motion_timeout_ms = APP_FEEDER_MOTION_TIMEOUT_MS;
+    c->config.jam_rpm = APP_FEEDER_JAM_RPM; c->config.jam_current_raw = APP_FEEDER_JAM_CURRENT_RAW; c->config.jam_ms = APP_FEEDER_JAM_MS;
+}
+
+uint8_t Feeder_SetConfig(FeederController *c, const FeederConfig *p)
+/*
+ * 作用：在控制器允许修改时应用合法配置，并同步必要的控制状态。
+ * 参数 c：拨盘控制器状态，保存反馈、累计角度、目标和发射计数。
+ * 参数 p：待校验或应用的拨盘配置。
+ * 返回 1 表示本次校验/请求被接受，0 表示条件不满足；接受请求不代表动作已经完成。
+ */
+{
+    uint8_t invalidate;
+    if (!c || c->busy || !Feeder_ConfigValid(p)) { return 0U; }
+    invalidate = (uint8_t)(p->gear_ratio != c->config.gear_ratio ||
+        p->direction != c->config.direction || p->calibrated != c->config.calibrated);
+    c->config = *p; Feeder_Stop(c);
+    if (invalidate) { c->have_zero = 0U; }
+    positions(c); c->axis_target_deg = c->axis_position_deg;
+    return 1U;
+}
+
+static double abs_double(double x)
+/*
+ * 作用：返回双精度数值的绝对值，保留连续编码器计算精度。
+ * 参数 x：待处理的数值。
+ * 返回转换或计算后的整数值，供调用方继续处理。
+ */
+{ return x < 0.0 ? -x : x; }
+
+static uint8_t within(float x, float low, float high)
+/*
+ * 作用：检查数值是否有限且处于指定闭区间。
+ * 参数 x：待处理的数值。
+ * 参数 low：下界。
+ * 参数 high：上界。
+ * 返回 1 表示本次校验/请求被接受，0 表示条件不满足；接受请求不代表动作已经完成。
+ */
+{ return (uint8_t)(finite_value(x) && x >= low && x <= high); }
+
+static void positions(FeederController *c)
+/*
+ * 作用：由连续编码器计数和传动配置换算拨盘实际及目标角度。
+ * 参数 c：拨盘控制器状态，保存反馈、累计角度、目标和发射计数。
+ * 不返回数值；处理结果保存在传入结构体或本文件维护的状态中。
+ */
+{
+    c->position_deg = (double)(c->accumulated_counts - c->zero_counts) * ((360.0 / (double)8192U));
+    c->axis_position_deg = c->position_deg / (double)c->config.gear_ratio;
+    c->axis_target_deg = c->target_deg / (double)c->config.gear_ratio;
+}
+
+static void reset_output(FeederController *c)
+/*
+ * 作用：清除拨盘当前控制输出、速度参考及对应积分历史。
+ * 参数 c：拨盘控制器状态，保存反馈、累计角度、目标和发射计数。
+ * 不返回数值；处理结果保存在传入结构体或本文件维护的状态中。
+ */
+{
+    c->command_raw = 0; c->target_rpm = c->integral = 0.0f;
+    c->single_braking = 0U;
+    c->settling = c->jamming = c->have_control_tick = 0U;
+}
+
+void Feeder_Stop(FeederController *c)
+/*
+ * 作用：结束拨盘当前动作并清除控制输出，保留原配置和后续恢复所需状态。
+ * 参数 c：拨盘控制器状态，保存反馈、累计角度、目标和发射计数。
+ * 不返回数值；处理结果保存在传入结构体或本文件维护的状态中。
+ */
+{
+    if (!c) { return; }
+    if (c->busy && c->outstanding) {
+        ++c->aborted;
+        if (c->outstanding > 1U) { c->cancelled += c->outstanding - 1U; }
+    }
+    c->busy = 0U; reset_output(c);
+    c->outstanding = 0U; c->motion_kind = FEEDER_MOTION_IDLE;
+    c->target_deg = c->position_deg;
+    c->axis_target_deg = c->axis_position_deg;
+}
+
+static uint8_t fresh(const FeederController *c, uint32_t now)
+/*
+ * 作用：判断拨盘控制器最近一帧反馈是否仍在有效时间范围内。
+ * 参数 c：拨盘控制器状态，保存反馈、累计角度、目标和发射计数。
+ * 参数 now：当前毫秒时间。
+ * 返回 1 表示本次校验/请求被接受，0 表示条件不满足；接受请求不代表动作已经完成。
+ */
+{
+    uint32_t age = now - c->last_feedback_ms;
+    return (uint8_t)(c->have_feedback && age <= FEEDER_FEEDBACK_TIMEOUT_MS);
+}
+
+uint8_t Feeder_Clear(FeederController *c, uint32_t now)
+/*
+ * 作用：在反馈健康且允许恢复时清除可恢复的拨盘故障。
+ * 参数 c：拨盘控制器状态，保存反馈、累计角度、目标和发射计数。
+ * 参数 now：当前毫秒时间。
+ * 返回 1 表示本次校验/请求被接受，0 表示条件不满足；接受请求不代表动作已经完成。
+ */
+{
+    if (!c || c->busy || !fresh(c, now) || c->recovery_samples < 3U ||
+        absolute((float)c->raw_rpm) > c->config.settle_rpm ||
+        absolute((float)c->raw_current) > (float)FEEDER_CURRENT_PROTOCOL_LIMIT) { return 0U; }
+    Feeder_Stop(c); c->faults = 0U; c->have_zero = 0U;
+    c->jump.valid = 0U; /* Lifetime count remains; next trial captures its own first jump. */
+    return 1U;
+}
+
+uint8_t Feeder_Zero(FeederController *c, uint32_t now)
+/*
+ * 作用：在原静止门禁允许时建立拨盘软件零点。
+ * 参数 c：拨盘控制器状态，保存反馈、累计角度、目标和发射计数。
+ * 参数 now：当前毫秒时间。
+ * 返回 1 表示本次校验/请求被接受，0 表示条件不满足；接受请求不代表动作已经完成。
+ */
+{
+    if (!c || c->busy || c->faults || !fresh(c, now) || c->recovery_samples < 3U ||
+        !c->config.calibrated || !c->config.direction ||
+        absolute((float)c->raw_rpm) > c->config.settle_rpm) { return 0U; }
+    Feeder_Stop(c); c->zero_counts = c->accumulated_counts;
+    c->position_deg = c->target_deg = c->axis_position_deg = c->axis_target_deg = 0.0;
+    c->have_zero = 1U; return 1U;
+}
+
+static uint8_t consume_event(FeederController *c, uint8_t event, uint32_t sequence)
+/*
+ * 作用：按事件序号识别新单次请求，避免重复执行同一个发射事件。
+ * 参数 c：拨盘控制器状态，保存反馈、累计角度、目标和发射计数。
+ * 参数 event：本轮单次动作事件标志。
+ * 参数 sequence：本次数据或事件序号，用于区分新旧输入。
+ * 返回 1 表示本次校验/请求被接受，0 表示条件不满足；接受请求不代表动作已经完成。
+ */
+{
+    uint32_t distance;
+    if (!event) { return 0U; }
+    distance = sequence - c->last_shot_sequence;
+    if (c->have_shot_sequence && (!distance || distance >= APP_TICK_HALF_RANGE)) { return 0U; }
+    c->have_shot_sequence = 1U; c->last_shot_sequence = sequence; return 1U;
+}
+
+static void completed_step(FeederController *c, uint32_t now)
+/*
+ * 作用：记录一发完成后的用时、误差、超调及累计完成计数。
+ * 参数 c：拨盘控制器状态，保存反馈、累计角度、目标和发射计数。
+ * 参数 now：当前毫秒时间。
+ * 不返回数值；处理结果保存在传入结构体或本文件维护的状态中。
+ */
+{
+    uint32_t i;
+    if (!c->outstanding) { return; }
+    ++c->completed;
+    c->last_motion_ms = now - c->pending_started_ms[0]; c->last_completed_ms = now;
+    c->last_motion_error_deg = (float)((c->position_deg - c->next_step_deg) /
+                                      (double)c->config.gear_ratio);
+    if (c->motion_kind == FEEDER_MOTION_SINGLE) { ++c->single_completed; }
+    else {
+        ++c->continuous_completed; ++c->burst_completed;
+        if (c->burst_completed == 1U) { c->burst_first_ms = now; }
+        c->burst_elapsed_ms = now - c->burst_first_ms;
+        c->measured_hz = c->burst_completed > 1U && c->burst_elapsed_ms ?
+            (float)(c->burst_completed - 1U) * 1000.0f / (float)c->burst_elapsed_ms : 0.0f;
+    }
+    --c->outstanding;
+    for (i = 0U; i < c->outstanding; ++i) { c->pending_started_ms[i] = c->pending_started_ms[i + 1U]; }
+}
+
+static void stream_crossings(FeederController *c)
+/*
+ * 作用：依据实测连续角度统计连发过程中已经跨过的发射边界。
+ * 参数 c：拨盘控制器状态，保存反馈、累计角度、目标和发射计数。
+ * 不返回数值；处理结果保存在传入结构体或本文件维护的状态中。
+ */
+{
+    double step = (double)c->config.step_deg * (double)c->config.gear_ratio * c->config.direction;
+    while (c->outstanding && (c->position_deg - c->next_step_deg) * c->config.direction >= 0.0) {
+        completed_step(c, c->last_feedback_ms);
+        if (c->outstanding) { c->next_step_deg += step; }
+    }
+}
+
+static void finish_stream(FeederController *c, uint32_t now)
+/*
+ * 作用：在释放连发时收回多余前瞻目标，保留已接受的尾步目标。
+ * 参数 c：拨盘控制器状态，保存反馈、累计角度、目标和发射计数。
+ * 参数 now：当前毫秒时间。
+ * 不返回数值；处理结果保存在传入结构体或本文件维护的状态中。
+ */
+{
+    if (c->outstanding > 1U) {
+        c->cancelled += c->outstanding - 1U; c->outstanding = 1U;
+    }
+    /* Finish only the boundary currently being traversed. No lookahead survives
+     * a trigger release or wheel speed dip, even if it was previously accepted. */
+    c->target_deg = c->next_step_deg;
+    c->axis_target_deg = c->target_deg / (double)c->config.gear_ratio;
+    c->motion_kind = FEEDER_MOTION_TAIL; c->motion_started_ms = now; c->settling = 0U;
+}
+
+static float absolute(float x)
+/*
+ * 作用：返回数值的绝对值，用于误差或速度幅值比较。
+ * 参数 x：待处理的数值。
+ * 返回计算后的浮点数；具体物理单位与输入量程一致。
+ */
+{ return x < 0.0f ? -x : x; }
+
+static float clamp(float x, float low, float high)
+/*
+ * 作用：把数值限制在指定上下界内，避免控制请求越界。
+ * 参数 x：待处理的数值。
+ * 参数 low：下界。
+ * 参数 high：上界。
+ * 返回计算后的浮点数；具体物理单位与输入量程一致。
+ */
+{ return x < low ? low : (x > high ? high : x); }
+
+static uint8_t finite_value(float x)
+/*
+ * 作用：检查浮点数是否有限，拒绝 NaN 和无穷值进入控制。
+ * 参数 x：待处理的数值。
+ * 返回布尔判断结果，非零为满足条件，0 为不满足。
+ */
+{ return (uint8_t)(x == x && x >= -FLT_MAX && x <= FLT_MAX); }
+
+static void fault(FeederController *c, uint32_t reason)
+/*
+ * 作用：锁存 Yaw 控制故障并沿原停止路径清理当前输出。
+ * 参数 c：拨盘控制器状态，保存反馈、累计角度、目标和发射计数。
+ * 参数 reason：本次停止、中止或状态原因。
+ * 不返回数值；处理结果保存在传入结构体或本文件维护的状态中。
+ */
+{
+    c->faults |= reason; Feeder_Stop(c); c->have_zero = 0U;
+    c->recovery_samples = 0U;
+}
+
+uint8_t Feeder_ConfigValid(const FeederConfig *p)
+/*
+ * 作用：检查拨盘传动、方向、PID、速度、电流、到位和堵转参数的合法范围。
+ * 参数 p：待校验或应用的拨盘配置。
+ * 返回 1 表示本次校验/请求被接受，0 表示条件不满足；接受请求不代表动作已经完成。
+ */
+{
+    if (!p) { return 0U; }
+    return (uint8_t)(within(p->step_deg, 0.1f, 360.0f) &&
+        within(p->gear_ratio, 0.1f, 100.0f) &&
+        (p->direction == -1 || p->direction == 0 || p->direction == 1) &&
+        p->calibrated <= 1U && (!p->calibrated || p->direction != 0) &&
+        within(p->pos_kp, 0.001f, 100.0f) &&
+        within(p->speed_kp, 0.001f, 100.0f) && within(p->speed_ki, 0.0f, 1000.0f) &&
+        within(p->max_rpm, 1.0f, 6000.0f) &&
+        within(p->max_feedback_rpm, p->max_rpm, 6000.0f) &&
+        within(p->continuous_max_rpm, 1.0f, p->max_feedback_rpm) &&
+        within(p->continuous_brake_kp, 0.001f, 1000.0f) &&
+        within(p->continuous_phase_ms, 0.0f, (float)APP_FIRE_INTERVAL_MS * 0.8f) &&
+        (p->single_decel_rpm_s == 0.0f || within(p->single_decel_rpm_s, 1000.0f, 200000.0f)) &&
+        within(p->current_limit, 1.0f, (float)FEEDER_CURRENT_CONFIG_LIMIT) &&
+        within(p->tolerance_deg, 0.05f, 5.0f) &&
+        within(p->settle_rpm, 0.0f, 100.0f) &&
+        within(p->jam_rpm, 0.0f, 100.0f) &&
+        within(p->jam_current_raw, 1.0f, (float)FEEDER_CURRENT_CONFIG_LIMIT) &&
+        p->settle_ms >= 5U && p->settle_ms <= 500U &&
+        p->motion_timeout_ms >= 50U && p->motion_timeout_ms <= 5000U &&
+        p->jam_ms >= 20U && p->jam_ms <= 2000U && p->jam_ms < p->motion_timeout_ms);
 }

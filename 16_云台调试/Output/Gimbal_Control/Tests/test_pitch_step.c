@@ -22,7 +22,7 @@ void test_run(void)
     PitchStep_Init(0); PitchStep_Sample(0, 0U, 0.0f, 0.0f, 0.0f, 0U);
     PitchStep_Abort(0, 0U, PITCH_STEP_STOP, 0U); PitchStep_Command(0, 0U, 0.0f);
     CHECK(!PitchStep_Start(0, 0U, 0.0f, 30.0f));
-    PitchStep_Init(&pitch); CHECK(pitch.phase == PITCH_STEP_IDLE && pitch.response_ms == PITCH_STEP_UNREACHED);
+    PitchStep_Init(&pitch); CHECK(pitch.phase == YAW_STEP_IDLE && pitch.response_ms == PITCH_STEP_UNREACHED);
     CHECK(!PitchStep_Start(&pitch, 0U, 0.0f, 50.01f));
     test_stage = 2U;
     ramp(1000U, 270U, 30.0f);
@@ -58,11 +58,11 @@ void test_run(void)
     test_stage = 5U;
     PitchStep_Init(&pitch); CHECK(PitchStep_Start(&pitch, 100U, 0.0f, 30.0f));
     PitchStep_Command(&pitch, 102U, 7.2f); CHECK(pitch.command_samples == 1U && pitch.first_command_nm == 7.2f);
-    PitchStep_Abort(&pitch, 104U, PITCH_STEP_PID_CHANGE, 0U);
-    CHECK(pitch.phase == PITCH_STEP_ABORTED && pitch.reason == PITCH_STEP_PID_CHANGE && !pitch.sse_valid && !pitch.pass);
+    PitchStep_Abort(&pitch, 104U, YAW_STEP_PID_CHANGE, 0U);
+    CHECK(pitch.phase == PITCH_STEP_ABORTED && pitch.reason == YAW_STEP_PID_CHANGE && !pitch.sse_valid && !pitch.pass);
     CHECK(PitchStep_Start(&pitch, 200U, 0.0f, 30.0f));
     PitchStep_Sample(&pitch, 300U, 30.0f, 0.0f, 0.0f, 0U);
-    CHECK(pitch.phase == PITCH_STEP_ABORTED && pitch.reason == PITCH_STEP_GAP && !pitch.pass);
+    CHECK(pitch.phase == PITCH_STEP_ABORTED && pitch.reason == YAW_STEP_GAP && !pitch.pass);
     test_stage = 6U;
     PitchStep_Init(&pitch); CHECK(PitchStep_Start(&pitch, 0U, 0.0f, 30.0f));
     for (t = 10U; t <= 5000U; t += 10U) {

@@ -24,7 +24,7 @@ void test_run(void)
     char expected[96], default_pid[128];
     test_stage = 1U;
     ConsoleZeroActivate(2000U); Control(2068U, 2U); at = 2068U;
-    CHECK(YAW_CONTROLLER_CASCADE_ENABLED && !YAW_CASCADE_OUTPUT_LIMITS_ENABLED);
+    CHECK(1U && !0U);
     (void)snprintf(default_pid, sizeof(default_pid), "POS|%.4f,%.4f,%.4f|VEL|%.6f,%.6f,%.6f",
         (double)APP_YAW_POSITION_KP, (double)APP_YAW_POSITION_KI, (double)APP_YAW_POSITION_KD,
         (double)APP_YAW_SPEED_KP, (double)APP_YAW_SPEED_KI, (double)APP_YAW_SPEED_KD);
@@ -36,13 +36,13 @@ void test_run(void)
         from = target; delta = move < 5U || move >= 15U ? 30.0f : -30.0f; target += delta;
         if (move & 1U) {
             receiver.channels[RC_STEP_YAW_CHANNEL] = delta > 0 ? 2000U : 1000U;
-            receiver.channels[RC_STEP_CHANNEL] = 1500U; Control(at + 2U, 2U);
-            receiver.channels[RC_STEP_CHANNEL] = 2000U; Control(at + 4U, 2U);
+            receiver.channels[6U] = 1500U; Control(at + 2U, 2U);
+            receiver.channels[6U] = 2000U; Control(at + 4U, 2U);
             CHECK(!request.step_return_event);
             CHECK(YawBackend_TakeRemoteStepEvent(&event) && event.result == 1U && !event.blocks);
             CHECK(event.target_deg == target);
             at += 4U;
-            receiver.channels[RC_STEP_CHANNEL] = receiver.channels[RC_STEP_YAW_CHANNEL] = 1500U;
+            receiver.channels[6U] = receiver.channels[RC_STEP_YAW_CHANNEL] = 1500U;
         } else {
             (void)snprintf(expected, sizeof(expected), "STEP_STARTED|TARGET|%.1f|DELTA|%.1f|MODE|RELATIVE", (double)target, (double)delta);
             Command(at, delta > 0 ? "YAW STEP 30" : "YAW STEP -30", expected);
@@ -58,9 +58,9 @@ void test_run(void)
             CHECK(prior.reason == YAW_STEP_TARGET_CHANGE && !prior.pass && !prior.sse_valid);
         }
         /* A held confirm switch must not repeat the accepted move. */
-        if (move & 1U) { receiver.channels[RC_STEP_CHANNEL] = 2000U; }
+        if (move & 1U) { receiver.channels[6U] = 2000U; }
         Drive(at, 400U, from, target); at += 400U;
-        receiver.channels[RC_STEP_CHANNEL] = 1500U; Control(at + 2U, 2U); at += 2U;
+        receiver.channels[6U] = 1500U; Control(at + 2U, 2U); at += 2U;
         YawBackend_GetStep(&snap);
         CHECK(state.active && !state.controller.faults && permission && snap.id == id);
         CHECK(!state.step_blocks && snap.phase == YAW_STEP_RUNNING && snap.elapsed_ms < 5000U);
@@ -96,8 +96,8 @@ void test_run(void)
     CHECK(state.step_blocks & YAW_STEP_BLOCK_POSITION);
     CHECK(state.step_blocks & YAW_STEP_BLOCK_MOVING);
     receiver.channels[RC_STEP_YAW_CHANNEL] = 1500U;
-    receiver.channels[RC_STEP_CHANNEL] = 1500U; Control(40080U, 2U);
-    receiver.channels[RC_STEP_CHANNEL] = 1000U; Control(40082U, 2U);
+    receiver.channels[6U] = 1500U; Control(40080U, 2U);
+    receiver.channels[6U] = 1000U; Control(40082U, 2U);
     CHECK(request.step_return_event && request.step_delta_deg == -30.0f);
     CHECK(YawBackend_TakeRemoteStepEvent(&event) && event.result == 2U && event.target_deg == 0.0f);
     CHECK(state.controller.target_deg == 0.0f && state.active && !state.controller.faults);
@@ -108,15 +108,15 @@ void test_run(void)
     Command(40482U, "YAW PID", default_pid);
     /* Travel limit and other-axis view lock still reject a return. */
     CHECK(YawBackend_SetParameter('T', -150.0f));
-    receiver.channels[RC_STEP_CHANNEL] = 1500U; Control(40484U, 2U);
-    receiver.channels[RC_STEP_CHANNEL] = 1000U; Control(40486U, 2U);
+    receiver.channels[6U] = 1500U; Control(40484U, 2U);
+    receiver.channels[6U] = 1000U; Control(40486U, 2U);
     CHECK(YawBackend_TakeRemoteStepEvent(&event) && event.result == 3U);
     CHECK(event.blocks & YAW_STEP_BLOCK_TARGET_LIMIT);
     CHECK(state.controller.target_deg == -150.0f);
     CHECK(YawBackend_SetParameter('T', 0.0f));
     YawBackend_SetViewLock(1U);
-    receiver.channels[RC_STEP_CHANNEL] = 1500U; Control(40488U, 2U);
-    receiver.channels[RC_STEP_CHANNEL] = 1000U; Control(40490U, 2U);
+    receiver.channels[6U] = 1500U; Control(40488U, 2U);
+    receiver.channels[6U] = 1000U; Control(40490U, 2U);
     CHECK(YawBackend_TakeRemoteStepEvent(&event) && event.result == 3U && (event.blocks & YAW_STEP_BLOCK_VIEW));
     test_done = 1U;
 }

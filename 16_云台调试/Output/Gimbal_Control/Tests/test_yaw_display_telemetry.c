@@ -1,5 +1,5 @@
 #include "app_config.h"
-#if APP_PITCH_ENABLED
+#if 1U
 #define PITCH_TELEMETRY_TEST_ENTRY pitch_telemetry_baseline_test_run
 #include "test_pitch_telemetry.c"
 #define step_sample yaw_step_sample
@@ -50,7 +50,7 @@ void test_run(void)
     CHECK(strstr(output, "RISE_STYLE|STAIRCASE|RISE_SAMPLE_MS|"));
     frame(1U); CHECK(demo_columns[72] == 0 && demo_columns[73] == 0 && demo_columns[74] == 1);
     clear_output(); command_line("YAW VIEW"); CHECK(strstr(output, "GROUP|gimbal_demo|COLS|75|"));
-#if APP_PITCH_ENABLED
+#if 1U
     CHECK(AppConsole_GetViewHoldMask() == APP_VIEW_HOLD_PITCH);
 #endif
     step_sample.phase = YAW_STEP_RUNNING; step_sample.id++;

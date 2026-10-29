@@ -1,19 +1,16 @@
 /**
  * @file yaw_console.c
- * @brief Yaw 串口命令和真实成绩
- * 配置入口：App/app_config.h；接口声明见同目录对应头文件。
- * 对外函数（3）：
- *   YawConsole_CancelPreparation / YawConsole_Poll / YawConsole_Handle
- * 内部函数（9）：
- *   SafeOffReason / SafeOff / PreparationTick / SafeStep / StepBlockReason / yaw_console_StepReport
- *   / ClearReport / BusReport / yaw_console_BriefStatus
- * 文件级变量/常量（3；局部变量见对应函数）：
+ * 作用：Yaw 串口命令和真实成绩
+ * 对外函数：
+ *   YawConsole_Handle / YawConsole_Poll / YawConsole_CancelPreparation
+ * 内部函数：
+ *   yaw_console_StepReport / PreparationTick / yaw_console_BriefStatus / BusReport / SafeOffReason /
+ *   SafeOff / SafeStep / StepBlockReason
+ * 文件级变量（函数局部变量在各函数内定义）：
  *   ready_phase：Yaw 人工准备流程当前阶段。
  *   ready_clear_sent：本次准备是否已经发送过固定清错帧。
  *   ready_started_ms：Yaw 本次准备流程开始时间。
- * 维护约束：函数前的功能说明对应当前实现，修改行为时同步更新。
  */
-/* YAW 命令：独立准备流程、配置查询和实测报告。 */
 #include "yaw_console.h"
 #include "yaw_backend.h"
 #include "app_config.h"
@@ -31,269 +28,24 @@
 static uint8_t ready_phase, ready_clear_sent;
 static uint32_t ready_started_ms;
 
-static const char *SafeOffReason(RemoteInput_State *remote_out)
-/* 功能：核对安全 OFF、新鲜反馈和遥控回中条件，返回准备操作的阻塞原因。 */
-{
-    RemoteInput_State remote;
-    RemoteFrame frame;
-    RemoteCommand command;
-    AppState app;
-    RemoteInput_GetState(&remote); AppTasks_GetState(&app);
-    if (remote_out) { *remote_out = remote; }
-    memset(&frame, 0, sizeof(frame));
-    memcpy(frame.channels, remote.channels, sizeof(frame.channels));
-    frame.has_frame = remote.has_frame; frame.received_ms = remote.received_ms;
-    RemoteMapper_Map(&frame, &command);
-    if (!remote.has_frame || (uint32_t)(HAL_GetTick() - remote.received_ms) >= REMOTE_TIMEOUT_MS) { return "STALE"; }
-    if (!command.valid) { return "INVALID"; }
-    if (!command.failsafe_ok) { return "CH8_LOCK"; }
-    if (command.arm != RC_LOW) { return "CH5_NOT_OFF"; }
-    if (!command.neutral) { return "NOT_NEUTRAL"; }
-    if (app.logic.safety.operator_armed) { return "ARMED"; }
-
-    return "OK";
-}
-
-static uint8_t SafeOff(void)
-/* 功能：判断 Yaw 当前是否满足准备流程要求的安全 OFF 条件。 */
-{ return strcmp(SafeOffReason(0), "OK") == 0; }
-
-void YawConsole_CancelPreparation(void)
-/* 功能：取消尚未完成的 Yaw 准备流程，避免旧操作继续接管会话。 */
-{
-    taskENTER_CRITICAL();
-    if (ready_phase) { ready_phase = 0U; (void)YawBackend_Request(0U); }
-    taskEXIT_CRITICAL();
-}
-
-static const char *PreparationTick(void)
-/* 功能：按反馈和超时推进 Yaw 停止、监测、参考捕获及请求准备流程。 */
-{
-    YawBackendState yaw;
-    CanBusDiagnostics bus;
-    const char *reason;
-    uint32_t now = HAL_GetTick();
-    if (!ready_phase) { return 0; }
-    reason = SafeOffReason(0);
-    if (strcmp(reason, "OK") != 0) { goto failed; }
-    CanBus_GetDiagnostics(&bus);
-    if (!bus.state.started || bus.state.fault_epoch || bus.hal_error[0] || bus.hal_error[1]) {
-        reason = "CAN_FAULT_USE_YAW_BUS"; goto failed;
-    }
-    YawBackend_GetState(&yaw);
-    if (yaw.controller.faults & (YAW_CONTROLLER_FAULT_CAN | (1UL << 17))) {
-        reason = "CAN_OR_TX_FAULT_USE_YAW_BUS"; goto failed;
-    }
-    if ((uint32_t)(now - ready_started_ms) >= YAW_READY_TIMEOUT_MS) {
-        reason = "TIMEOUT_USE_YAW_STATUS"; goto failed;
-    }
-    if (!yaw.online) { return 0; }
-    if (ready_phase == 2U) {
-        if (!yaw.requested || !yaw.zero_set || yaw.controller.faults || yaw.feedback.status != 0U) {
-            reason = "PREPARE_STATE_CHANGED"; goto failed;
-        }
-        if (yaw.stop_pending) { return 0; }
-        YawBackend_ReleasePreparation(); ready_phase = 0U; return "OK";
-    }
-    if (yaw.feedback.status == 13U) {
-        /* 仅人工READY这一次会话允许单次FB；沿用既有全部清错门禁。 */
-        if (!ready_clear_sent && YawBackend_ClearCommsFault()) { ready_clear_sent = 1U; }
-        return 0;
-    }
-    if (yaw.feedback.status > 1U) { reason = "DRIVER_STATUS_USE_YAW_STATUS"; goto failed; }
-    if (yaw.feedback.status != 0U || yaw.stop_pending || !YawBackend_CaptureReference()) { return 0; }
-    AppTasks_RequestStop();
-    if (!YawBackend_Request(1U)) { reason = "PREPARE_REJECTED"; goto failed; }
-    ready_phase = 2U;
-    return 0;
-failed:
-    ready_phase = 0U;
-    (void)YawBackend_Request(0U); AppTasks_RequestStop();
-    return reason;
-}
-
-static uint8_t SafeStep(void)
-/* 功能：核对当前遥控、解锁与回中条件是否允许串口阶跃。 */
-{
-    RemoteInput_State remote;
-    RemoteFrame frame;
-    RemoteCommand command;
-    AppState app;
-    RemoteInput_GetState(&remote); AppTasks_GetState(&app);
-    memset(&frame, 0, sizeof(frame)); memcpy(frame.channels, remote.channels, sizeof(frame.channels));
-    frame.has_frame = remote.has_frame; frame.received_ms = remote.received_ms;
-    RemoteMapper_Map(&frame, &command);
-    return (uint8_t)(remote.has_frame && (uint32_t)(HAL_GetTick() - remote.received_ms) < REMOTE_TIMEOUT_MS &&
-        command.valid && command.failsafe_ok && command.neutral && command.arm == RC_HIGH &&
-        (command.gimbal_mode == GIMBAL_MANUAL || command.gimbal_mode == GIMBAL_TEST) &&
-        app.logic.safety.operator_armed);
-}
-
-static const char *StepBlockReason(uint32_t blocks)
-/* 功能：把 Yaw 阶跃门禁位转换为优先显示的拒绝原因。 */
-{
-    if (blocks & YAW_STEP_BLOCK_VIEW) { return "VIEW_LOCKED_USE_YAW_VIEW"; }
-    if (blocks & YAW_STEP_BLOCK_FAULT) { return "FAULT"; }
-    if (blocks & YAW_STEP_BLOCK_REFERENCE) { return "NEED_ZERO"; }
-    if (blocks & YAW_STEP_BLOCK_FEEDBACK) { return "FEEDBACK"; }
-    if (blocks & YAW_STEP_BLOCK_TRANSITION) { return "WAIT_ENABLE_OR_STOP"; }
-    if (blocks & YAW_STEP_BLOCK_INACTIVE) { return "NOT_ACTIVE"; }
-    if (blocks & YAW_STEP_BLOCK_PERMISSION) { return "REMOTE_OR_OUTPUT_GUARD"; }
-    if (blocks & YAW_STEP_BLOCK_TARGET_LIMIT) { return "TARGET_LIMIT"; }
-    if (blocks & YAW_STEP_BLOCK_WINDOW) { return "WAIT_5S_WINDOW"; }
-    if (blocks & YAW_STEP_BLOCK_HOME) { return "SEND_HOME_FIRST"; }
-    if (blocks & YAW_STEP_BLOCK_POSITION) { return "WAIT_TARGET_BAND"; }
-    if (blocks & YAW_STEP_BLOCK_MOVING) { return "WAIT_STILL"; }
-    if (blocks & YAW_STEP_BLOCK_STILL) { return "WAIT_STILL_HOLD"; }
-    return "READY";
-}
-
-static uint8_t yaw_console_StepReport(const YawStep *step, char *response, size_t capacity)
-/* 功能：格式化Yaw真实阶跃成绩、控制参数和终止原因。 */
-{
-    static const char *phases[] = { "IDLE", "RUNNING", "DONE", "ABORTED" };
-    static const char *reasons[] = { "NONE", "STOP", "FAULT", "PID_CHANGE", "TARGET_CHANGE", "MANUAL", "GAP", "DATA", "FF_CHANGE" };
-    uint32_t rise = step->t10_ms != YAW_STEP_UNREACHED && step->t90_ms != YAW_STEP_UNREACHED ?
-        step->t90_ms - step->t10_ms : YAW_STEP_UNREACHED;
-    int length = snprintf(response, capacity,
-        "Y|STEP|ID|%lu|STATE|%s|REASON|%s|VALID|%u|START|%.3f|TARGET|%.3f|WINDOW_MS|%lu|RESP_MS|%ld|T90_MS|%ld|RISE_MS|%ld|SETTLE_MS|%ld|OS_DEG|%.6f|OS_PCT|%.3f|SSE_DEG|%.6f|SSE_VALID|%u|PASS|%u|FAULT|%lu|VMAX_DPS|%.2f|TMAX_NM|%.5f|N|%lu|GAP_MS|%lu|%s|%lu|%s|%.4f|%s|%.4f|%s|%.4f|CMD_N|%lu|FIRST_NM|%.5f",
-        (unsigned long)step->id, step->phase <= YAW_STEP_ABORTED ? phases[step->phase] : "UNKNOWN",
-        step->reason <= YAW_STEP_FF_CHANGE ? reasons[step->reason] : "UNKNOWN",
-        (unsigned)(step->phase == YAW_STEP_DONE), (double)step->start_deg, (double)step->target_deg,
-        (unsigned long)step->elapsed_ms, (long)(int32_t)step->response_ms, (long)(int32_t)step->t90_ms,
-        (long)(int32_t)rise, (long)(int32_t)step->settle_ms, (double)step->overshoot_deg,
-        (double)step->overshoot_pct, (double)step->steady_error_deg, (unsigned)step->sse_valid,
-        (unsigned)step->pass, (unsigned long)step->faults, (double)step->peak_velocity_dps,
-        (double)step->peak_torque_nm, (unsigned long)step->samples, (unsigned long)step->max_gap_ms,
-        step->cascade ? "SAT_N" : "LIMIT_N", (unsigned long)step->limited_samples,
-        step->cascade ? "PKP" : "KP", (double)step->kp,
-        step->cascade ? "PKI" : "KI", (double)step->ki,
-        step->cascade ? "PKD" : "KD", (double)step->kd,
-        (unsigned long)step->command_samples, (double)step->first_command_nm);
-    if (length <= 0 || (size_t)length >= capacity) { return 0U; }
-    {
-        size_t used = (size_t)length;
-        if (step->cascade) {
-            length = snprintf(response + used, capacity - used,
-                "|CTRL|CASCADE|VKP|%.6f|VKI|%.6f|VKD|%.6f|VREF_MAX_DPS|%.1f|VFILTER_MS|%u|OUTPUT_LIMITS|%u"
-                "|BAND02|0.2|RESP02_MS|%ld|SETTLE02_MS|%ld|PASS02|%u"
-                "|TIME_LIMIT_MS|250|OS_LIMIT_DEG|0.2|SSE_LIMIT_DEG|0.2|SSE_PEAK_DEG|%.6g|ASSESSMENT|FINAL_SETTLE"
-                "|FF_ON|%u|FF_TYPE|ACCEL|FKA|%.6g|FMAX|%.6g|SHAPE_MS|%lu|SHAPE_V|%.6g\r\n",
-                (double)step->vkp, (double)step->vki, (double)step->vkd,
-                (double)step->vmax_dps, (unsigned)YAW_CASCADE_VELOCITY_FILTER_MS, (unsigned)step->output_limits,
-                (long)(int32_t)step->response_ms, (long)(int32_t)step->settle_ms, (unsigned)step->pass,
-                (double)step->ss_max_error,
-                (unsigned)step->ff_enabled, (double)step->ff_acceleration_gain,
-                (double)step->ff_limit_nm, (unsigned long)step->shape_ms,
-                (double)step->shape_velocity_gain);
-        } else { length = snprintf(response + used, capacity - used, "\r\n"); }
-        return (uint8_t)(length > 0 && (size_t)length < capacity - used);
-    }
-}
-
-uint8_t YawConsole_Poll(char *response, size_t capacity)
-/* 功能：推进Yaw准备操作和异步事件，按需生成一条回执或真实结果。 */
-{
-    YawStep snapshot, report;
-    YawRemoteStepEvent event;
-    if (!response || !capacity) { return 0U; }
-    if (capacity >= 128U) {
-        const char *result;
-        taskENTER_CRITICAL(); result = PreparationTick(); taskEXIT_CRITICAL();
-        if (result) {
-            if (strcmp(result, "OK") == 0) {
-                (void)snprintf(response, capacity, "Y|OK|READY|ZERO_SET|1|REQUESTED|1|ACTIVE|0|NEXT|NEW_CH5_OFF_THEN_MANUAL_OR_TEST\r\n");
-            } else { (void)snprintf(response, capacity, "Y|ERROR|READY|%s\r\n", result); }
-            return 1U;
-        }
-    }
-    if (capacity >= 128U && YawBackend_TakeRemoteStepEvent(&event)) {
-        static const char *results[] = { "NONE", "STARTED", "BACK_30", "START_GUARD",
-#if APP_PITCH_ENABLED
-            "OTHER_AXIS"
-#else
-            "PITCH_NOT_IMPLEMENTED"
-#endif
-        };
-        (void)snprintf(response, capacity, "Y|REMOTE_STEP|SEQ|%lu|RESULT|%s|TARGET|%.1f|WHY|%s|BLOCKS|%lu\r\n",
-            (unsigned long)event.sequence, event.result <= 4U ? results[event.result] : "UNKNOWN",
-            (double)event.target_deg, StepBlockReason(event.blocks), (unsigned long)event.blocks);
-        return 1U;
-    }
-    YawBackend_GetStep(&snapshot);
-    if (!snapshot.pending || !yaw_console_StepReport(&snapshot, response, capacity)) { return 0U; }
-    if (!YawBackend_TakeStepReport(&report)) { return 0U; }
-    if (report.id != snapshot.id) { return yaw_console_StepReport(&report, response, capacity); }
-    return 1U;
-}
-
-static void ClearReport(const char *prefix, const char *remote_override, char *response, size_t capacity)
-/* 功能：格式化 Yaw 清错条件、停止确认和最近一次清错结果。 */
-{
-    RemoteInput_State remote;
-    YawBackendState yaw;
-    YawClearCheck check;
-    const char *remote_reason;
-    taskENTER_CRITICAL();
-    remote_reason = SafeOffReason(&remote);
-    if (remote_override) { remote_reason = remote_override; }
-    YawBackend_GetState(&yaw); YawBackend_GetClearCheck(&check);
-    taskEXIT_CRITICAL();
-    (void)snprintf(response, capacity,
-        "%s|REMOTE|%s|BLOCKS|%lu|LAST_BLOCKS|%lu|SAMPLES|%u|HOLD_MS|%lu|VEL_DPS|%.2f|D_TEMP|%d|M_TEMP|%d|MONITOR|%u|FD_ATTEMPTED|%u|FD_AGE_MS|%lu|FD_RESULT|%u|FD_CANCEL|%u|MAILBOX|%lu|CAN_EPOCH|%lu|CLEAR_RESULT|%u|OFF_MOTION|%lu|ACTUATION_STARTED|%u|REQUIRED_HOLD_MS|%lu|CH|%u,%u,%u,%u,%u,%u,%u,%u\r\n",
-        prefix, remote_reason, (unsigned long)check.blocks, (unsigned long)check.last_blocks,
-        (unsigned)check.samples, (unsigned long)check.hold_ms, (double)yaw.controller.velocity_dps,
-        (int)yaw.feedback.driver_temp_c, (int)yaw.feedback.motor_temp_c, (unsigned)check.monitoring,
-        (unsigned)check.fd_sent, (unsigned long)check.fd_age_ms, (unsigned)check.fd_result,
-        (unsigned)check.fd_cancel, (unsigned long)check.mailbox_pending, (unsigned long)check.can_epoch,
-        (unsigned)check.clear_result, (unsigned long)check.off_motion_faults,
-        (unsigned)check.actuation_started, (unsigned long)check.required_hold_ms,
-        (unsigned)remote.channels[0], (unsigned)remote.channels[1],
-        (unsigned)remote.channels[2], (unsigned)remote.channels[3], (unsigned)remote.channels[4],
-        (unsigned)remote.channels[5], (unsigned)remote.channels[6], (unsigned)remote.channels[7]);
-}
-
-static void BusReport(char *response, size_t capacity)
-/* 功能：发布双 CAN 收发计数、邮箱占用及首次错误证据，不改变输出许可。 */
-{
-    CanBusDiagnostics bus;
-    size_t used;
-    uint32_t i;
-    int count;
-    CanBus_GetDiagnostics(&bus);
-    count = snprintf(response, capacity, "Y|BUS|%s|EPOCH|%lu|DROP|%lu",
-        APP_YAW_VERSION, (unsigned long)bus.state.fault_epoch, (unsigned long)bus.state.dropped);
-    if (count < 0 || (size_t)count >= capacity) { return; }
-    used = (size_t)count;
-    for (i = 0U; i < 2U; ++i) {
-        count = snprintf(response + used, capacity - used,
-            "|C%u_RX|%lu|TX|%lu|ERR|%lu|LAST|0x%08lX|HAL|0x%08lX|FIRST|0x%08lX|SOURCE|%u|FIRST_MS|%lu|PENDING|%lu%s",
-            (unsigned)(i + 1U), (unsigned long)bus.state.rx_frames[i],
-            (unsigned long)bus.state.tx_frames[i], (unsigned long)bus.state.errors[i],
-            (unsigned long)bus.state.last_error[i], (unsigned long)bus.hal_error[i],
-            (unsigned long)bus.state.first_error[i], (unsigned)bus.state.first_error_source[i],
-            (unsigned long)bus.state.first_error_ms[i], (unsigned long)bus.pending[i],
-            i == 1U ? "\r\n" : "");
-        if (count < 0 || (size_t)count >= capacity - used) { return; }
-        used += (size_t)count;
-    }
-}
-
-static void yaw_console_BriefStatus(char *response, size_t capacity)
-/* 功能：格式化Yaw精简状态，供高频查询读取且不改变运行状态。 */
-{
-    YawBackendState state;
-    YawBackend_GetState(&state);
-    (void)snprintf(response, capacity,
-        "Y|STATE|%s|ONLINE|%u|ACTIVE|%u|REQUESTED|%u|ZERO_SET|%u|FAULT|%lu|AGE_MS|%lu|ANGLE|%.3f|TARGET|%.3f|VEL_DPS|%.2f|TORQUE_NM|%.5f\r\n",
-        APP_YAW_VERSION, (unsigned)state.online, (unsigned)state.active, (unsigned)state.requested,
-        (unsigned)state.zero_set, (unsigned long)state.controller.faults, (unsigned long)state.feedback_age_ms,
-        (double)state.controller.angle_deg, (double)state.controller.target_deg,
-        (double)state.controller.cascade.velocity_dps, (double)state.controller.torque_nm);
-}
+/* 内部函数前置声明：主流程先展示，辅助实现放在文件后方。 */
+static const char *SafeOffReason(RemoteInput_State *remote_out);
+static uint8_t SafeOff(void);
+static const char *PreparationTick(void);
+static uint8_t SafeStep(void);
+static const char *StepBlockReason(uint32_t blocks);
+static uint8_t yaw_console_StepReport(const YawStep *step, char *response, size_t capacity);
+static void BusReport(char *response, size_t capacity);
+static void yaw_console_BriefStatus(char *response, size_t capacity);
 
 uint8_t YawConsole_Handle(const char *line, char *response, size_t capacity)
-/* 功能：解析Yaw命令，核对格式和操作条件后查询状态或调用对应后端。 */
+/*
+ * 作用：解析Yaw命令，核对格式和操作条件后查询状态或调用对应后端。
+ * 参数 line：已经组装好的完整串口命令。
+ * 参数 response：写入串口回复的字符缓冲区。
+ * 参数 capacity：回复缓冲区容量，byte。
+ * 返回 1 表示识别了这类命令，具体执行成功与否写在回复中；0 表示交给其他模块处理。
+ */
 {
     YawBackendState yaw;
     uint8_t accepted = 0U;
@@ -383,7 +135,7 @@ uint8_t YawConsole_Handle(const char *line, char *response, size_t capacity)
         return 1U;
     }
     if (strcmp(line, "YAW CHECK") == 0) {
-        ClearReport("Y|CHECK", 0, response, capacity); return 1U;
+        yaw_console_BriefStatus(response, capacity); return 1U;
     }
     if (strcmp(line, "YAW STATUS") == 0 || strcmp(line, "YAW INFO") == 0) {
         YawBackend_GetState(&yaw);
@@ -399,10 +151,10 @@ uint8_t YawConsole_Handle(const char *line, char *response, size_t capacity)
             (double)yaw.controller.cascade.speed.ki, (double)yaw.controller.cascade.speed.kd,
             (double)yaw.controller.cascade.velocity_limit_dps,
             (unsigned)yaw.controller.cascade.torque_limited, (unsigned)yaw.controller.cascade.velocity_limited,
-            0U ? "LIMIT_NM" : "PROTOCOL_NM",
+            "PROTOCOL_NM",
             (double)YAW_CONTROLLER_TORQUE_LIMIT_NM, (unsigned)0U,
             (double)YAW_CONTROLLER_TARGET_LIMIT_DEG,
-            (double)YAW_CONTROLLER_HARD_LIMIT_DEG, (unsigned)YAW_CONTROLLER_SPEED_GUARD_ENABLED,
+            (double)YAW_CONTROLLER_HARD_LIMIT_DEG, (unsigned)0U,
             (unsigned)yaw.zero_set, (unsigned)APP_TELEMETRY_PERIOD_MS,
             (unsigned long)APP_CONSOLE_BAUDRATE, (unsigned long)yaw.rx_count);
         return 1U;
@@ -455,13 +207,9 @@ uint8_t YawConsole_Handle(const char *line, char *response, size_t capacity)
         (void)snprintf(response, capacity, accepted ? "Y|OK|PARAMETER\r\n" : "Y|ERROR|PARAMETER_OR_STATE\r\n"); return 1U;
     }
     if (strcmp(line, "YAW CLEAR") == 0) {
-        const char *remote_reason;
-        taskENTER_CRITICAL();
-        remote_reason = SafeOffReason(0);
-        if (strcmp(remote_reason, "OK") == 0) { accepted = YawBackend_ClearCommsFault(); }
-        taskEXIT_CRITICAL();
-        if (accepted) { (void)snprintf(response, capacity, "Y|OK|CLEAR_SENT\r\n"); }
-        else { ClearReport("Y|ERROR|CLEAR", remote_reason, response, capacity); }
+        uint8_t accepted = SafeOff() && YawBackend_ClearCommsFault();
+        (void)snprintf(response, capacity, accepted ? "Y|OK|CLEAR_REQUESTED\r\n" :
+            "Y|ERROR|CLEAR_REQUIRES_OFF_STATIONARY_STATUS13\r\n");
         return 1U;
     }
     if (strcmp(line, "YAW ZERO") == 0) {
@@ -487,4 +235,280 @@ uint8_t YawConsole_Handle(const char *line, char *response, size_t capacity)
     }
     (void)snprintf(response, capacity, accepted ? "Y|OK|PARAMETER\r\n" : "Y|ERROR|PARAMETER_OR_STATE\r\n");
     return 1U;
+}
+
+uint8_t YawConsole_Poll(char *response, size_t capacity)
+/*
+ * 作用：推进Yaw准备操作和异步事件，按需生成一条回执或真实结果。
+ * 参数 response：写入串口回复的字符缓冲区。
+ * 参数 capacity：回复缓冲区容量，byte。
+ * 返回 1 表示本次生成了待发送报告，0 表示当前没有报告。
+ */
+{
+    YawStep snapshot, report;
+    YawRemoteStepEvent event;
+    if (!response || !capacity) { return 0U; }
+    if (capacity >= 128U) {
+        const char *result;
+        taskENTER_CRITICAL(); result = PreparationTick(); taskEXIT_CRITICAL();
+        if (result) {
+            if (strcmp(result, "OK") == 0) {
+                (void)snprintf(response, capacity, "Y|OK|READY|ZERO_SET|1|REQUESTED|1|ACTIVE|0|NEXT|NEW_CH5_OFF_THEN_MANUAL_OR_TEST\r\n");
+            } else { (void)snprintf(response, capacity, "Y|ERROR|READY|%s\r\n", result); }
+            return 1U;
+        }
+    }
+    if (capacity >= 128U && YawBackend_TakeRemoteStepEvent(&event)) {
+        static const char *results[] = { "NONE", "STARTED", "BACK_30", "START_GUARD",
+            "OTHER_AXIS"
+        };
+        (void)snprintf(response, capacity, "Y|REMOTE_STEP|SEQ|%lu|RESULT|%s|TARGET|%.1f|WHY|%s|BLOCKS|%lu\r\n",
+            (unsigned long)event.sequence, event.result <= 4U ? results[event.result] : "UNKNOWN",
+            (double)event.target_deg, StepBlockReason(event.blocks), (unsigned long)event.blocks);
+        return 1U;
+    }
+    YawBackend_GetStep(&snapshot);
+    if (!snapshot.pending || !yaw_console_StepReport(&snapshot, response, capacity)) { return 0U; }
+    if (!YawBackend_TakeStepReport(&report)) { return 0U; }
+    if (report.id != snapshot.id) { return yaw_console_StepReport(&report, response, capacity); }
+    return 1U;
+}
+
+static uint8_t yaw_console_StepReport(const YawStep *step, char *response, size_t capacity)
+/*
+ * 作用：格式化Yaw真实阶跃成绩、控制参数和终止原因。
+ * 参数 step：本次真实阶跃的起点、目标、采样和结果状态。
+ * 参数 response：写入串口回复的字符缓冲区。
+ * 参数 capacity：回复缓冲区容量，byte。
+ * 返回 1 表示本次校验/请求被接受，0 表示条件不满足；接受请求不代表动作已经完成。
+ */
+{
+    static const char *phases[] = { "IDLE", "RUNNING", "DONE", "ABORTED" };
+    static const char *reasons[] = { "NONE", "STOP", "FAULT", "PID_CHANGE", "TARGET_CHANGE", "MANUAL", "GAP", "DATA", "FF_CHANGE" };
+    uint32_t rise = step->t10_ms != YAW_STEP_UNREACHED && step->t90_ms != YAW_STEP_UNREACHED ?
+        step->t90_ms - step->t10_ms : YAW_STEP_UNREACHED;
+    int length = snprintf(response, capacity,
+        "Y|STEP|ID|%lu|STATE|%s|REASON|%s|VALID|%u|START|%.3f|TARGET|%.3f|WINDOW_MS|%lu|RESP_MS|%ld|T90_MS|%ld|RISE_MS|%ld|SETTLE_MS|%ld|OS_DEG|%.6f|OS_PCT|%.3f|SSE_DEG|%.6f|SSE_VALID|%u|PASS|%u|FAULT|%lu|VMAX_DPS|%.2f|TMAX_NM|%.5f|N|%lu|GAP_MS|%lu|%s|%lu|%s|%.4f|%s|%.4f|%s|%.4f|CMD_N|%lu|FIRST_NM|%.5f",
+        (unsigned long)step->id, step->phase <= YAW_STEP_ABORTED ? phases[step->phase] : "UNKNOWN",
+        step->reason <= YAW_STEP_FF_CHANGE ? reasons[step->reason] : "UNKNOWN",
+        (unsigned)(step->phase == YAW_STEP_DONE), (double)step->start_deg, (double)step->target_deg,
+        (unsigned long)step->elapsed_ms, (long)(int32_t)step->response_ms, (long)(int32_t)step->t90_ms,
+        (long)(int32_t)rise, (long)(int32_t)step->settle_ms, (double)step->overshoot_deg,
+        (double)step->overshoot_pct, (double)step->steady_error_deg, (unsigned)step->sse_valid,
+        (unsigned)step->pass, (unsigned long)step->faults, (double)step->peak_velocity_dps,
+        (double)step->peak_torque_nm, (unsigned long)step->samples, (unsigned long)step->max_gap_ms,
+        step->cascade ? "SAT_N" : "LIMIT_N", (unsigned long)step->limited_samples,
+        step->cascade ? "PKP" : "KP", (double)step->kp,
+        step->cascade ? "PKI" : "KI", (double)step->ki,
+        step->cascade ? "PKD" : "KD", (double)step->kd,
+        (unsigned long)step->command_samples, (double)step->first_command_nm);
+    if (length <= 0 || (size_t)length >= capacity) { return 0U; }
+    {
+        size_t used = (size_t)length;
+        if (step->cascade) {
+            length = snprintf(response + used, capacity - used,
+                "|CTRL|CASCADE|VKP|%.6f|VKI|%.6f|VKD|%.6f|VREF_MAX_DPS|%.1f|VFILTER_MS|%u|OUTPUT_LIMITS|%u"
+                "|BAND02|0.2|RESP02_MS|%ld|SETTLE02_MS|%ld|PASS02|%u"
+                "|TIME_LIMIT_MS|250|OS_LIMIT_DEG|0.2|SSE_LIMIT_DEG|0.2|SSE_PEAK_DEG|%.6g|ASSESSMENT|FINAL_SETTLE"
+                "|FF_ON|%u|FF_TYPE|ACCEL|FKA|%.6g|FMAX|%.6g|SHAPE_MS|%lu|SHAPE_V|%.6g\r\n",
+                (double)step->vkp, (double)step->vki, (double)step->vkd,
+                (double)step->vmax_dps, (unsigned)YAW_CASCADE_VELOCITY_FILTER_MS, (unsigned)step->output_limits,
+                (long)(int32_t)step->response_ms, (long)(int32_t)step->settle_ms, (unsigned)step->pass,
+                (double)step->ss_max_error,
+                (unsigned)step->ff_enabled, (double)step->ff_acceleration_gain,
+                (double)step->ff_limit_nm, (unsigned long)step->shape_ms,
+                (double)step->shape_velocity_gain);
+        } else { length = snprintf(response + used, capacity - used, "\r\n"); }
+        return (uint8_t)(length > 0 && (size_t)length < capacity - used);
+    }
+}
+
+static const char *PreparationTick(void)
+/*
+ * 作用：按反馈和超时推进 Yaw 停止、监测、参考捕获及请求准备流程。
+ * 输入：无显式参数，读取或维护本模块状态；相关变量见文件头。
+ * 返回用于串口显示的原因/状态文字，调用方不释放该字符串。
+ */
+{
+    YawBackendState yaw;
+    CanBusDiagnostics bus;
+    const char *reason;
+    uint32_t now = HAL_GetTick();
+    if (!ready_phase) { return 0; }
+    reason = SafeOffReason(0);
+    if (strcmp(reason, "OK") != 0) { goto failed; }
+    CanBus_GetDiagnostics(&bus);
+    if (!bus.state.started || bus.state.fault_epoch || bus.hal_error[0] || bus.hal_error[1]) {
+        reason = "CAN_FAULT_USE_YAW_BUS"; goto failed;
+    }
+    YawBackend_GetState(&yaw);
+    if (yaw.controller.faults & (YAW_CONTROLLER_FAULT_CAN | (1UL << 17))) {
+        reason = "CAN_OR_TX_FAULT_USE_YAW_BUS"; goto failed;
+    }
+    if ((uint32_t)(now - ready_started_ms) >= 5000U) {
+        reason = "TIMEOUT_USE_YAW_STATUS"; goto failed;
+    }
+    if (!yaw.online) { return 0; }
+    if (ready_phase == 2U) {
+        if (!yaw.requested || !yaw.zero_set || yaw.controller.faults || yaw.feedback.status != 0U) {
+            reason = "PREPARE_STATE_CHANGED"; goto failed;
+        }
+        if (yaw.stop_pending) { return 0; }
+        YawBackend_ReleasePreparation(); ready_phase = 0U; return "OK";
+    }
+    if (yaw.feedback.status == 13U) {
+        /* 仅人工READY这一次会话允许单次FB；沿用既有全部清错门禁。 */
+        if (!ready_clear_sent && YawBackend_ClearCommsFault()) { ready_clear_sent = 1U; }
+        return 0;
+    }
+    if (yaw.feedback.status > 1U) { reason = "DRIVER_STATUS_USE_YAW_STATUS"; goto failed; }
+    if (yaw.feedback.status != 0U || yaw.stop_pending || !YawBackend_CaptureReference()) { return 0; }
+    AppTasks_RequestStop();
+    if (!YawBackend_Request(1U)) { reason = "PREPARE_REJECTED"; goto failed; }
+    ready_phase = 2U;
+    return 0;
+failed:
+    ready_phase = 0U;
+    (void)YawBackend_Request(0U); AppTasks_RequestStop();
+    return reason;
+}
+
+static void yaw_console_BriefStatus(char *response, size_t capacity)
+/*
+ * 作用：格式化Yaw精简状态，供高频查询读取且不改变运行状态。
+ * 参数 response：写入串口回复的字符缓冲区。
+ * 参数 capacity：回复缓冲区容量，byte。
+ * 不返回数值；处理结果保存在传入结构体或本文件维护的状态中。
+ */
+{
+    YawBackendState state;
+    YawBackend_GetState(&state);
+    (void)snprintf(response, capacity,
+        "Y|STATE|%s|ONLINE|%u|ACTIVE|%u|REQUESTED|%u|ZERO_SET|%u|FAULT|%lu|AGE_MS|%lu|ANGLE|%.3f|TARGET|%.3f|VEL_DPS|%.2f|TORQUE_NM|%.5f\r\n",
+        APP_YAW_VERSION, (unsigned)state.online, (unsigned)state.active, (unsigned)state.requested,
+        (unsigned)state.zero_set, (unsigned long)state.controller.faults, (unsigned long)state.feedback_age_ms,
+        (double)state.controller.angle_deg, (double)state.controller.target_deg,
+        (double)state.controller.cascade.velocity_dps, (double)state.controller.torque_nm);
+}
+
+void YawConsole_CancelPreparation(void)
+/*
+ * 作用：取消尚未完成的 Yaw 准备流程，避免旧操作继续接管会话。
+ * 输入：无显式参数，读取或维护本模块状态；相关变量见文件头。
+ * 不返回数值；处理结果保存在传入结构体或本文件维护的状态中。
+ */
+{
+    taskENTER_CRITICAL();
+    if (ready_phase) { ready_phase = 0U; (void)YawBackend_Request(0U); }
+    taskEXIT_CRITICAL();
+}
+
+static void BusReport(char *response, size_t capacity)
+/*
+ * 作用：发布双 CAN 收发计数、邮箱占用及首次错误证据，不改变输出许可。
+ * 参数 response：写入串口回复的字符缓冲区。
+ * 参数 capacity：回复缓冲区容量，byte。
+ * 不返回数值；处理结果保存在传入结构体或本文件维护的状态中。
+ */
+{
+    CanBusDiagnostics bus;
+    size_t used;
+    uint32_t i;
+    int count;
+    CanBus_GetDiagnostics(&bus);
+    count = snprintf(response, capacity, "Y|BUS|%s|EPOCH|%lu|DROP|%lu",
+        APP_YAW_VERSION, (unsigned long)bus.state.fault_epoch, (unsigned long)bus.state.dropped);
+    if (count < 0 || (size_t)count >= capacity) { return; }
+    used = (size_t)count;
+    for (i = 0U; i < 2U; ++i) {
+        count = snprintf(response + used, capacity - used,
+            "|C%u_RX|%lu|TX|%lu|ERR|%lu|LAST|0x%08lX|HAL|0x%08lX|FIRST|0x%08lX|SOURCE|%u|FIRST_MS|%lu|PENDING|%lu%s",
+            (unsigned)(i + 1U), (unsigned long)bus.state.rx_frames[i],
+            (unsigned long)bus.state.tx_frames[i], (unsigned long)bus.state.errors[i],
+            (unsigned long)bus.state.last_error[i], (unsigned long)bus.hal_error[i],
+            (unsigned long)bus.state.first_error[i], (unsigned)bus.state.first_error_source[i],
+            (unsigned long)bus.state.first_error_ms[i], (unsigned long)bus.pending[i],
+            i == 1U ? "\r\n" : "");
+        if (count < 0 || (size_t)count >= capacity - used) { return; }
+        used += (size_t)count;
+    }
+}
+
+static const char *SafeOffReason(RemoteInput_State *remote_out)
+/*
+ * 作用：核对安全 OFF、新鲜反馈和遥控回中条件，返回准备操作的阻塞原因。
+ * 参数 remote_out：可选输出参数，接收本次检查使用的遥控快照。
+ * 返回用于串口显示的原因/状态文字，调用方不释放该字符串。
+ */
+{
+    RemoteInput_State remote;
+    RemoteFrame frame;
+    RemoteCommand command;
+    AppState app;
+    RemoteInput_GetState(&remote); AppTasks_GetState(&app);
+    if (remote_out) { *remote_out = remote; }
+    memset(&frame, 0, sizeof(frame));
+    memcpy(frame.channels, remote.channels, sizeof(frame.channels));
+    frame.has_frame = remote.has_frame; frame.received_ms = remote.received_ms;
+    RemoteMapper_Map(&frame, &command);
+    if (!remote.has_frame || (uint32_t)(HAL_GetTick() - remote.received_ms) >= REMOTE_TIMEOUT_MS) { return "STALE"; }
+    if (!command.valid) { return "INVALID"; }
+    if (!command.failsafe_ok) { return "CH8_LOCK"; }
+    if (command.arm != RC_LOW) { return "CH5_NOT_OFF"; }
+    if (!command.neutral) { return "NOT_NEUTRAL"; }
+    if (app.logic.safety.operator_armed) { return "ARMED"; }
+
+    return "OK";
+}
+
+static uint8_t SafeOff(void)
+/*
+ * 作用：检查启动流程所需的新鲜安全 OFF 遥控条件。
+ * 输入：无显式参数，读取或维护本模块状态；相关变量见文件头。
+ * 返回布尔判断结果，非零为满足条件，0 为不满足。
+ */
+{ return strcmp(SafeOffReason(0), "OK") == 0; }
+
+static uint8_t SafeStep(void)
+/*
+ * 作用：核对当前遥控、解锁与回中条件是否允许串口阶跃。
+ * 输入：无显式参数，读取或维护本模块状态；相关变量见文件头。
+ * 返回 1 表示本次校验/请求被接受，0 表示条件不满足；接受请求不代表动作已经完成。
+ */
+{
+    RemoteInput_State remote;
+    RemoteFrame frame;
+    RemoteCommand command;
+    AppState app;
+    RemoteInput_GetState(&remote); AppTasks_GetState(&app);
+    memset(&frame, 0, sizeof(frame)); memcpy(frame.channels, remote.channels, sizeof(frame.channels));
+    frame.has_frame = remote.has_frame; frame.received_ms = remote.received_ms;
+    RemoteMapper_Map(&frame, &command);
+    return (uint8_t)(remote.has_frame && (uint32_t)(HAL_GetTick() - remote.received_ms) < REMOTE_TIMEOUT_MS &&
+        command.valid && command.failsafe_ok && command.neutral && command.arm == RC_HIGH &&
+        (command.gimbal_mode == GIMBAL_MANUAL || command.gimbal_mode == GIMBAL_TEST) &&
+        app.logic.safety.operator_armed);
+}
+
+static const char *StepBlockReason(uint32_t blocks)
+/*
+ * 作用：把 Yaw 阶跃门禁位转换为优先显示的拒绝原因。
+ * 参数 blocks：可组合的阶跃阻塞原因位。
+ * 返回用于串口显示的原因/状态文字，调用方不释放该字符串。
+ */
+{
+    if (blocks & YAW_STEP_BLOCK_VIEW) { return "VIEW_LOCKED_USE_YAW_VIEW"; }
+    if (blocks & YAW_STEP_BLOCK_FAULT) { return "FAULT"; }
+    if (blocks & YAW_STEP_BLOCK_REFERENCE) { return "NEED_ZERO"; }
+    if (blocks & YAW_STEP_BLOCK_FEEDBACK) { return "FEEDBACK"; }
+    if (blocks & YAW_STEP_BLOCK_TRANSITION) { return "WAIT_ENABLE_OR_STOP"; }
+    if (blocks & YAW_STEP_BLOCK_INACTIVE) { return "NOT_ACTIVE"; }
+    if (blocks & YAW_STEP_BLOCK_PERMISSION) { return "REMOTE_OR_OUTPUT_GUARD"; }
+    if (blocks & YAW_STEP_BLOCK_TARGET_LIMIT) { return "TARGET_LIMIT"; }
+    if (blocks & YAW_STEP_BLOCK_WINDOW) { return "WAIT_5S_WINDOW"; }
+    if (blocks & YAW_STEP_BLOCK_HOME) { return "SEND_HOME_FIRST"; }
+    if (blocks & YAW_STEP_BLOCK_POSITION) { return "WAIT_TARGET_BAND"; }
+    if (blocks & YAW_STEP_BLOCK_MOVING) { return "WAIT_STILL"; }
+    if (blocks & YAW_STEP_BLOCK_STILL) { return "WAIT_STILL_HOLD"; }
+    return "READY";
 }

@@ -787,9 +787,9 @@
               <FilePath>../App/control/pitch_step.c</FilePath>
             </File>
             <File>
-              <FileName>yaw_cascade.c</FileName>
+              <FileName>gimbal_pid.c</FileName>
               <FileType>1</FileType>
-              <FilePath>../App/control/yaw_cascade.c</FilePath>
+              <FilePath>../App/control/gimbal_pid.c</FilePath>
             </File>
             <File>
               <FileName>yaw_step.c</FileName>

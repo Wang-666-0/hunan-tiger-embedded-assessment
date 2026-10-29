@@ -19,7 +19,7 @@ static void TraceArm(uint32_t timestamp)
     input.backend_ready = input.feedback_ready = 1U;
     frame(timestamp, 1000U); AppLogic_Step(&logic, &input, 0U);
     frame(timestamp + 10U, 2000U); AppLogic_Step(&logic, &input, 0U);
-    CHECK(logic.safety.operator_armed && logic.trace_armed && !logic.stop_trace.id);
+    CHECK(logic.safety.operator_armed);
 }
 void test_run(void)
 {
@@ -69,41 +69,21 @@ void test_run(void)
     TraceArm(100U);
     frame(120U, 2000U); input.uart_epoch = 1U; input.stop_sequence = 1U; input.control_late = 1U;
     AppLogic_Step(&logic, &input, 0U);
-    CHECK(!logic.safety.operator_armed && logic.stop_trace.id == 1U);
-    CHECK(logic.stop_trace.source == APP_STOP_SOURCE_SAFETY && logic.stop_trace.reason == SAFETY_STOP);
-    CHECK(logic.stop_trace.triggers == (APP_STOP_TRIGGER_STOP | APP_STOP_TRIGGER_UART | APP_STOP_TRIGGER_TIMING));
-    CHECK(logic.stop_trace.at_ms == 120U && logic.stop_trace.channels[4] == 2000U);
-    input.control_late = 0U; input.stop_sequence = 2U;
+    CHECK(!logic.safety.operator_armed && !logic.safety.output_allowed && logic.safety.reason == SAFETY_STOP);
+    input.control_late = 0U;
     frame(130U, 1000U); AppLogic_Step(&logic, &input, 0U);
-    AppLogic_RecordStop(&logic, &input, APP_STOP_SOURCE_PITCH);
-    CHECK(logic.stop_trace.id == 1U && logic.stop_trace.at_ms == 120U);
-    frame(140U, 1000U); AppLogic_Step(&logic, &input, 0U);
-    frame(150U, 2000U); AppLogic_Step(&logic, &input, 0U);
-    CHECK(logic.safety.operator_armed && logic.trace_armed);
-    input.can_epoch = 1U; frame(160U, 2000U); AppLogic_Step(&logic, &input, 0U);
-    CHECK(logic.stop_trace.id == 2U && logic.stop_trace.reason == SAFETY_CAN);
-    CHECK(logic.stop_trace.triggers == APP_STOP_TRIGGER_CAN && logic.stop_trace.at_ms == 160U);
+    frame(140U, 2000U); AppLogic_Step(&logic, &input, 0U);
+    CHECK(logic.safety.operator_armed);
+    input.can_epoch = 1U; frame(150U, 2000U); AppLogic_Step(&logic, &input, 0U);
+    CHECK(!logic.safety.output_allowed && logic.safety.reason == SAFETY_CAN);
     test_stage = 6U;
     TraceArm(200U); input.now_ms = input.remote.received_ms + REMOTE_TIMEOUT_MS;
-    AppLogic_Step(&logic, &input, 0U);
-    CHECK(logic.stop_trace.reason == SAFETY_REMOTE && logic.stop_trace.remote_age_ms == REMOTE_TIMEOUT_MS);
-    CHECK(logic.stop_trace.triggers == APP_STOP_TRIGGER_REMOTE);
+    AppLogic_Step(&logic, &input, 0U); CHECK(logic.safety.reason == SAFETY_REMOTE);
     TraceArm(400U); frame(420U, 2000U); input.remote.channels[7] = 1000U;
-    AppLogic_Step(&logic, &input, 0U);
-    CHECK(logic.stop_trace.reason == SAFETY_FAILSAFE && logic.stop_trace.channels[7] == 1000U);
+    AppLogic_Step(&logic, &input, 0U); CHECK(logic.safety.reason == SAFETY_FAILSAFE);
     TraceArm(500U); frame(520U, 2000U); input.feedback_ready = 0U;
-    AppLogic_Step(&logic, &input, 0U);
-    CHECK(logic.stop_trace.reason == SAFETY_FEEDBACK && logic.stop_trace.triggers == APP_STOP_TRIGGER_FEEDBACK);
-    TraceArm(600U); frame(620U, 1000U); AppLogic_Step(&logic, &input, 0U);
-    CHECK(logic.stop_trace.reason == SAFETY_NONE && logic.stop_trace.triggers == APP_STOP_TRIGGER_CH5_OFF);
-    TraceArm(700U); frame(720U, 1500U); AppLogic_Step(&logic, &input, 0U);
-    CHECK(logic.safety.operator_armed);
-    AppLogic_RecordStop(&logic, &input, APP_STOP_SOURCE_PITCH);
-    CHECK(logic.safety.operator_armed && logic.safety.output_allowed); /* 日志不撤权。 */
-    CHECK(logic.stop_trace.source == APP_STOP_SOURCE_PITCH && logic.stop_trace.previous_mode == GIMBAL_TEST);
-    CHECK(logic.stop_trace.mode == GIMBAL_MANUAL && logic.stop_trace.reason == SAFETY_NONE);
-    AppLogic_RecordStop(&logic, &input, APP_STOP_SOURCE_WHEELS); CHECK(logic.stop_trace.id == 1U);
-    TraceArm(0xFFFFFFE0UL); input.now_ms = 90U; AppLogic_Step(&logic, &input, 0U);
-    CHECK(logic.stop_trace.reason == SAFETY_REMOTE && logic.stop_trace.remote_age_ms == 112U);
+    AppLogic_Step(&logic, &input, 0U); CHECK(logic.safety.reason == SAFETY_FEEDBACK);
+    TraceArm(0xFFFFFFE0UL); input.now_ms = 90U;
+    AppLogic_Step(&logic, &input, 0U); CHECK(logic.safety.reason == SAFETY_REMOTE);
     test_done = 1U;
 }

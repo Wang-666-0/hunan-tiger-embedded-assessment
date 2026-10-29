@@ -1,11 +1,4 @@
-/**
- * @file safety_manager.h
- * @brief 统一安全状态机
- * 职责：定义安全输入、锁定原因、输出许可及人工重解锁屏障。
- * 主要接口：SafetyManager_Init, SafetyManager_Step。
- * 实现：system/safety_manager.c；调用关系见实现文件与 App/README。
- * 参数：app_config.h 是 App 参数及常量的唯一宏定义入口。
- */
+/* 统一安全状态机 */
 #ifndef SAFETY_MANAGER_H
 #define SAFETY_MANAGER_H
 #include "app_config.h"

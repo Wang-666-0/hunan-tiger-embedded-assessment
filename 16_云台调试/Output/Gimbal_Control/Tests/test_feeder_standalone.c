@@ -40,7 +40,7 @@ void CanBus_SetFeederPermission(uint8_t allowed)
 { permission = allowed && bus.started && !bus.fault_epoch; }
 uint8_t CanBus_FeederAllowed(void) { return permission; }
 void CanBus_SetOutputPermission(uint8_t allowed)
-{ wheel_permission = allowed && !APP_FEEDER_STANDALONE_TEST_ACTIVE && bus.started && !bus.fault_epoch; }
+{ wheel_permission = allowed && !APP_FEEDER_STANDALONE_TEST_ENABLED && bus.started && !bus.fault_epoch; }
 uint8_t CanBus_OutputAllowed(void) { return wheel_permission; }
 HAL_StatusTypeDef CanBus_FeederCurrent(int16_t value)
 {
@@ -149,7 +149,7 @@ static void Complete(void)
 void test_run(void)
 {
     uint32_t i, before;
-    CHECK(APP_FEEDER_STANDALONE_TEST_ACTIVE && APP_FEEDER_STANDALONE_TEST_ENABLED == 1U);
+    CHECK(APP_FEEDER_STANDALONE_TEST_ENABLED && APP_FEEDER_STANDALONE_TEST_ENABLED == 1U);
     test_stage = 1U; Start(100U);
     CHECK(fabs(feeder.controller.axis_target_deg + 40.0) < 0.001);
     for (i = 0; i < 30U; ++i) Tick(now_ms + 2U);

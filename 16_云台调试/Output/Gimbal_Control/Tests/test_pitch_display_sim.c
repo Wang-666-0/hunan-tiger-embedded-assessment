@@ -15,13 +15,13 @@ static float sample(float real, float target, uint8_t healthy)
 static void reset(float start)
 {
     memset(&step, 0, sizeof(step)); PitchDisplaySim_Reset(&sim, 1U);
-    at = 1000U; step.phase = PITCH_STEP_IDLE;
+    at = 1000U; step.phase = YAW_STEP_IDLE;
     CHECK(sample(start, start, 1U) == start && !sim.active && sim.armed);
 }
 static void launch(float start, float target)
 {
     float expected = sim.active ? sim.last_display_deg : start;
-    step.id++; step.phase = PITCH_STEP_RUNNING; step.reason = PITCH_STEP_NONE;
+    step.id++; step.phase = PITCH_STEP_RUNNING; step.reason = YAW_STEP_NONE;
     step.start_deg = start; step.target_deg = target; step.start_ms = at + 5U;
     CHECK(sample(start, target, 1U) == expected && sim.active);
 }

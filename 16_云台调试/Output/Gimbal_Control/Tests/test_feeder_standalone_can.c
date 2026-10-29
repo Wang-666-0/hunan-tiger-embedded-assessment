@@ -12,7 +12,7 @@ void test_run(void)
     uint32_t before;
     test_stage = 1U;
     CanBus_CreateQueue(); CanBus_Start();
-    CHECK(APP_FEEDER_STANDALONE_TEST_ACTIVE);
+    CHECK(APP_FEEDER_STANDALONE_TEST_ENABLED);
     CanBus_SetOutputPermission(1U);
     CHECK(!CanBus_OutputAllowed()); before = sends;
     CHECK(CanBus_JogVescCurrent(70U, 1) == HAL_ERROR);

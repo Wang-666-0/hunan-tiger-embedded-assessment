@@ -3,7 +3,7 @@
 #include "test_pitch_controller.c"
 #undef test_run
 #include <math.h>
-static YawCascade plain, with_ff;
+static GimbalPid plain, with_ff;
 static void gravity_ready(uint32_t ms, float offset, float gain)
 {
     PitchController_Init(&pitch);
@@ -86,21 +86,21 @@ void test_run(void)
     CHECK((pitch.faults & PITCH_CONTROLLER_FAULT_DATA) && !pitch.gravity_torque_nm && !pitch.torque_nm);
 
     test_stage = 4U;
-    YawCascade_Init(&plain); plain.position.kp = 1.0f; plain.position.ki = 0.0f;
+    GimbalPid_Init(&plain); plain.position.kp = 1.0f; plain.position.ki = 0.0f;
     plain.position.kd = 0.0f; plain.speed.kp = 0.2f; plain.speed.ki = 1.0f; plain.speed.kd = 0.0f;
     with_ff = plain;
     for (ms = 100U; ms < 150U; ms += 2U) {
-        CHECK(YawCascade_Update(&plain, 2.0f, ms, ms, 10.0f) ==
-              YawCascade_UpdateWithFeedforward(&with_ff, 2.0f, ms, ms, 10.0f, 0.0f));
+        CHECK(GimbalPid_Update(&plain, 2.0f, ms, ms, 10.0f) ==
+              GimbalPid_UpdateWithFeedforward(&with_ff, 2.0f, ms, ms, 10.0f, 0.0f));
         CHECK(plain.speed_i == with_ff.speed_i && plain.unsaturated_torque_nm == with_ff.unsaturated_torque_nm);
     }
-    YawCascade_Stop(&with_ff);
-    CHECK(YawCascade_UpdateWithFeedforward(&with_ff, 1.0f, 200U, 1U, 10.0f, 9.9f) == 10.0f);
-    CHECK(YawCascade_UpdateWithFeedforward(&with_ff, 1.0f, 210U, 2U, 10.0f, 9.9f) == 10.0f);
+    GimbalPid_Stop(&with_ff);
+    CHECK(GimbalPid_UpdateWithFeedforward(&with_ff, 1.0f, 200U, 1U, 10.0f, 9.9f) == 10.0f);
+    CHECK(GimbalPid_UpdateWithFeedforward(&with_ff, 1.0f, 210U, 2U, 10.0f, 9.9f) == 10.0f);
     CHECK(with_ff.speed_i == 0.0f && with_ff.torque_limited);
-    CHECK(YawCascade_UpdateWithFeedforward(&with_ff, -1.0f, 220U, 3U, 10.0f, -9.9f) == -10.0f);
+    CHECK(GimbalPid_UpdateWithFeedforward(&with_ff, -1.0f, 220U, 3U, 10.0f, -9.9f) == -10.0f);
     CHECK(with_ff.speed_i == 0.0f && with_ff.torque_limited);
-    (void)YawCascade_UpdateWithFeedforward(&with_ff, 1.0f, 230U, 4U, 10.0f, -9.9f);
+    (void)GimbalPid_UpdateWithFeedforward(&with_ff, 1.0f, 230U, 4U, 10.0f, -9.9f);
     CHECK(with_ff.speed_i > 0.0f && !with_ff.torque_limited);
     test_done = 1U;
 }

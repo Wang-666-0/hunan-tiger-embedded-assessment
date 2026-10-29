@@ -1,11 +1,4 @@
-/**
- * @file gl60_ii.h
- * @brief GL60 II 协议接口
- * 职责：定义 Yaw 电机反馈及力矩、使能、失能、清错报文接口。
- * 主要接口：Gl60_Decode, Gl60_BuildTorque, Gl60_BuildEnable, Gl60_BuildDisable, Gl60_BuildClearError。
- * 实现：drivers/gl60_ii.c；调用关系见实现文件与 App/README。
- * 参数：app_config.h 是 App 参数及常量的唯一宏定义入口。
- */
+/* GL60 II 协议接口 */
 #ifndef GL60_II_H
 #define GL60_II_H
 #include "app_config.h"

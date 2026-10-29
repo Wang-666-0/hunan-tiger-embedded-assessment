@@ -1,11 +1,4 @@
-/**
- * @file remote_mapper.h
- * @brief 遥控语义映射
- * 职责：定义 RemoteFrame、RemoteCommand、开关/发射/云台模式并声明映射函数。
- * 主要接口：RemoteMapper_Map。
- * 实现：system/remote_mapper.c；调用关系见实现文件与 App/README。
- * 参数：app_config.h 是 App 参数及常量的唯一宏定义入口。
- */
+/* 遥控语义映射 */
 #ifndef REMOTE_MAPPER_H
 #define REMOTE_MAPPER_H
 #include "app_config.h"

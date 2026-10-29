@@ -1,4 +1,4 @@
-﻿/* Reuse the backend transport substitute, fixtures and assertion counters;
+/* Reuse the backend transport substitute, fixtures and assertion counters;
  * this group links the real console, backend, controller and remote logic. */
 #define test_run backend_standalone_test_run
 #include "test_yaw_backend.c"
@@ -34,8 +34,8 @@ static void ConsoleReset(uint32_t timestamp)
     Reset(timestamp);
     memset(&receiver, 0, sizeof(receiver)); memset(&application, 0, sizeof(application));
     for (i = 0U; i < 14U; ++i) { receiver.channels[i] = RC_CENTER; }
-    receiver.channels[RC_ARM_CHANNEL] = 1000U;
-    receiver.channels[RC_FRICTION_CHANNEL] = 1000U;
+    receiver.channels[4U] = 1000U;
+    receiver.channels[5U] = 1000U;
     receiver.has_frame = 1U; receiver.received_ms = timestamp;
     receiver.valid_frames = 1U; stop_sequence = stop_calls = 0U; diagnostic_mode = 0U;
     AppLogic_Init(&application.logic);
@@ -47,7 +47,7 @@ static void Control(uint32_t timestamp, uint8_t mode_on)
 {
     SafetyInput input;
     now_ms = timestamp;
-    receiver.channels[RC_ARM_CHANNEL] = mode_on == 2U ? 2000U : (mode_on ? 1500U : 1000U);
+    receiver.channels[4U] = mode_on == 2U ? 2000U : (mode_on ? 1500U : 1000U);
     receiver.received_ms = timestamp; ++receiver.valid_frames;
     Read(); memset(&input, 0, sizeof(input));
     memcpy(input.remote.channels, receiver.channels, sizeof(input.remote.channels));
@@ -126,9 +126,9 @@ static void __attribute__((unused)) RemoteStart(uint32_t timestamp)
     ConsoleZeroActivate(timestamp);
     Control(timestamp + 68U, 2U); /* CH5测试，先观察CH7中位。 */
     receiver.channels[RC_STEP_YAW_CHANNEL] = 2000U; Control(timestamp + 70U, 2U);
-    receiver.channels[RC_STEP_CHANNEL] = 2000U; Control(timestamp + 72U, 2U);
+    receiver.channels[6U] = 2000U; Control(timestamp + 72U, 2U);
     CHECK(state.step_hold && state.controller.target_deg == 30.0f && request.step_sequence == 1U);
-    receiver.channels[RC_STEP_YAW_CHANNEL] = receiver.channels[RC_STEP_CHANNEL] = 1500U;
+    receiver.channels[RC_STEP_YAW_CHANNEL] = receiver.channels[6U] = 1500U;
     Control(timestamp + 74U, 2U);
 }
 

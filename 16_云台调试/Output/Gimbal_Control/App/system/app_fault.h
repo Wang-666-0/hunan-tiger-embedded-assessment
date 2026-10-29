@@ -1,11 +1,4 @@
-/**
- * @file app_fault.h
- * @brief 致命故障接口
- * 职责：定义队列、任务、UART 初始化失败等不可继续运行的故障入口。
- * 主要接口：AppFault_Fatal。
- * 实现：system/app_fault.c；调用关系见实现文件与 App/README。
- * 参数：app_config.h 是 App 参数及常量的唯一宏定义入口。
- */
+/* 致命故障接口 */
 #ifndef APP_FAULT_H
 #define APP_FAULT_H
 #include "app_config.h"

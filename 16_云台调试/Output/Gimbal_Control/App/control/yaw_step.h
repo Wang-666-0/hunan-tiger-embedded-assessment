@@ -1,11 +1,4 @@
-/**
- * @file yaw_step.h
- * @brief 共用实测阶跃统计
- * 职责：定义阶跃阶段、结束原因、测量快照及首次到位/稳定/超调判定。
- * 主要接口：YawStep_Init, YawStep_Start, YawStep_Sample, YawStep_Command, YawStep_Abort 等。
- * 实现：control/yaw_step.c；调用关系见实现文件与 App/README。
- * 参数：app_config.h 是 App 参数及常量的唯一宏定义入口。
- */
+/* 共用实测阶跃统计 */
 #ifndef YAW_STEP_H
 #define YAW_STEP_H
 #include "app_config.h"

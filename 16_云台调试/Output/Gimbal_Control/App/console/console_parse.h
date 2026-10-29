@@ -1,11 +1,4 @@
-/**
- * @file console_parse.h
- * @brief 共用命令数字解析
- * 职责：实现不依赖设备状态的浮点数及 PID 三参数解析。
- * 主要接口：ConsoleParse_Number, ConsoleParse_PidNumbers, for。
- * 实现/调用：头文件内 static 函数；Yaw/Pitch 命令共用，拒绝非有限值和尾随垃圾。
- * 参数：app_config.h 是 App 参数及常量的唯一宏定义入口。
- */
+/* 共用命令数字解析 */
 #ifndef CONSOLE_PARSE_H
 #define CONSOLE_PARSE_H
 #include "app_config.h"
@@ -15,7 +8,6 @@
 #include <float.h>
 
 static inline uint8_t ConsoleParse_Number(const char *text, float *value)
-/* 功能：严格解析一个有限浮点数，拒绝空输入和数值后的多余字符。 */
 {
     char *end;
     float parsed = strtof(text, &end);
@@ -24,7 +16,6 @@ static inline uint8_t ConsoleParse_Number(const char *text, float *value)
 }
 
 static inline uint8_t ConsoleParse_PidNumbers(const char *text, float *kp, float *ki, float *kd)
-/* 功能：严格解析一组 Kp、Ki、Kd，供串口参数范围校验使用。 */
 {
     char *end;
     float *values[3] = { kp, ki, kd };

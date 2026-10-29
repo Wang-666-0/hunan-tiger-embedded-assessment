@@ -1,88 +1,36 @@
 /**
  * @file flywheel_speed.c
- * @brief 摩擦轮速度 PI 与现用速度斜坡
- * 配置入口：App/app_config.h；接口声明见同目录对应头文件。
- * 对外函数（5）：
- *   FlywheelSpeed_Init / FlywheelSpeed_Start / FlywheelSpeed_Stop / FlywheelSpeed_RecordFeedback /
- *   FlywheelSpeed_Step
- * 内部函数（3）：
- *   magnitude / clamp / add_saturated
- * 文件级变量/常量（0；局部变量见对应函数）：
- *   无；状态由调用方传入的结构体保存。
- * 维护约束：函数前的功能说明对应当前实现，修改行为时同步更新。
+ * 作用：摩擦轮速度 PI 与现用速度斜坡
+ * 对外函数：
+ *   FlywheelSpeed_Step / FlywheelSpeed_Start / FlywheelSpeed_RecordFeedback / FlywheelSpeed_Init /
+ *   FlywheelSpeed_Stop
+ * 内部函数：
+ *   add_saturated / magnitude / clamp
+ * 文件级变量（函数局部变量在各函数内定义）：
+ *   无；控制状态由调用方提供的结构体保存。
  */
-/* 共用轮速 PI：目标爬升、观测、限幅及抗饱和。 */
 #include "flywheel_speed.h"
 #include <string.h>
 
-static uint32_t magnitude(int32_t erpm)
-/* 功能：计算转速或电流的无符号幅值，用于运行统计和边界比较。 */
-{
-    /* 包括INT_MIN，不能对有符号最小值直接取负。 */
-    return erpm >= 0 ? (uint32_t)erpm : (uint32_t)(-1 - erpm) + 1U;
-}
-
-static float clamp(float value, float low, float high)
-/* 功能：把数值限制在指定上下界内，避免控制请求越界。 */
-{
-    return value < low ? low : (value > high ? high : value);
-}
-
-static uint32_t add_saturated(uint32_t value, uint32_t increment)
-/* 功能：累加统计计数，达到整数上限后保持饱和，避免回绕。 */
-{
-    return increment > UINT32_MAX - value ? UINT32_MAX : value + increment;
-}
-
-void FlywheelSpeed_Init(FlywheelSpeed *speed)
-/* 功能：载入现用摩擦轮速度环参数并初始化滤波、积分和统计状态。 */
-{
-    if (speed != 0) { memset(speed, 0, sizeof(*speed)); }
-}
-
-void FlywheelSpeed_Start(FlywheelSpeed *speed, uint32_t now_ms,
-                        int32_t erpm, uint32_t feedback_ms)
-/* 功能：以当前反馈建立一次速度运行会话，初始化目标斜坡和计时。 */
-{
-    if (speed == 0) { return; }
-    FlywheelSpeed_Init(speed);
-    speed->running = 1U;
-    speed->started_ms = speed->last_update_ms = now_ms;
-    speed->last_call_ms = now_ms;
-    speed->last_feedback_ms = feedback_ms;
-    speed->filtered_erpm = (float)magnitude(erpm);
-    FlywheelSpeed_RecordFeedback(speed, erpm, feedback_ms);
-}
-
-void FlywheelSpeed_Stop(FlywheelSpeed *speed)
-/* 功能：清除当前速度控制请求与积分，并保留需要读取的运行统计。 */
-{
-    if (speed == 0) { return; }
-    speed->running = speed->coasting = speed->at_limit = speed->in_band = 0U;
-    speed->requested_mA = 0;
-    speed->target_erpm = speed->integral_mA = 0.0f;
-    speed->band_ms = 0U;
-}
-
-void FlywheelSpeed_RecordFeedback(FlywheelSpeed *speed, int32_t erpm, uint32_t feedback_ms)
-/* 功能：记录新反馈对应的达速、带内保持、峰值和限流统计。 */
-{
-    uint32_t value, since_start;
-    if (speed == 0 || !speed->running) { return; }
-    value = magnitude(erpm);
-    if (value > speed->peak_erpm) { speed->peak_erpm = value; }
-    since_start = feedback_ms - speed->started_ms;
-    if (!speed->rise90_seen && since_start < 0x80000000UL &&
-        value >= (uint32_t)APP_FLYWHEEL_SPEED_TARGET_ERPM * 9U / 10U) {
-        speed->rise90_ms = since_start;
-        speed->rise90_seen = 1U;
-    }
-}
+/* 内部函数前置声明：主流程先展示，辅助实现放在文件后方。 */
+static uint32_t magnitude(int32_t erpm);
+static float clamp(float value, float low, float high);
+static uint32_t add_saturated(uint32_t value, uint32_t increment);
 
 int32_t FlywheelSpeed_Step(FlywheelSpeed *speed, uint32_t now_ms,
                            int32_t erpm, uint32_t feedback_ms,
                            int32_t current_limit_mA)
-/* 功能：推进现用速度斜坡和滤波 PI，结合软滑行与电流限制返回 mA 请求。 */
+/*
+ * 作用：推进摩擦轮目标爬升和滤波速度 PI，输出受限的电流请求。
+ * 参数 speed：该侧摩擦轮的速度 PI、目标爬升及运行统计状态。
+ * 参数 now_ms：当前毫秒时间。
+ * 参数 erpm：电调反馈的电角转速，机械 rpm 需再除以极对数。
+ * 参数 feedback_ms：当前反馈的接收时间戳，ms。
+ * 参数 current_limit_mA：允许的摩擦轮电流上限，mA。
+ * 流程：当前速度环周期 20 ms，反馈速度使用 ERPM；换算机械 rpm 时除以配置的极对数。
+ * 流程：目标有斜坡，输出有电流限幅和抗积分饱和，并统计稳速带内持续时间。
+ * 返回当前摩擦轮电流请求，mA。
+ */
 {
     uint32_t elapsed, raw, call_elapsed;
     float error, proportional, integral, wanted, limit, alpha, band_low, band_high;
@@ -167,4 +115,104 @@ int32_t FlywheelSpeed_Step(FlywheelSpeed *speed, uint32_t now_ms,
         speed->band_first_seen = 1U;
     }
     return speed->requested_mA;
+}
+
+void FlywheelSpeed_Start(FlywheelSpeed *speed, uint32_t now_ms,
+                        int32_t erpm, uint32_t feedback_ms)
+/*
+ * 作用：以当前反馈建立一次速度运行会话，初始化目标斜坡和计时。
+ * 参数 speed：该侧摩擦轮的速度 PI、目标爬升及运行统计状态。
+ * 参数 now_ms：当前毫秒时间。
+ * 参数 erpm：电调反馈的电角转速，机械 rpm 需再除以极对数。
+ * 参数 feedback_ms：当前反馈的接收时间戳，ms。
+ * 不返回数值；处理结果保存在传入结构体或本文件维护的状态中。
+ */
+{
+    if (speed == 0) { return; }
+    FlywheelSpeed_Init(speed);
+    speed->running = 1U;
+    speed->started_ms = speed->last_update_ms = now_ms;
+    speed->last_call_ms = now_ms;
+    speed->last_feedback_ms = feedback_ms;
+    speed->filtered_erpm = (float)magnitude(erpm);
+    FlywheelSpeed_RecordFeedback(speed, erpm, feedback_ms);
+}
+
+void FlywheelSpeed_RecordFeedback(FlywheelSpeed *speed, int32_t erpm, uint32_t feedback_ms)
+/*
+ * 作用：记录新反馈对应的达速、带内保持、峰值和限流统计。
+ * 参数 speed：该侧摩擦轮的速度 PI、目标爬升及运行统计状态。
+ * 参数 erpm：电调反馈的电角转速，机械 rpm 需再除以极对数。
+ * 参数 feedback_ms：当前反馈的接收时间戳，ms。
+ * 不返回数值；处理结果保存在传入结构体或本文件维护的状态中。
+ */
+{
+    uint32_t value, since_start;
+    if (speed == 0 || !speed->running) { return; }
+    value = magnitude(erpm);
+    if (value > speed->peak_erpm) { speed->peak_erpm = value; }
+    since_start = feedback_ms - speed->started_ms;
+    if (!speed->rise90_seen && since_start < 0x80000000UL &&
+        value >= (uint32_t)APP_FLYWHEEL_SPEED_TARGET_ERPM * 9U / 10U) {
+        speed->rise90_ms = since_start;
+        speed->rise90_seen = 1U;
+    }
+}
+
+void FlywheelSpeed_Init(FlywheelSpeed *speed)
+/*
+ * 作用：载入现用摩擦轮速度环参数并初始化滤波、积分和统计状态。
+ * 参数 speed：该侧摩擦轮的速度 PI、目标爬升及运行统计状态。
+ * 不返回数值；处理结果保存在传入结构体或本文件维护的状态中。
+ */
+{
+    if (speed != 0) { memset(speed, 0, sizeof(*speed)); }
+}
+
+void FlywheelSpeed_Stop(FlywheelSpeed *speed)
+/*
+ * 作用：清除当前速度控制请求与积分，并保留需要读取的运行统计。
+ * 参数 speed：该侧摩擦轮的速度 PI、目标爬升及运行统计状态。
+ * 不返回数值；处理结果保存在传入结构体或本文件维护的状态中。
+ */
+{
+    if (speed == 0) { return; }
+    speed->running = speed->coasting = speed->at_limit = speed->in_band = 0U;
+    speed->requested_mA = 0;
+    speed->target_erpm = speed->integral_mA = 0.0f;
+    speed->band_ms = 0U;
+}
+
+static uint32_t add_saturated(uint32_t value, uint32_t increment)
+/*
+ * 作用：累加统计计数，达到整数上限后保持饱和，避免回绕。
+ * 参数 value：待处理的数值。
+ * 参数 increment：本次要累加的非负统计增量。
+ * 返回当前序号、计数或故障代次，读取本身不触发运动。
+ */
+{
+    return increment > UINT32_MAX - value ? UINT32_MAX : value + increment;
+}
+
+static uint32_t magnitude(int32_t erpm)
+/*
+ * 作用：计算转速或电流的无符号幅值，用于运行统计和边界比较。
+ * 参数 erpm：电调反馈的电角转速，机械 rpm 需再除以极对数。
+ * 返回当前序号、计数或故障代次，读取本身不触发运动。
+ */
+{
+    /* 包括INT_MIN，不能对有符号最小值直接取负。 */
+    return erpm >= 0 ? (uint32_t)erpm : (uint32_t)(-1 - erpm) + 1U;
+}
+
+static float clamp(float value, float low, float high)
+/*
+ * 作用：把数值限制在指定上下界内，避免控制请求越界。
+ * 参数 value：待处理的数值。
+ * 参数 low：下界。
+ * 参数 high：上界。
+ * 返回计算后的浮点数；具体物理单位与输入量程一致。
+ */
+{
+    return value < low ? low : (value > high ? high : value);
 }

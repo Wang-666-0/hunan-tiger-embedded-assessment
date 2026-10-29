@@ -1,14 +1,12 @@
 /**
  * @file gimbal_startup.c
- * @brief 双轴上电准备和参考建立
- * 配置入口：App/app_config.h；接口声明见同目录对应头文件。
- * 对外函数（7）：
- *   GimbalStartup_Init / GimbalStartup_ManualOverride / GimbalStartup_Request /
- *   GimbalStartup_GetState / GimbalStartup_TakeEvent / GimbalStartup_OutputReady /
- *   GimbalStartup_Update
- * 内部函数（4）：
- *   Status / SafeOff / Barrier / CancelInitial
- * 文件级变量/常量（18；局部变量见对应函数）：
+ * 作用：双轴上电准备和参考建立
+ * 对外函数：
+ *   GimbalStartup_Update / GimbalStartup_Request / GimbalStartup_Init / GimbalStartup_ManualOverride /
+ *   GimbalStartup_OutputReady / GimbalStartup_TakeEvent / GimbalStartup_GetState
+ * 内部函数：
+ *   Status / Barrier / CancelInitial / SafeOff
+ * 文件级变量（函数局部变量在各函数内定义）：
  *   state：本模块维护并向外发布的设备或流程状态快照。
  *   remote_sequence：启动流程最近已观察的有效遥控帧序号。
  *   guard_stop：启动流程已同步的停止、串口和 CAN 故障代次。
@@ -27,9 +25,7 @@
  *   pitch_zero_done：本次准备是否已完成对应轴的参考捕获。
  *   clear_sent：本次双轴准备是否已经尝试过允许的 Yaw 固定清错。
  *   manual_rezero：当前流程是否为人工请求的重新建立零点。
- * 维护约束：函数前的功能说明对应当前实现，修改行为时同步更新。
  */
-/* 双轴启动协调：安全 OFF、建立基准和原使能握手。 */
 #include "gimbal_startup.h"
 #include "app_config.h"
 #include "app_tasks.h"
@@ -45,83 +41,19 @@ static uint32_t barrier_ms, off_since_ms, started_ms, query_ms;
 static uint8_t have_sequence, have_guard, off_seen, pending_event;
 static uint8_t begun, yaw_zero_done, pitch_zero_done, clear_sent, manual_rezero;
 
-static void Status(uint8_t phase, uint8_t reason, uint8_t ready)
-/* 功能：更新双轴准备阶段、原因和就绪标记，状态变化时产生待报告事件。 */
-{
-    if (state.phase != phase || state.reason != reason || state.ready != ready) {
-        state.phase = phase; state.reason = reason; state.ready = ready;
-        ++state.sequence; pending_event = 1U;
-    }
-}
-void GimbalStartup_Init(void)
-/* 功能：初始化双轴上电准备阶段、参考有效性及重新解锁屏障。 */
-{
-    taskENTER_CRITICAL();
-    memset(&state, 0, sizeof(state));
-    have_sequence = have_guard = off_seen = pending_event = 0U;
-    begun = yaw_zero_done = pitch_zero_done = clear_sent = 0U;
-    manual_rezero = 0U;
-    remote_sequence = guard_stop = guard_uart = guard_can = 0U;
-    barrier_ms = off_since_ms = started_ms = query_ms = 0U;
-    taskEXIT_CRITICAL();
-}
-static uint8_t SafeOff(const RemoteFrame *frame, uint32_t now)
-/* 功能：检查启动流程所需的新鲜安全 OFF 遥控条件。 */
-{
-    RemoteCommand command;
-    if (!frame || !frame->has_frame || (uint32_t)(now - frame->received_ms) >= REMOTE_TIMEOUT_MS) { return 0U; }
-    RemoteMapper_Map(frame, &command);
-    return (uint8_t)(command.valid && command.failsafe_ok && command.arm == RC_LOW && command.neutral);
-}
-static void Barrier(uint32_t now)
-/* 功能：更新时间屏障，要求后续使用更新的安全 OFF 帧重新准备。 */
-{
-    AppTasks_RequireRearm(); ++guard_stop;
-    barrier_ms = now; off_seen = 0U;
-}
-static void CancelInitial(void)
-/* 功能：撤销尚未完成的双轴初始准备及对应会话请求。 */
-{
-    if (begun && !state.reference_latched) {
-        (void)YawBackend_Request(0U); (void)PitchBackend_Request(0U);
-    }
-    begun = yaw_zero_done = pitch_zero_done = clear_sent = 0U;
-}
-void GimbalStartup_ManualOverride(void)
-/* 功能：把准备流程控制权交给显式人工操作，避免自动流程覆盖人工请求。 */
-{
-    taskENTER_CRITICAL(); CancelInitial(); off_seen = 0U;
-    Status(GIMBAL_STARTUP_MANUAL, GIMBAL_STARTUP_NONE, 0U);
-    taskEXIT_CRITICAL();
-}
-uint8_t GimbalStartup_Request(const RemoteFrame *frame, uint32_t now, uint8_t inhibited)
-/* 功能：核对安全条件后提出双轴重新准备请求，等待原流程逐步完成。 */
-{
-    CanBusState bus;
-    uint8_t accepted = 0U;
-    taskENTER_CRITICAL(); CanBus_GetState(&bus);
-    if (!inhibited && SafeOff(frame, now) && bus.started && !bus.fault_epoch) {
-        GimbalStartup_Init(); manual_rezero = 1U; accepted = 1U;
-    }
-    taskEXIT_CRITICAL(); return accepted;
-}
-void GimbalStartup_GetState(GimbalStartupState *out)
-/* 功能：复制双轴准备阶段、原因和参考状态，供只读查询。 */
-{ if (out) { taskENTER_CRITICAL(); *out = state; taskEXIT_CRITICAL(); } }
-uint8_t GimbalStartup_TakeEvent(GimbalStartupState *out)
-/* 功能：取出并清除一条新的双轴准备状态事件。 */
-{
-    uint8_t result = 0U;
-    taskENTER_CRITICAL();
-    if (out && pending_event) { *out = state; pending_event = 0U; result = 1U; }
-    taskEXIT_CRITICAL(); return result;
-}
-uint8_t GimbalStartup_OutputReady(void)
-/* 功能：检查双轴参考和准备阶段是否允许后续运行解锁。 */
-{ return (uint8_t)(state.phase == GIMBAL_STARTUP_MANUAL || state.ready); }
+/* 内部函数前置声明：主流程先展示，辅助实现放在文件后方。 */
+static void Status(uint8_t phase, uint8_t reason, uint8_t ready);
+static uint8_t SafeOff(const RemoteFrame *frame, uint32_t now);
+static void Barrier(uint32_t now);
+static void CancelInitial(void);
 
 void GimbalStartup_Update(const SafetyInput *input, uint8_t inhibited)
-/* 功能：按原安全门禁推进双轴停止确认、参考捕获和准备就绪状态。 */
+/*
+ * 作用：按原安全门禁推进双轴停止确认、参考捕获和准备就绪状态。
+ * 参数 input：本轮遥控、设备健康、时间及故障代次快照。
+ * 参数 inhibited：调用方是否额外禁止本次动作。
+ * 不返回数值；处理结果保存在传入结构体或本文件维护的状态中。
+ */
 {
     CanBusState bus;
     YawBackendState yaw;
@@ -196,14 +128,14 @@ void GimbalStartup_Update(const SafetyInput *input, uint8_t inhibited)
         off_seen = 1U; off_since_ms = now;
     }
     if (!begun) {
-        if (!fresh || (uint32_t)(now - off_since_ms) < APP_GIMBAL_STARTUP_OFF_HOLD_MS) { return; }
+        if (!fresh || (uint32_t)(now - off_since_ms) < 100U) { return; }
         if (!YawBackend_PrepareStop()) { return; }
         (void)PitchBackend_Request(0U); (void)PitchBackend_QueryFeedback();
         begun = 1U; started_ms = query_ms = now;
         yaw_zero_done = pitch_zero_done = clear_sent = 0U;
         Status(GIMBAL_STARTUP_PREPARING, GIMBAL_STARTUP_NONE, 0U); return;
     }
-    if ((uint32_t)(now - started_ms) >= APP_GIMBAL_STARTUP_TIMEOUT_MS) {
+    if ((uint32_t)(now - started_ms) >= 5000U) {
         CancelInitial(); Status(GIMBAL_STARTUP_BLOCKED, GIMBAL_STARTUP_TIMEOUT, 0U); return;
     }
     if (state.phase == GIMBAL_STARTUP_BLOCKED) { return; }
@@ -240,4 +172,133 @@ void GimbalStartup_Update(const SafetyInput *input, uint8_t inhibited)
         YawBackend_ReleasePreparation(); state.reference_latched = 1U;
         Barrier(now); Status(GIMBAL_STARTUP_READY, GIMBAL_STARTUP_NONE, 1U);
     }
+}
+
+uint8_t GimbalStartup_Request(const RemoteFrame *frame, uint32_t now, uint8_t inhibited)
+/*
+ * 作用：核对安全条件后提出双轴重新准备请求，等待原流程逐步完成。
+ * 参数 frame：包含总线/通道数据和接收时间的输入帧。
+ * 参数 now：当前毫秒时间。
+ * 参数 inhibited：调用方是否额外禁止本次动作。
+ * 返回 1 表示本次校验/请求被接受，0 表示条件不满足；接受请求不代表动作已经完成。
+ */
+{
+    CanBusState bus;
+    uint8_t accepted = 0U;
+    taskENTER_CRITICAL(); CanBus_GetState(&bus);
+    if (!inhibited && SafeOff(frame, now) && bus.started && !bus.fault_epoch) {
+        GimbalStartup_Init(); manual_rezero = 1U; accepted = 1U;
+    }
+    taskEXIT_CRITICAL(); return accepted;
+}
+
+void GimbalStartup_Init(void)
+/*
+ * 作用：初始化双轴上电准备阶段、参考有效性及重新解锁屏障。
+ * 输入：无显式参数，读取或维护本模块状态；相关变量见文件头。
+ * 不返回数值；处理结果保存在传入结构体或本文件维护的状态中。
+ */
+{
+    taskENTER_CRITICAL();
+    memset(&state, 0, sizeof(state));
+    have_sequence = have_guard = off_seen = pending_event = 0U;
+    begun = yaw_zero_done = pitch_zero_done = clear_sent = 0U;
+    manual_rezero = 0U;
+    remote_sequence = guard_stop = guard_uart = guard_can = 0U;
+    barrier_ms = off_since_ms = started_ms = query_ms = 0U;
+    taskEXIT_CRITICAL();
+}
+
+void GimbalStartup_ManualOverride(void)
+/*
+ * 作用：把准备流程控制权交给显式人工操作，避免自动流程覆盖人工请求。
+ * 输入：无显式参数，读取或维护本模块状态；相关变量见文件头。
+ * 不返回数值；处理结果保存在传入结构体或本文件维护的状态中。
+ */
+{
+    taskENTER_CRITICAL(); CancelInitial(); off_seen = 0U;
+    Status(GIMBAL_STARTUP_MANUAL, GIMBAL_STARTUP_NONE, 0U);
+    taskEXIT_CRITICAL();
+}
+
+uint8_t GimbalStartup_OutputReady(void)
+/*
+ * 作用：检查双轴参考和准备阶段是否允许后续运行解锁。
+ * 输入：无显式参数，读取或维护本模块状态；相关变量见文件头。
+ * 返回 1 表示本次校验/请求被接受，0 表示条件不满足；接受请求不代表动作已经完成。
+ */
+{ return (uint8_t)(state.phase == GIMBAL_STARTUP_MANUAL || state.ready); }
+
+uint8_t GimbalStartup_TakeEvent(GimbalStartupState *out)
+/*
+ * 作用：取出并清除一条新的双轴准备状态事件。
+ * 参数 out：接收结果的输出结构体/缓冲区。
+ * 返回 1 表示取到了新事件/报告，并消费其待处理标志；0 表示当前没有。
+ */
+{
+    uint8_t result = 0U;
+    taskENTER_CRITICAL();
+    if (out && pending_event) { *out = state; pending_event = 0U; result = 1U; }
+    taskEXIT_CRITICAL(); return result;
+}
+
+void GimbalStartup_GetState(GimbalStartupState *out)
+/*
+ * 作用：复制双轴准备阶段、原因和参考状态，供只读查询。
+ * 参数 out：接收结果的输出结构体/缓冲区。
+ * 不返回数值，将当前快照写入输出参数；不会启动新的运动。
+ */
+{ if (out) { taskENTER_CRITICAL(); *out = state; taskEXIT_CRITICAL(); } }
+
+static void Status(uint8_t phase, uint8_t reason, uint8_t ready)
+/*
+ * 作用：更新双轴准备阶段、原因和就绪标记，状态变化时产生待报告事件。
+ * 参数 phase：双轴上电准备的阶段枚举。
+ * 参数 reason：本次停止、中止或状态原因。
+ * 参数 ready：双轴是否已经完成准备。
+ * 不返回数值；处理结果保存在传入结构体或本文件维护的状态中。
+ */
+{
+    if (state.phase != phase || state.reason != reason || state.ready != ready) {
+        state.phase = phase; state.reason = reason; state.ready = ready;
+        ++state.sequence; pending_event = 1U;
+    }
+}
+
+static void Barrier(uint32_t now)
+/*
+ * 作用：更新时间屏障，要求后续使用更新的安全 OFF 帧重新准备。
+ * 参数 now：当前毫秒时间。
+ * 不返回数值；处理结果保存在传入结构体或本文件维护的状态中。
+ */
+{
+    AppTasks_RequireRearm(); ++guard_stop;
+    barrier_ms = now; off_seen = 0U;
+}
+
+static void CancelInitial(void)
+/*
+ * 作用：撤销尚未完成的双轴初始准备及对应会话请求。
+ * 输入：无显式参数，读取或维护本模块状态；相关变量见文件头。
+ * 不返回数值；处理结果保存在传入结构体或本文件维护的状态中。
+ */
+{
+    if (begun && !state.reference_latched) {
+        (void)YawBackend_Request(0U); (void)PitchBackend_Request(0U);
+    }
+    begun = yaw_zero_done = pitch_zero_done = clear_sent = 0U;
+}
+
+static uint8_t SafeOff(const RemoteFrame *frame, uint32_t now)
+/*
+ * 作用：检查启动流程所需的新鲜安全 OFF 遥控条件。
+ * 参数 frame：包含总线/通道数据和接收时间的输入帧。
+ * 参数 now：当前毫秒时间。
+ * 返回布尔判断结果，非零为满足条件，0 为不满足。
+ */
+{
+    RemoteCommand command;
+    if (!frame || !frame->has_frame || (uint32_t)(now - frame->received_ms) >= REMOTE_TIMEOUT_MS) { return 0U; }
+    RemoteMapper_Map(frame, &command);
+    return (uint8_t)(command.valid && command.failsafe_ok && command.arm == RC_LOW && command.neutral);
 }

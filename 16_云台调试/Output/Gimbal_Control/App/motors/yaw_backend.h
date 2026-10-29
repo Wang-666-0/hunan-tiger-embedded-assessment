@@ -1,11 +1,4 @@
-/**
- * @file yaw_backend.h
- * @brief Yaw 执行后端
- * 职责：声明基准、使能、参数、相对阶跃、锁轴、停机及实测结果接口。
- * 主要接口：YawBackend_Init, YawBackend_OnFrame, YawBackend_GetState, YawBackend_Request, YawBackend_PrepareStop 等。
- * 实现：motors/yaw_backend.c；调用关系见实现文件与 App/README。
- * 参数：app_config.h 是 App 参数及常量的唯一宏定义入口。
- */
+/* Yaw 执行后端 */
 #ifndef YAW_BACKEND_H
 #define YAW_BACKEND_H
 #include "app_config.h"
@@ -39,27 +32,6 @@ typedef struct {
     uint8_t step_still_samples;
 } YawBackendState;
 /* 位值可同时出现；CHECK只读，当前阻碍与上一次清错拒绝分别记录。 */
-typedef enum {
-    YAW_CLEAR_NOT_MONITORING = 1UL << 0,
-    YAW_CLEAR_REQUESTED = 1UL << 1,
-    YAW_CLEAR_ACTIVE = 1UL << 2,
-    YAW_CLEAR_WAITING_DISABLE = 1UL << 3,
-    YAW_CLEAR_OUTPUT_ALLOWED = 1UL << 4,
-    YAW_CLEAR_FEEDBACK_STALE = 1UL << 5,
-    YAW_CLEAR_STATUS_NOT_13 = 1UL << 6,
-    YAW_CLEAR_OTHER_FAULT = 1UL << 7,
-    YAW_CLEAR_NOT_STATIONARY = 1UL << 8,
-    YAW_CLEAR_DISABLE_UNCONFIRMED = 1UL << 9,
-    YAW_CLEAR_CAN_FAULT = 1UL << 10,
-    YAW_CLEAR_MAILBOX_BUSY = 1UL << 11,
-    YAW_CLEAR_TX_FAILED = 1UL << 12
-} YawClearBlock;
-typedef struct {
-    uint32_t blocks, last_blocks, hold_ms, fd_age_ms, mailbox_pending, can_epoch;
-    uint32_t off_motion_faults, required_hold_ms;
-    uint8_t samples, monitoring, fd_sent, fd_cancel, fd_result, clear_result;
-    uint8_t actuation_started;
-} YawClearCheck;
 void YawBackend_Init(void);
 uint8_t YawBackend_OnFrame(const CanFrame *frame);
 void YawBackend_GetState(YawBackendState *out);
@@ -97,6 +69,5 @@ uint8_t YawBackend_TakeRemoteStepEvent(YawRemoteStepEvent *out);
  * 须静止500ms。使能后的运动故障及其它故障仍拒绝，STOP不抹掉来源。
  * 不直接清软件故障，不使能；提交后先完成新的FD才可再次准备。 */
 uint8_t YawBackend_ClearCommsFault(void);
-void YawBackend_GetClearCheck(YawClearCheck *out);
 uint8_t YawBackend_TakeRearmRequest(void);
 #endif

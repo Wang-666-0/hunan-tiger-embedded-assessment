@@ -30,7 +30,7 @@ void test_run(void)
     }
     test_stage = 2U;
     PitchDisplaySim_Reset(&sim, 1U);
-    step.phase = PITCH_STEP_IDLE; sample(0.0f, 0.0f);
+    step.phase = YAW_STEP_IDLE; sample(0.0f, 0.0f);
     for (direction = 0U; direction < 10U; ++direction) {
         float target = direction & 1U ? 0.0f : 30.0f;
         step.phase = PITCH_STEP_ABORTED; step.reason = PITCH_STEP_TARGET_CHANGE;

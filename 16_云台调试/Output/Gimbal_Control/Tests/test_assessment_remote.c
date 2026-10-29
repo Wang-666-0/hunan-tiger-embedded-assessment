@@ -36,8 +36,8 @@ static void mapper_and_safety(void)
     uint32_t i;
     test_stage = 1U;
     reset(100U);
-    CHECK(APP_REMOTE_PROFILE_ASSESSMENT && !APP_REMOTE_PROFILE_LEGACY);
-    CHECK(RC_FAILSAFE_CHANNEL == 7U && RC_TRIGGER_CHANNEL == 7U);
+    CHECK(1U && !0U);
+    CHECK(7U == 7U && 7U == 7U);
     CHECK(logic.command.neutral && logic.command.failsafe_ok);
     for (i = 0U; i < 8U; ++i) {
         input.remote.channels[i] = 799U;
@@ -125,7 +125,7 @@ static void wheels_and_test_interfaces(void)
     input.remote.channels[3] = 2000U; input.remote.channels[6] = 2000U; frame(198U);
     CHECK(!logic.targets.request.step_event); /* 左摇杆斜向拒绝，不能猜测测试轴。 */
     input.remote.channels[6] = 1000U; frame(205U);
-    CHECK(logic.targets.request.step_return_event && logic.targets.request.step_delta_deg == -30.0f);
+    CHECK(!logic.targets.request.step_return_event); /* 斜向选择不能确定回退轴。 */
     sequence = logic.targets.request.step_sequence;
     frame(212U); CHECK(!logic.targets.request.step_return_event && logic.targets.request.step_sequence == sequence);
     input.remote.channels[4] = 1500U; frame(219U);

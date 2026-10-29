@@ -7,7 +7,7 @@
 static void ManualRun(uint32_t *clock_ms, uint32_t duration_ms, uint16_t channel)
 {
     uint32_t elapsed;
-    receiver.channels[RC_YAW_CHANNEL] = channel;
+    receiver.channels[0U] = channel;
     for (elapsed = 2U; elapsed <= duration_ms; elapsed += 2U) {
         *clock_ms += 2U;
         if (*clock_ms % 10U == 0U) { FeedDegrees(*clock_ms, state.controller.target_deg, 0); }
@@ -46,7 +46,7 @@ void test_run(void)
     YawStep step;
     char default_pid[128];
     test_stage = 1U;
-    CHECK(!YAW_CASCADE_OUTPUT_LIMITS_ENABLED);
+    CHECK(!0U);
     (void)snprintf(default_pid, sizeof(default_pid), "|POS|%.4f,%.4f,%.4f|VEL|%.6f,%.6f,%.6f",
         (double)APP_YAW_POSITION_KP, (double)APP_YAW_POSITION_KI, (double)APP_YAW_POSITION_KD,
         (double)APP_YAW_SPEED_KP, (double)APP_YAW_SPEED_KI, (double)APP_YAW_SPEED_KD);
@@ -67,10 +67,10 @@ void test_run(void)
     ManualRun(&clock_ms, 100U, 1500U);
     ManualRun(&clock_ms, 100U, 1470U); ManualRun(&clock_ms, 100U, 1530U);
     CHECK(state.controller.target_deg == held && request.yaw_rate_dps == 0);
-    receiver.channels[RC_PITCH_CHANNEL] = 2000U;
+    receiver.channels[1U] = 2000U;
     ManualRun(&clock_ms, 100U, 1500U);
     CHECK(state.controller.target_deg == held); /* 右杆上下不串入Yaw。 */
-    receiver.channels[RC_PITCH_CHANNEL] = 1500U;
+    receiver.channels[1U] = 1500U;
 
     test_stage = 3U;
     ManualRun(&clock_ms, 2000U, 2000U);
@@ -81,18 +81,18 @@ void test_run(void)
     ManualRun(&clock_ms, 100U, 1500U); CHECK(state.controller.target_deg == -150);
     CHECK(!YawBackend_StartStep(50) && !YawBackend_StartStep(-50));
     /* CH5 captures the measured pose, then ignores manual stick rates. */
-    receiver.channels[RC_YAW_CHANNEL] = 2000U;
+    receiver.channels[0U] = 2000U;
     clock_ms += 2U; Control(clock_ms, 2U);
     CHECK(request.gimbal_mode == GIMBAL_TEST && request.yaw_rate_dps == 0 && state.active && state.step_hold);
     CHECK(fabsf(state.controller.target_deg - state.controller.angle_deg) <= YAW_STEP_BAND_DEG);
-    receiver.channels[RC_YAW_CHANNEL] = 1500U;
+    receiver.channels[0U] = 1500U;
     clock_ms += 2U; Control(clock_ms, 1U);
 
     test_stage = 4U;
-    enabled = enable_calls; receiver.channels[RC_TRIGGER_CHANNEL] = 1000U;
+    enabled = enable_calls; receiver.channels[7U] = 1000U;
     clock_ms += 2U; Control(clock_ms, 1U);
     CHECK(!state.active && !permission && !application.logic.safety.operator_armed);
-    receiver.channels[RC_TRIGGER_CHANNEL] = 1500U;
+    receiver.channels[7U] = 1500U;
     clock_ms += 2U; FeedAt(clock_ms, -150.0f, 0U); Control(clock_ms, 1U);
     CHECK(!state.active && enable_calls == enabled); /* 仅释放安全锁不会自启。 */
 
@@ -100,7 +100,7 @@ void test_run(void)
     /* 端点微小静差仍能按OFF->ON重启，保留原零点并裁目标，而非追赶0。 */
     ConsoleZeroActivate(30000U); clock_ms = 30066U;
     ManualRun(&clock_ms, 1900U, 1000U);
-    receiver.channels[RC_YAW_CHANNEL] = 1500U;
+    receiver.channels[0U] = 1500U;
     clock_ms += 2U; FeedAt(clock_ms, -150.1f, 1U); Control(clock_ms, 1U);
     clock_ms += 2U; Control(clock_ms, 0U);
     FeedAt(clock_ms + 2U, -150.1f, 0U); Control(clock_ms + 2U, 0U);

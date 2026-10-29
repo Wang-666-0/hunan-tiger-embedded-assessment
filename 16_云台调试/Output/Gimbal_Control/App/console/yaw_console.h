@@ -1,11 +1,4 @@
-/**
- * @file yaw_console.h
- * @brief Yaw 串口命令
- * 职责：声明 YAW 命令处理、准备状态轮询和准备取消接口。
- * 主要接口：YawConsole_Handle, YawConsole_Poll, YawConsole_CancelPreparation。
- * 实现：console/yaw_console.c；调用关系见实现文件与 App/README。
- * 参数：app_config.h 是 App 参数及常量的唯一宏定义入口。
- */
+/* Yaw 串口命令 */
 #ifndef YAW_CONSOLE_H
 #define YAW_CONSOLE_H
 #include "app_config.h"

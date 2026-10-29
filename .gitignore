@@ -48,3 +48,19 @@ Listings/
 # Keil 生成的链接和内存报告
 **/MDK-ARM/*/*.htm
 
+# 可重建的本地缓存；过程记录中的构建日志、固件和 Flash 备份仍保留
+/tmp/
+/M2006/tmp/
+**/__pycache__/
+*.py[cod]
+**/MDK-ARM/build/
+**/MDK-ARM/.vscode/keil-assistant.log
+**/MDK-ARM/.vscode/uv4.log.lock
+
+# 大型下载资料保留在本机，来源与 SHA256 见 16_云台调试/03_参考资料/本地大文件说明.md
+/16_云台调试/03_参考资料/bldc/
+/16_云台调试/03_参考资料/bldc.rar
+/16_云台调试/03_参考资料/03_摩擦轮_N630_VESC/上位机/vesc_tool_6.05.exe
+/16_云台调试/03_参考资料/03_摩擦轮_N630_VESC/原作者资料/南邮N630电调开源.zip
+/16_云台调试/03_参考资料/03_摩擦轮_N630_VESC/原作者资料/南邮N630电调开源/南邮N630电调开源/vesc_tool_6.05.exe
+

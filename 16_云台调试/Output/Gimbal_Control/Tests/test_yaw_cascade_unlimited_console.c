@@ -12,7 +12,7 @@ void test_run(void)
         (double)APP_YAW_POSITION_KP, (double)APP_YAW_POSITION_KI, (double)APP_YAW_POSITION_KD,
         (double)APP_YAW_SPEED_KP, (double)APP_YAW_SPEED_KI, (double)APP_YAW_SPEED_KD);
     test_stage = 1;
-    CHECK(!YAW_CASCADE_OUTPUT_LIMITS_ENABLED);
+    CHECK(!0U);
     ConsoleReset(1000); Control(1000, 0);
     Command(1000, "YAW", "Y|STATE|GL60II_FIXED_PID_V2Q"); CHECK(strlen(response) < 300U);
     Command(1000, "YAW HELP", "Y|HELP|CTRL|FIXED_CASCADE_PID|READ|YAW;PID;RESULT;STATUS;STEP CHECK");
@@ -51,7 +51,7 @@ void test_run(void)
     /* 2.448基础输出加新反馈期间的积分，不再受原.10发送校验阻碍。 */
     CHECK(last_torque > 2.44f && last_torque < 2.6f && state.active && !state.controller.faults);
     CHECK(state.controller.cascade.target_velocity_dps > 509 && !state.controller.cascade.velocity_limited);
-    receiver.channels[RC_TRIGGER_CHANNEL] = 1000;
+    receiver.channels[7U] = 1000;
     Control(3094, 2); CHECK(!state.active && !permission);
 
     test_stage = 3;

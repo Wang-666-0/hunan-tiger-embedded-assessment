@@ -55,7 +55,10 @@ def main():
     gcc = args.gcc_dir / "arm-none-eabi-gcc.exe"
     nm = args.gcc_dir / "arm-none-eabi-nm.exe"
     for name, sources in groups.items():
-        compile_sources = production_sources = sources
+        compile_sources = list(sources)
+        if any(p.name == "app_console.c" for p in sources):
+            compile_sources.append(root / "mocks/console_peers.c")
+        production_sources = compile_sources
         tested = production_sources + sorted(app.rglob("*.h")) + sorted((root / "mocks").glob("*.h"))
         # 部分集成用例include已有夹具.c，也纳入源码哈希，避免漏验。
         tested += list(root.glob("test_*.c")) + [root / "test.ld", Path(__file__),
@@ -64,16 +67,8 @@ def main():
                   hashlib.sha256(p.read_bytes()).hexdigest() for p in tested}
         elf = output / (name + ".elf")
         profile_flags = []
-        if not name.startswith(("pitch_", "feeder_")):
-            profile_flags += ["-DAPP_PITCH_ENABLED=0"]
-        if name == "speed_6000":
-            profile_flags += ["-DAPP_YAW_ENABLED=0"]
-        profile_flags += ["-DAPP_FEEDER_ENABLED=" + ("1" if name.startswith("feeder_") else "0")]
         if not name.startswith("feeder_standalone"):
             profile_flags += ["-DAPP_FEEDER_STANDALONE_TEST_ENABLED=0"]
-        # Preserve the original per-byte transport fixtures; the new group runs DMA RX.
-        profile_flags += ["-DAPP_CONSOLE_RX_DMA_ENABLED=" + ("1" if name in ("pitch_console_dma", "pitch_dual_uart_dma") else "0")]
-        profile_flags += ["-DAPP_REMOTE_RX_DMA_ENABLED=" + ("1" if name in ("pitch_remote_dma", "pitch_dual_uart_dma") else "0")]
         try:
             run([str(gcc), "-mcpu=cortex-m4", "-mthumb", "-mfloat-abi=soft", "-std=c99", "-O0", "-g"] + profile_flags + [
                  "-Wall", "-Wextra", "-Werror", "-ffunction-sections", "-fdata-sections",

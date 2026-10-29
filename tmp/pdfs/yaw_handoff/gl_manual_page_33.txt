@@ -1,8 +1,0 @@
-https://www.cubemars.com/
-33 / 41
-Vmax 为驱动器中控制幅值设置的 VMAX 参数，Max 为输入 PWM 最大脉宽时间，Min 为输
-入 PWM 最小脉宽时间。
-4.4.5.1 位置控制
-确认电机输入电源稳定，PWM 连接正常，并且电机处于位置速度模式。
-Pmax 为驱动器中控制幅值设置的 PMAX 参数，此模式下速度限制为 VMAX，Max 为输入 PWM
-最大脉宽时间，Min 为输入 PWM 最小脉宽时间。

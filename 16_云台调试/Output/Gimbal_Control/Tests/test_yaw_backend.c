@@ -1,4 +1,4 @@
-﻿#include "yaw_backend.h"
+#include "yaw_backend.h"
 #include "can_bus.h"
 #include "app_config.h"
 #include <string.h>

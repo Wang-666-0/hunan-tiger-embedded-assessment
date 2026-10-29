@@ -1,11 +1,4 @@
-/**
- * @file feeder_backend.h
- * @brief 拨盘执行后端
- * 职责：声明拨盘会话、配置、准备、单发/连发、停机及只读状态接口。
- * 主要接口：FeederBackend_Init, FeederBackend_Stop, FeederBackend_ManualOff, FeederBackend_OnFrame, FeederBackend_Apply 等。
- * 实现：motors/feeder_backend.c；调用关系见实现文件与 App/README。
- * 参数：app_config.h 是 App 参数及常量的唯一宏定义入口。
- */
+/* 拨盘执行后端 */
 #ifndef FEEDER_BACKEND_H
 #define FEEDER_BACKEND_H
 #include "app_config.h"

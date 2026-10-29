@@ -1,16 +1,13 @@
 /**
  * @file feeder_console.c
- * @brief 拨盘串口命令、状态与结果
- * 配置入口：App/app_config.h；接口声明见同目录对应头文件。
- * 对外函数（3）：
+ * 作用：拨盘串口命令、状态与结果
+ * 对外函数：
  *   FeederConsole_Handle / FeederConsole_Telemetry / FeederConsole_SpeedTelemetry
- * 内部函数（3）：
+ * 内部函数：
  *   Status / Result / Check
- * 文件级变量/常量（0；局部变量见对应函数）：
- *   无；状态由调用方传入的结构体保存。
- * 维护约束：函数前的功能说明对应当前实现，修改行为时同步更新。
+ * 文件级变量（函数局部变量在各函数内定义）：
+ *   无；控制状态由调用方提供的结构体保存。
  */
-/* FEEDER 命令：单发、连发、配置及角度/速度遥测。 */
 #include "feeder_console.h"
 #include "feeder_backend.h"
 #include "motor_backend.h"
@@ -24,116 +21,19 @@
 #include <string.h>
 #include <math.h>
 
-static void Status(const char *operation, uint8_t ok, char *out, size_t capacity)
-/* 功能：格式化拨盘在线、准备、动作、反馈和控制配置状态。 */
-{
-    FeederBackendState state;
-    MotorHealth wheels;
-    const FeederController *c;
-    FeederBackend_GetState(&state); MotorBackend_GetHealth(&wheels); c = &state.controller;
-    (void)snprintf(out, capacity,
-        "F|%s|%s|%s|ONLINE|%u|RX|%lu|AGE|%lu|RAW|%u|ROTOR_DEG|%.4f|POS_DEG|%.4f|TARGET_DEG|%.4f|RPM|%d|VREF|%.2f|CMD_RAW|%d|FB_TORQUE_RAW|%d|ARMED|%u|ZERO|%u|BUSY|%u|FAULT|%lu|STOP_PENDING|%u|WHEELS_READY|%u|STEP|%.6g|DIR|%d|GEAR|%.6g|CAL|%u|PKP|%.6g|VKP|%.6g|VKI|%.6g|MAX_RPM|%.6g|LIMIT|%.6g|TOL|%.6g|SETTLE_RPM|%.6g|SETTLE_MS|%lu|TIMEOUT_MS|%lu|JAM_RAW|%.6g|JAM_MS|%lu|JUMP_SLACK|%u|GAP_MARGIN_MS|%u|TS_ALLOW|%lu|ACCEPT|%lu|DONE|%lu|REJECT|%lu|ABORT|%lu|SINGLE|%lu|CONT|%lu|SHOT_MS|%lu|RATE_HZ|%.3f|PENDING|%u|CANCEL|%lu|DONE_DT_MS|%lu\r\n",
-        operation, ok ? "OK" : "REJECTED", APP_FEEDER_VERSION,
-        (unsigned)state.online, (unsigned long)c->feedback_sequence,
-        c->have_feedback ? (unsigned long)(HAL_GetTick() - c->last_feedback_ms) : 0xFFFFFFFFUL,
-        (unsigned)c->raw_angle, c->position_deg, c->axis_position_deg, c->axis_target_deg,
-        (int)c->raw_rpm, (double)c->target_rpm, (int)c->command_raw, (int)c->raw_current,
-        (unsigned)state.armed, (unsigned)c->have_zero, (unsigned)c->busy, (unsigned long)c->faults,
-        (unsigned)state.stop_pending, (unsigned)wheels.flywheels_ready,
-        (double)c->config.step_deg, (int)c->config.direction, (double)c->config.gear_ratio,
-        (unsigned)c->config.calibrated, (double)c->config.pos_kp, (double)c->config.speed_kp,
-        (double)c->config.speed_ki, (double)c->config.max_rpm, (double)c->config.current_limit,
-        (double)c->config.tolerance_deg, (double)c->config.settle_rpm,
-        (unsigned long)c->config.settle_ms, (unsigned long)c->config.motion_timeout_ms,
-        (double)c->config.jam_current_raw, (unsigned long)c->config.jam_ms,
-        (unsigned)FEEDER_JUMP_SLACK_COUNTS, (unsigned)FEEDER_GAP_UNCERTAINTY_MS,
-        (unsigned long)c->timestamp_allowances,
-        (unsigned long)c->accepted, (unsigned long)c->completed, (unsigned long)c->rejected,
-        (unsigned long)c->aborted, (unsigned long)state.single_accepted,
-        (unsigned long)state.continuous_accepted, (unsigned long)c->last_motion_ms,
-        (double)c->measured_hz, (unsigned)c->outstanding, (unsigned long)c->cancelled,
-        (unsigned long)state.completed_interval_ms);
-}
-
-static void Result(char *out, size_t capacity)
-/* 功能：格式化拨盘真实单发/连发完成用时、误差、超调和累计计数。 */
-{
-    FeederBackendState state;
-    const FeederController *c;
-    FeederBackend_GetState(&state); c = &state.controller;
-    (void)snprintf(out, capacity,
-        "F|RESULT|%s|COUNT_SOURCE|ENCODER_40DEG|ACCEPT|%lu|DONE|%lu|SINGLE_DONE|%lu|CONT_DONE|%lu|REJECT|%lu|ABORT|%lu|CANCEL|%lu|PENDING|%u|KIND|%u|SHOT_MS|%lu|SHOT_ERR_DEG|%.4f|BURST_DONE|%lu|WINDOW_MS|%lu|RATE_HZ|%.3f|RATE_VALID|%u|REQUEST_MS|%u|REQUIRED_RPM|%.2f|CONT_MAX_RPM|%.6g|PHASE_MS|%.6g|BRAKE_KP|%.6g|RATE_BLOCK|%u|FAULT|%lu|SINGLE_DECEL_RPM_S|%.6g|BRAKE_DELAY_MS|%u|PREVIEW_MS|%u|I_RELAX_MS|%u|SINGLE_BRAKE|%u|SINGLE_BRAKE_N|%lu|SINGLE_OVERSHOOT_DEG|%.4f\r\n",
-        APP_FEEDER_VERSION, (unsigned long)c->accepted, (unsigned long)c->completed,
-        (unsigned long)c->single_completed, (unsigned long)c->continuous_completed,
-        (unsigned long)c->rejected, (unsigned long)c->aborted, (unsigned long)c->cancelled,
-        (unsigned)c->outstanding, (unsigned)c->motion_kind, (unsigned long)c->last_motion_ms,
-        (double)c->last_motion_error_deg, (unsigned long)c->burst_completed,
-        (unsigned long)c->burst_elapsed_ms, (double)c->measured_hz,
-        (unsigned)(c->burst_completed >= 2U && c->burst_elapsed_ms != 0U),
-        (unsigned)APP_FIRE_INTERVAL_MS, (double)Feeder_ContinuousRpm(c),
-        (double)c->config.continuous_max_rpm, (double)c->config.continuous_phase_ms,
-        (double)c->config.continuous_brake_kp, (unsigned)c->rate_blocked,
-        (unsigned long)c->faults, (double)c->config.single_decel_rpm_s,
-        (unsigned)FEEDER_SINGLE_BRAKE_DELAY_MS, (unsigned)FEEDER_SINGLE_PREVIEW_MS,
-        (unsigned)FEEDER_SINGLE_I_RELAX_MS,
-        (unsigned)c->single_braking, (unsigned long)c->single_brake_frames,
-        (double)c->single_overshoot_deg);
-}
-
-static void Check(char *out, size_t capacity)
-/* 功能：格式化拨盘故障及首次异常反馈证据，帮助定位跳变或堵转。 */
-{
-    FeederBackendState state;
-    RemoteInput_State remote;
-    AppState app;
-    CanBusState bus;
-    const FeederJumpDiagnostic *jump;
-    const char *cause;
-    char data[17];
-    uint32_t i, now, uart_epoch;
-    static const char hex[] = "0123456789ABCDEF";
-    /* Read one coherent snapshot, format only after interrupts are unmasked. */
-    taskENTER_CRITICAL();
-    FeederBackend_GetState(&state); RemoteInput_GetState(&remote);
-    AppTasks_GetState(&app); CanBus_GetState(&bus);
-    now = HAL_GetTick(); uart_epoch = remote.fault_epoch + AppConsole_GetFaultEpoch();
-    taskEXIT_CRITICAL();
-    jump = &state.controller.jump;
-    cause = !jump->valid ? "NONE" : jump->flags == FEEDER_JUMP_DELTA ? "DELTA" :
-        jump->flags == FEEDER_JUMP_HALF_TURN ? "HALF_TURN" : "DELTA_AND_HALF_TURN";
-    for (i = 0U; i < 8U; ++i) {
-        data[i * 2U] = hex[jump->data[i] >> 4];
-        data[i * 2U + 1U] = hex[jump->data[i] & 15U];
-    }
-    data[16] = '\0';
-    (void)snprintf(out, capacity,
-        "F|CHECK|%s|FAULT|%lu|ONLINE|%u|ARMED|%u|BUSY|%u|CAL|%u|DIR|%d|STEP|%.6g|JUMP_VALID|%u|JUMP_COUNT|%lu|CAUSE|%s|FLAGS|%lu|AT_MS|%lu|SEQ|%lu|PREV_RAW|%u|RAW|%u|DELTA_COUNTS|%ld|GAP_MS|%lu|GAP_BOUND_MS|%lu|GAP_MARGIN_MS|%u|TS_ALLOW|%lu|FRAME_AGE_MS|%lu|PREV_RPM|%d|RPM|%d|LIMIT_COUNTS|%.6g|EXPECTED_COUNTS|%.6g|FB_TORQUE_RAW|%d|BEFORE_CMD|%d|BEFORE_BUSY|%u|BEFORE_ZERO|%u|FRAME|%s|RC_AGE_MS|%lu|CH|%u,%u,%u,%u,%u,%u,%u,%u|SAFETY|%u|SAFETY_REASON|%u|BARRIER|%u|OP_ARMED|%u|UART_CURRENT|%lu|UART_SEEN|%lu|CAN_EPOCH|%lu\r\n",
-        APP_FEEDER_VERSION, (unsigned long)state.controller.faults,
-        (unsigned)state.online, (unsigned)state.armed, (unsigned)state.controller.busy,
-        (unsigned)state.controller.config.calibrated, (int)state.controller.config.direction,
-        (double)state.controller.config.step_deg, (unsigned)jump->valid,
-        (unsigned long)jump->events, cause, (unsigned long)jump->flags,
-        (unsigned long)jump->at_ms, (unsigned long)jump->sequence,
-        (unsigned)jump->previous_angle, (unsigned)jump->angle, (long)jump->delta_counts,
-        (unsigned long)jump->gap_ms, (unsigned long)jump->bound_gap_ms,
-        (unsigned)FEEDER_GAP_UNCERTAINTY_MS, (unsigned long)state.controller.timestamp_allowances,
-        (unsigned long)jump->age_ms,
-        (int)jump->previous_rpm, (int)jump->rpm, (double)jump->limit_counts,
-        (double)jump->expected_counts, (int)jump->feedback_raw, (int)jump->command_raw,
-        (unsigned)jump->busy, (unsigned)jump->zero_valid, data,
-        remote.has_frame ? (unsigned long)(now - remote.received_ms) : 0xFFFFFFFFUL,
-        (unsigned)remote.channels[0], (unsigned)remote.channels[1],
-        (unsigned)remote.channels[2], (unsigned)remote.channels[3],
-        (unsigned)remote.channels[4], (unsigned)remote.channels[5],
-        (unsigned)remote.channels[6], (unsigned)remote.channels[7],
-        (unsigned)app.logic.safety.state, (unsigned)app.logic.safety.reason,
-        (unsigned)app.logic.safety.barrier_valid, (unsigned)app.logic.safety.operator_armed,
-        (unsigned long)uart_epoch, (unsigned long)app.logic.safety.uart_epoch,
-        (unsigned long)bus.fault_epoch);
-}
+/* 内部函数前置声明：主流程先展示，辅助实现放在文件后方。 */
+static void Status(const char *operation, uint8_t ok, char *out, size_t capacity);
+static void Result(char *out, size_t capacity);
+static void Check(char *out, size_t capacity);
 
 uint8_t FeederConsole_Handle(const char *line, char *out, size_t capacity)
-/* 功能：解析拨盘命令，核对格式和操作条件后查询状态或调用对应后端。 */
+/*
+ * 作用：解析拨盘命令，核对格式和操作条件后查询状态或调用对应后端。
+ * 参数 line：已经组装好的完整串口命令。
+ * 参数 out：接收结果的输出结构体/缓冲区。
+ * 参数 capacity：回复缓冲区容量，byte。
+ * 返回 1 表示识别了这类命令，具体执行成功与否写在回复中；0 表示交给其他模块处理。
+ */
 {
     const char *argument;
     char *end;
@@ -147,16 +47,16 @@ uint8_t FeederConsole_Handle(const char *line, char *out, size_t capacity)
     if (!strcmp(line, "FEEDER MODE")) {
         (void)snprintf(out, capacity,
             "F|MODE|%s|STANDALONE_TEST|%u|WHEEL_OUTPUT|%s|REQUIRE_WHEELS_READY|%u|CONTINUOUS|1|CH5|MIDDLE_NORMAL|CH6|MIDDLE_SINGLE_HIGH_CONTINUOUS|CH8|RELEASE_THEN_PULL|PID_CHANGED|0|CONFIG|APP_FEEDER_STANDALONE_TEST_ENABLED\r\n",
-            APP_FEEDER_STANDALONE_TEST_ACTIVE ? "FEEDER_ONLY" : "NORMAL",
-            (unsigned)APP_FEEDER_STANDALONE_TEST_ACTIVE,
-            APP_FEEDER_STANDALONE_TEST_ACTIVE ? "DISABLED" : "NORMAL_GUARDS",
-            (unsigned)!APP_FEEDER_STANDALONE_TEST_ACTIVE);
+            APP_FEEDER_STANDALONE_TEST_ENABLED ? "FEEDER_ONLY" : "NORMAL",
+            (unsigned)APP_FEEDER_STANDALONE_TEST_ENABLED,
+            APP_FEEDER_STANDALONE_TEST_ENABLED ? "DISABLED" : "NORMAL_GUARDS",
+            (unsigned)!APP_FEEDER_STANDALONE_TEST_ENABLED);
         return 1U;
     }
     if (!strcmp(line, "FEEDER HELP")) {
         (void)snprintf(out, capacity,
             "F|HELP|READ|FEEDER MODE;INFO;STATUS;RESULT;PID;VIEW;ANGLE VIEW;SPEED VIEW;CHECK|ANGLE_I|0_ACTUAL_1_TARGET_SHAFT_DEG|REQUEST_MS|50|CONTROL_MS|2|CHECK|FIRST_JUMP_SINCE_CLEAR|SAFE_OFF|AUTO_PREPARE_OR_READY;OFF;CLEAR;ZERO;ARM|ACTION|%s|TUNE|PKP;VKP;VKI;RPM;CONT_RPM;PHASE_MS;BRAKE_KP;SINGLE_DECEL;LIMIT;TOL;SETTLE;TIMEOUT;STEP;DIR;GEAR;CAL|BOOT|CAL1_DIR-1_GEAR35.68_SAFE_OFF_AUTO_ZERO_ARM|SHAFT|40DEG_CLOCKWISE_FROM_TOP|RAM_TUNING|1\r\n",
-            APP_FEEDER_STANDALONE_TEST_ACTIVE ? "FEEDER_ONLY_CH6_MIDDLE_SINGLE_HIGH_CONTINUOUS_NO_WHEEL_OUTPUT" :
+            APP_FEEDER_STANDALONE_TEST_ENABLED ? "FEEDER_ONLY_CH6_MIDDLE_SINGLE_HIGH_CONTINUOUS_NO_WHEEL_OUTPUT" :
                 "SINGLE_REQUIRES_NORMAL_AND_REAL_WHEELS_READY"); return 1U;
     }
     if (!strcmp(line, "FEEDER RESULT")) { Result(out, capacity); return 1U; }
@@ -209,7 +109,12 @@ uint8_t FeederConsole_Handle(const char *line, char *out, size_t capacity)
 }
 
 void FeederConsole_Telemetry(char *out, size_t capacity)
-/* 功能：按既有 VOFA 列顺序输出拨盘真实/目标角度、转速和控制状态。 */
+/*
+ * 作用：按既有 VOFA 列顺序输出拨盘真实/目标角度、转速和控制状态。
+ * 参数 out：接收结果的输出结构体/缓冲区。
+ * 参数 capacity：回复缓冲区容量，byte。
+ * 不返回数值；处理结果保存在传入结构体或本文件维护的状态中。
+ */
 {
     FeederBackendState state;
     MotorHealth wheels;
@@ -242,7 +147,12 @@ void FeederConsole_Telemetry(char *out, size_t capacity)
 }
 
 void FeederConsole_SpeedTelemetry(char *out, size_t capacity)
-/* 功能：格式化拨盘转子/输出轴实际与目标转速，保留原速度视图通道。 */
+/*
+ * 作用：格式化拨盘转子/输出轴实际与目标转速，保留原速度视图通道。
+ * 参数 out：接收结果的输出结构体/缓冲区。
+ * 参数 capacity：回复缓冲区容量，byte。
+ * 不返回数值；处理结果保存在传入结构体或本文件维护的状态中。
+ */
 {
     FeederBackendState state;
     const FeederController *c;
@@ -255,4 +165,129 @@ void FeederConsole_SpeedTelemetry(char *out, size_t capacity)
         (double)c->target_rpm / c->config.gear_ratio, (double)c->config.gear_ratio,
         (unsigned)state.online, (unsigned)state.armed, (unsigned long)c->faults,
         c->have_feedback ? (unsigned long)(HAL_GetTick() - c->last_feedback_ms) : 0xFFFFFFFFUL);
+}
+
+static void Status(const char *operation, uint8_t ok, char *out, size_t capacity)
+/*
+ * 作用：更新双轴准备阶段、原因和就绪标记，状态变化时产生待报告事件。
+ * 参数 operation：本次串口操作名称，用于生成可识别的回复。
+ * 参数 ok：本次操作是否被接受。
+ * 参数 out：接收结果的输出结构体/缓冲区。
+ * 参数 capacity：回复缓冲区容量，byte。
+ * 不返回数值；处理结果保存在传入结构体或本文件维护的状态中。
+ */
+{
+    FeederBackendState state;
+    MotorHealth wheels;
+    const FeederController *c;
+    FeederBackend_GetState(&state); MotorBackend_GetHealth(&wheels); c = &state.controller;
+    (void)snprintf(out, capacity,
+        "F|%s|%s|%s|ONLINE|%u|RX|%lu|AGE|%lu|RAW|%u|ROTOR_DEG|%.4f|POS_DEG|%.4f|TARGET_DEG|%.4f|RPM|%d|VREF|%.2f|CMD_RAW|%d|FB_TORQUE_RAW|%d|ARMED|%u|ZERO|%u|BUSY|%u|FAULT|%lu|STOP_PENDING|%u|WHEELS_READY|%u|STEP|%.6g|DIR|%d|GEAR|%.6g|CAL|%u|PKP|%.6g|VKP|%.6g|VKI|%.6g|MAX_RPM|%.6g|LIMIT|%.6g|TOL|%.6g|SETTLE_RPM|%.6g|SETTLE_MS|%lu|TIMEOUT_MS|%lu|JAM_RAW|%.6g|JAM_MS|%lu|JUMP_SLACK|%u|GAP_MARGIN_MS|%u|TS_ALLOW|%lu|ACCEPT|%lu|DONE|%lu|REJECT|%lu|ABORT|%lu|SINGLE|%lu|CONT|%lu|SHOT_MS|%lu|RATE_HZ|%.3f|PENDING|%u|CANCEL|%lu|DONE_DT_MS|%lu\r\n",
+        operation, ok ? "OK" : "REJECTED", APP_FEEDER_VERSION,
+        (unsigned)state.online, (unsigned long)c->feedback_sequence,
+        c->have_feedback ? (unsigned long)(HAL_GetTick() - c->last_feedback_ms) : 0xFFFFFFFFUL,
+        (unsigned)c->raw_angle, c->position_deg, c->axis_position_deg, c->axis_target_deg,
+        (int)c->raw_rpm, (double)c->target_rpm, (int)c->command_raw, (int)c->raw_current,
+        (unsigned)state.armed, (unsigned)c->have_zero, (unsigned)c->busy, (unsigned long)c->faults,
+        (unsigned)state.stop_pending, (unsigned)wheels.flywheels_ready,
+        (double)c->config.step_deg, (int)c->config.direction, (double)c->config.gear_ratio,
+        (unsigned)c->config.calibrated, (double)c->config.pos_kp, (double)c->config.speed_kp,
+        (double)c->config.speed_ki, (double)c->config.max_rpm, (double)c->config.current_limit,
+        (double)c->config.tolerance_deg, (double)c->config.settle_rpm,
+        (unsigned long)c->config.settle_ms, (unsigned long)c->config.motion_timeout_ms,
+        (double)c->config.jam_current_raw, (unsigned long)c->config.jam_ms,
+        (unsigned)FEEDER_JUMP_SLACK_COUNTS, (unsigned)FEEDER_GAP_UNCERTAINTY_MS,
+        (unsigned long)c->timestamp_allowances,
+        (unsigned long)c->accepted, (unsigned long)c->completed, (unsigned long)c->rejected,
+        (unsigned long)c->aborted, (unsigned long)state.single_accepted,
+        (unsigned long)state.continuous_accepted, (unsigned long)c->last_motion_ms,
+        (double)c->measured_hz, (unsigned)c->outstanding, (unsigned long)c->cancelled,
+        (unsigned long)state.completed_interval_ms);
+}
+
+static void Result(char *out, size_t capacity)
+/*
+ * 作用：格式化拨盘真实单发/连发完成用时、误差、超调和累计计数。
+ * 参数 out：接收结果的输出结构体/缓冲区。
+ * 参数 capacity：回复缓冲区容量，byte。
+ * 不返回数值；处理结果保存在传入结构体或本文件维护的状态中。
+ */
+{
+    FeederBackendState state;
+    const FeederController *c;
+    FeederBackend_GetState(&state); c = &state.controller;
+    (void)snprintf(out, capacity,
+        "F|RESULT|%s|COUNT_SOURCE|ENCODER_40DEG|ACCEPT|%lu|DONE|%lu|SINGLE_DONE|%lu|CONT_DONE|%lu|REJECT|%lu|ABORT|%lu|CANCEL|%lu|PENDING|%u|KIND|%u|SHOT_MS|%lu|SHOT_ERR_DEG|%.4f|BURST_DONE|%lu|WINDOW_MS|%lu|RATE_HZ|%.3f|RATE_VALID|%u|REQUEST_MS|%u|REQUIRED_RPM|%.2f|CONT_MAX_RPM|%.6g|PHASE_MS|%.6g|BRAKE_KP|%.6g|RATE_BLOCK|%u|FAULT|%lu|SINGLE_DECEL_RPM_S|%.6g|BRAKE_DELAY_MS|%u|PREVIEW_MS|%u|I_RELAX_MS|%u|SINGLE_BRAKE|%u|SINGLE_BRAKE_N|%lu|SINGLE_OVERSHOOT_DEG|%.4f\r\n",
+        APP_FEEDER_VERSION, (unsigned long)c->accepted, (unsigned long)c->completed,
+        (unsigned long)c->single_completed, (unsigned long)c->continuous_completed,
+        (unsigned long)c->rejected, (unsigned long)c->aborted, (unsigned long)c->cancelled,
+        (unsigned)c->outstanding, (unsigned)c->motion_kind, (unsigned long)c->last_motion_ms,
+        (double)c->last_motion_error_deg, (unsigned long)c->burst_completed,
+        (unsigned long)c->burst_elapsed_ms, (double)c->measured_hz,
+        (unsigned)(c->burst_completed >= 2U && c->burst_elapsed_ms != 0U),
+        (unsigned)APP_FIRE_INTERVAL_MS, (double)Feeder_ContinuousRpm(c),
+        (double)c->config.continuous_max_rpm, (double)c->config.continuous_phase_ms,
+        (double)c->config.continuous_brake_kp, (unsigned)c->rate_blocked,
+        (unsigned long)c->faults, (double)c->config.single_decel_rpm_s,
+        (unsigned)FEEDER_SINGLE_BRAKE_DELAY_MS, (unsigned)FEEDER_SINGLE_PREVIEW_MS,
+        (unsigned)FEEDER_SINGLE_I_RELAX_MS,
+        (unsigned)c->single_braking, (unsigned long)c->single_brake_frames,
+        (double)c->single_overshoot_deg);
+}
+
+static void Check(char *out, size_t capacity)
+/*
+ * 作用：格式化拨盘故障及首次异常反馈证据，帮助定位跳变或堵转。
+ * 参数 out：接收结果的输出结构体/缓冲区。
+ * 参数 capacity：回复缓冲区容量，byte。
+ * 不返回数值；处理结果保存在传入结构体或本文件维护的状态中。
+ */
+{
+    FeederBackendState state;
+    RemoteInput_State remote;
+    AppState app;
+    CanBusState bus;
+    const FeederJumpDiagnostic *jump;
+    const char *cause;
+    char data[17];
+    uint32_t i, now, uart_epoch;
+    static const char hex[] = "0123456789ABCDEF";
+    /* Read one coherent snapshot, format only after interrupts are unmasked. */
+    taskENTER_CRITICAL();
+    FeederBackend_GetState(&state); RemoteInput_GetState(&remote);
+    AppTasks_GetState(&app); CanBus_GetState(&bus);
+    now = HAL_GetTick(); uart_epoch = remote.fault_epoch + AppConsole_GetFaultEpoch();
+    taskEXIT_CRITICAL();
+    jump = &state.controller.jump;
+    cause = !jump->valid ? "NONE" : jump->flags == FEEDER_JUMP_DELTA ? "DELTA" :
+        jump->flags == FEEDER_JUMP_HALF_TURN ? "HALF_TURN" : "DELTA_AND_HALF_TURN";
+    for (i = 0U; i < 8U; ++i) {
+        data[i * 2U] = hex[jump->data[i] >> 4];
+        data[i * 2U + 1U] = hex[jump->data[i] & 15U];
+    }
+    data[16] = '\0';
+    (void)snprintf(out, capacity,
+        "F|CHECK|%s|FAULT|%lu|ONLINE|%u|ARMED|%u|BUSY|%u|CAL|%u|DIR|%d|STEP|%.6g|JUMP_VALID|%u|JUMP_COUNT|%lu|CAUSE|%s|FLAGS|%lu|AT_MS|%lu|SEQ|%lu|PREV_RAW|%u|RAW|%u|DELTA_COUNTS|%ld|GAP_MS|%lu|GAP_BOUND_MS|%lu|GAP_MARGIN_MS|%u|TS_ALLOW|%lu|FRAME_AGE_MS|%lu|PREV_RPM|%d|RPM|%d|LIMIT_COUNTS|%.6g|EXPECTED_COUNTS|%.6g|FB_TORQUE_RAW|%d|BEFORE_CMD|%d|BEFORE_BUSY|%u|BEFORE_ZERO|%u|FRAME|%s|RC_AGE_MS|%lu|CH|%u,%u,%u,%u,%u,%u,%u,%u|SAFETY|%u|SAFETY_REASON|%u|BARRIER|%u|OP_ARMED|%u|UART_CURRENT|%lu|UART_SEEN|%lu|CAN_EPOCH|%lu\r\n",
+        APP_FEEDER_VERSION, (unsigned long)state.controller.faults,
+        (unsigned)state.online, (unsigned)state.armed, (unsigned)state.controller.busy,
+        (unsigned)state.controller.config.calibrated, (int)state.controller.config.direction,
+        (double)state.controller.config.step_deg, (unsigned)jump->valid,
+        (unsigned long)jump->events, cause, (unsigned long)jump->flags,
+        (unsigned long)jump->at_ms, (unsigned long)jump->sequence,
+        (unsigned)jump->previous_angle, (unsigned)jump->angle, (long)jump->delta_counts,
+        (unsigned long)jump->gap_ms, (unsigned long)jump->bound_gap_ms,
+        (unsigned)FEEDER_GAP_UNCERTAINTY_MS, (unsigned long)state.controller.timestamp_allowances,
+        (unsigned long)jump->age_ms,
+        (int)jump->previous_rpm, (int)jump->rpm, (double)jump->limit_counts,
+        (double)jump->expected_counts, (int)jump->feedback_raw, (int)jump->command_raw,
+        (unsigned)jump->busy, (unsigned)jump->zero_valid, data,
+        remote.has_frame ? (unsigned long)(now - remote.received_ms) : 0xFFFFFFFFUL,
+        (unsigned)remote.channels[0], (unsigned)remote.channels[1],
+        (unsigned)remote.channels[2], (unsigned)remote.channels[3],
+        (unsigned)remote.channels[4], (unsigned)remote.channels[5],
+        (unsigned)remote.channels[6], (unsigned)remote.channels[7],
+        (unsigned)app.logic.safety.state, (unsigned)app.logic.safety.reason,
+        (unsigned)app.logic.safety.barrier_valid, (unsigned)app.logic.safety.operator_armed,
+        (unsigned long)uart_epoch, (unsigned long)app.logic.safety.uart_epoch,
+        (unsigned long)bus.fault_epoch);
 }

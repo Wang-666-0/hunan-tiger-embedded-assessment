@@ -1,11 +1,4 @@
-/**
- * @file gimbal_startup.h
- * @brief 双轴准备状态机
- * 职责：定义安全 OFF 准备阶段、拒绝原因和对外查询/更新接口。
- * 主要接口：GimbalStartup_Init, GimbalStartup_Update, GimbalStartup_OutputReady, GimbalStartup_ManualOverride, GimbalStartup_Request 等。
- * 实现：system/gimbal_startup.c；调用关系见实现文件与 App/README。
- * 参数：app_config.h 是 App 参数及常量的唯一宏定义入口。
- */
+/* 双轴准备状态机 */
 #ifndef GIMBAL_STARTUP_H
 #define GIMBAL_STARTUP_H
 #include "app_config.h"

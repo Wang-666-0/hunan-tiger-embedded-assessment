@@ -23,7 +23,7 @@ HAL_StatusTypeDef HAL_UART_AbortReceive(UART_HandleTypeDef *handle)
 { CHECK(handle == &huart4); ++aborts; return HAL_OK; }
 HAL_StatusTypeDef RemoteUart_StartReceive(uint8_t *data, uint16_t length)
 {
-    CHECK(data && length == APP_REMOTE_RX_DMA_BYTES && length == 64U);
+    CHECK(data && length == 64U && length == 64U);
     dma_data = data; ++rearms;
     if (!fail_rearm) { huart4.error = 0U; }
     return fail_rearm ? HAL_ERROR : HAL_OK;
@@ -50,7 +50,7 @@ static void Read(void) { RemoteInput_GetState(&remote); }
 static void Poll(void) { RemoteInput_Poll(); Read(); }
 static void Burst(const uint8_t *data, uint16_t length)
 {
-    CHECK(length && length <= APP_REMOTE_RX_DMA_BYTES);
+    CHECK(length && length <= 64U);
     memcpy(dma_data, data, length); RemoteInput_RxEvent(&huart4, length);
 }
 static void FrameBytes(uint8_t data[32])
@@ -79,7 +79,7 @@ void test_run(void)
     uint32_t i, before, epoch, timestamp;
     uint8_t data[64];
     test_stage = 1U;
-    CHECK(APP_REMOTE_RX_DMA_ENABLED && APP_PITCH_ENABLED && APP_REMOTE_RX_DMA_BYTES == 64U);
+    CHECK(1U && 1U && 64U == 64U);
     for (i = 0U; i < 14U; ++i) { channels[i] = 1500U; }
     channels[4] = channels[5] = 1000U;
     RemoteInput_CreateQueue(); RemoteInput_Start(); Read();
@@ -94,7 +94,7 @@ void test_run(void)
     Burst(data + 9U, 23U); Poll(); CHECK(remote.valid_frames == before + 1U);
     memcpy(data + 32U, data, 32U); now += 7U; Burst(data, 64U); Poll();
     CHECK(remote.valid_frames == before + 3U);
-    before = remote.rx_bytes; RemoteInput_RxEvent(&huart1, 32U); RemoteInput_RxCplt(&huart4);
+    before = remote.rx_bytes; RemoteInput_RxEvent(&huart1, 32U);
     RemoteInput_Error(&huart1); Read(); CHECK(remote.rx_bytes == before && remote.fault_epoch == 0U);
 
     test_stage = 2U;

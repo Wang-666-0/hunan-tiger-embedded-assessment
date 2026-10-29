@@ -1,4 +1,4 @@
-﻿#include "ibus.h" /* 编译真实库，在 ARM 模拟器运行；不访问物理硬件。 */
+#include "ibus.h" /* 编译真实库，在 ARM 模拟器运行；不访问物理硬件。 */
 
 #include <stdint.h>
 #include <string.h>

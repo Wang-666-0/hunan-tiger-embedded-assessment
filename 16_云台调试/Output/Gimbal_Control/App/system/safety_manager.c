@@ -1,44 +1,32 @@
 /**
  * @file safety_manager.c
- * @brief 运行许可和失联/故障撤权
- * 配置入口：App/app_config.h；接口声明见同目录对应头文件。
- * 对外函数（2）：
- *   SafetyManager_Init / SafetyManager_Step
- * 内部函数（1）：
+ * 作用：运行许可和失联/故障撤权
+ * 对外函数：
+ *   SafetyManager_Step / SafetyManager_Init
+ * 内部函数：
  *   Lock
- * 文件级变量/常量（0；局部变量见对应函数）：
- *   无；状态由调用方传入的结构体保存。
- * 维护约束：函数前的功能说明对应当前实现，修改行为时同步更新。
+ * 文件级变量（函数局部变量在各函数内定义）：
+ *   无；控制状态由调用方提供的结构体保存。
  */
-/* 安全许可状态机与新 OFF 帧解锁屏障。 */
 #include "safety_manager.h"
 #include "app_config.h"
 #include <string.h>
 
-static void Lock(SafetyManager *manager, SafetyReason reason, uint32_t now)
-/* 功能：撤销当前运行许可并建立安全屏障，要求新的完整解锁条件。 */
-{
-    manager->state = SAFETY_FAULT;
-    manager->reason = reason;
-    manager->last_fault = reason;
-    manager->operator_armed = 0U;
-    manager->output_allowed = 0U;
-    manager->off_seen = 0U;
-    manager->barrier_ms = now;
-    manager->barrier_valid = 1U;
-}
-
-void SafetyManager_Init(SafetyManager *manager)
-/* 功能：初始化操作员解锁、输出许可和故障代次观察状态。 */
-{
-    if (manager == 0) { return; }
-    memset(manager, 0, sizeof(*manager));
-    manager->reason = SAFETY_POWER_ON;
-}
+/* 内部函数前置声明：主流程先展示，辅助实现放在文件后方。 */
+static void Lock(SafetyManager *manager, SafetyReason reason, uint32_t now);
 
 void SafetyManager_Step(SafetyManager *manager, const SafetyInput *input,
                         const RemoteCommand *command)
-/* 功能：综合遥控时效、故障和新帧边沿，推进解锁、撤权与重新解锁屏障。 */
+/*
+ * 作用：综合新遥控帧、时效、通信和执行器状态，决定是否解锁及是否允许动力输出。
+ * 参数 manager：调用方保存的安全状态机或目标管理状态。
+ * 参数 input：本轮遥控、设备健康、时间及故障代次快照。
+ * 参数 command：通道映射后的操作命令。
+ * 流程：每轮先检查 STOP、UART/CAN 异常、控制超时、遥控失联及设备故障；故障优先。
+ * 流程：故障后先收到晚于屏障的新 OFF 帧，再收到满足回中条件的解锁操作，才恢复解锁。
+ * 流程：output_allowed 同时要求人工解锁、后端就绪和反馈就绪。
+ * 不返回数值；处理结果保存在传入结构体或本文件维护的状态中。
+ */
 {
     SafetyReason fault = SAFETY_NONE;
     uint8_t new_frame;
@@ -93,4 +81,35 @@ void SafetyManager_Step(SafetyManager *manager, const SafetyInput *input,
     }
     /* 遥控解锁可以先演示；动力许可还要求正式驱动和真实反馈均就绪。 */
     manager->output_allowed = manager->operator_armed && input->backend_ready && input->feedback_ready;
+}
+
+void SafetyManager_Init(SafetyManager *manager)
+/*
+ * 作用：初始化操作员解锁、输出许可和故障代次观察状态。
+ * 参数 manager：调用方保存的安全状态机或目标管理状态。
+ * 不返回数值；处理结果保存在传入结构体或本文件维护的状态中。
+ */
+{
+    if (manager == 0) { return; }
+    memset(manager, 0, sizeof(*manager));
+    manager->reason = SAFETY_POWER_ON;
+}
+
+static void Lock(SafetyManager *manager, SafetyReason reason, uint32_t now)
+/*
+ * 作用：撤销当前运行许可并建立安全屏障，要求新的完整解锁条件。
+ * 参数 manager：调用方保存的安全状态机或目标管理状态。
+ * 参数 reason：本次停止、中止或状态原因。
+ * 参数 now：当前毫秒时间。
+ * 不返回数值；处理结果保存在传入结构体或本文件维护的状态中。
+ */
+{
+    manager->state = SAFETY_FAULT;
+    manager->reason = reason;
+    manager->last_fault = reason;
+    manager->operator_armed = 0U;
+    manager->output_allowed = 0U;
+    manager->off_seen = 0U;
+    manager->barrier_ms = now;
+    manager->barrier_valid = 1U;
 }

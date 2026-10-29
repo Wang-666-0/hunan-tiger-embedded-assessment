@@ -1,13 +1,12 @@
 /**
  * @file remote_input.c
- * @brief UART4 遥控接收与有效帧发布
- * 配置入口：App/app_config.h；接口声明见同目录对应头文件。
- * 对外函数（7）：
- *   RemoteInput_CreateQueue / RemoteInput_Start / RemoteInput_RxCplt / RemoteInput_RxEvent /
- *   RemoteInput_Error / RemoteInput_Poll / RemoteInput_GetState
- * 内部函数（2）：
+ * 作用：UART4 遥控接收与有效帧发布
+ * 对外函数：
+ *   RemoteInput_Poll / RemoteInput_RxEvent / RemoteInput_Start / RemoteInput_CreateQueue /
+ *   RemoteInput_GetState / RemoteInput_Error
+ * 内部函数：
  *   StartRemoteRx / RemoteInput_SyncFault
- * 文件级变量/常量（15；局部变量见对应函数）：
+ * 文件级变量（函数局部变量在各函数内定义）：
  *   rx_queue：接收队列，连接中断生产者与任务消费者。
  *   parser：iBUS 持续解析器及有效帧统计状态。
  *   state：本模块维护并向外发布的设备或流程状态快照。
@@ -21,14 +20,7 @@
  *   needs_rearm：接收需要重新启动的标记。
  *   last_rx_byte：最近一个接收字节的时间戳。
  *   observed_epoch：任务已处理的故障代次。
- *   rx_dma：DMA 批量缓冲或单字节接收缓冲，按构建选择。
- *   rx_byte：DMA 批量缓冲或单字节接收缓冲，按构建选择。
- * 文件级类型：RemoteByte，携带遥控字节的接收时间和故障代次。
- * 维护约束：函数前的功能说明对应当前实现，修改行为时同步更新。
- */
-/* UART4 接收、队列消费及有效帧快照。 */
-/* UART4 ISR 只搬运字节和实际时间；独立任务完成 iBUS 校验。
- * 丢字节/USART 错误产生故障代次：旧队列字节不能复活旧许可。
+ *   rx_dma：DMA 接收缓冲区。
  */
 #include "remote_input.h"
 #include "ibus.h"
@@ -47,104 +39,18 @@ static volatile uint32_t fault_epoch, rx_bytes, rx_drops, rx_errors, last_uart_e
 static volatile uint32_t rx_bursts, rearm_errors;
 static volatile uint8_t needs_rearm, last_rx_byte;
 static uint32_t observed_epoch;
-#if APP_REMOTE_RX_DMA_ENABLED
-static uint8_t rx_dma[APP_REMOTE_RX_DMA_BYTES];
-#else
-static uint8_t rx_byte;
-#endif
+static uint8_t rx_dma[64U];
 
-static HAL_StatusTypeDef StartRemoteRx(void)
-/* 功能：按配置启动 UART4 的 DMA 或单字节中断接收。 */
-{
-#if APP_REMOTE_RX_DMA_ENABLED
-    return RemoteUart_StartReceive(rx_dma, sizeof(rx_dma));
-#else
-    return HAL_UART_Receive_IT(&huart4, &rx_byte, 1U);
-#endif
-}
+/* 内部函数前置声明：主流程先展示，辅助实现放在文件后方。 */
+static HAL_StatusTypeDef StartRemoteRx(void);
+static void RemoteInput_SyncFault(void);
 
-void RemoteInput_CreateQueue(void)// 创建接收队列和 iBUS 解析器
-/* 功能：创建遥控字节队列并初始化解析器与接收状态。 */
-{
-    rx_queue = xQueueCreate(REMOTE_RX_QUEUE_LENGTH, sizeof(RemoteByte));
-    if (rx_queue == NULL) { AppFault_Fatal(APP_FAULT_QUEUE); }
-    vQueueAddToRegistry(rx_queue, "IBUS_BYTES");
-    ibus_init(&parser);
-    memset(&state, 0, sizeof(state));
-}
-void RemoteInput_Start(void)// 启动UART4接收，生产配置为DMA+IDLE
-/* 功能：启动遥控接收，失败时记录错误并安排恢复。 */
-{
-    if (StartRemoteRx() != HAL_OK) { AppFault_Fatal(APP_FAULT_UART_START); }
-}
-void RemoteInput_RxCplt(UART_HandleTypeDef *huart)// UART 接收完成中断回调
-/* 功能：处理遥控单字节接收完成事件，附加接收信息后入队。 */
-{
-#if !APP_REMOTE_RX_DMA_ENABLED
-    RemoteByte item;
-    BaseType_t woken = pdFALSE;
-    if (huart != &huart4) { return; }
-    rx_bytes++;
-    last_rx_byte = rx_byte;
-    /* HAL 的错误 IRQ 可能先调用 RxCplt、随后才调用 ErrorCallback。
-     * 错误字节不入队，也不能在这里重启接收（重启会清掉 ErrorCode）。
-     * 交给随后执行的 ErrorCallback 保存错误、撤销许可并安排任务恢复。 */
-    if (HAL_UART_GetError(huart) != HAL_UART_ERROR_NONE) { return; }
-    item.byte = rx_byte; item.received_ms = HAL_GetTick(); item.epoch = fault_epoch;
-    if (xQueueSendFromISR(rx_queue, &item, &woken) != pdPASS) { rx_drops++; fault_epoch++; }
-    if (StartRemoteRx() != HAL_OK) { rearm_errors++; fault_epoch++; needs_rearm = 1U; }
-    portYIELD_FROM_ISR(woken);
-#else
-    (void)huart; /* ReceiveToIdle routes UART4 through RxEvent, not RxCplt. */
-#endif
-}
-
-void RemoteInput_RxEvent(UART_HandleTypeDef *huart, uint16_t size)
-/* 功能：把一批遥控 DMA 字节附加时间和故障代次后入队。 */
-{
-#if APP_REMOTE_RX_DMA_ENABLED
-    RemoteByte item;
-    uint16_t i;
-    BaseType_t woken = pdFALSE;
-    if (huart != &huart4 || HAL_UART_GetError(huart) != HAL_UART_ERROR_NONE) { return; }
-    /* HT is disabled; normal DMA is stopped by HAL before IDLE/TC callback.
-     * Copy a stable bounded burst. Parsing and safety remain in their tasks. */
-    if (!size || size > sizeof(rx_dma)) { fault_epoch++; needs_rearm = 1U; return; }
-    rx_bursts++; rx_bytes += size; last_rx_byte = rx_dma[size - 1U];
-    item.received_ms = HAL_GetTick(); item.epoch = fault_epoch;
-    for (i = 0U; i < size; ++i) {
-        item.byte = rx_dma[i];
-        if (xQueueSendFromISR(rx_queue, &item, &woken) != pdPASS) {
-            rx_drops++; fault_epoch++; break;
-        }
-    }
-    if (StartRemoteRx() != HAL_OK) { rearm_errors++; fault_epoch++; needs_rearm = 1U; }
-    portYIELD_FROM_ISR(woken);
-#else
-    (void)huart; (void)size;
-#endif
-}
-void RemoteInput_Error(UART_HandleTypeDef *huart)// UART 错误中断回调
-/* 功能：记录遥控串口错误，撤销旧数据可信度并安排重新接收。 */
-{
-    if (huart != &huart4) { return; }
-    /* 后续 HAL 错误分支或重启接收会清除错误码，在恢复前保存诊断。 */
-    last_uart_error = HAL_UART_GetError(huart);
-    rx_errors++; fault_epoch++;
-    (void)HAL_UART_AbortReceive(huart);
-    needs_rearm = 1U;
-}
-static void RemoteInput_SyncFault(void)
-/* 功能：同步接收故障代次，使旧队列字节不能重新形成有效遥控输入。 */
-{
-    if (observed_epoch != fault_epoch) {
-        observed_epoch = fault_epoch;
-        parser.buffered = 0U; parser.has_frame = 0U;
-        taskENTER_CRITICAL(); state.has_frame = 0U; taskEXIT_CRITICAL();
-    }
-}
-void RemoteInput_Poll(void)// 轮询处理接收队列和 iBUS 解析
-/* 功能：恢复遥控接收并解析队列字节，只发布通过校验的新鲜遥控帧。 */
+void RemoteInput_Poll(void)
+/*
+ * 作用：恢复遥控接收并解析队列字节，只发布通过校验的新鲜遥控帧。
+ * 输入：无显式参数，读取或维护本模块状态；相关变量见文件头。
+ * 不返回数值；处理结果保存在传入结构体或本文件维护的状态中。
+ */
 {
     RemoteByte item;
     ibus_frame_t frame;
@@ -181,8 +87,64 @@ void RemoteInput_Poll(void)// 轮询处理接收队列和 iBUS 解析
     state.partial_timeouts = parser.stats.partial_timeouts;
     taskEXIT_CRITICAL();
 }
-void RemoteInput_GetState(RemoteInput_State *out)// 获取当前遥控输入状态
-/* 功能：复制当前遥控通道、有效帧时间和接收故障统计。 */
+
+void RemoteInput_RxEvent(UART_HandleTypeDef *huart, uint16_t size)
+/*
+ * 作用：把一批遥控 DMA 字节附加时间和故障代次后入队。
+ * 参数 huart：产生事件的 UART 句柄。
+ * 参数 size：DMA 本批接收字节数。
+ * 不返回数值；处理结果保存在传入结构体或本文件维护的状态中。
+ */
+{
+    RemoteByte item;
+    uint16_t i;
+    BaseType_t woken = pdFALSE;
+    if (huart != &huart4 || HAL_UART_GetError(huart) != HAL_UART_ERROR_NONE) { return; }
+    /* HT is disabled; normal DMA is stopped by HAL before IDLE/TC callback.
+     * Copy a stable bounded burst. Parsing and safety remain in their tasks. */
+    if (!size || size > sizeof(rx_dma)) { fault_epoch++; needs_rearm = 1U; return; }
+    rx_bursts++; rx_bytes += size; last_rx_byte = rx_dma[size - 1U];
+    item.received_ms = HAL_GetTick(); item.epoch = fault_epoch;
+    for (i = 0U; i < size; ++i) {
+        item.byte = rx_dma[i];
+        if (xQueueSendFromISR(rx_queue, &item, &woken) != pdPASS) {
+            rx_drops++; fault_epoch++; break;
+        }
+    }
+    if (StartRemoteRx() != HAL_OK) { rearm_errors++; fault_epoch++; needs_rearm = 1U; }
+    portYIELD_FROM_ISR(woken);
+}
+
+void RemoteInput_Start(void)
+/*
+ * 作用：启动遥控接收，失败时记录错误并安排恢复。
+ * 输入：无显式参数，读取或维护本模块状态；相关变量见文件头。
+ * 不返回数值；处理结果保存在传入结构体或本文件维护的状态中。
+ */
+{
+    if (StartRemoteRx() != HAL_OK) { AppFault_Fatal(APP_FAULT_UART_START); }
+}
+
+void RemoteInput_CreateQueue(void)
+/*
+ * 作用：创建遥控字节队列并初始化解析器与接收状态。
+ * 输入：无显式参数，读取或维护本模块状态；相关变量见文件头。
+ * 不返回数值；处理结果保存在传入结构体或本文件维护的状态中。
+ */
+{
+    rx_queue = xQueueCreate(REMOTE_RX_QUEUE_LENGTH, sizeof(RemoteByte));
+    if (rx_queue == NULL) { AppFault_Fatal(APP_FAULT_QUEUE); }
+    vQueueAddToRegistry(rx_queue, "IBUS_BYTES");
+    ibus_init(&parser);
+    memset(&state, 0, sizeof(state));
+}
+
+void RemoteInput_GetState(RemoteInput_State *out)
+/*
+ * 作用：复制当前遥控通道、有效帧时间和接收故障统计。
+ * 参数 out：接收结果的输出结构体/缓冲区。
+ * 不返回数值，将当前快照写入输出参数；不会启动新的运动。
+ */
 {
     if (out == NULL) { return; }
     taskENTER_CRITICAL();
@@ -196,4 +158,43 @@ void RemoteInput_GetState(RemoteInput_State *out)// 获取当前遥控输入状�
     out->needs_rearm = needs_rearm;
     if (observed_epoch != fault_epoch) { out->has_frame = 0U; }
     taskEXIT_CRITICAL();
+}
+
+static HAL_StatusTypeDef StartRemoteRx(void)
+/*
+ * 作用：按配置启动 UART4 的 DMA 或单字节中断接收。
+ * 输入：无显式参数，读取或维护本模块状态；相关变量见文件头。
+ * 返回 HAL 状态；HAL_OK 表示本次请求已提交，不等于电机已完成动作。
+ */
+{
+    return RemoteUart_StartReceive(rx_dma, sizeof(rx_dma));
+}
+
+void RemoteInput_Error(UART_HandleTypeDef *huart)
+/*
+ * 作用：记录遥控串口错误，撤销旧数据可信度并安排重新接收。
+ * 参数 huart：产生事件的 UART 句柄。
+ * 不返回数值；处理结果保存在传入结构体或本文件维护的状态中。
+ */
+{
+    if (huart != &huart4) { return; }
+    /* 后续 HAL 错误分支或重启接收会清除错误码，在恢复前保存诊断。 */
+    last_uart_error = HAL_UART_GetError(huart);
+    rx_errors++; fault_epoch++;
+    (void)HAL_UART_AbortReceive(huart);
+    needs_rearm = 1U;
+}
+
+static void RemoteInput_SyncFault(void)
+/*
+ * 作用：同步接收故障代次，使旧队列字节不能重新形成有效遥控输入。
+ * 输入：无显式参数，读取或维护本模块状态；相关变量见文件头。
+ * 不返回数值；处理结果保存在传入结构体或本文件维护的状态中。
+ */
+{
+    if (observed_epoch != fault_epoch) {
+        observed_epoch = fault_epoch;
+        parser.buffered = 0U; parser.has_frame = 0U;
+        taskENTER_CRITICAL(); state.has_frame = 0U; taskEXIT_CRITICAL();
+    }
 }

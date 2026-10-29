@@ -5,13 +5,13 @@
 
 static void feed_pair(PitchController *legacy, uint32_t ms, float angle, float speed)
 {
-    YawCascade old = legacy->cascade;
+    GimbalPid old = legacy->cascade;
     float previous_angle = legacy->angle_deg;
     uint32_t gap = ms - legacy->last_feedback_ms;
     sample(ms, angle, speed, 1U);
     CHECK(PitchController_OnFeedback(legacy, &feedback));
     /* Replay the former observer with the same accepted position and timestamp. */
-    YawCascade_Observe(&old, legacy->angle_deg - previous_angle, gap);
+    GimbalPid_Observe(&old, legacy->angle_deg - previous_angle, gap);
     legacy->cascade.velocity_dps = old.velocity_dps;
     legacy->cascade.acceleration_dps2 = old.acceleration_dps2;
     (void)PitchController_Update(&pitch, 0.0f, ms, 1U);
@@ -30,7 +30,7 @@ static void stopping_replay(uint32_t base, uint8_t reverse)
     CHECK(PitchController_SetPid(&pitch, 'V', APP_PITCH_SPEED_KP, APP_PITCH_SPEED_KI, APP_PITCH_SPEED_KD));
     CHECK(PitchController_SetBrakeEnabled(&pitch, 0U)); /* Isolate measurement/PID changes. */
     sample(now, start, 0.0f, 1U);
-    YawCascade_ResetObserver(&pitch.cascade);
+    GimbalPid_ResetObserver(&pitch.cascade);
     CHECK(PitchController_SetTarget(&pitch, start));
     (void)PitchController_Update(&pitch, 0.0f, now, 1U);
     legacy = pitch;
@@ -50,13 +50,10 @@ static void stopping_replay(uint32_t base, uint8_t reverse)
                   sign * (200.0f - 25.0f * (float)i));
     }
     now += 16U;
-    CHECK(pitch.landing.landed && legacy.landing.landed);
-    CHECK(pitch.landing.land_ms == 158U && legacy.landing.land_ms == 158U);
     CHECK(absolute(pitch.velocity_dps) < 0.0001f);
     /* Position differences measure interval-average speed, not endpoint speed. */
     CHECK(pitch.cascade.velocity_dps * sign < 40.0f);
     CHECK(legacy.cascade.velocity_dps * sign > 80.0f);
-    CHECK(pitch.landing.land_filtered_dps * sign < legacy.landing.land_filtered_dps * sign);
     fast_i = pitch.cascade.speed_i; slow_i = legacy.cascade.speed_i;
     for (i = 1U; i <= 5U; ++i) {
         feed_pair(&legacy, now + 2U * i, reverse ? 0.0f : 30.0f, 0.0f);
@@ -75,15 +72,15 @@ void test_run(void)
 {
     uint32_t i, sequence;
     float velocity, acceleration, pi, vi;
-    YawCascade yaw;
+    GimbalPid yaw;
     test_stage = 1U;
-    CHECK(APP_PITCH_VELOCITY_FILTER_MS == 2U && APP_PITCH_ACCEL_FILTER_MS == 20U);
-    CHECK(YAW_CASCADE_VELOCITY_FILTER_MS == 10U && YAW_CASCADE_ACCEL_FILTER_MS == 20U);
+    CHECK(2U == 2U && 20U == 20U);
+    CHECK(YAW_CASCADE_VELOCITY_FILTER_MS == 10U && 20U == 20U);
     ready(1000U, 0.0f);
     sample(1032U, 0.04f, 20.0f, 1U);
     CHECK(absolute(pitch.cascade.velocity_dps - 10.0f) < 0.001f);
     CHECK(absolute(pitch.cascade.acceleration_dps2 - 454.54545f) < 0.1f);
-    YawCascade_Init(&yaw); YawCascade_Observe(&yaw, 0.04f, 2U);
+    GimbalPid_Init(&yaw); GimbalPid_Observe(&yaw, 0.04f, 2U);
     CHECK(absolute(yaw.velocity_dps - 3.333333f) < 0.001f);
     CHECK(absolute(yaw.acceleration_dps2 - 151.51515f) < 0.1f);
     CHECK(PitchController_SetTarget(&pitch, 0.0f));

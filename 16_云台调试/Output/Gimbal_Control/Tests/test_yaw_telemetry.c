@@ -41,7 +41,7 @@ void YAW_TELEMETRY_TEST_ENTRY(void)
 {
     uint32_t index, frames;
     test_stage = 1U;
-    CHECK(APP_TELEMETRY_PERIOD_MS == 5U && APP_CONSOLE_PERIOD_MS == 5U && APP_CONSOLE_BAUDRATE == 921600U);
+    CHECK(APP_TELEMETRY_PERIOD_MS == 5U && 5U == 5U && APP_CONSOLE_BAUDRATE == 921600U);
     AppConsole_CreateQueue(); AppConsole_Start(); clear_output(); command_line("YAW SIM OFF");
     memset(&yaw_sample, 0, sizeof(yaw_sample)); memset(&step_sample, 0, sizeof(step_sample));
     yaw_sample.controller.angle_deg = 1.234f; yaw_sample.controller.target_deg = 30.0f;

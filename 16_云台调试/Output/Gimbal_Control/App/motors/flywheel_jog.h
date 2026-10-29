@@ -1,18 +1,10 @@
-/**
- * @file flywheel_jog.h
- * @brief 双摩擦轮受限会话
- * 职责：定义左右轮反馈、速度控制会话、过流过速等保护及输出请求。
- * 主要接口：FlywheelJog_Init, FlywheelJog_OnFrame, FlywheelJog_GetHealth, FlywheelJog_Select, FlywheelJog_Step 等。
- * 实现：motors/flywheel_jog.c；调用关系见实现文件与 App/README。
- * 参数：app_config.h 是 App 参数及常量的唯一宏定义入口。
- */
+/* 双摩擦轮受限会话 */
 #ifndef FLYWHEEL_JOG_H
 #define FLYWHEEL_JOG_H
 #include "can_frame.h"
 #include "app_config.h"
 #include "flywheel_speed.h"
 #include <stdint.h>
-
 
 typedef enum {
     FLYWHEEL_JOG_OFF = 0, FLYWHEEL_JOG_LEFT = 1, FLYWHEEL_JOG_RIGHT = 2,

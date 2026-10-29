@@ -1,11 +1,4 @@
-/**
- * @file remote_input.h
- * @brief 遥控传输与快照
- * 职责：声明 UART4 DMA/字节回调、接收轮询、错误统计和只读状态。
- * 主要接口：RemoteInput_CreateQueue, RemoteInput_Start, RemoteInput_Poll, RemoteInput_GetState, RemoteInput_RxCplt 等。
- * 实现：drivers/remote_input.c；调用关系见实现文件与 App/README。
- * 参数：app_config.h 是 App 参数及常量的唯一宏定义入口。
- */
+/* 遥控传输与快照 */
 #ifndef REMOTE_INPUT_H
 #define REMOTE_INPUT_H
 #include "app_config.h"
@@ -23,7 +16,6 @@ void RemoteInput_CreateQueue(void);
 void RemoteInput_Start(void);
 void RemoteInput_Poll(void);
 void RemoteInput_GetState(RemoteInput_State *out);
-void RemoteInput_RxCplt(UART_HandleTypeDef *huart);
 void RemoteInput_RxEvent(UART_HandleTypeDef *huart, uint16_t size);
 void RemoteInput_Error(UART_HandleTypeDef *huart);
 #endif

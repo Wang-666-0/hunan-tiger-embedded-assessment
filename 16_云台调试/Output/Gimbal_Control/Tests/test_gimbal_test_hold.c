@@ -50,7 +50,7 @@ void test_run(void)
     Run(2U, 2000U);
     CHECK(yaw.controller.target_deg == 30.0f);
     CHECK(fabsf(pitch.controller.target_deg - pitch.controller.angle_deg) < 0.001f);
-    CHECK(fabsf(pitch.controller.target_deg) < 0.01f && !pitch.controller.shape.active);
+    CHECK(fabsf(pitch.controller.target_deg) < 0.01f);
     held_p = pitch.controller.target_deg;
     follow_target = 1U; Run(200U, 2000U);
     CHECK(pitch.controller.target_deg == held_p && yaw.active && pitch.active);

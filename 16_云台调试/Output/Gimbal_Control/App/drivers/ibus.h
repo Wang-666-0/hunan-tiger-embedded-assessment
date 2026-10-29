@@ -1,11 +1,4 @@
-/**
- * @file ibus.h
- * @brief iBUS 解析接口
- * 职责：定义解析器、有效帧和统计信息，支持按字节或块输入。
- * 主要接口：ibus_init, ibus_set_channel_validation, ibus_poll_timeout, ibus_feed_byte, ibus_feed。
- * 实现：drivers/ibus.c；调用关系见实现文件与 App/README。
- * 参数：app_config.h 是 App 参数及常量的唯一宏定义入口。
- */
+/* iBUS 解析接口 */
 #ifndef IBUS_H
 #define IBUS_H
 #include "app_config.h"

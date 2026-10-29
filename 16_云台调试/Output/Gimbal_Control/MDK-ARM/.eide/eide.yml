@@ -101,7 +101,7 @@ virtualFolder:
         - name: control
           files:
             - path: ../App/control/pitch_step.c
-            - path: ../App/control/yaw_cascade.c
+            - path: ../App/control/gimbal_pid.c
             - path: ../App/control/yaw_step.c
           folders: []
         - name: motors

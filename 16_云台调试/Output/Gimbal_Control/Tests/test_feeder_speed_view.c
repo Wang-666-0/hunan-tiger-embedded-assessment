@@ -69,7 +69,7 @@ void test_run(void)
     clear_output(); command_line("YAW STEP"); CHECK(strstr(output, "Y|ERROR|VIEW_LOCKED_USE_YAW_VIEW"));
     clear_output(); command_line("YAW HOME"); CHECK(strstr(output, "Y|ERROR|VIEW_LOCKED_USE_YAW_VIEW"));
     clear_output(); command_line("YAW TARGET 5"); CHECK(strstr(output, "Y|ERROR|VIEW_LOCKED_USE_YAW_VIEW"));
-    clear_output(); command_line("GIMBAL VIEW LOCK"); CHECK(strstr(output, APP_GIMBAL_VIEW_HOLD_VERSION "|YAW|1|PITCH|0|"));
+    clear_output(); command_line("GIMBAL VIEW LOCK"); CHECK(strstr(output, "VIEW_AXIS_HOLD_V5" "|YAW|1|PITCH|0|"));
     clear_output(); command_line("TELEM OFF"); CHECK(AppConsole_GetViewHoldMask() == APP_VIEW_HOLD_YAW);
     clear_output(); command_line("TELEM ON");
     clear_output(); command_line("GIMBAL VIEW FREE"); CHECK(AppConsole_GetViewHoldMask() == 0U);

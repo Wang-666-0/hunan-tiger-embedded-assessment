@@ -1,11 +1,4 @@
-/**
- * @file pitch_backend.h
- * @brief Pitch 执行后端
- * 职责：声明坐标标定、准备/使能、目标、归位、锁轴及实测结果接口。
- * 主要接口：PitchBackend_Init, PitchBackend_OnFrame, PitchBackend_GetState, PitchBackend_QueryFeedback, PitchBackend_SetCoordinate 等。
- * 实现：motors/pitch_backend.c；调用关系见实现文件与 App/README。
- * 参数：app_config.h 是 App 参数及常量的唯一宏定义入口。
- */
+/* Pitch 执行后端 */
 #ifndef PITCH_BACKEND_H
 #define PITCH_BACKEND_H
 #include "app_config.h"
@@ -59,8 +52,6 @@ uint8_t PitchBackend_SetLoopPid(char loop, float kp, float ki, float kd);
 uint8_t PitchBackend_SetLoopParameter(char loop, char parameter, float value);
 uint8_t PitchBackend_SetGravityGain(float kg_nm);
 uint8_t PitchBackend_SetGravityOffset(float offset_deg, uint8_t capture_horizontal);
-/* 五秒测量窗口中拒绝改变轨迹配置；相同配置幂等，不清积分。 */
-uint8_t PitchBackend_SetShape(uint32_t duration_ms, float velocity_gain);
 uint8_t PitchBackend_SetBrakeEnabled(uint8_t enabled);
 /* +/-30 is an absolute software-zero target, measured for five seconds and then held. */
 uint8_t PitchBackend_StartStep(float degrees);

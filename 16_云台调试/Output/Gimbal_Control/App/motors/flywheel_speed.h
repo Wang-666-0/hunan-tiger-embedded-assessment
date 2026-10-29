@@ -1,11 +1,4 @@
-/**
- * @file flywheel_speed.h
- * @brief 摩擦轮速度 PI
- * 职责：定义目标爬升、滤波、积分和限幅状态，声明速度环计算接口。
- * 主要接口：FlywheelSpeed_Init, FlywheelSpeed_Start, FlywheelSpeed_Stop, FlywheelSpeed_RecordFeedback, FlywheelSpeed_Step。
- * 实现：motors/flywheel_speed.c；调用关系见实现文件与 App/README。
- * 参数：app_config.h 是 App 参数及常量的唯一宏定义入口。
- */
+/* 摩擦轮速度 PI */
 #ifndef FLYWHEEL_SPEED_H
 #define FLYWHEEL_SPEED_H
 #include "app_config.h"

@@ -1,15 +1,8 @@
-/**
- * @file yaw_controller.h
- * @brief Yaw 控制器数据与接口
- * 职责：定义位置基准、双环状态、反馈连续性和机械边界保护。
- * 主要接口：YawController_Init, YawController_OnFeedback, YawController_CaptureReference, YawController_SetTarget, YawController_Stop 等。
- * 实现：motors/yaw_controller.c；调用关系见实现文件与 App/README。
- * 参数：app_config.h 是 App 参数及常量的唯一宏定义入口。
- */
+/* Yaw 控制器数据与接口 */
 #ifndef YAW_CONTROLLER_H
 #define YAW_CONTROLLER_H
 #include "gl60_ii.h"
-#include "yaw_cascade.h"
+#include "gimbal_pid.h"
 #include "app_config.h"
 #include <stdint.h>
 
@@ -27,7 +20,7 @@ typedef enum {
 } YawControllerFault;
 
 typedef struct {
-    YawCascade cascade;
+    GimbalPid cascade;
     float pid_torque_nm;
     float reference_rad, last_position_rad, continuous_rad;
     float angle_deg, target_deg, velocity_dps, torque_nm;

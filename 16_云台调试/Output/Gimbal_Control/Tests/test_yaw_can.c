@@ -1,4 +1,4 @@
-﻿#include "can_bus.h"
+#include "can_bus.h"
 #include "app_config.h"
 #include "app_fault.h"
 #include "gl60_ii.h"
@@ -19,7 +19,7 @@ static uint8_t keep_pending, abort_failure_bus;
 void HAL_CAN_ErrorCallback(CAN_HandleTypeDef *handle);
 void AppFault_Fatal(AppFault fault) { (void)fault; CHECK(0); }
 QueueHandle_t xQueueCreate(uint32_t length, uint32_t size)
-{ CHECK(length == APP_CAN_RX_QUEUE_LENGTH && size == sizeof(CanFrame)); return &queued; }
+{ CHECK(length == 64U && size == sizeof(CanFrame)); return &queued; }
 void vQueueAddToRegistry(QueueHandle_t queue, const char *name) { (void)queue; (void)name; }
 BaseType_t xQueueReceive(QueueHandle_t queue, void *data, TickType_t wait)
 { (void)queue; (void)data; (void)wait; return 0; }
@@ -35,9 +35,9 @@ HAL_StatusTypeDef HAL_CAN_ActivateNotification(CAN_HandleTypeDef *handle, uint32
 { (void)handle; CHECK(flags & CAN_IT_ERROR); ++notices; return HAL_OK; }
 HAL_StatusTypeDef HAL_CAN_AbortTxRequest(CAN_HandleTypeDef *handle, uint32_t mailboxes)
 {
-    CHECK(mailboxes == 7U); ++aborts; abort_mask |= 1U << (handle->instance - 1U);
+    CHECK(mailboxes && !(mailboxes & ~7U)); ++aborts; abort_mask |= 1U << (handle->instance - 1U);
     if (abort_failure_bus == handle->instance) { return HAL_ERROR; }
-    if (!keep_pending) { pending[handle->instance - 1U] = 0U; }
+    if (!keep_pending) { pending[handle->instance - 1U] &= ~mailboxes; }
     return HAL_OK;
 }
 HAL_StatusTypeDef HAL_CAN_AddTxMessage(CAN_HandleTypeDef *handle, const CAN_TxHeaderTypeDef *header,
@@ -56,7 +56,7 @@ HAL_StatusTypeDef HAL_CAN_GetRxMessage(CAN_HandleTypeDef *handle, uint32_t fifo,
 { (void)handle; (void)fifo; (void)header; (void)data; return HAL_ERROR; }
 uint32_t HAL_CAN_GetError(CAN_HandleTypeDef *handle) { return error_bits[handle->instance - 1U]; }
 uint32_t HAL_CAN_IsTxMessagePending(const CAN_HandleTypeDef *handle, uint32_t mailboxes)
-{ CHECK(mailboxes == 7U); return pending[handle->instance - 1U]; }
+{ CHECK(mailboxes && !(mailboxes & ~7U)); return (pending[handle->instance - 1U] & mailboxes) != 0U; }
 uint32_t HAL_GetTick(void) { return 100U; }
 
 static float FloatBits(uint32_t raw) { float out; memcpy(&out, &raw, sizeof(out)); return out; }

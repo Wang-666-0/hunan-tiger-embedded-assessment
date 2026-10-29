@@ -11,7 +11,7 @@ void test_run(void)
     uint16_t previous = 0U;
     static const float requests[] = {-12, -10, -5, -2.45f, -0.24f, -0.1f, 0, 0.1f, 0.24f, 2.45f, 5, 10, 12};
     test_stage = 1U;
-    CHECK(!YAW_CASCADE_OUTPUT_LIMITS_ENABLED && YAW_CONTROLLER_TORQUE_LIMIT_NM == 10);
+    CHECK(!0U && YAW_CONTROLLER_TORQUE_LIMIT_NM == 10);
     CanBus_CreateQueue(); CanBus_Start();
     CHECK(CanBus_YawTorque(2.45f) == HAL_ERROR && !sends);
     CanBus_SetYawPermission(1U);

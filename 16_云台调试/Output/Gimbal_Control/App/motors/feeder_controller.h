@@ -1,11 +1,4 @@
-/**
- * @file feeder_controller.h
- * @brief 拨盘控制器数据与接口
- * 职责：定义编码器累计、位置/速度环参数、单发/连发状态和保护位。
- * 主要接口：Feeder_Init, Feeder_ConfigValid, Feeder_SetConfig, Feeder_OnFrame, Feeder_Step 等。
- * 实现：motors/feeder_controller.c；调用关系见实现文件与 App/README。
- * 参数：app_config.h 是 App 参数及常量的唯一宏定义入口。
- */
+/* 拨盘控制器数据与接口 */
 #ifndef FEEDER_CONTROLLER_H
 #define FEEDER_CONTROLLER_H
 #include "app_config.h"

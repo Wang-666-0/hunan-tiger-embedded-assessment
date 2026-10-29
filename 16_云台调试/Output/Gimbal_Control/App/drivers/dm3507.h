@@ -1,11 +1,4 @@
-/**
- * @file dm3507.h
- * @brief DM3507 协议接口
- * 职责：定义 Pitch 电机反馈，声明使能、失能、读取反馈和力矩报文编码。
- * 主要接口：Dm3507_Decode, Dm3507_MakeEnable, Dm3507_MakeDisable, Dm3507_MakeReadFeedback, Dm3507_MakeTorque。
- * 实现：drivers/dm3507.c；调用关系见实现文件与 App/README。
- * 参数：app_config.h 是 App 参数及常量的唯一宏定义入口。
- */
+/* DM3507 协议接口 */
 #ifndef DM3507_H
 #define DM3507_H
 #include "app_config.h"

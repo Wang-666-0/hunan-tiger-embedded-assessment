@@ -13,7 +13,7 @@ volatile uint32_t test_checks, test_failures, test_failed_line, test_done, test_
     if (!test_failed_line) { test_failed_line = __LINE__; } } } while (0)
 
 #include "gimbal_startup.h"
-#if APP_GIMBAL_REMOTE_STARTUP_ENABLED
+#if 1U
 static uint32_t now;
 static uint32_t startup_manual_calls, startup_requests;
 static uint8_t startup_request_allowed = 1U;
@@ -40,7 +40,7 @@ static uint8_t output_allowed, app_armed, remote_present = 1U;
 static uint32_t remote_age = 5U, remote_reads, change_remote_at_read;
 static uint16_t remote_yaw = RC_CENTER, remote_arm = 1000U, remote_failsafe = 2000U;
 static uint16_t remote_other_sticks[3] = { RC_CENTER, RC_CENTER, RC_CENTER };
-#if APP_FLYWHEEL_JOG_ENABLED
+#if 1U
 static MotorJogState jog_state;
 static uint8_t select_allowed = 1U;
 static uint32_t selections;
@@ -82,6 +82,15 @@ HAL_StatusTypeDef HAL_UART_Receive_IT(UART_HandleTypeDef *handle, uint8_t *data,
     rx_data = data; ++rearms;
     return fail_rearm ? HAL_ERROR : HAL_OK;
 }
+#ifndef TEST_CUSTOM_CONSOLE_DMA
+HAL_StatusTypeDef ConsoleUart_StartReceive(uint8_t *data, uint16_t length)
+{
+    CHECK(data != 0 && length == 128U);
+    rx_data = data;
+    ++rearms;
+    return fail_rearm ? HAL_ERROR : HAL_OK;
+}
+#endif
 HAL_StatusTypeDef HAL_UART_AbortReceive(UART_HandleTypeDef *handle)
 { CHECK(handle == &huart1); ++aborts; return HAL_OK; }
 uint32_t HAL_UART_GetError(UART_HandleTypeDef *handle) { return handle->error; }
@@ -89,8 +98,8 @@ uint32_t HAL_GetTick(void) { return now; }
 HAL_StatusTypeDef HAL_UART_Transmit(UART_HandleTypeDef *handle, uint8_t *data,
     uint16_t length, uint32_t timeout)
 {
-    CHECK(handle == &huart1 && length < (APP_YAW_ENABLED ? 1024U : 512U) &&
-        (timeout == (APP_YAW_ENABLED ? 90U : 40U) || timeout == (APP_YAW_ENABLED ? 120U : 60U)));
+    CHECK(handle == &huart1 && length < (1U ? 1024U : 512U) &&
+        (timeout == (1U ? 90U : 40U) || timeout == (1U ? 120U : 60U)));
     CHECK(output_length + length < sizeof(output));
     if (fail_transmit) { return HAL_ERROR; }
     memcpy(output + output_length, data, length);
@@ -110,9 +119,9 @@ void RemoteInput_GetState(RemoteInput_State *state)
     for (i = 0U; i < 10U; ++i) { state->channels[i] = 1500U; }
     for (i = 0U; i < 3U; ++i) { state->channels[i + 1U] = remote_other_sticks[i]; }
     state->has_frame = remote_present; state->received_ms = now - remote_age;
-    state->channels[RC_YAW_CHANNEL] = remote_yaw;
-    state->channels[RC_ARM_CHANNEL] = remote_arm;
-    state->channels[RC_FAILSAFE_CHANNEL] = remote_failsafe;
+    state->channels[0U] = remote_yaw;
+    state->channels[4U] = remote_arm;
+    state->channels[7U] = remote_failsafe;
 }
 void CanBus_GetState(CanBusState *state)
 {
@@ -126,7 +135,7 @@ void AppTasks_GetState(AppState *state)
 { memset(state, 0, sizeof(*state)); state->logic.safety.operator_armed = app_armed;
   state->logic.safety.output_allowed = output_allowed; }
 void AppTasks_RequestStop(void) { ++stops; output_allowed = 0U;  }
-#if APP_FLYWHEEL_JOG_ENABLED
+#if 1U
 void MotorBackend_GetJogState(MotorJogState *state) { *state = jog_state; }
 uint8_t MotorBackend_SelectJog(FlywheelJogSelection selection)
 {
@@ -142,10 +151,14 @@ uint8_t MotorBackend_SelectJog(FlywheelJogSelection selection)
 static void clear_output(void) { output_length = 0U; output[0] = '\0'; }
 static void feed(const char *text)
 {
+    void HAL_UARTEx_RxEventCallback(UART_HandleTypeDef *, uint16_t);
     while (*text) {
+        size_t length = strlen(text);
+        if (length > 128U) { length = 128U; }
         CHECK(rx_data != 0);
-        *rx_data = (uint8_t)*text++;
-        HAL_UART_RxCpltCallback(&huart1);
+        memcpy(rx_data, text, length);
+        HAL_UARTEx_RxEventCallback(&huart1, (uint16_t)length);
+        text += length;
     }
 }
 static void command_line(const char *text)

@@ -49,7 +49,7 @@ void test_run(void)
     YawStep result;
     CanFrame bad;
     test_stage = 1U;
-    CHECK(YAW_CONTROLLER_SPEED_GUARD_ENABLED == 0U);
+    CHECK(0U == 0U);
     FastTrace(1000U, 30.0f);
     test_stage = 2U;
     FastTrace(8000U, -30.0f);
@@ -83,7 +83,15 @@ void test_run(void)
     CHECK(state.active && !state.controller.faults);
     PerformanceFeed(17102U, 59.0f, 300.0f); Apply(17102U, 1U);
     CHECK(state.active && !state.controller.faults);
-    PerformanceFeed(17112U, 61.0f, 300.0f); Apply(17112U, 1U);
+    {
+        uint32_t sample_ms = 17112U;
+        float angle;
+        for (angle = 61.0f; angle <= YAW_CONTROLLER_HARD_LIMIT_DEG + 1.0f; angle += 10.0f) {
+            PerformanceFeed(sample_ms, angle, 300.0f); Apply(sample_ms, 1U);
+            if (angle <= YAW_CONTROLLER_HARD_LIMIT_DEG) { CHECK(state.active && !state.controller.faults); }
+            sample_ms += 10U;
+        }
+    }
     CHECK(!state.active && (state.controller.faults & YAW_CONTROLLER_FAULT_LIMIT));
     CHECK(!(state.controller.faults & YAW_CONTROLLER_FAULT_SPEED));
     Activate(18000U); Apply(18134U, 1U);

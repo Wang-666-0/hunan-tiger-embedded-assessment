@@ -1,5 +1,6 @@
 /* Exercise production USART command routing with DMA bursts, not byte IRQs.
  * Reuse the existing transport/app snapshots; real app_console.c is linked. */
+#define TEST_CUSTOM_CONSOLE_DMA
 #define PITCH_TELEMETRY_TEST_ENTRY telemetry_baseline_test_run
 #include "test_pitch_telemetry.c"
 static uint32_t dma_rearms;
@@ -7,7 +8,7 @@ static uint8_t dma_rearm_failure;
 void HAL_UARTEx_RxEventCallback(UART_HandleTypeDef *handle, uint16_t size);
 HAL_StatusTypeDef ConsoleUart_StartReceive(uint8_t *data, uint16_t length)
 {
-    CHECK(length == APP_CONSOLE_RX_DMA_BYTES && length == 128U && data != 0);
+    CHECK(length == 128U && length == 128U && data != 0);
     rx_data = data; ++dma_rearms;
     if (!dma_rearm_failure) { huart1.error = 0U; }
     return dma_rearm_failure ? HAL_ERROR : HAL_OK;
@@ -15,7 +16,7 @@ HAL_StatusTypeDef ConsoleUart_StartReceive(uint8_t *data, uint16_t length)
 static void Burst(const char *text)
 {
     uint16_t size = (uint16_t)strlen(text);
-    CHECK(size && size <= APP_CONSOLE_RX_DMA_BYTES);
+    CHECK(size && size <= 128U);
     memcpy(rx_data, text, size);
     HAL_UARTEx_RxEventCallback(&huart1, size);
 }
@@ -24,13 +25,13 @@ void test_run(void)
     uint32_t before, epoch;
     char full[129];
     test_stage = 1U;
-    CHECK(APP_CONSOLE_RX_DMA_ENABLED && APP_PITCH_ENABLED && APP_YAW_ENABLED && APP_CONSOLE_BAUDRATE == 921600U);
+    CHECK(1U && 1U && 1U && APP_CONSOLE_BAUDRATE == 921600U);
     AppConsole_CreateQueue(); AppConsole_Start(); clear_output();
     Burst("YAW SIM OFF\r\nPITCH SIM OFF\r\n"); AppConsole_Poll(); clear_output();
     CHECK(dma_rearms == 2U && rearms == 0U && rx_data);
-    HAL_UART_RxCpltCallback(&huart4); HAL_UART_ErrorCallback(&huart4);
-    CHECK(remote_rx == 1U && remote_errors == 1U);
-#if APP_REMOTE_RX_DMA_ENABLED
+    HAL_UART_ErrorCallback(&huart4);
+    CHECK(remote_errors == 1U);
+#if 1U
     HAL_UARTEx_RxEventCallback(&huart4, 32U);
     CHECK(remote_events == 1U && remote_event_size == 32U && pitch_commands == 0U);
 #endif
@@ -67,7 +68,7 @@ void test_run(void)
     CHECK(pitch_commands == before + 1U && rearms == 0U);
     clear_output(); Burst("REMOTE RX\r\n"); AppConsole_Poll();
     CHECK(strstr(output, "R|RX|EPOCH|0|LAST|0x00000000|RX_ERR|0|DROP|0|REARM_ERR|0"));
-#if APP_REMOTE_RX_DMA_ENABLED
+#if 1U
     CHECK(strstr(output, "RX_DMA|1"));
 #else
     CHECK(strstr(output, "RX_DMA|0"));

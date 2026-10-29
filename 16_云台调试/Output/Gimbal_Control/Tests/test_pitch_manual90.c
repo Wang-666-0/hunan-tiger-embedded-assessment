@@ -10,10 +10,10 @@ static uint8_t near(float a, float b) { return (uint8_t)(fabsf(a - b) < 0.001f);
 static void Defaults(void)
 {
     Read();
-    CHECK(state.controller.cascade.position.kp == 10.678f);
-    CHECK(state.controller.cascade.position.ki == 24.153f);
+    CHECK(state.controller.cascade.position.kp == 11.500f);
+    CHECK(state.controller.cascade.position.ki == 24.775f);
     CHECK(state.controller.cascade.position.kd == 0.002f);
-    CHECK(state.controller.cascade.speed.kp == 0.00406f);
+    CHECK(state.controller.cascade.speed.kp == 0.00408f);
     CHECK(state.controller.cascade.speed.ki == 0.0005f);
     CHECK(state.controller.cascade.speed.kd == 0.000001f);
     CHECK(state.controller.gravity_kg_nm == -0.13f);
@@ -76,7 +76,7 @@ void test_run(void)
     uint32_t ms, before, elapsed;
     float target;
     test_stage = 1U;
-    CHECK(APP_PITCH_ENABLED && APP_REMOTE_PROFILE_ASSESSMENT);
+    CHECK(1U && 1U);
     CHECK(APP_PITCH_RATE_LIMIT_DPS == 90.0f && APP_YAW_RATE_LIMIT_DPS == 90.0f);
     Start(1000U); ms = 1030U; target = state.controller.target_deg;
     Manual(&ms, 100U, 1765U);

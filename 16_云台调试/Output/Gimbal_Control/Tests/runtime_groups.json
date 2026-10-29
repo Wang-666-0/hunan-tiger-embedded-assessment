@@ -89,7 +89,7 @@
     "App/control/yaw_step.c",
     "App/drivers/gl60_ii.c",
     "App/drivers/can_frame.c",
-    "App/control/yaw_cascade.c"
+    "App/control/gimbal_pid.c"
   ],
   "yaw_telemetry": [
     "Tests/test_yaw_telemetry.c",
@@ -99,7 +99,7 @@
   "yaw_cascade_unlimited": [
     "Tests/test_yaw_cascade_unlimited.c",
     "App/motors/yaw_controller.c",
-    "App/control/yaw_cascade.c"
+    "App/control/gimbal_pid.c"
   ],
   "yaw_repeat_step": [
     "Tests/test_yaw_repeat_step.c",
@@ -113,7 +113,7 @@
     "App/system/app_logic.c",
     "App/system/safety_manager.c",
     "App/system/target_manager.c",
-    "App/control/yaw_cascade.c"
+    "App/control/gimbal_pid.c"
   ],
   "yaw_step_assessment": [
     "Tests/test_yaw_step_assessment.c",
@@ -131,7 +131,7 @@
     "App/system/app_logic.c",
     "App/system/safety_manager.c",
     "App/system/target_manager.c",
-    "App/control/yaw_cascade.c"
+    "App/control/gimbal_pid.c"
   ],
   "yaw_manual50": [
     "Tests/test_yaw_manual50.c",
@@ -145,7 +145,7 @@
     "App/system/app_logic.c",
     "App/system/safety_manager.c",
     "App/system/target_manager.c",
-    "App/control/yaw_cascade.c"
+    "App/control/gimbal_pid.c"
   ],
   "yaw_can_unlimited": [
     "Tests/test_yaw_can_unlimited.c",
@@ -161,27 +161,22 @@
   "pitch_controller": [
     "Tests/test_pitch_controller.c",
     "App/motors/pitch_controller.c",
-    "App/control/yaw_cascade.c"
+    "App/control/gimbal_pid.c"
   ],
   "pitch_observer": [
     "Tests/test_pitch_observer.c",
     "App/motors/pitch_controller.c",
-    "App/control/yaw_cascade.c"
+    "App/control/gimbal_pid.c"
   ],
   "pitch_gravity": [
     "Tests/test_pitch_gravity.c",
     "App/motors/pitch_controller.c",
-    "App/control/yaw_cascade.c"
-  ],
-  "pitch_shape": [
-    "Tests/test_pitch_shape.c",
-    "App/motors/pitch_controller.c",
-    "App/control/yaw_cascade.c"
+    "App/control/gimbal_pid.c"
   ],
   "pitch_terminal_brake": [
     "Tests/test_pitch_terminal_brake.c",
     "App/motors/pitch_controller.c",
-    "App/control/yaw_cascade.c"
+    "App/control/gimbal_pid.c"
   ],
   "pitch_step": [
     "Tests/test_pitch_step.c",
@@ -194,7 +189,7 @@
     "App/motors/pitch_controller.c",
     "App/control/pitch_step.c",
     "App/drivers/dm3507.c",
-    "App/control/yaw_cascade.c",
+    "App/control/gimbal_pid.c",
     "App/control/yaw_step.c",
     "App/drivers/can_frame.c"
   ],
@@ -206,7 +201,7 @@
     "App/motors/yaw_backend.c",
     "App/motors/yaw_controller.c",
     "App/control/yaw_step.c",
-    "App/control/yaw_cascade.c",
+    "App/control/gimbal_pid.c",
     "App/drivers/gl60_ii.c",
     "App/motors/pitch_backend.c",
     "App/motors/pitch_controller.c",
@@ -226,7 +221,7 @@
     "App/motors/yaw_backend.c",
     "App/motors/yaw_controller.c",
     "App/control/yaw_step.c",
-    "App/control/yaw_cascade.c",
+    "App/control/gimbal_pid.c",
     "App/drivers/gl60_ii.c",
     "App/motors/pitch_backend.c",
     "App/motors/pitch_controller.c",
@@ -246,7 +241,7 @@
     "App/motors/yaw_backend.c",
     "App/motors/yaw_controller.c",
     "App/control/yaw_step.c",
-    "App/control/yaw_cascade.c",
+    "App/control/gimbal_pid.c",
     "App/drivers/gl60_ii.c",
     "App/motors/pitch_backend.c",
     "App/motors/pitch_controller.c",
@@ -264,7 +259,7 @@
     "App/motors/pitch_controller.c",
     "App/control/pitch_step.c",
     "App/drivers/dm3507.c",
-    "App/control/yaw_cascade.c",
+    "App/control/gimbal_pid.c",
     "App/control/yaw_step.c",
     "App/drivers/can_frame.c",
     "App/system/app_logic.c",
@@ -279,7 +274,7 @@
     "App/motors/pitch_controller.c",
     "App/control/pitch_step.c",
     "App/drivers/dm3507.c",
-    "App/control/yaw_cascade.c",
+    "App/control/gimbal_pid.c",
     "App/control/yaw_step.c",
     "App/drivers/can_frame.c",
     "App/system/remote_mapper.c"
@@ -322,11 +317,6 @@
   ],
   "pitch_display_sim": [
     "Tests/test_pitch_display_sim.c"
-  ],
-  "pitch_view_stiffness": [
-    "Tests/test_pitch_view_stiffness.c",
-    "App/motors/pitch_controller.c",
-    "App/control/yaw_cascade.c"
   ],
   "yaw_display_sim": [
     "Tests/test_yaw_display_sim.c"

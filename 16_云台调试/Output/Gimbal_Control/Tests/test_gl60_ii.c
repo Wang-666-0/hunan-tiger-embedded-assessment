@@ -1,4 +1,4 @@
-﻿#include "gl60_ii.h"
+#include "gl60_ii.h"
 #include <string.h>
 
 volatile uint32_t test_checks, test_failures, test_failed_line, test_done, test_stage;

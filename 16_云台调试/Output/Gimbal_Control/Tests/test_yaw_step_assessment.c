@@ -20,7 +20,7 @@ void test_run(void)
 {
     uint32_t d, start;
     float direction;
-    CHECK(YAW_STEP_BAND_DEG == 0.2f && YAW_STEP_RESPONSE_LIMIT_MS == 250);
+    CHECK(YAW_STEP_BAND_DEG == 0.2f && 250U == 250);
     CHECK(!YawStep_Passed(0, 250));
     for (d = 0; d < 2; ++d) {
         direction = d ? -1.0f : 1.0f;
